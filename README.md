@@ -1,17 +1,20 @@
 # clarix
 
-A new Flutter project.
+A simple local Gemma chat app built with Flutter and `flutter_gemma`.
 
-## Getting Started
+## Local model setup
 
-This project is a starting point for a Flutter application.
+The app loads the model from the filesystem, not from the Flutter asset bundle.
 
-A few resources to get you started if this is your first Flutter project:
+- Model path: `assets/models/gemma-4-E2B-it.litertlm`
+- Loading method: `FlutterGemma.installModel(...).fromFile(...)`
+- Speculative decoding: enabled for Gemma 4
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Run it
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run
+```
+
+If you rename or move the model file, update the path in `lib/main.dart`.
