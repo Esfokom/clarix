@@ -1,20 +1,36 @@
 # clarix
 
-A simple local Gemma chat app built with Flutter and `flutter_gemma`.
+Clarix is a Windows-first Flutter PDF workspace with:
 
-## Local model setup
+- a left-side document rail for recent files, tabs, and page navigation
+- a central `pdfrx` reading surface
+- a bottom AI composer powered by `flutter_gemma`
+- persisted session restore and model/download state
+- a Rust `pdf_oxide` scaffold for extraction/search FFI work
 
-The app loads the model from the filesystem, not from the Flutter asset bundle.
+## Current architecture
 
-- Model path: `assets/models/gemma-4-E2B-it.litertlm`
-- Loading method: `FlutterGemma.installModel(...).fromFile(...)`
-- Speculative decoding: enabled for Gemma 4
+- `lib/src/features/workspace/domain`: entities and aggregate UI state
+- `lib/src/features/workspace/application`: Riverpod 3 notifiers and AI orchestration
+- `lib/src/features/workspace/infrastructure`: persistence and chunk storage
+- `lib/src/features/workspace/presentation`: desktop shell, viewer, and composer UI
+- `rust/clarix_pdf_oxide`: native extraction/search scaffold
+
+## Local AI and RAG
+
+- Inference default: Gemma 4 `E2B IT`
+- Embeddings default: `EmbeddingGemma 1024`
+- Vector store: `flutter_gemma` native vector store path
+- PDF indexing: page-aware chunking with persisted chunk cache
 
 ## Run it
 
 ```bash
 flutter pub get
-flutter run
+flutter run -d windows
 ```
 
-If you rename or move the model file, update the path in `lib/main.dart`.
+## Notes
+
+- `pdfrx` on Windows requires Developer Mode to be enabled.
+- The Flutter app currently falls back to a Dart extraction path while the Rust `pdf_oxide` dynamic library wiring is still scaffolded rather than fully linked.
