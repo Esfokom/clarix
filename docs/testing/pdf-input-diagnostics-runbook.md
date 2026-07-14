@@ -181,3 +181,27 @@ pointer-signal handler in the diagnostic code. Finally, inspect
 - [ ] Diagnostics do not modify the `PdfViewerController` camera.
 - [ ] Complete user-provided format, analysis, test, and Windows-build outputs are clean.
 - [ ] The completed comparison distinguishes Flutter input, stock `pdfrx`, and Clarix observation behavior.
+
+## Final evidence table
+
+Complete this table before declaring the diagnostic run complete. Reference the
+saved artifact, log, screenshot, or pasted complete command output in **Actual
+evidence/output reference**. Do not mark a gate as passed based on an expected
+result or a partial output.
+
+| Gate | Required evidence | Actual evidence/output reference | Pass/fail status |
+| --- | --- | --- | --- |
+| Diagnostics hub and workspace access | Startup shows **Reader diagnostics**; **Open workspace** reaches normal Clarix in one click and Back returns to the hub. |  | ☐ Pass ☐ Fail |
+| Stock viewer baseline | Stock viewer opens the selected local PDF with default `PdfViewerParams`, no recorder, and no diagnostic pointer handlers. |  | ☐ Pass ☐ Fail |
+| Instrumented observation coverage | Instrumented JSON/log evidence includes raw pointer and focal data, converted viewer/document coordinates where available, scale/pan, and before/after camera state through `clarixLog`. |  | ☐ Pass ☐ Fail |
+| Crosshair independence | Observation from the instrumented viewer shows the cyan cursor and amber focal crosshairs remain visually independent. |  | ☐ Pass ☐ Fail |
+| Stock/instrumented five-location manual comparison | Completed C, TL, TR, BL, and BR matrix for the same PDF, page, device, and fit-width baseline; each location has ten zoom-ins and ten zoom-outs crossing the threshold, plus its saved instrumented JSON export. |  | ☐ Pass ☐ Fail |
+| Pointer-lab result | Completed equivalent C, TL, TR, BL, and BR lab sequence without loading `pdfrx` or a PDF; result explicitly states whether the amber focal marker jumps to a viewport corner while the cyan cursor remains stable. |  | ☐ Pass ☐ Fail |
+| Recorder bounds and export privacy | Source/manual evidence confirms bounded recorder/UI work and JSON exports contain no path, title, text, model, or document content. |  | ☐ Pass ☐ Fail |
+| Privacy and architecture source checks | Complete output of both required `rg` commands, classification of expected notifier assignments, and inspection confirming no sensitive logger fields, controller camera writes, zoom/pan calls, or forwarded pointer signals; stock screen has no recorder or pointer handlers. |  | ☐ Pass ☐ Fail |
+| Formatter | Complete output of `dart format --output=none --set-exit-if-changed lib/src/features/reader_diagnostics test/reader_diagnostics lib/src/app.dart`; if it changed files, include the formatted diff and rerun output. |  | ☐ Pass ☐ Fail |
+| Static analysis | Complete output of `flutter analyze` with no issues. |  | ☐ Pass ☐ Fail |
+| Focused diagnostics tests | Complete output of `flutter test test/reader_diagnostics` with all focused diagnostics tests passing. |  | ☐ Pass ☐ Fail |
+| Full test suite | Complete output of `flutter test` with the existing suite passing. |  | ☐ Pass ☐ Fail |
+| Windows build | Complete output of `flutter build windows` showing success and no native-asset or `pdfrx` compilation errors. |  | ☐ Pass ☐ Fail |
+| Final diagnosis | A written diagnosis links the five-location comparison, pointer-lab result, JSON exports, environment record, and source checks to a conclusion that distinguishes Flutter input, stock `pdfrx`, and Clarix workspace behavior. |  | ☐ Pass ☐ Fail |
