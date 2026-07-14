@@ -1,5 +1,6 @@
 import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/instrumented_pdfrx_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/stock_pdfrx_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostic_crosshair.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostics_event_panel.dart';
@@ -35,6 +36,25 @@ void main() {
     expect(find.byKey(const Key('diagnostic-back')), findsOneWidget);
     expect(find.byKey(const Key('stock-open-pdf')), findsOneWidget);
     expect(find.byKey(const Key('diagnostics-event-panel')), findsNothing);
+  });
+
+  testWidgets('instrumented viewer stays empty when picking is cancelled', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InstrumentedPdfrxScreen(pickPdf: () async => null),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('stock-open-pdf')));
+    await tester.pump();
+
+    expect(
+      find.text('Open a PDF to inspect raw pdfrx input behavior.'),
+      findsOneWidget,
+    );
+    expect(find.byType(PdfViewer), findsNothing);
   });
 
   testWidgets('event panel pauses clears collapses and copies JSON', (
@@ -93,5 +113,37 @@ void main() {
 
     expect(find.byKey(const Key('cursor-crosshair')), findsOneWidget);
     expect(find.byKey(const Key('focal-crosshair')), findsOneWidget);
+  });
+
+  testWidgets('event panel renders only the newest 100 in newest-first order', (
+    WidgetTester tester,
+  ) async {
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      logSink: (_) {},
+    );
+    addTearDown(recorder.dispose);
+    for (int index = 0; index < 105; index++) {
+      recorder.record(
+        source: ReaderDiagnosticSource.pointerListener,
+        type: ReaderDiagnosticEventType.pointerMove,
+      );
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DiagnosticsEventPanel(recorder: recorder)),
+      ),
+    );
+
+    final ListView listView = tester.widget<ListView>(find.byType(ListView));
+    final SliverChildBuilderDelegate delegate =
+        listView.childrenDelegate as SliverChildBuilderDelegate;
+    final BuildContext listContext = tester.element(find.byType(ListView));
+    final Widget first = delegate.builder(listContext, 0)!;
+    final Widget last = delegate.builder(listContext, 99)!;
+
+    expect(delegate.estimatedChildCount, 100);
+    expect(first.key, const Key('diagnostics-event-105'));
+    expect(last.key, const Key('diagnostics-event-6'));
   });
 }

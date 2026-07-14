@@ -16,6 +16,8 @@ void main() {
       deviceKind: ReaderDiagnosticDeviceKind.trackpad,
       global: const ReaderDiagnosticPoint(410, 260),
       viewerLocal: const ReaderDiagnosticPoint(390, 220),
+      pan: const ReaderDiagnosticPoint(18, -9),
+      panDelta: const ReaderDiagnosticPoint(3, -2),
       note: 'scale_update',
     );
 
@@ -24,6 +26,8 @@ void main() {
     expect(json['sequence'], 7);
     expect(json['deviceKind'], 'trackpad');
     expect(json['global'], <String, double>{'x': 410, 'y': 260});
+    expect(json['pan'], <String, double>{'x': 18, 'y': -9});
+    expect(json['panDelta'], <String, double>{'x': 3, 'y': -2});
     expect(json.keys, isNot(contains('path')));
     expect(json.keys, isNot(contains('title')));
     expect(json.keys, isNot(contains('text')));
@@ -80,6 +84,7 @@ void main() {
       source: ReaderDiagnosticSource.instrumentedPdfrx,
       type: ReaderDiagnosticEventType.scaleUpdate,
       scale: double.nan,
+      panDelta: const ReaderDiagnosticPoint(double.nan, double.infinity),
       before: snapshot,
     );
 
@@ -87,6 +92,7 @@ void main() {
     final Map<String, Object?> before = json['before']! as Map<String, Object?>;
 
     expect(json['scale'], isNull);
+    expect(json['panDelta'], isNull);
     expect(before['zoom'], isNull);
     expect(before['translation'], isNull);
     expect(before['viewport'], <String, Object?>{

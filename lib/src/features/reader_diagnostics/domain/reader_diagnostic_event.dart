@@ -183,6 +183,7 @@ class ReaderDiagnosticEvent {
     this.focal,
     this.scale,
     this.pan,
+    this.panDelta,
     this.before,
     this.after,
     String? note,
@@ -201,6 +202,7 @@ class ReaderDiagnosticEvent {
   final ReaderDiagnosticPoint? focal;
   final double? scale;
   final ReaderDiagnosticPoint? pan;
+  final ReaderDiagnosticPoint? panDelta;
   final ReaderViewerSnapshot? before;
   final ReaderViewerSnapshot? after;
   final String? note;
@@ -219,6 +221,7 @@ class ReaderDiagnosticEvent {
     'focal': focal?.toJson(),
     'scale': _finiteDouble(scale),
     'pan': pan?.toJson(),
+    'panDelta': panDelta?.toJson(),
     'before': before?.toJson(),
     'after': after?.toJson(),
     'note': note,

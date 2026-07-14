@@ -219,6 +219,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
       type: ReaderDiagnosticEventType.panZoomUpdate,
       event: event,
       pan: _observedPan,
+      panDelta: event.panDelta,
       scale: event.scale,
     );
   }
@@ -234,6 +235,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
     required ReaderDiagnosticEventType type,
     required PointerEvent event,
     Offset? pan,
+    Offset? panDelta,
     double? scale,
   }) {
     final Offset globalPosition = event.position;
@@ -265,8 +267,10 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
           : ReaderDiagnosticPoint.fromOffset(positions.focal!),
       scale: scale,
       pan: pan == null ? null : ReaderDiagnosticPoint.fromOffset(pan),
+      panDelta: panDelta == null
+          ? null
+          : ReaderDiagnosticPoint.fromOffset(panDelta),
     );
-
   }
 
   void _onInteractionStart(ScaleStartDetails details) {

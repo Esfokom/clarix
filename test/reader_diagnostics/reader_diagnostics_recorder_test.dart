@@ -172,6 +172,34 @@ void main() {
     expect(logged.single, contains('"source":"unknown"'));
     expect(logged.single, isNot(contains('"note":"')));
   });
+
+  test('recorder exports and logs finite pan deltas', () {
+    final List<String> logged = <String>[];
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      logSink: logged.add,
+    );
+    addTearDown(recorder.dispose);
+
+    recorder.record(
+      source: ReaderDiagnosticSource.pointerListener,
+      type: ReaderDiagnosticEventType.panZoomUpdate,
+      pan: const ReaderDiagnosticPoint(20, -8),
+      panDelta: const ReaderDiagnosticPoint(4, -3),
+    );
+
+    expect(
+      recorder.events.value.single.panDelta?.toJson(),
+      <String, double>{'x': 4, 'y': -3},
+    );
+    expect(
+      recorder.exportJson(),
+      contains('"panDelta":{"x":4.0,"y":-3.0}'),
+    );
+    expect(
+      logged.single,
+      contains('"panDelta":{"x":4.0,"y":-3.0}'),
+    );
+  });
 }
 
 ReaderDiagnosticEvent _testEvent() => ReaderDiagnosticEvent(

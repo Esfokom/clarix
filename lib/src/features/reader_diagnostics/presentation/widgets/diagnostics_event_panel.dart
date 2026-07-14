@@ -73,19 +73,24 @@ class _DiagnosticsEventPanelState extends State<DiagnosticsEventPanel> {
                         ),
                       );
                     }
-                    return ListView.separated(
+                    return ListView.builder(
                       padding: const EdgeInsets.all(8),
                       itemCount: newest.length,
-                      separatorBuilder: (_, __) => const Divider(height: 12),
                       itemBuilder: (BuildContext context, int index) {
                         final ReaderDiagnosticEvent event = newest[index];
-                        return SelectableText(
-                          jsonEncode(event.toJson()),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                            height: 1.3,
+                        return Padding(
+                          key: Key(
+                            'diagnostics-event-' + event.sequence.toString(),
+                          ),
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: SelectableText(
+                            jsonEncode(event.toJson()),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                              height: 1.3,
+                            ),
                           ),
                         );
                       },
