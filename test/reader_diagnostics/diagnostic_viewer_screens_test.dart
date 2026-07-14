@@ -1,9 +1,11 @@
 import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/instrumented_pdfrx_screen.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/pointer_trackpad_lab_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/stock_pdfrx_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostic_crosshair.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostics_event_panel.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -145,5 +147,40 @@ void main() {
     expect(delegate.estimatedChildCount, 100);
     expect(first.key, const Key('diagnostics-event-105'));
     expect(last.key, const Key('diagnostics-event-6'));
+  });
+
+  testWidgets('pointer lab renders four quadrants and separate markers', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: PointerTrackpadLabScreen()),
+    );
+    expect(find.text('Q1'), findsOneWidget);
+    expect(find.text('Q2'), findsOneWidget);
+    expect(find.text('Q3'), findsOneWidget);
+    expect(find.text('Q4'), findsOneWidget);
+    expect(find.byKey(const Key('pointer-lab-canvas')), findsOneWidget);
+  });
+
+  testWidgets('hover moves cursor without moving focal marker', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: PointerTrackpadLabScreen()),
+    );
+    final TestGesture gesture = await tester.createGesture(
+      kind: PointerDeviceKind.mouse,
+    );
+    await gesture.addPointer(location: const Offset(80, 90));
+    await gesture.moveTo(const Offset(140, 150));
+    await tester.pump();
+    final Positioned cursor = tester.widget<Positioned>(
+      find.byKey(const Key('cursor-crosshair')),
+    );
+    final Positioned focal = tester.widget<Positioned>(
+      find.byKey(const Key('focal-crosshair')),
+    );
+    expect(cursor.left, isNot(focal.left));
+    await gesture.removePointer();
   });
 }
