@@ -1,4 +1,122 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:pdfrx/pdfrx.dart';
+
+/// A smaller delta gives mouse wheels finer steps while high-resolution
+/// trackpads remain continuous.
+const double readerPointerZoomSensitivity = 0.65;
+
+typedef ReaderZoomAnchorProvider = Offset? Function();
+
+Offset resolveReaderZoomFocalPoint({
+  required Offset? trackedCursorLocal,
+  required Offset reportedTrackpadFocalPoint,
+  required Size viewportSize,
+}) {
+  final Offset? tracked = trackedCursorLocal;
+  if (tracked != null &&
+      tracked.dx.isFinite &&
+      tracked.dy.isFinite &&
+      tracked.dx >= 0 &&
+      tracked.dy >= 0 &&
+      tracked.dx <= viewportSize.width &&
+      tracked.dy <= viewportSize.height) {
+    return tracked;
+  }
+  if (reportedTrackpadFocalPoint.dx.isFinite &&
+      reportedTrackpadFocalPoint.dy.isFinite) {
+    return reportedTrackpadFocalPoint;
+  }
+  return viewportSize.center(Offset.zero);
+}
+
+/// Uses the actual cursor tracked by the reader instead of trusting Windows'
+/// trackpad focal point, which can be quantized to viewport corners.
+class ReaderCursorAnchoredInteractionDelegateProvider
+    extends PdfViewerScrollInteractionDelegateProvider {
+  ReaderCursorAnchoredInteractionDelegateProvider(this.anchorProvider);
+
+  final ReaderZoomAnchorProvider anchorProvider;
+
+  @override
+  PdfViewerScrollInteractionDelegate create() {
+    return _ReaderCursorAnchoredInteractionDelegate(anchorProvider);
+  }
+
+  @override
+  bool operator ==(Object other) => identical(this, other);
+
+  @override
+  int get hashCode => identityHashCode(this);
+}
+
+class _ReaderCursorAnchoredInteractionDelegate
+    implements PdfViewerScrollInteractionDelegate {
+  _ReaderCursorAnchoredInteractionDelegate(this.anchorProvider);
+
+  final ReaderZoomAnchorProvider anchorProvider;
+  PdfViewerController? _controller;
+
+  @override
+  void init(PdfViewerController controller, TickerProvider vsync) {
+    _controller = controller;
+  }
+
+  @override
+  void dispose() {
+    _controller = null;
+  }
+
+  @override
+  void stop() {}
+
+  @override
+  void pan(Offset delta, PdfViewerLayoutMetrics layoutMetrics) {
+    final PdfViewerController? controller = _controller;
+    if (controller == null || !controller.isReady) {
+      return;
+    }
+    final Matrix4 matrix = controller.value.clone()
+      ..setEntry(0, 3, controller.value.entry(0, 3) + delta.dx)
+      ..setEntry(1, 3, controller.value.entry(1, 3) + delta.dy);
+    controller.value = controller.makeMatrixInSafeRange(
+      matrix,
+      forceClamp: true,
+    );
+  }
+
+  @override
+  void zoom(
+    double scale,
+    Offset reportedFocalPoint,
+    PdfViewerLayoutMetrics layoutMetrics,
+  ) {
+    final PdfViewerController? controller = _controller;
+    if (controller == null || !controller.isReady) {
+      return;
+    }
+    final double currentZoom = controller.currentZoom;
+    final double newZoom = (currentZoom * scale)
+        .clamp(layoutMetrics.minScale, layoutMetrics.maxScale)
+        .toDouble();
+    if ((newZoom - currentZoom).abs() < 0.0001) {
+      return;
+    }
+    final Offset focalPoint = resolveReaderZoomFocalPoint(
+      trackedCursorLocal: anchorProvider(),
+      reportedTrackpadFocalPoint: reportedFocalPoint,
+      viewportSize: controller.viewSize,
+    );
+    unawaited(
+      controller.zoomOnLocalPosition(
+        localPosition: focalPoint,
+        newZoom: newZoom,
+        duration: Duration.zero,
+      ),
+    );
+  }
+}
 
 enum PdfScrollbarAxis { vertical, horizontal }
 
@@ -86,5 +204,9 @@ Offset resolvePdfZoomAnchor({
   required Offset fallbackLocalPosition,
   required Offset? Function(Offset globalPosition) globalToLocal,
 }) {
-  return globalToLocal(globalPosition) ?? fallbackLocalPosition;
+  final Offset? converted = globalToLocal(globalPosition);
+  if (converted == null || !converted.dx.isFinite || !converted.dy.isFinite) {
+    return fallbackLocalPosition;
+  }
+  return converted;
 }

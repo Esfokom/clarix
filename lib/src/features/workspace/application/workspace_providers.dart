@@ -1,11 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/local_gemma_model_store.dart';
 import '../../../core/model_catalog.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../infrastructure/document_chunk_store.dart';
+import '../infrastructure/document_metadata_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
@@ -32,8 +37,30 @@ final pdfExtractionServiceProvider = Provider<HybridPdfExtractionService>(
   (Ref ref) => HybridPdfExtractionService(),
 );
 
+final pdfDocumentRefProvider =
+    Provider.autoDispose.family<PdfDocumentRefFile, String>(
+  (Ref ref, String path) => PdfDocumentRefFile(path),
+);
+
 final chunkStoreProvider = Provider<DocumentChunkStore>(
   (Ref ref) => DocumentChunkStore(),
+);
+final documentIdentityServiceProvider = Provider<DocumentIdentityService>(
+  (Ref ref) => DocumentIdentityService(),
+);
+
+final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>(
+  (Ref ref) async {
+    Directory root;
+    try {
+      root = await getApplicationSupportDirectory();
+    } catch (_) {
+      root = Directory(
+        '${Directory.systemTemp.path}${Platform.pathSeparator}clarix',
+      );
+    }
+    return DocumentMetadataStore(root: root);
+  },
 );
 
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {

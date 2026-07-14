@@ -12,7 +12,7 @@ import '../../domain/workspace_feature_state.dart';
 import 'pdf_viewer_interaction_math.dart';
 import 'workspace_common.dart';
 
-class DocumentWorkspace extends StatelessWidget {
+class DocumentWorkspace extends ConsumerWidget {
   const DocumentWorkspace({
     required this.state,
     required this.activeTab,
@@ -23,11 +23,19 @@ class DocumentWorkspace extends StatelessWidget {
   final DocumentTabState activeTab;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: <Widget>[
         _TabStrip(state: state, activeTab: activeTab),
-        Expanded(child: _PdfViewerPane(tab: activeTab)),
+        Expanded(
+          child: _PdfViewerPane(
+            tab: activeTab,
+            documentRef: ref.watch(pdfDocumentRefProvider(activeTab.filePath)),
+            annotations: state.documentMetadata[activeTab.documentId]
+                    ?.annotations ??
+                const <DocumentAnnotation>[],
+          ),
+        ),
       ],
     );
   }
@@ -71,124 +79,325 @@ class _TabStripState extends ConsumerState<_TabStrip> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: const BoxDecoration(
-        color: WorkspaceColors.canvasRaised,
-        border: Border(bottom: BorderSide(color: WorkspaceColors.border)),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: widget.state.session.tabs.length,
-              separatorBuilder: (_, int index) => const SizedBox(width: 6),
-              itemBuilder: (BuildContext context, int index) {
-                final DocumentTabState tab = widget.state.session.tabs[index];
-                final bool selected = tab.id == widget.activeTab.id;
-                return GestureDetector(
-                  onTap: () => ref
+    final DocumentMetadata? metadata =
+        widget.state.documentMetadata[widget.activeTab.documentId];
+    final bool bookmarked = metadata?.bookmarks.any(
+          (DocumentBookmark item) =>
+              item.pageNumber == widget.activeTab.currentPage,
+        ) ??
+        false;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final bool compact = constraints.maxWidth < 760;
+        return Container(
+          height: 58,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: const BoxDecoration(
+            color: WorkspaceColors.canvasRaised,
+            border: Border(bottom: BorderSide(color: WorkspaceColors.border)),
+          ),
+          child: Row(
+            children: <Widget>[
+              Tooltip(
+                message: 'Open PDF (Ctrl+O)',
+                child: ShadIconButton.ghost(
+                  width: 32,
+                  height: 32,
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(LucideIcons.folderOpen, size: 16),
+                  onPressed: () => ref
                       .read(workspaceNotifierProvider.notifier)
-                      .setActiveTab(tab.id),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 140),
-                    padding: const EdgeInsets.fromLTRB(10, 7, 8, 7),
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? WorkspaceColors.panelRaised
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: selected
-                            ? WorkspaceColors.accentBorder
-                            : Colors.transparent,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const Icon(
-                          LucideIcons.fileText,
-                          size: 13,
-                          color: WorkspaceColors.textMuted,
+                      .pickAndOpenPdfs(),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: widget.state.session.tabs.length,
+                  separatorBuilder: (_, int index) =>
+                      const SizedBox(width: 4),
+                  itemBuilder: (BuildContext context, int index) {
+                    final DocumentTabState tab =
+                        widget.state.session.tabs[index];
+                    final bool selected = tab.id == widget.activeTab.id;
+                    return GestureDetector(
+                      onTap: () => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .setActiveTab(tab.id),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 120),
+                        padding: const EdgeInsets.fromLTRB(9, 7, 7, 7),
+                        margin: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? WorkspaceColors.panelRaised
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(
+                            color: selected
+                                ? WorkspaceColors.accentBorder
+                                : Colors.transparent,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 180),
-                          child: Text(
-                            tab.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: WorkspaceColors.textStrong,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Icon(
+                              tab.isMissingFile
+                                  ? LucideIcons.triangleAlert
+                                  : LucideIcons.fileText,
+                              size: 13,
+                              color: tab.isMissingFile
+                                  ? WorkspaceColors.warning
+                                  : WorkspaceColors.textMuted,
                             ),
-                          ),
+                            const SizedBox(width: 7),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: compact ? 96 : 160,
+                              ),
+                              child: Text(
+                                tab.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: WorkspaceColors.textStrong,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () => ref
+                                  .read(workspaceNotifierProvider.notifier)
+                                  .closeTab(tab.id),
+                              child: const Padding(
+                                padding: EdgeInsets.all(2),
+                                child: Icon(
+                                  LucideIcons.x,
+                                  size: 12,
+                                  color: WorkspaceColors.textFaint,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: () => ref
-                              .read(workspaceNotifierProvider.notifier)
-                              .closeTab(tab.id),
-                          child: const Icon(
-                            LucideIcons.x,
-                            size: 12,
-                            color: WorkspaceColors.textFaint,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              if (!compact)
+                SizedBox(
+                  width: 190,
+                  child: ShadInput(
+                    controller: _searchController,
+                    placeholder: const Text('Search document'),
+                    leading: const Icon(LucideIcons.search, size: 14),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    onSubmitted: _submitSearch,
                   ),
-                );
-              },
-            ),
+                )
+              else
+                _ToolbarButton(
+                  tooltip: 'Search document (Ctrl+F)',
+                  icon: LucideIcons.search,
+                  onPressed: _showSearchDialog,
+                ),
+              const SizedBox(width: 4),
+              _ToolbarButton(
+                tooltip: bookmarked
+                    ? 'Remove page bookmark'
+                    : 'Bookmark current page',
+                icon: bookmarked
+                    ? LucideIcons.bookmarkCheck
+                    : LucideIcons.bookmark,
+                active: bookmarked,
+                onPressed: () => ref
+                    .read(workspaceNotifierProvider.notifier)
+                    .toggleBookmark(
+                      widget.activeTab.id,
+                      widget.activeTab.currentPage,
+                    ),
+              ),
+              _ToolbarButton(
+                tooltip: 'Add note to current page',
+                icon: LucideIcons.stickyNote,
+                onPressed: _showNoteDialog,
+              ),
+              _ToolbarButton(
+                tooltip: widget.state.composerExpanded
+                    ? 'Close AI assistant'
+                    : 'Open local AI assistant',
+                icon: LucideIcons.sparkles,
+                active: widget.state.composerExpanded,
+                onPressed: () => ref
+                    .read(workspaceNotifierProvider.notifier)
+                    .toggleComposerExpanded(),
+              ),
+              if (!compact) ...<Widget>[
+                const SizedBox(width: 4),
+                ShadBadge.secondary(
+                  child: Text(
+                    widget.activeTab.indexStatus.name,
+                    style: const TextStyle(fontSize: 10),
+                  ),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 220,
-            child: ShadInput(
-              controller: _searchController,
-              placeholder: const Text('Search PDF'),
-              leading: const Icon(LucideIcons.search, size: 14),
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              onSubmitted: (String value) => ref
-                  .read(workspaceNotifierProvider.notifier)
-                  .setSearchQuery(widget.activeTab.id, value.trim()),
-            ),
+        );
+      },
+    );
+  }
+
+  void _submitSearch(String value) {
+    ref
+        .read(workspaceNotifierProvider.notifier)
+        .setSearchQuery(widget.activeTab.id, value.trim());
+  }
+
+  Future<void> _showSearchDialog() async {
+    final String? query = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) {
+        final TextEditingController controller = TextEditingController(
+          text: _searchController.text,
+        );
+        return AlertDialog(
+          backgroundColor: WorkspaceColors.panel,
+          title: const Text(
+            'Search document',
+            style: TextStyle(color: WorkspaceColors.textStrong),
           ),
-          const SizedBox(width: 8),
-          ShadBadge.secondary(
-            child: Text(
-              widget.activeTab.indexStatus.name,
-              style: const TextStyle(fontSize: 10.5),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            style: const TextStyle(color: WorkspaceColors.textStrong),
+            onSubmitted: (String value) => Navigator.of(context).pop(value),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
             ),
+            FilledButton(
+              onPressed: () => Navigator.of(context).pop(controller.text),
+              child: const Text('Search'),
+            ),
+          ],
+        );
+      },
+    );
+    if (query != null) {
+      _searchController.text = query;
+      _submitSearch(query);
+    }
+  }
+
+  Future<void> _showNoteDialog() async {
+    final TextEditingController controller = TextEditingController();
+    final String? note = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: WorkspaceColors.panel,
+        title: Text(
+          'Note on page ${widget.activeTab.currentPage}',
+          style: const TextStyle(color: WorkspaceColors.textStrong),
+        ),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 4,
+          style: const TextStyle(color: WorkspaceColors.textStrong),
+          decoration: const InputDecoration(hintText: 'Write a local note'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(controller.text),
+            child: const Text('Save note'),
           ),
         ],
       ),
     );
+    controller.dispose();
+    if (note != null) {
+      await ref.read(workspaceNotifierProvider.notifier).addNote(
+            tabId: widget.activeTab.id,
+            pageNumber: widget.activeTab.currentPage,
+            note: note,
+          );
+    }
   }
 }
 
+class _ToolbarButton extends StatelessWidget {
+  const _ToolbarButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+    this.active = false,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool active;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: ShadIconButton.ghost(
+        width: 32,
+        height: 32,
+        padding: EdgeInsets.zero,
+        backgroundColor: active ? WorkspaceColors.accentSoft : null,
+        icon: Icon(icon, size: 15),
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
 class _PdfViewerPane extends ConsumerStatefulWidget {
-  const _PdfViewerPane({required this.tab});
+  const _PdfViewerPane({required this.tab, required this.documentRef, required this.annotations});
 
   final DocumentTabState tab;
+  final PdfDocumentRefFile documentRef;
+  final List<DocumentAnnotation> annotations;
 
   @override
   ConsumerState<_PdfViewerPane> createState() => _PdfViewerPaneState();
 }
 
+class _ReaderViewportMetrics {
+  const _ReaderViewportMetrics({required this.page, required this.zoom});
+
+  final int page;
+  final double zoom;
+}
+
 class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   late PdfViewerController _controller;
+  late ValueNotifier<_ReaderViewportMetrics> _metrics;
+  late ReaderCursorAnchoredInteractionDelegateProvider
+      _interactionDelegateProvider;
   PdfTextSearcher? _searcher;
   VoidCallback? _searchListener;
-  double _zoom = 1;
-  int _page = 1;
-  Offset? _lastPointerLocalPosition;
+  Timer? _viewerStateDebounce;
+  Offset? _lastPointerGlobalPosition;
+
+  int get _page => _metrics.value.page;
+  double get _zoom => _metrics.value.zoom;
 
   @override
   void initState() {
@@ -198,8 +407,16 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   void _createController() {
     _controller = PdfViewerController();
-    _zoom = widget.tab.zoomScale;
-    _page = widget.tab.currentPage;
+    _interactionDelegateProvider =
+        ReaderCursorAnchoredInteractionDelegateProvider(
+      _trackedPointerAnchor,
+    );
+    _metrics = ValueNotifier<_ReaderViewportMetrics>(
+      _ReaderViewportMetrics(
+        page: widget.tab.currentPage,
+        zoom: widget.tab.zoomScale,
+      ),
+    );
     _controller.addListener(_syncViewerMetrics);
   }
 
@@ -209,8 +426,16 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     if (oldWidget.tab.id != widget.tab.id) {
       _disposeSearcher();
       _controller.removeListener(_syncViewerMetrics);
+      _metrics.dispose();
+      _viewerStateDebounce?.cancel();
+      _lastPointerGlobalPosition = null;
       _createController();
       return;
+    }
+
+    if (!identical(oldWidget.annotations, widget.annotations) &&
+        _controller.isReady) {
+      _controller.invalidate();
     }
 
     if (oldWidget.tab.currentPage != widget.tab.currentPage &&
@@ -230,8 +455,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   @override
   void dispose() {
+    _viewerStateDebounce?.cancel();
     _disposeSearcher();
     _controller.removeListener(_syncViewerMetrics);
+    _metrics.dispose();
     super.dispose();
   }
 
@@ -240,6 +467,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       _searcher?.removeListener(_searchListener!);
     }
     _searcher?.dispose();
+    _searcher = null;
     _searchListener = null;
   }
 
@@ -247,10 +475,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     if (!mounted || !_controller.isReady) {
       return;
     }
-    setState(() {
-      _zoom = _controller.currentZoom;
-      _page = _controller.pageNumber ?? widget.tab.currentPage;
-    });
+    final _ReaderViewportMetrics next = _ReaderViewportMetrics(
+      page: _controller.pageNumber ?? widget.tab.currentPage,
+      zoom: _controller.currentZoom,
+    );
+    if (next.page != _metrics.value.page || next.zoom != _metrics.value.zoom) {
+      _metrics.value = next;
+    }
   }
 
   @override
@@ -259,12 +490,31 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       return Center(
         child: SurfaceBlock(
           padding: const EdgeInsets.all(18),
-          child: Text(
-            widget.tab.missingFileMessage ?? 'This file is missing.',
-            style: const TextStyle(
-              color: WorkspaceColors.textMuted,
-              fontSize: 12,
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Icon(
+                LucideIcons.fileQuestion,
+                color: WorkspaceColors.warning,
+                size: 24,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                widget.tab.missingFileMessage ?? 'This file is missing.',
+                style: const TextStyle(
+                  color: WorkspaceColors.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 14),
+              FilledButton.icon(
+                onPressed: () => ref
+                    .read(workspaceNotifierProvider.notifier)
+                    .locateMissingFile(widget.tab.id),
+                icon: const Icon(LucideIcons.folderSearch, size: 15),
+                label: const Text('Locate file'),
+              ),
+            ],
           ),
         ),
       );
@@ -278,41 +528,97 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
             selectionColor: WorkspaceColors.selection,
           ),
         ),
-        child: Listener(
-          onPointerHover: _rememberPointerPosition,
-          onPointerDown: _rememberPointerPosition,
-          onPointerMove: _rememberPointerPosition,
-          onPointerUp: _rememberPointerPosition,
-          onPointerCancel: _rememberPointerPosition,
-          child: PdfViewer.file(
-            widget.tab.filePath,
-            controller: _controller,
-            initialPageNumber: widget.tab.currentPage,
-            params: PdfViewerParams(
-              backgroundColor: WorkspaceColors.viewerBackground,
-              margin: 14,
-              pageDropShadow: const BoxShadow(
-                color: Color(0x1A000000),
-                blurRadius: 10,
-                offset: Offset(0, 6),
-              ),
-              maxImageBytesCachedOnMemory: 48 * 1024 * 1024,
-              panEnabled: false,
-              scaleEnabled: true,
-              textSelectionParams: const PdfTextSelectionParams(
-                enabled: true,
-              ),
-              interactionDelegateProvider: const PdfViewerScrollInteractionDelegateProviderPhysics(),
-              onPageChanged: _onPageChanged,
-              onViewerReady: _onViewerReady,
-              pagePaintCallbacks: _searcher == null
-                  ? const <PdfViewerPagePaintCallback>[]
-                  : <PdfViewerPagePaintCallback>[
-                      _searcher!.pageTextMatchPaintCallback,
+        child: Stack(
+          children: <Widget>[
+            Positioned.fill(
+              child: Listener(
+                onPointerHover: _rememberPointerPosition,
+                onPointerDown: _rememberPointerPosition,
+                onPointerMove: _rememberPointerPosition,
+                onPointerUp: _rememberPointerPosition,
+                onPointerCancel: _rememberPointerPosition,
+                child: PdfViewer(
+                  widget.documentRef,
+                  controller: _controller,
+                  initialPageNumber: widget.tab.currentPage,
+                  params: PdfViewerParams(
+                    backgroundColor: WorkspaceColors.viewerBackground,
+                    margin: 14,
+                    pageDropShadow: const BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 10,
+                      offset: Offset(0, 6),
+                    ),
+                    limitRenderingCache: true,
+                    maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
+                    horizontalCacheExtent: 0.5,
+                    verticalCacheExtent: 0.75,
+                    panEnabled: true,
+                    scaleEnabled: true,
+                    scaleByPointerScale: readerPointerZoomSensitivity,
+                    textSelectionParams: const PdfTextSelectionParams(
+                      enabled: true,
+                    ),
+                    interactionDelegateProvider:
+                        _interactionDelegateProvider,
+                    onInteractionEnd: (_) => _persistViewerState(),
+                    onPageChanged: _onPageChanged,
+                    onViewerReady: _onViewerReady,
+                    pagePaintCallbacks: <PdfViewerPagePaintCallback>[
+                      _paintAnnotations,
+                      if (_searcher != null)
+                        _searcher!.pageTextMatchPaintCallback,
                     ],
-              viewerOverlayBuilder: _buildViewerOverlay,
+                    viewerOverlayBuilder: _buildViewerOverlay,
+                  ),
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 14,
+              child: IgnorePointer(
+                ignoring: false,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: ValueListenableBuilder<_ReaderViewportMetrics>(
+                    valueListenable: _metrics,
+                    builder: (
+                      BuildContext context,
+                      _ReaderViewportMetrics metrics,
+                      Widget? child,
+                    ) {
+                      return _ViewerHud(
+                        page: metrics.page,
+                        pageCount: widget.tab.pageCountHint,
+                        zoom: metrics.zoom,
+                        onPreviousPage: _controller.isReady && metrics.page > 1
+                            ? () => _controller.goToPage(
+                                  pageNumber: metrics.page - 1,
+                                )
+                            : null,
+                        onNextPage: _controller.isReady &&
+                                (widget.tab.pageCountHint == null ||
+                                    metrics.page < widget.tab.pageCountHint!)
+                            ? () => _controller.goToPage(
+                                  pageNumber: metrics.page + 1,
+                                )
+                            : null,
+                        onZoomOut:
+                            _controller.isReady ? _zoomOutAtPointer : null,
+                        onZoomIn: _controller.isReady ? _zoomInAtPointer : null,
+                        onSelectZoomPreset:
+                            _controller.isReady ? _applyZoomPreset : null,
+                        onHighlightSelection:
+                            _controller.isReady ? _highlightSelection : null,
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -322,21 +628,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     if (page == null) {
       return;
     }
-    _page = page;
-    unawaited(
-      ref
-          .read(workspaceNotifierProvider.notifier)
-          .updateViewerState(
-            tabId: widget.tab.id,
-            currentPage: page,
-            zoomScale: _controller.isReady
-                ? _controller.currentZoom
-                : widget.tab.zoomScale,
-          ),
+    _metrics.value = _ReaderViewportMetrics(
+      page: page,
+      zoom: _controller.isReady ? _controller.currentZoom : _zoom,
     );
-    if (mounted) {
-      setState(() {});
-    }
+    _queueViewerStatePersistence();
   }
 
   Future<void> _onViewerReady(
@@ -368,11 +664,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
           zoomScale: controller.currentZoom,
         );
     if (mounted) {
-      setState(() {
-        _searcher = searcher;
-        _zoom = controller.currentZoom;
-        _page = controller.pageNumber ?? widget.tab.currentPage;
-      });
+      setState(() => _searcher = searcher);
+      _metrics.value = _ReaderViewportMetrics(
+        page: controller.pageNumber ?? widget.tab.currentPage,
+        zoom: controller.currentZoom,
+      );
+    } else {
+      searcher.dispose();
     }
   }
 
@@ -392,56 +690,67 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
         axis: PdfScrollbarAxis.horizontal,
         viewportSize: size,
       ),
-      Positioned(
-        left: 0,
-        right: 0,
-        bottom: 14,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          child: _ViewerHud(
-            page: _page,
-            pageCount: widget.tab.pageCountHint,
-            zoom: _zoom,
-            onPreviousPage: _controller.isReady && _page > 1
-                ? () => _controller.goToPage(pageNumber: _page - 1)
-                : null,
-            onNextPage:
-                _controller.isReady &&
-                    (widget.tab.pageCountHint == null ||
-                        _page < widget.tab.pageCountHint!)
-                ? () => _controller.goToPage(pageNumber: _page + 1)
-                : null,
-            onZoomOut: _controller.isReady ? _zoomOutAtPointer : null,
-            onZoomIn: _controller.isReady ? _zoomInAtPointer : null,
-            onSelectZoomPreset: _controller.isReady ? _applyZoomPreset : null,
-          ),
-        ),
-      ),
     ];
   }
 
+  void _paintAnnotations(Canvas canvas, Rect pageRect, PdfPage page) {
+    for (final DocumentAnnotation annotation in widget.annotations) {
+      if (annotation.pageNumber != page.pageNumber ||
+          annotation.kind != AnnotationKind.highlight) {
+        continue;
+      }
+      final Paint paint = Paint()..color = Color(annotation.colorValue);
+      for (final Rect stored in annotation.pageRects) {
+        final PdfRect bounds = PdfRect(
+          stored.left,
+          stored.bottom,
+          stored.right,
+          stored.top,
+        );
+        final Rect rendered = bounds
+            .toRect(page: page, scaledPageSize: pageRect.size)
+            .translate(pageRect.left, pageRect.top);
+        canvas.drawRect(rendered, paint);
+      }
+    }
+  }
   void _rememberPointerPosition(PointerEvent event) {
-    _lastPointerLocalPosition = event.localPosition;
+    _lastPointerGlobalPosition = event.position;
   }
 
+  Future<void> _highlightSelection() async {
+    final List<PdfPageTextRange> ranges =
+        await _controller.textSelectionDelegate.getSelectedTextRanges();
+    for (final PdfPageTextRange range in ranges) {
+      final PdfRect bounds = range.bounds;
+      await ref.read(workspaceNotifierProvider.notifier).addHighlight(
+            tabId: widget.tab.id,
+            pageNumber: range.pageNumber,
+            pageRect: Rect.fromLTRB(
+              bounds.left,
+              bounds.bottom,
+              bounds.right,
+              bounds.top,
+            ),
+            selectedText: range.text,
+          );
+    }
+    await _controller.textSelectionDelegate.clearTextSelection();
+  }
   Future<void> _zoomInAtPointer() async {
     await _controller.zoomUpOnLocalPosition(
       localPosition: _lastPointerAnchor(),
-      duration: const Duration(milliseconds: 180),
+      duration: Duration.zero,
     );
-    if (mounted) {
-      setState(() => _zoom = _controller.currentZoom);
-    }
+    await _persistViewerState();
   }
 
   Future<void> _zoomOutAtPointer() async {
     await _controller.zoomDownOnLocalPosition(
       localPosition: _lastPointerAnchor(),
-      duration: const Duration(milliseconds: 180),
+      duration: Duration.zero,
     );
-    if (mounted) {
-      setState(() => _zoom = _controller.currentZoom);
-    }
+    await _persistViewerState();
   }
 
   Future<void> _applyZoomPreset(_ZoomPreset preset) async {
@@ -453,13 +762,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       case _ZoomPreset.fitWidth:
         await _controller.goTo(
           _controller.calcMatrixFitWidthForPage(pageNumber: _page),
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 120),
         );
         break;
       case _ZoomPreset.fitPage:
         await _controller.goTo(
           _controller.calcMatrixForFit(pageNumber: _page),
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 120),
         );
         break;
       case _ZoomPreset.percent50:
@@ -482,16 +791,14 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
         break;
     }
 
-    if (mounted) {
-      setState(() => _zoom = _controller.currentZoom);
-    }
+    await _persistViewerState();
   }
 
   Future<void> _zoomOnPointer(double zoom) {
     return _controller.zoomOnLocalPosition(
       localPosition: _lastPointerAnchor(),
       newZoom: _clampZoom(zoom),
-      duration: const Duration(milliseconds: 180),
+      duration: Duration.zero,
     );
   }
 
@@ -499,12 +806,52 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     return zoom.clamp(_controller.minScale, _controller.maxScale).toDouble();
   }
 
-  Offset _lastPointerAnchor() {
-    if (_lastPointerLocalPosition != null) {
-      return _lastPointerLocalPosition!;
+  Offset? _trackedPointerAnchor() {
+    if (!_controller.isReady) {
+      return null;
+    }
+    final Offset? global = _lastPointerGlobalPosition;
+    if (global == null) {
+      return null;
+    }
+    final Offset? local = _controller.globalToLocal(global);
+    if (local == null || !local.dx.isFinite || !local.dy.isFinite) {
+      return null;
     }
     final Size size = _controller.viewSize;
-    return Offset(size.width / 2, size.height / 2);
+    if (local.dx < 0 ||
+        local.dy < 0 ||
+        local.dx > size.width ||
+        local.dy > size.height) {
+      return null;
+    }
+    return local;
+  }
+
+  Offset _lastPointerAnchor() {
+    final Size size = _controller.viewSize;
+    return _trackedPointerAnchor() ?? size.center(Offset.zero);
+  }
+
+  void _queueViewerStatePersistence() {
+    _viewerStateDebounce?.cancel();
+    _viewerStateDebounce = Timer(
+      const Duration(milliseconds: 180),
+      _persistViewerState,
+    );
+  }
+
+  Future<void> _persistViewerState() async {
+    _viewerStateDebounce?.cancel();
+    if (!mounted || !_controller.isReady) {
+      return;
+    }
+    _syncViewerMetrics();
+    await ref.read(workspaceNotifierProvider.notifier).updateViewerState(
+          tabId: widget.tab.id,
+          currentPage: _page,
+          zoomScale: _zoom,
+        );
   }
 
   OutlineNodeState _mapOutline(PdfOutlineNode node) {
@@ -698,6 +1045,7 @@ class _ViewerHud extends StatelessWidget {
     required this.onZoomOut,
     required this.onZoomIn,
     required this.onSelectZoomPreset,
+    required this.onHighlightSelection,
   });
 
   final int page;
@@ -708,6 +1056,7 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onZoomOut;
   final VoidCallback? onZoomIn;
   final ValueChanged<_ZoomPreset>? onSelectZoomPreset;
+  final VoidCallback? onHighlightSelection;
 
   @override
   Widget build(BuildContext context) {
@@ -778,6 +1127,16 @@ class _ViewerHud extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             _HudIcon(icon: LucideIcons.plus, onPressed: onZoomIn),
+            const SizedBox(width: 10),
+            const _HudDivider(),
+            const SizedBox(width: 10),
+            Tooltip(
+              message: 'Highlight selected text',
+              child: _HudIcon(
+                icon: LucideIcons.highlighter,
+                onPressed: onHighlightSelection,
+              ),
+            ),
           ],
         ),
       ),

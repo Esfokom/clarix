@@ -21,7 +21,7 @@ class WorkspaceSidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return SizedBox(
-      width: 248,
+      width: 224,
       child: DecoratedBox(
         decoration: const BoxDecoration(color: WorkspaceColors.panel),
         child: Column(
@@ -103,32 +103,6 @@ class WorkspaceSidebar extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                   ],
-                  const SectionLabel(label: 'Utilities'),
-                  _UtilityTile(
-                    icon: LucideIcons.layers2,
-                    title: 'Merge PDFs',
-                    subtitle: 'Combine multiple documents',
-                    onPressed: () {},
-                  ),
-                  _UtilityTile(
-                    icon: LucideIcons.scissors,
-                    title: 'Split or extract pages',
-                    subtitle: 'Pull page ranges into a new PDF',
-                    onPressed: () {},
-                  ),
-                  _UtilityTile(
-                    icon: LucideIcons.image,
-                    title: 'Convert to images',
-                    subtitle: 'Export pages as PNG or JPEG',
-                    onPressed: () {},
-                  ),
-                  _UtilityTile(
-                    icon: LucideIcons.fileCog,
-                    title: 'Optimize PDF',
-                    subtitle: 'Compress and clean metadata',
-                    onPressed: () {},
-                  ),
-                  const SizedBox(height: 14),
                   const SectionLabel(label: 'Open tabs'),
                   if (state.session.tabs.isEmpty)
                     const SidebarEmpty(message: 'No open PDFs')
@@ -184,69 +158,6 @@ class WorkspaceSidebar extends ConsumerWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _UtilityTile extends StatelessWidget {
-  const _UtilityTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: GestureDetector(
-        onTap: onPressed,
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: WorkspaceColors.panelRaised,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: WorkspaceColors.border),
-          ),
-          child: Row(
-            children: <Widget>[
-              Icon(icon, size: 14, color: WorkspaceColors.textMuted),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: WorkspaceColors.textStrong,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: WorkspaceColors.textFaint,
-                        fontSize: 10.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -404,8 +315,8 @@ class ThumbnailPane extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return PdfDocumentViewBuilder.file(
-      tab.filePath,
+    return PdfDocumentViewBuilder(
+      documentRef: ref.watch(pdfDocumentRefProvider(tab.filePath)),
       builder: (BuildContext context, PdfDocument? document) {
         if (document == null) {
           return const Center(

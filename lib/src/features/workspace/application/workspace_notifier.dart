@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter_gemma/core/model_management/cancel_token.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path/path.dart' as p;
 
 import '../../../core/clarix_logger.dart';
 import '../../../core/local_gemma_model_store.dart';
@@ -13,6 +14,7 @@ import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../domain/workspace_feature_state.dart';
 import '../infrastructure/document_chunk_store.dart';
+import '../infrastructure/document_metadata_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_providers.dart';
 
@@ -27,6 +29,10 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
   DocumentChunkStore get _chunkStore => ref.read(chunkStoreProvider);
+  DocumentIdentityService get _identityService =>
+      ref.read(documentIdentityServiceProvider);
+  Future<DocumentMetadataStore> get _metadataStore =>
+      ref.read(documentMetadataStoreProvider.future);
   AiRuntimeService get _ai => ref.read(aiRuntimeServiceProvider);
 
   @override
@@ -38,6 +44,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         await _sessionStore.readDownloads();
     final WorkspaceSession restoredSession =
         await _rehydrateWorkspace(storedSession);
+    final Map<String, DocumentMetadata> documentMetadata =
+        await _loadDocumentMetadata(restoredSession);
     final List<ModelCatalogItem> catalog =
         _catalogService.buildCatalog(downloads: downloads);
     final AiWorkspaceState restoredAi = await _restoreAiBestEffort(
@@ -51,7 +59,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       downloads: downloads,
       catalog: _catalogService.buildCatalog(downloads: downloads),
       outlines: const <String, List<OutlineNodeState>>{},
-      composerExpanded: true,
+      documentMetadata: documentMetadata,
+      composerExpanded: false,
       showModelCatalog: false,
       bannerMessage: null,
     );
@@ -80,32 +89,58 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final List<DocumentTabState> tabs = List<DocumentTabState>.from(
       current.session.tabs,
     );
-    final List<String> recentFiles = List<String>.from(current.session.recentFiles);
+    final Map<String, DocumentMetadata> metadata =
+        Map<String, DocumentMetadata>.from(current.documentMetadata);
+    final List<String> recentFiles =
+        List<String>.from(current.session.recentFiles);
+    final List<DocumentTabState> tabsToIndex = <DocumentTabState>[];
     String? activeTabId = current.session.activeTabId;
+    final DocumentMetadataStore store = await _metadataStore;
 
     for (final String path in paths) {
-      if (tabs.any((DocumentTabState tab) => tab.filePath == path)) {
-        activeTabId = tabs
-            .firstWhere((DocumentTabState tab) => tab.filePath == path)
-            .id;
+      DocumentIdentity identity;
+      try {
+        identity = await _identityService.identify(path);
+      } on FileSystemException catch (error) {
+        clarixLog.w('Could not open PDF: $path', error: error);
         continue;
       }
 
-      final String fileName = p.basename(path);
+      DocumentTabState? existing;
+      for (final DocumentTabState tab in tabs) {
+        if (tab.documentId == identity.fingerprint ||
+            tab.filePath == identity.path) {
+          existing = tab;
+          break;
+        }
+      }
+      if (existing != null) {
+        activeTabId = existing.id;
+        continue;
+      }
+
+      DocumentMetadata documentMetadata =
+          await store.read(identity.fingerprint) ??
+              DocumentMetadata.empty(identity);
+      if (documentMetadata.identity.path != identity.path) {
+        documentMetadata = documentMetadata.copyWith(identity: identity);
+      }
+      await store.write(documentMetadata);
+      metadata[identity.fingerprint] = documentMetadata;
+
       final DocumentTabState tab = DocumentTabState.create(
         id: '${DateTime.now().microsecondsSinceEpoch}_${tabs.length}',
-        documentId: _documentIdFromPath(path),
-        filePath: path,
-        title: fileName,
+        documentId: identity.fingerprint,
+        filePath: identity.path,
+        title: identity.title,
       );
       tabs.add(tab);
+      tabsToIndex.add(tab);
       activeTabId = tab.id;
 
       recentFiles
-        ..remove(path)
-        ..insert(0, path);
-
-      unawaited(_indexDocument(tab));
+        ..remove(identity.path)
+        ..insert(0, identity.path);
     }
 
     final WorkspaceSession session = current.session.copyWith(
@@ -114,7 +149,13 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       recentFiles: recentFiles.take(12).toList(growable: false),
       lastOpenedAt: DateTime.now().toUtc(),
     );
-    await _commit(current.copyWith(session: session), persistAi: false);
+    await _commit(
+      current.copyWith(session: session, documentMetadata: metadata),
+      persistAi: false,
+    );
+    for (final DocumentTabState tab in tabsToIndex) {
+      unawaited(_indexDocument(tab));
+    }
   }
 
   Future<void> reopenRecent(String path) => openPdfFiles(<String>[path]);
@@ -569,6 +610,274 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     return null;
   }
 
+  Future<void> locateMissingFile(String tabId) async {
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final FilePickerResult? result = await FilePicker.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const <String>['pdf'],
+      allowMultiple: false,
+      dialogTitle: 'Locate ${tab.title}',
+    );
+    final String? selectedPath = result?.files.single.path;
+    if (selectedPath == null) {
+      return;
+    }
+
+    final DocumentIdentity identity =
+        await _identityService.identify(selectedPath);
+    final bool hasStableFingerprint =
+        RegExp(r'^[a-f0-9]{64}$').hasMatch(tab.documentId);
+    if (hasStableFingerprint && identity.fingerprint != tab.documentId) {
+      state = AsyncData(
+        current.copyWith(
+          bannerMessage: 'The selected file does not match ${tab.title}.',
+        ),
+      );
+      return;
+    }
+
+    final DocumentMetadataStore store = await _metadataStore;
+    final DocumentMetadata existing = current.documentMetadata[tab.documentId] ??
+        await store.read(identity.fingerprint) ??
+        DocumentMetadata.empty(identity);
+    final DocumentMetadata updatedMetadata = existing.copyWith(
+      identity: identity,
+    );
+    await store.write(updatedMetadata);
+
+    final List<DocumentTabState> tabs = current.session.tabs
+        .map(
+          (DocumentTabState item) => item.id == tabId
+              ? item.copyWith(
+                  documentId: identity.fingerprint,
+                  filePath: identity.path,
+                  title: identity.title,
+                  clearMissingFileMessage: true,
+                  indexStatus: DocumentIndexStatus.queued,
+                )
+              : item,
+        )
+        .toList(growable: false);
+    final List<String> recentFiles =
+        List<String>.from(current.session.recentFiles)
+          ..remove(identity.path)
+          ..insert(0, identity.path);
+    final Map<String, DocumentMetadata> metadata =
+        Map<String, DocumentMetadata>.from(current.documentMetadata)
+          ..remove(tab.documentId)
+          ..[identity.fingerprint] = updatedMetadata;
+    final WorkspaceSession session = current.session.copyWith(
+      tabs: tabs,
+      recentFiles: recentFiles.take(12).toList(growable: false),
+    );
+    await _commit(
+      current.copyWith(
+        session: session,
+        documentMetadata: metadata,
+        clearBannerMessage: true,
+      ),
+      persistAi: false,
+    );
+    unawaited(
+      _indexDocument(tabs.firstWhere((DocumentTabState item) => item.id == tabId)),
+    );
+  }
+
+  Future<void> toggleBookmark(String tabId, int pageNumber) async {
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) {
+      return;
+    }
+    final List<DocumentBookmark> bookmarks =
+        List<DocumentBookmark>.from(document.bookmarks);
+    final int existing = bookmarks.indexWhere(
+      (DocumentBookmark item) => item.pageNumber == pageNumber,
+    );
+    if (existing >= 0) {
+      bookmarks.removeAt(existing);
+    } else {
+      bookmarks.add(
+        DocumentBookmark(
+          id: 'bookmark_${DateTime.now().microsecondsSinceEpoch}',
+          pageNumber: pageNumber,
+          label: 'Page $pageNumber',
+          createdAt: DateTime.now().toUtc(),
+        ),
+      );
+      bookmarks.sort(
+        (DocumentBookmark a, DocumentBookmark b) =>
+            a.pageNumber.compareTo(b.pageNumber),
+      );
+    }
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(bookmarks: bookmarks),
+    );
+  }
+
+  Future<void> addNote({
+    required String tabId,
+    required int pageNumber,
+    required String note,
+  }) async {
+    final String trimmed = note.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) {
+      return;
+    }
+    final List<DocumentAnnotation> annotations =
+        List<DocumentAnnotation>.from(document.annotations)
+          ..add(
+            DocumentAnnotation(
+              id: 'note_${DateTime.now().microsecondsSinceEpoch}',
+              kind: AnnotationKind.note,
+              pageNumber: pageNumber,
+              pageRects: const <Rect>[],
+              selectedText: '',
+              note: trimmed,
+              colorValue: 0x66FFD54F,
+              createdAt: DateTime.now().toUtc(),
+            ),
+          );
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(annotations: annotations),
+    );
+  }
+
+  Future<void> addHighlight({
+    required String tabId,
+    required int pageNumber,
+    required Rect pageRect,
+    required String selectedText,
+  }) async {
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null || selectedText.trim().isEmpty) {
+      return;
+    }
+    final List<DocumentAnnotation> annotations =
+        List<DocumentAnnotation>.from(document.annotations)
+          ..add(
+            DocumentAnnotation(
+              id: 'highlight_${DateTime.now().microsecondsSinceEpoch}',
+              kind: AnnotationKind.highlight,
+              pageNumber: pageNumber,
+              pageRects: <Rect>[pageRect],
+              selectedText: selectedText,
+              note: null,
+              colorValue: 0x66FFD54F,
+              createdAt: DateTime.now().toUtc(),
+            ),
+          );
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(annotations: annotations),
+    );
+  }
+  Future<void> updateAnnotationNote({
+    required String tabId,
+    required String annotationId,
+    required String note,
+  }) async {
+    final String trimmed = note.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) {
+      return;
+    }
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(
+        annotations: document.annotations
+            .map(
+              (DocumentAnnotation item) => item.id == annotationId
+                  ? item.copyWith(note: trimmed)
+                  : item,
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+  Future<void> removeAnnotation(String tabId, String annotationId) async {
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) {
+      return;
+    }
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(
+        annotations: document.annotations
+            .where((DocumentAnnotation item) => item.id != annotationId)
+            .toList(growable: false),
+      ),
+    );
+  }
+
+  Future<void> _saveDocumentMetadata(
+    WorkspaceFeatureState current,
+    DocumentMetadata document,
+  ) async {
+    await (await _metadataStore).write(document);
+    final Map<String, DocumentMetadata> metadata =
+        Map<String, DocumentMetadata>.from(current.documentMetadata)
+          ..[document.identity.fingerprint] = document;
+    state = AsyncData(current.copyWith(documentMetadata: metadata));
+  }
+
+  Future<Map<String, DocumentMetadata>> _loadDocumentMetadata(
+    WorkspaceSession session,
+  ) async {
+    final DocumentMetadataStore store = await _metadataStore;
+    final Map<String, DocumentMetadata> output = <String, DocumentMetadata>{};
+    for (final DocumentTabState tab in session.tabs) {
+      if (tab.isMissingFile ||
+          !RegExp(r'^[a-f0-9]{64}$').hasMatch(tab.documentId)) {
+        continue;
+      }
+      final DocumentIdentity identity = await _identityService.identify(
+        tab.filePath,
+        pageCount: tab.pageCountHint,
+      );
+      DocumentMetadata document =
+          await store.read(tab.documentId) ?? DocumentMetadata.empty(identity);
+      if (document.identity.path != identity.path ||
+          document.identity.modifiedAt != identity.modifiedAt) {
+        document = document.copyWith(identity: identity);
+        await store.write(document);
+      }
+      output[tab.documentId] = document;
+    }
+    return output;
+  }
+
   Future<WorkspaceSession> _rehydrateWorkspace(WorkspaceSession session) async {
     if (!session.restorePreviousSession) {
       return session.copyWith(
@@ -578,14 +887,37 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     }
 
     final List<DocumentTabState> tabs = <DocumentTabState>[];
+    final Set<String> fingerprints = <String>{};
     for (final DocumentTabState tab in session.tabs) {
       final bool exists = await _pdfExtraction.fileExists(tab.filePath);
+      if (!exists) {
+        tabs.add(
+          tab.copyWith(
+            missingFileMessage: 'File is no longer available on disk.',
+          ),
+        );
+        continue;
+      }
+      DocumentIdentity identity;
+      try {
+        identity = await _identityService.identify(
+          tab.filePath,
+          pageCount: tab.pageCountHint,
+        );
+      } on FileSystemException {
+        tabs.add(tab.copyWith(clearMissingFileMessage: true));
+        continue;
+      }
+      if (!fingerprints.add(identity.fingerprint)) {
+        continue;
+      }
       tabs.add(
-        exists
-            ? tab.copyWith(clearMissingFileMessage: true)
-            : tab.copyWith(
-                missingFileMessage: 'File is no longer available on disk.',
-              ),
+        tab.copyWith(
+          documentId: identity.fingerprint,
+          filePath: identity.path,
+          title: identity.title,
+          clearMissingFileMessage: true,
+        ),
       );
     }
 
@@ -603,20 +935,22 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       clearActiveTabId: activeTabId == null,
     );
   }
-
   Future<void> _indexDocument(DocumentTabState tab) async {
     await _markTabIndexStatus(tab.id, DocumentIndexStatus.indexing);
     try {
       clarixLog.i('Indexing PDF document: ${tab.filePath}');
-      final List<PdfChunkRecord> chunks = await _pdfExtraction.buildChunks(
-        path: tab.filePath,
-        documentId: tab.documentId,
-        title: tab.title,
+      final int chunkCount = await _chunkStore.replaceWithBatches(
+        tab.documentId,
+        _pdfExtraction.buildChunkBatches(
+          path: tab.filePath,
+          documentId: tab.documentId,
+          title: tab.title,
+          batchSize: 32,
+        ),
       );
-      await _chunkStore.saveChunks(tab.documentId, chunks);
       await _markTabIndexStatus(
         tab.id,
-        chunks.isEmpty
+        chunkCount == 0
             ? DocumentIndexStatus.unavailable
             : DocumentIndexStatus.indexed,
       );
@@ -876,13 +1210,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       throw StateError('Workspace state is not ready.');
     }
     return current;
-  }
-
-  String _documentIdFromPath(String path) {
-    return p
-        .basenameWithoutExtension(path)
-        .replaceAll(RegExp(r'[^a-zA-Z0-9]+'), '_')
-        .toLowerCase();
   }
 }
 

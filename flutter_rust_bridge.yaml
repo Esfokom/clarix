@@ -1,0 +1,3 @@
+rust_input: crate::api
+rust_root: rust/clarix_pdf_oxide/
+dart_output: lib/src/core/ffi

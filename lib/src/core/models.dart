@@ -195,6 +195,8 @@ class DocumentTabState {
   bool get isMissingFile => missingFileMessage != null;
 
   DocumentTabState copyWith({
+    String? documentId,
+    String? filePath,
     String? title,
     int? currentPage,
     double? zoomScale,
@@ -211,8 +213,8 @@ class DocumentTabState {
   }) {
     return DocumentTabState(
       id: id,
-      documentId: documentId,
-      filePath: filePath,
+      documentId: documentId ?? this.documentId,
+      filePath: filePath ?? this.filePath,
       title: title ?? this.title,
       currentPage: currentPage ?? this.currentPage,
       zoomScale: zoomScale ?? this.zoomScale,
@@ -631,4 +633,326 @@ class PdfExtractionError {
   const PdfExtractionError(this.message);
 
   final String message;
+}
+
+enum AnnotationKind { highlight, note }
+
+class DocumentIdentity {
+  const DocumentIdentity({
+    required this.fingerprint,
+    required this.path,
+    required this.title,
+    required this.byteLength,
+    required this.modifiedAt,
+    required this.pageCount,
+    required this.isEncrypted,
+  });
+
+  factory DocumentIdentity.fromJson(Map<String, dynamic> json) {
+    return DocumentIdentity(
+      fingerprint: json['fingerprint'] as String,
+      path: json['path'] as String,
+      title: json['title'] as String,
+      byteLength: json['byteLength'] as int,
+      modifiedAt: DateTime.parse(json['modifiedAt'] as String),
+      pageCount: json['pageCount'] as int?,
+      isEncrypted: json['isEncrypted'] as bool? ?? false,
+    );
+  }
+
+  final String fingerprint;
+  final String path;
+  final String title;
+  final int byteLength;
+  final DateTime modifiedAt;
+  final int? pageCount;
+  final bool isEncrypted;
+
+  DocumentIdentity copyWith({
+    String? path,
+    String? title,
+    int? byteLength,
+    DateTime? modifiedAt,
+    int? pageCount,
+    bool? isEncrypted,
+  }) {
+    return DocumentIdentity(
+      fingerprint: fingerprint,
+      path: path ?? this.path,
+      title: title ?? this.title,
+      byteLength: byteLength ?? this.byteLength,
+      modifiedAt: modifiedAt ?? this.modifiedAt,
+      pageCount: pageCount ?? this.pageCount,
+      isEncrypted: isEncrypted ?? this.isEncrypted,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'fingerprint': fingerprint,
+        'path': path,
+        'title': title,
+        'byteLength': byteLength,
+        'modifiedAt': modifiedAt.toIso8601String(),
+        'pageCount': pageCount,
+        'isEncrypted': isEncrypted,
+      };
+}
+
+class DocumentBookmark {
+  const DocumentBookmark({
+    required this.id,
+    required this.pageNumber,
+    required this.label,
+    required this.createdAt,
+  });
+
+  factory DocumentBookmark.fromJson(Map<String, dynamic> json) {
+    return DocumentBookmark(
+      id: json['id'] as String,
+      pageNumber: json['pageNumber'] as int,
+      label: json['label'] as String,
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+  }
+
+  final String id;
+  final int pageNumber;
+  final String label;
+  final DateTime createdAt;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'pageNumber': pageNumber,
+        'label': label,
+        'createdAt': createdAt.toIso8601String(),
+      };
+}
+
+class DocumentAnnotation {
+  const DocumentAnnotation({
+    required this.id,
+    required this.kind,
+    required this.pageNumber,
+    required this.pageRects,
+    required this.selectedText,
+    required this.note,
+    required this.colorValue,
+    required this.createdAt,
+    DateTime? modifiedAt,
+  }) : modifiedAt = modifiedAt ?? createdAt;
+
+  factory DocumentAnnotation.fromJson(Map<String, dynamic> json) {
+    final DateTime createdAt = DateTime.parse(json['createdAt'] as String);
+    return DocumentAnnotation(
+      id: json['id'] as String,
+      kind: AnnotationKind.values.byName(json['kind'] as String),
+      pageNumber: json['pageNumber'] as int,
+      pageRects: (json['pageRects'] as List<dynamic>? ?? const <dynamic>[])
+          .map((dynamic item) {
+        final Map<String, dynamic> rect = item as Map<String, dynamic>;
+        return Rect.fromLTWH(
+          (rect['left'] as num).toDouble(),
+          (rect['top'] as num).toDouble(),
+          (rect['width'] as num).toDouble(),
+          (rect['height'] as num).toDouble(),
+        );
+      }).toList(growable: false),
+      selectedText: json['selectedText'] as String? ?? '',
+      note: json['note'] as String?,
+      colorValue: json['colorValue'] as int? ?? 0x66FFD54F,
+      createdAt: createdAt,
+      modifiedAt:
+          DateTime.tryParse(json['modifiedAt'] as String? ?? '') ?? createdAt,
+    );
+  }
+
+  final String id;
+  final AnnotationKind kind;
+  final int pageNumber;
+  final List<Rect> pageRects;
+  final String selectedText;
+  final String? note;
+  final int colorValue;
+  final DateTime createdAt;
+  final DateTime modifiedAt;
+
+  DocumentAnnotation copyWith({String? note, bool clearNote = false}) {
+    return DocumentAnnotation(
+      id: id,
+      kind: kind,
+      pageNumber: pageNumber,
+      pageRects: pageRects,
+      selectedText: selectedText,
+      note: clearNote ? null : note ?? this.note,
+      colorValue: colorValue,
+      createdAt: createdAt,
+      modifiedAt: DateTime.now().toUtc(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'id': id,
+        'kind': kind.name,
+        'pageNumber': pageNumber,
+        'pageRects': pageRects
+            .map((Rect rect) => <String, double>{
+                  'left': rect.left,
+                  'top': rect.top,
+                  'width': rect.width,
+                  'height': rect.height,
+                })
+            .toList(growable: false),
+        'selectedText': selectedText,
+        'note': note,
+        'colorValue': colorValue,
+        'createdAt': createdAt.toIso8601String(),
+        'modifiedAt': modifiedAt.toIso8601String(),
+      };
+}
+
+class OcrWordData {
+  const OcrWordData({
+    required this.text,
+    required this.confidence,
+    required this.bounds,
+  });
+
+  factory OcrWordData.fromJson(Map<String, dynamic> json) {
+    final Map<String, dynamic> bounds =
+        json['bounds'] as Map<String, dynamic>;
+    return OcrWordData(
+      text: json['text'] as String,
+      confidence: (json['confidence'] as num).toDouble(),
+      bounds: Rect.fromLTRB(
+        (bounds['left'] as num).toDouble(),
+        (bounds['top'] as num).toDouble(),
+        (bounds['right'] as num).toDouble(),
+        (bounds['bottom'] as num).toDouble(),
+      ),
+    );
+  }
+
+  final String text;
+  final double confidence;
+  final Rect bounds;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'text': text,
+        'confidence': confidence,
+        'bounds': <String, double>{
+          'left': bounds.left,
+          'top': bounds.top,
+          'right': bounds.right,
+          'bottom': bounds.bottom,
+        },
+      };
+}
+
+class OcrPageData {
+  const OcrPageData({
+    required this.pageNumber,
+    required this.width,
+    required this.height,
+    required this.modelId,
+    required this.words,
+  });
+
+  factory OcrPageData.fromJson(Map<String, dynamic> json) {
+    return OcrPageData(
+      pageNumber: json['pageNumber'] as int,
+      width: json['width'] as int,
+      height: json['height'] as int,
+      modelId: json['modelId'] as String,
+      words: (json['words'] as List<dynamic>? ?? const <dynamic>[])
+          .map((dynamic item) =>
+              OcrWordData.fromJson(item as Map<String, dynamic>))
+          .toList(growable: false),
+    );
+  }
+
+  final int pageNumber;
+  final int width;
+  final int height;
+  final String modelId;
+  final List<OcrWordData> words;
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'pageNumber': pageNumber,
+        'width': width,
+        'height': height,
+        'modelId': modelId,
+        'words': words
+            .map((OcrWordData word) => word.toJson())
+            .toList(growable: false),
+      };
+}
+class DocumentMetadata {
+  const DocumentMetadata({
+    required this.identity,
+    required this.bookmarks,
+    required this.annotations,
+    this.ocrPages = const <int, OcrPageData>{},
+  });
+
+  factory DocumentMetadata.empty(DocumentIdentity identity) {
+    return DocumentMetadata(
+      identity: identity,
+      bookmarks: const <DocumentBookmark>[],
+      annotations: const <DocumentAnnotation>[],
+    );
+  }
+
+  factory DocumentMetadata.fromJson(Map<String, dynamic> json) {
+    return DocumentMetadata(
+      identity: DocumentIdentity.fromJson(
+        json['identity'] as Map<String, dynamic>,
+      ),
+      bookmarks: (json['bookmarks'] as List<dynamic>? ?? const <dynamic>[])
+          .map((dynamic item) =>
+              DocumentBookmark.fromJson(item as Map<String, dynamic>))
+          .toList(growable: false),
+      annotations: (json['annotations'] as List<dynamic>? ?? const <dynamic>[])
+          .map((dynamic item) =>
+              DocumentAnnotation.fromJson(item as Map<String, dynamic>))
+          .toList(growable: false),
+      ocrPages: <int, OcrPageData>{
+        for (final dynamic item
+            in json['ocrPages'] as List<dynamic>? ?? const <dynamic>[])
+          (item as Map<String, dynamic>)['pageNumber'] as int:
+              OcrPageData.fromJson(item),
+      },
+    );
+  }
+
+  final DocumentIdentity identity;
+  final List<DocumentBookmark> bookmarks;
+  final List<DocumentAnnotation> annotations;
+  final Map<int, OcrPageData> ocrPages;
+
+  DocumentMetadata copyWith({
+    DocumentIdentity? identity,
+    List<DocumentBookmark>? bookmarks,
+    List<DocumentAnnotation>? annotations,
+    Map<int, OcrPageData>? ocrPages,
+  }) {
+    return DocumentMetadata(
+      identity: identity ?? this.identity,
+      bookmarks: bookmarks ?? this.bookmarks,
+      annotations: annotations ?? this.annotations,
+      ocrPages: ocrPages ?? this.ocrPages,
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+        'identity': identity.toJson(),
+        'bookmarks': bookmarks
+            .map((DocumentBookmark item) => item.toJson())
+            .toList(growable: false),
+        'annotations': annotations
+            .map((DocumentAnnotation item) => item.toJson())
+            .toList(growable: false),
+        'ocrPages': ocrPages.values
+            .map((OcrPageData page) => page.toJson())
+            .toList(growable: false),
+      };
 }
