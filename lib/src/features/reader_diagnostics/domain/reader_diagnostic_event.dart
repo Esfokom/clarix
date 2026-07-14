@@ -186,6 +186,7 @@ class ReaderDiagnosticEvent {
     this.panDelta,
     this.before,
     this.after,
+    this.nearBoundary,
     String? note,
   }) : note = sanitizeReaderDiagnosticNote(note);
 
@@ -205,6 +206,7 @@ class ReaderDiagnosticEvent {
   final ReaderDiagnosticPoint? panDelta;
   final ReaderViewerSnapshot? before;
   final ReaderViewerSnapshot? after;
+  final bool? nearBoundary;
   final String? note;
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -224,6 +226,7 @@ class ReaderDiagnosticEvent {
     'panDelta': panDelta?.toJson(),
     'before': before?.toJson(),
     'after': after?.toJson(),
+    'nearBoundary': nearBoundary,
     'note': note,
   };
 }

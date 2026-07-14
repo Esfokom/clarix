@@ -17,3 +17,14 @@ Offset anchoredTranslation({
   final Offset documentPoint = (anchor - oldTranslation) / oldScale;
   return anchor - documentPoint * newScale;
 }
+
+Offset anchoredPanZoomTranslation({
+  required Offset previousAnchor,
+  required Offset currentAnchor,
+  required Offset oldTranslation,
+  required double oldScale,
+  required double newScale,
+}) {
+  final Offset documentPoint = (previousAnchor - oldTranslation) / oldScale;
+  return currentAnchor - documentPoint * newScale;
+}

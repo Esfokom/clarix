@@ -25,6 +25,7 @@ class ReaderDiagnosticsRecorder {
   final ValueNotifier<List<ReaderDiagnosticEvent>> events =
       ValueNotifier<List<ReaderDiagnosticEvent>>(_emptyEvents);
   final ValueNotifier<bool> paused = ValueNotifier<bool>(false);
+  final ValueNotifier<int> evictedEventCount = ValueNotifier<int>(0);
   final int Function() _nowMicros;
   final ReaderDiagnosticLogSink _logSink;
   late final int _originMicros;
@@ -60,6 +61,7 @@ class ReaderDiagnosticsRecorder {
     ReaderDiagnosticPoint? panDelta,
     ReaderViewerSnapshot? before,
     ReaderViewerSnapshot? after,
+    bool? nearBoundary,
     String? note,
   }) {
     if (paused.value) {
@@ -91,28 +93,49 @@ class ReaderDiagnosticsRecorder {
       panDelta: panDelta,
       before: before,
       after: after,
+      nearBoundary: nearBoundary,
       note: note,
     );
     final List<ReaderDiagnosticEvent> next = <ReaderDiagnosticEvent>[
       ...events.value,
       event,
     ];
+    final int overflow = next.length - capacity;
+    if (overflow > 0) {
+      evictedEventCount.value += overflow;
+    }
     events.value = next.length <= capacity
         ? List<ReaderDiagnosticEvent>.unmodifiable(next)
         : List<ReaderDiagnosticEvent>.unmodifiable(
-            next.sublist(next.length - capacity),
+            next.sublist(overflow),
           );
     _logSink(jsonEncode(event.toJson()));
   }
 
-  String exportJson() => jsonEncode(
-    events.value.map((ReaderDiagnosticEvent event) => event.toJson()).toList(),
-  );
+  String exportJson() {
+    final List<ReaderDiagnosticEvent> bufferedEvents = events.value;
+    final int evicted = evictedEventCount.value;
+    return jsonEncode(<String, Object?>{
+      'metadata': <String, Object?>{
+        'capacity': capacity,
+        'eventCount': bufferedEvents.length,
+        'evictedEventCount': evicted,
+        'truncated': evicted > 0,
+      },
+      'events': bufferedEvents
+          .map((ReaderDiagnosticEvent event) => event.toJson())
+          .toList(growable: false),
+    });
+  }
 
-  void clear() => events.value = _emptyEvents;
+  void clear() {
+    events.value = _emptyEvents;
+    evictedEventCount.value = 0;
+  }
 
   void dispose() {
     events.dispose();
     paused.dispose();
+    evictedEventCount.dispose();
   }
 }

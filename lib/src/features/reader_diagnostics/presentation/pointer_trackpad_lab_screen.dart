@@ -4,6 +4,7 @@ import 'package:clarix/src/features/reader_diagnostics/application/reader_diagno
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_math.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostic_crosshair.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostics_event_panel.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -52,11 +53,13 @@ class PointerTrackpadLabScreen extends StatefulWidget {
   const PointerTrackpadLabScreen({
     this.onBack,
     this.recorder,
+    this.copyDiagnosticsText,
     super.key,
   });
 
   final VoidCallback? onBack;
   final ReaderDiagnosticsRecorder? recorder;
+  final DiagnosticsCopyText? copyDiagnosticsText;
 
   @override
   State<PointerTrackpadLabScreen> createState() =>
@@ -70,6 +73,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   final GlobalKey _canvasKey = GlobalKey();
 
   double _lastGestureScale = 1;
+  bool _overlaysHidden = false;
 
   @override
   void initState() {
@@ -108,7 +112,6 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
             onScaleStart: _onScaleStart,
             onScaleUpdate: _onScaleUpdate,
             onScaleEnd: _onScaleEnd,
-            onScaleCancel: _onScaleCancel,
             child: Stack(
               fit: StackFit.expand,
               children: <Widget>[
@@ -152,28 +155,64 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
                             cursor: state.cursor,
                             focal: state.focal,
                           ),
-                          Positioned(
-                            top: 12,
-                            right: 12,
-                            child: _PointerLabReadout(
-                              state: state,
-                              canvasKey: _canvasKey,
+                          if (!_overlaysHidden)
+                            Positioned(
+                              top: 12,
+                              right: 12,
+                              child: _PointerLabReadout(
+                                state: state,
+                                canvasKey: _canvasKey,
+                              ),
                             ),
-                          ),
                         ],
                       );
                     },
                   ),
                 ),
+                if (!_overlaysHidden)
+                  Positioned(
+                    right: 12,
+                    bottom: 12,
+                    child: DiagnosticsEventPanel(
+                      recorder: _recorder,
+                      copyText: widget.copyDiagnosticsText,
+                    ),
+                  ),
+                if (!_overlaysHidden)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: OutlinedButton.icon(
+                      key: const Key('pointer-lab-back'),
+                      onPressed:
+                          widget.onBack ?? () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Back'),
+                    ),
+                  ),
                 Positioned(
                   top: 12,
-                  left: 12,
-                  child: OutlinedButton.icon(
-                    key: const Key('pointer-lab-back'),
-                    onPressed:
-                        widget.onBack ?? () => Navigator.of(context).maybePop(),
-                    icon: const Icon(Icons.arrow_back),
-                    label: const Text('Back'),
+                  left: 0,
+                  right: 0,
+                  child: Center(
+                    child: Material(
+                      color: const Color(0xD9141B24),
+                      shape: const CircleBorder(),
+                      child: IconButton(
+                        key: const Key('pointer-lab-overlays-toggle'),
+                        tooltip: _overlaysHidden
+                            ? 'Show lab overlays'
+                            : 'Hide lab overlays',
+                        onPressed: () => setState(
+                          () => _overlaysHidden = !_overlaysHidden,
+                        ),
+                        icon: Icon(
+                          _overlaysHidden
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -273,11 +312,18 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     final PointerLabState current = _state.value;
     final double oldScale = current.scale;
     final double newScale = (oldScale * scaleRatio).clamp(0.25, 8.0).toDouble();
-    final Offset anchored = anchoredTranslation(
-      anchor: canvasCenteredFocalPoint(
-        localFocalPoint: details.localFocalPoint,
-        canvasSize: _canvasSize(),
-      ),
+    final Size canvasSize = _canvasSize();
+    final Offset currentAnchor = canvasCenteredFocalPoint(
+      localFocalPoint: details.localFocalPoint,
+      canvasSize: canvasSize,
+    );
+    final Offset previousAnchor = canvasCenteredFocalPoint(
+      localFocalPoint: details.localFocalPoint - details.focalPointDelta,
+      canvasSize: canvasSize,
+    );
+    final Offset translation = anchoredPanZoomTranslation(
+      previousAnchor: previousAnchor,
+      currentAnchor: currentAnchor,
       oldTranslation: current.translation,
       oldScale: oldScale,
       newScale: newScale,
@@ -286,7 +332,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     _state.value = current.copyWith(
       focal: details.localFocalPoint,
       scale: newScale,
-      translation: anchored + details.focalPointDelta,
+      translation: translation,
       pan: details.focalPointDelta,
     );
     _recordScaleEvent(
@@ -299,11 +345,6 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
-    _lastGestureScale = 1;
-    _recordScaleEvent(type: ReaderDiagnosticEventType.scaleEnd);
-  }
-
-  void _onScaleCancel() {
     _lastGestureScale = 1;
     _recordScaleEvent(type: ReaderDiagnosticEventType.scaleEnd);
   }

@@ -213,6 +213,30 @@ void main() {
     expect(documentPoint * newScale + next, anchor);
   });
 
+  test('mixed pan and zoom moves one anchor by exactly the focal delta', () {
+    const Offset previousAnchor = Offset(173, 91);
+    const Offset focalDelta = Offset(14, -9);
+    final Offset currentAnchor = previousAnchor + focalDelta;
+    const double oldScale = 1.25;
+    const double newScale = 1.8;
+    const Offset oldTranslation = Offset(22, -14);
+    final Offset documentPoint = (previousAnchor - oldTranslation) / oldScale;
+
+    final Offset next = anchoredPanZoomTranslation(
+      previousAnchor: previousAnchor,
+      currentAnchor: currentAnchor,
+      oldTranslation: oldTranslation,
+      oldScale: oldScale,
+      newScale: newScale,
+    );
+
+    expect(documentPoint * newScale + next, currentAnchor);
+    expect(
+      documentPoint * newScale + next - previousAnchor,
+      focalDelta,
+    );
+  });
+
   test('pointer lab keeps an off-center local focal point fixed while zooming', () {
     const Size canvasSize = Size(800, 600);
     const Offset localFocalPoint = Offset(620, 180);
@@ -237,5 +261,26 @@ void main() {
 
     expect(renderedAfter.dx, closeTo(localFocalPoint.dx, 0.000001));
     expect(renderedAfter.dy, closeTo(localFocalPoint.dy, 0.000001));
+  });
+
+  test('controller snapshots serialize typed boundary state for both values', () {
+    final ReaderDiagnosticEvent near = ReaderDiagnosticEvent(
+      sequence: 1,
+      elapsedMicros: 2,
+      source: ReaderDiagnosticSource.controllerListener,
+      type: ReaderDiagnosticEventType.controllerSnapshot,
+      nearBoundary: true,
+    );
+    final ReaderDiagnosticEvent away = ReaderDiagnosticEvent(
+      sequence: 2,
+      elapsedMicros: 3,
+      source: ReaderDiagnosticSource.controllerListener,
+      type: ReaderDiagnosticEventType.controllerSnapshot,
+      nearBoundary: false,
+    );
+
+    expect(near.toJson()['nearBoundary'], isTrue);
+    expect(away.toJson()['nearBoundary'], isFalse);
+    expect(jsonEncode(near.toJson()), isNot(contains('near_boundary')));
   });
 }

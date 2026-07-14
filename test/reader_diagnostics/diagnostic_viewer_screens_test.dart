@@ -40,6 +40,26 @@ void main() {
     expect(find.byKey(const Key('diagnostics-event-panel')), findsNothing);
   });
 
+  testWidgets('stock viewer can hide chrome without resizing its surface', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(home: StockPdfrxScreen(pickPdf: () async => null)),
+    );
+    final Rect before = tester.getRect(
+      find.byKey(const Key('diagnostic-viewer-surface')),
+    );
+
+    await tester.tap(find.byKey(const Key('diagnostic-chrome-toggle')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('diagnostic-chrome-controls')), findsNothing);
+    expect(
+      tester.getRect(find.byKey(const Key('diagnostic-viewer-surface'))),
+      before,
+    );
+  });
+
   testWidgets('instrumented viewer stays empty when picking is cancelled', (
     WidgetTester tester,
   ) async {
@@ -58,6 +78,32 @@ void main() {
     );
     expect(find.byType(PdfViewer), findsNothing);
   });
+
+  testWidgets(
+    'instrumented viewer can hide chrome without resizing its surface',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: InstrumentedPdfrxScreen(pickPdf: () async => null),
+        ),
+      );
+      final Rect before = tester.getRect(
+        find.byKey(const Key('diagnostic-viewer-surface')),
+      );
+
+      await tester.tap(find.byKey(const Key('diagnostic-chrome-toggle')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('diagnostic-chrome-controls')),
+        findsNothing,
+      );
+      expect(
+        tester.getRect(find.byKey(const Key('diagnostic-viewer-surface'))),
+        before,
+      );
+    },
+  );
 
   testWidgets('event panel pauses clears collapses and copies JSON', (
     WidgetTester tester,
@@ -95,6 +141,30 @@ void main() {
     await tester.tap(find.byKey(const Key('diagnostics-collapse')));
     await tester.pump();
     expect(find.byKey(const Key('diagnostics-event-list')), findsNothing);
+  });
+
+  testWidgets('event panel surfaces the evicted event count', (
+    WidgetTester tester,
+  ) async {
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      capacity: 2,
+      logSink: (_) {},
+    );
+    addTearDown(recorder.dispose);
+    for (int index = 0; index < 3; index++) {
+      recorder.record(
+        source: ReaderDiagnosticSource.pointerListener,
+        type: ReaderDiagnosticEventType.pointerMove,
+      );
+    }
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: DiagnosticsEventPanel(recorder: recorder)),
+      ),
+    );
+
+    expect(find.text('2 buffered · 1 evicted'), findsOneWidget);
   });
 
   testWidgets('cursor and focal crosshairs are independently positioned', (
@@ -160,6 +230,60 @@ void main() {
     expect(find.text('Q3'), findsOneWidget);
     expect(find.text('Q4'), findsOneWidget);
     expect(find.byKey(const Key('pointer-lab-canvas')), findsOneWidget);
+    expect(find.byKey(const Key('diagnostics-event-panel')), findsOneWidget);
+  });
+
+  testWidgets('pointer lab hides overlays without resizing its canvas', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(home: PointerTrackpadLabScreen()),
+    );
+    final Rect before = tester.getRect(
+      find.byKey(const Key('pointer-lab-canvas')),
+    );
+
+    await tester.tap(find.byKey(const Key('pointer-lab-overlays-toggle')));
+    await tester.pump();
+
+    expect(find.byKey(const Key('diagnostics-event-panel')), findsNothing);
+    expect(find.byKey(const Key('pointer-lab-back')), findsNothing);
+    expect(
+      tester.getRect(find.byKey(const Key('pointer-lab-canvas'))),
+      before,
+    );
+  });
+
+  testWidgets('pointer lab panel pauses clears and copies its recorder', (
+    WidgetTester tester,
+  ) async {
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      logSink: (_) {},
+    );
+    addTearDown(recorder.dispose);
+    recorder.record(
+      source: ReaderDiagnosticSource.pointerListener,
+      type: ReaderDiagnosticEventType.scaleStart,
+    );
+    String copied = '';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PointerTrackpadLabScreen(
+          recorder: recorder,
+          copyDiagnosticsText: (String value) async => copied = value,
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('diagnostics-pause')));
+    expect(recorder.paused.value, isTrue);
+
+    await tester.tap(find.byKey(const Key('diagnostics-copy')));
+    expect(copied, contains('scaleStart'));
+
+    await tester.tap(find.byKey(const Key('diagnostics-clear')));
+    expect(recorder.events.value, isEmpty);
   });
 
   testWidgets('hover moves cursor without moving focal marker', (

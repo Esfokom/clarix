@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +23,36 @@ void main() {
       recorder.events.value.map((ReaderDiagnosticEvent event) => event.sequence),
       <int>[3, 4, 5],
     );
+    expect(recorder.evictedEventCount.value, 2);
+  });
+
+  test('export explicitly reports bounded-buffer truncation', () {
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      capacity: 2,
+      logSink: (_) {},
+    );
+    addTearDown(recorder.dispose);
+
+    for (int index = 0; index < 3; index++) {
+      recorder.record(
+        source: ReaderDiagnosticSource.pointerListener,
+        type: ReaderDiagnosticEventType.pointerMove,
+      );
+    }
+
+    final Map<String, Object?> export =
+        jsonDecode(recorder.exportJson()) as Map<String, Object?>;
+    final Map<String, Object?> metadata =
+        export['metadata']! as Map<String, Object?>;
+    final List<Object?> events = export['events']! as List<Object?>;
+
+    expect(metadata, <String, Object?>{
+      'capacity': 2,
+      'eventCount': 2,
+      'evictedEventCount': 1,
+      'truncated': true,
+    });
+    expect(events, hasLength(2));
   });
 
   test('pause blocks records and clear resets the visible buffer', () {
@@ -41,9 +73,17 @@ void main() {
       source: ReaderDiagnosticSource.instrumentedPdfrx,
       type: ReaderDiagnosticEventType.scaleStart,
     );
+    for (int index = 0; index < 500; index++) {
+      recorder.record(
+        source: ReaderDiagnosticSource.pointerListener,
+        type: ReaderDiagnosticEventType.pointerMove,
+      );
+    }
+    expect(recorder.evictedEventCount.value, 1);
     recorder.clear();
 
     expect(recorder.events.value, isEmpty);
+    expect(recorder.evictedEventCount.value, 0);
   });
 
   test('hover is sampled but scale updates are retained', () {

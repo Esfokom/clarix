@@ -107,15 +107,7 @@ class _DiagnosticsEventPanelState extends State<DiagnosticsEventPanel> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: <Widget>[
-          const Expanded(
-            child: Text(
-              'Events',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
+          Expanded(child: _RecorderBufferStatus(recorder: widget.recorder)),
           ValueListenableBuilder<bool>(
             valueListenable: widget.recorder.paused,
             builder: (BuildContext context, bool paused, Widget? child) {
@@ -176,5 +168,55 @@ class _DiagnosticsEventPanelState extends State<DiagnosticsEventPanel> {
         );
       }
     }
+  }
+}
+
+class _RecorderBufferStatus extends StatelessWidget {
+  const _RecorderBufferStatus({required this.recorder});
+
+  final ReaderDiagnosticsRecorder recorder;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'Events',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        ValueListenableBuilder<List<ReaderDiagnosticEvent>>(
+          valueListenable: recorder.events,
+          builder: (
+            BuildContext context,
+            List<ReaderDiagnosticEvent> events,
+            Widget? child,
+          ) {
+            return ValueListenableBuilder<int>(
+              valueListenable: recorder.evictedEventCount,
+              builder: (
+                BuildContext context,
+                int evicted,
+                Widget? child,
+              ) {
+                return Text(
+                  '${events.length} buffered · $evicted evicted',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: evicted > 0 ? Colors.amber : Colors.white70,
+                    fontSize: 10,
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
   }
 }

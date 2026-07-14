@@ -343,6 +343,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
     final ReaderViewerSnapshot? after = _snapshot();
     if (after != null) {
       _syncStatus(after);
+      _lastViewerSnapshot = after;
     }
     _recorder.record(
       source: ReaderDiagnosticSource.instrumentedPdfrx,
@@ -390,9 +391,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
         type: ReaderDiagnosticEventType.controllerSnapshot,
         before: before,
         after: after,
-        note: _isNearBoundary(after)
-            ? readerDiagnosticNearBoundaryNote
-            : null,
+        nearBoundary: _isNearBoundary(after),
       );
       _lastViewerSnapshot = after;
     });
