@@ -26,7 +26,9 @@ class _DiagnosticViewerChromeState extends State<DiagnosticViewerChrome> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Material(
+      color: Colors.black,
+      child: Stack(
       children: <Widget>[
         Positioned.fill(
           child: KeyedSubtree(
@@ -95,6 +97,7 @@ class _DiagnosticViewerChromeState extends State<DiagnosticViewerChrome> {
           ),
         ),
       ],
+      ),
     );
   }
 }

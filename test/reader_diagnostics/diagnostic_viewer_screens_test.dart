@@ -1,5 +1,6 @@
 import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/diagnostic_viewer_chrome.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/instrumented_pdfrx_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/pointer_trackpad_lab_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/stock_pdfrx_screen.dart';
@@ -11,6 +12,55 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 void main() {
+  testWidgets(
+    'viewer chrome supplies Material controls without resizing its viewer',
+    (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: SizedBox.expand(
+            key: const Key('diagnostic-viewer-host'),
+            child: DiagnosticViewerChrome(
+              viewer: const ColoredBox(color: Colors.blue),
+              status: 'Testing viewer chrome',
+              onBack: () {},
+              onOpenPdf: () {},
+            ),
+          ),
+        ),
+      );
+
+      final Finder surface = find.byKey(
+        const Key('diagnostic-viewer-surface'),
+      );
+      final Rect hostRect = tester.getRect(
+        find.byKey(const Key('diagnostic-viewer-host')),
+      );
+
+      expect(tester.getRect(surface), hostRect);
+      expect(
+        find.ancestor(
+          of: find.byKey(const Key('diagnostic-back')),
+          matching: find.byType(Material),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('diagnostic-chrome-toggle')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('diagnostic-chrome-controls')), findsNothing);
+      expect(tester.getRect(surface), hostRect);
+
+      await tester.tap(find.byKey(const Key('diagnostic-chrome-toggle')));
+      await tester.pump();
+
+      expect(
+        find.byKey(const Key('diagnostic-chrome-controls')),
+        findsOneWidget,
+      );
+      expect(tester.getRect(surface), hostRect);
+    },
+  );
   testWidgets('stock viewer stays empty when picking is cancelled', (
     WidgetTester tester,
   ) async {
