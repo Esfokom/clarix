@@ -17,6 +17,55 @@ enum ReaderDiagnosticEventType {
   viewerError,
 }
 
+enum ReaderDiagnosticSource {
+  instrumentedPdfrx,
+  pointerListener,
+  controllerListener,
+  unknown;
+
+  static ReaderDiagnosticSource fromRaw(String value) {
+    switch (value) {
+      case 'instrumented_pdfrx':
+        return ReaderDiagnosticSource.instrumentedPdfrx;
+      case 'pointer_listener':
+        return ReaderDiagnosticSource.pointerListener;
+      case 'controller_listener':
+        return ReaderDiagnosticSource.controllerListener;
+      default:
+        return ReaderDiagnosticSource.unknown;
+    }
+  }
+
+  String get jsonValue {
+    switch (this) {
+      case ReaderDiagnosticSource.instrumentedPdfrx:
+        return 'instrumented_pdfrx';
+      case ReaderDiagnosticSource.pointerListener:
+        return 'pointer_listener';
+      case ReaderDiagnosticSource.controllerListener:
+        return 'controller_listener';
+      case ReaderDiagnosticSource.unknown:
+        return 'unknown';
+    }
+  }
+}
+
+const String readerDiagnosticNearBoundaryNote = 'near_boundary';
+const String _readerDiagnosticScaleUpdateNote = 'scale_update';
+
+String? sanitizeReaderDiagnosticNote(String? value) {
+  switch (value) {
+    case readerDiagnosticNearBoundaryNote:
+    case _readerDiagnosticScaleUpdateNote:
+      return value;
+    default:
+      return null;
+  }
+}
+
+double? _finiteDouble(double? value) =>
+    value != null && value.isFinite ? value : null;
+
 @immutable
 class ReaderDiagnosticPoint {
   const ReaderDiagnosticPoint(this.x, this.y);
@@ -54,21 +103,21 @@ class ReaderViewerSnapshot {
   final int? pageNumber;
 
   Map<String, Object?> toJson() => <String, Object?>{
-    'zoom': zoom,
+    'zoom': _finiteDouble(zoom),
     'translation': translation.toJson(),
-    'viewport': <String, double>{
-      'width': viewportSize.width,
-      'height': viewportSize.height,
+    'viewport': <String, Object?>{
+      'width': _finiteDouble(viewportSize.width),
+      'height': _finiteDouble(viewportSize.height),
     },
-    'document': <String, double>{
-      'width': documentSize.width,
-      'height': documentSize.height,
+    'document': <String, Object?>{
+      'width': _finiteDouble(documentSize.width),
+      'height': _finiteDouble(documentSize.height),
     },
-    'visibleRect': <String, double>{
-      'left': visibleRect.left,
-      'top': visibleRect.top,
-      'right': visibleRect.right,
-      'bottom': visibleRect.bottom,
+    'visibleRect': <String, Object?>{
+      'left': _finiteDouble(visibleRect.left),
+      'top': _finiteDouble(visibleRect.top),
+      'right': _finiteDouble(visibleRect.right),
+      'bottom': _finiteDouble(visibleRect.bottom),
     },
     'pageNumber': pageNumber,
   };
@@ -76,7 +125,7 @@ class ReaderViewerSnapshot {
 
 @immutable
 class ReaderDiagnosticEvent {
-  const ReaderDiagnosticEvent({
+  ReaderDiagnosticEvent({
     required this.sequence,
     required this.elapsedMicros,
     required this.source,
@@ -92,12 +141,12 @@ class ReaderDiagnosticEvent {
     this.pan,
     this.before,
     this.after,
-    this.note,
-  });
+    String? note,
+  }) : note = sanitizeReaderDiagnosticNote(note);
 
   final int sequence;
   final int elapsedMicros;
-  final String source;
+  final ReaderDiagnosticSource source;
   final ReaderDiagnosticEventType type;
   final String? deviceKind;
   final ReaderDiagnosticPoint? global;
@@ -115,7 +164,7 @@ class ReaderDiagnosticEvent {
   Map<String, Object?> toJson() => <String, Object?>{
     'sequence': sequence,
     'elapsedMicros': elapsedMicros,
-    'source': source,
+    'source': source.jsonValue,
     'type': type.name,
     'deviceKind': deviceKind,
     'global': global?.toJson(),
@@ -124,7 +173,7 @@ class ReaderDiagnosticEvent {
     'document': document?.toJson(),
     'cursor': cursor?.toJson(),
     'focal': focal?.toJson(),
-    'scale': scale,
+    'scale': _finiteDouble(scale),
     'pan': pan?.toJson(),
     'before': before?.toJson(),
     'after': after?.toJson(),

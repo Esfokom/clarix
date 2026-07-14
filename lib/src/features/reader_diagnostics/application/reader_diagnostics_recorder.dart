@@ -8,17 +8,22 @@ typedef ReaderDiagnosticLogSink = void Function(String jsonLine);
 
 class ReaderDiagnosticsRecorder {
   ReaderDiagnosticsRecorder({
-    this.capacity = 500,
+    int capacity = maxCapacity,
     int Function()? nowMicros,
     ReaderDiagnosticLogSink? logSink,
-  })  : _nowMicros = nowMicros ?? _stopwatchMicros,
+  })  : capacity = _boundedCapacity(capacity),
+        _nowMicros = nowMicros ?? _stopwatchMicros,
         _logSink = logSink ?? _defaultLogSink {
     _originMicros = _nowMicros();
   }
 
+  static const int maxCapacity = 500;
+  static final List<ReaderDiagnosticEvent> _emptyEvents =
+      List<ReaderDiagnosticEvent>.unmodifiable(<ReaderDiagnosticEvent>[]);
+
   final int capacity;
   final ValueNotifier<List<ReaderDiagnosticEvent>> events =
-      ValueNotifier<List<ReaderDiagnosticEvent>>(<ReaderDiagnosticEvent>[]);
+      ValueNotifier<List<ReaderDiagnosticEvent>>(_emptyEvents);
   final ValueNotifier<bool> paused = ValueNotifier<bool>(false);
   final int Function() _nowMicros;
   final ReaderDiagnosticLogSink _logSink;
@@ -28,13 +33,20 @@ class ReaderDiagnosticsRecorder {
 
   static final Stopwatch _clock = Stopwatch()..start();
 
+  static int _boundedCapacity(int value) {
+    if (value <= 0) {
+      throw ArgumentError.value(value, 'capacity', 'must be positive');
+    }
+    return value > maxCapacity ? maxCapacity : value;
+  }
+
   static int _stopwatchMicros() => _clock.elapsedMicroseconds;
 
   static void _defaultLogSink(String value) =>
       clarixLog.t('reader_diagnostics $value');
 
   void record({
-    required String source,
+    required ReaderDiagnosticSource source,
     required ReaderDiagnosticEventType type,
     String? deviceKind,
     ReaderDiagnosticPoint? global,
@@ -91,10 +103,11 @@ class ReaderDiagnosticsRecorder {
     _logSink(jsonEncode(event.toJson()));
   }
 
-  String exportJson() =>
-      jsonEncode(events.value.map((ReaderDiagnosticEvent event) => event.toJson()).toList());
+  String exportJson() => jsonEncode(
+    events.value.map((ReaderDiagnosticEvent event) => event.toJson()).toList(),
+  );
 
-  void clear() => events.value = <ReaderDiagnosticEvent>[];
+  void clear() => events.value = _emptyEvents;
 
   void dispose() {
     events.dispose();

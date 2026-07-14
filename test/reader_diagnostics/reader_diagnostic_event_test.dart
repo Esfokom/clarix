@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
@@ -10,12 +11,12 @@ void main() {
     final ReaderDiagnosticEvent event = ReaderDiagnosticEvent(
       sequence: 7,
       elapsedMicros: 1200,
-      source: 'instrumented_pdfrx',
+      source: ReaderDiagnosticSource.instrumentedPdfrx,
       type: ReaderDiagnosticEventType.scaleUpdate,
       deviceKind: 'trackpad',
       global: const ReaderDiagnosticPoint(410, 260),
       viewerLocal: const ReaderDiagnosticPoint(390, 220),
-      note: 'scale update',
+      note: 'scale_update',
     );
 
     final Map<String, Object?> json = event.toJson();
@@ -61,6 +62,85 @@ void main() {
       },
       'pageNumber': 3,
     });
+  });
+
+  test('non-finite event and snapshot numbers are JSON-safe', () {
+    const ReaderViewerSnapshot snapshot = ReaderViewerSnapshot(
+      zoom: double.nan,
+      translation: ReaderDiagnosticPoint(double.infinity, 12),
+      viewportSize: Size(double.infinity, 600),
+      documentSize: Size(1200, double.nan),
+      visibleRect: Rect.fromLTRB(10, double.nan, 810, double.infinity),
+      pageNumber: 3,
+    );
+    final ReaderDiagnosticEvent event = ReaderDiagnosticEvent(
+      sequence: 1,
+      elapsedMicros: 2,
+      source: ReaderDiagnosticSource.instrumentedPdfrx,
+      type: ReaderDiagnosticEventType.scaleUpdate,
+      scale: double.nan,
+      before: snapshot,
+    );
+
+    final Map<String, Object?> json = event.toJson();
+    final Map<String, Object?> before = json['before']! as Map<String, Object?>;
+
+    expect(json['scale'], isNull);
+    expect(before['zoom'], isNull);
+    expect(before['translation'], isNull);
+    expect(before['viewport'], <String, Object?>{
+      'width': null,
+      'height': 600,
+    });
+    expect(before['document'], <String, Object?>{
+      'width': 1200,
+      'height': null,
+    });
+    expect(before['visibleRect'], <String, Object?>{
+      'left': 10,
+      'top': null,
+      'right': 810,
+      'bottom': null,
+    });
+    expect(jsonEncode(json), isNotEmpty);
+  });
+
+  test('raw source and note values cannot leak through event JSON', () {
+    const List<String> unsafeValues = <String>[
+      r'C:\private\patient-report.pdf',
+      'Confidential report title',
+      'Extracted document text is private.',
+      'gemma-4-e4b-it',
+    ];
+
+    for (final String unsafeValue in unsafeValues) {
+      final ReaderDiagnosticEvent event = ReaderDiagnosticEvent(
+        sequence: 1,
+        elapsedMicros: 2,
+        source: ReaderDiagnosticSource.fromRaw(unsafeValue),
+        type: ReaderDiagnosticEventType.viewerError,
+        note: unsafeValue,
+      );
+      final Map<String, Object?> json = event.toJson();
+      final String encoded = jsonEncode(json);
+
+      expect(event.source, ReaderDiagnosticSource.unknown);
+      expect(json['source'], 'unknown');
+      expect(json['note'], isNull);
+      expect(encoded, isNot(contains(unsafeValue)));
+    }
+  });
+
+  test('sanitized notes retain the Task 3 near-boundary marker', () {
+    final ReaderDiagnosticEvent event = ReaderDiagnosticEvent(
+      sequence: 1,
+      elapsedMicros: 2,
+      source: ReaderDiagnosticSource.controllerListener,
+      type: ReaderDiagnosticEventType.controllerSnapshot,
+      note: readerDiagnosticNearBoundaryNote,
+    );
+
+    expect(event.toJson()['note'], readerDiagnosticNearBoundaryNote);
   });
 
   test('finite offset and matrix translation report usable coordinates', () {
