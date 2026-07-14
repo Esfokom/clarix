@@ -1,4 +1,8 @@
+import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
+import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/stock_pdfrx_screen.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostic_crosshair.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostics_event_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -31,5 +35,63 @@ void main() {
     expect(find.byKey(const Key('diagnostic-back')), findsOneWidget);
     expect(find.byKey(const Key('stock-open-pdf')), findsOneWidget);
     expect(find.byKey(const Key('diagnostics-event-panel')), findsNothing);
+  });
+
+  testWidgets('event panel pauses clears collapses and copies JSON', (
+    WidgetTester tester,
+  ) async {
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      logSink: (_) {},
+    );
+    addTearDown(recorder.dispose);
+    recorder.record(
+      source: ReaderDiagnosticSource.instrumentedPdfrx,
+      type: ReaderDiagnosticEventType.scaleStart,
+    );
+    String copied = '';
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DiagnosticsEventPanel(
+            recorder: recorder,
+            copyText: (String value) async => copied = value,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('diagnostics-pause')));
+    expect(recorder.paused.value, isTrue);
+
+    await tester.tap(find.byKey(const Key('diagnostics-copy')));
+    expect(copied, contains('scaleStart'));
+
+    await tester.tap(find.byKey(const Key('diagnostics-clear')));
+    expect(recorder.events.value, isEmpty);
+
+    await tester.tap(find.byKey(const Key('diagnostics-collapse')));
+    await tester.pump();
+    expect(find.byKey(const Key('diagnostics-event-list')), findsNothing);
+  });
+
+  testWidgets('cursor and focal crosshairs are independently positioned', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: SizedBox(
+          width: 400,
+          height: 300,
+          child: DiagnosticCrosshairOverlay(
+            cursor: Offset(70, 80),
+            focal: Offset(250, 190),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('cursor-crosshair')), findsOneWidget);
+    expect(find.byKey(const Key('focal-crosshair')), findsOneWidget);
   });
 }
