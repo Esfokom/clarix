@@ -130,6 +130,30 @@ void main() {
     );
   });
 
+  test('recorder export and logger exclude raw device kinds', () {
+    final List<String> logged = <String>[];
+    final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(
+      logSink: logged.add,
+    );
+    addTearDown(recorder.dispose);
+    const String unsafeValue = r'C:\private\patient-report.pdf';
+
+    recorder.record(
+      source: ReaderDiagnosticSource.instrumentedPdfrx,
+      type: ReaderDiagnosticEventType.pointerMove,
+      deviceKind: ReaderDiagnosticDeviceKind.fromRaw(unsafeValue),
+    );
+
+    expect(
+      recorder.events.value.single.deviceKind,
+      ReaderDiagnosticDeviceKind.unknown,
+    );
+    expect(recorder.exportJson(), isNot(contains(unsafeValue)));
+    expect(recorder.exportJson(), contains('"deviceKind":"unknown"'));
+    expect(logged.single, isNot(contains(unsafeValue)));
+    expect(logged.single, contains('"deviceKind":"unknown"'));
+  });
+
   test('recorder logger excludes raw source and note values', () {
     final List<String> logged = <String>[];
     final ReaderDiagnosticsRecorder recorder = ReaderDiagnosticsRecorder(

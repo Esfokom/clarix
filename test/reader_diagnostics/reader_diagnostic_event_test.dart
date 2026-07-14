@@ -13,7 +13,7 @@ void main() {
       elapsedMicros: 1200,
       source: ReaderDiagnosticSource.instrumentedPdfrx,
       type: ReaderDiagnosticEventType.scaleUpdate,
-      deviceKind: 'trackpad',
+      deviceKind: ReaderDiagnosticDeviceKind.trackpad,
       global: const ReaderDiagnosticPoint(410, 260),
       viewerLocal: const ReaderDiagnosticPoint(390, 220),
       note: 'scale_update',
@@ -22,6 +22,7 @@ void main() {
     final Map<String, Object?> json = event.toJson();
 
     expect(json['sequence'], 7);
+    expect(json['deviceKind'], 'trackpad');
     expect(json['global'], <String, double>{'x': 410, 'y': 260});
     expect(json.keys, isNot(contains('path')));
     expect(json.keys, isNot(contains('title')));
@@ -141,6 +142,41 @@ void main() {
     );
 
     expect(event.toJson()['note'], readerDiagnosticNearBoundaryNote);
+  });
+
+  test('device kinds use allowlisted JSON values', () {
+    expect(ReaderDiagnosticDeviceKind.mouse.jsonValue, 'mouse');
+    expect(ReaderDiagnosticDeviceKind.touch.jsonValue, 'touch');
+    expect(ReaderDiagnosticDeviceKind.stylus.jsonValue, 'stylus');
+    expect(
+      ReaderDiagnosticDeviceKind.invertedStylus.jsonValue,
+      'invertedStylus',
+    );
+    expect(ReaderDiagnosticDeviceKind.trackpad.jsonValue, 'trackpad');
+  });
+
+  test('raw device kinds cannot leak through event JSON', () {
+    const List<String> unsafeValues = <String>[
+      r'C:\private\patient-report.pdf',
+      'Confidential document title',
+      'Extracted document text is private.',
+      'gemma-4-e4b-it',
+    ];
+
+    for (final String unsafeValue in unsafeValues) {
+      final ReaderDiagnosticEvent event = ReaderDiagnosticEvent(
+        sequence: 1,
+        elapsedMicros: 2,
+        source: ReaderDiagnosticSource.instrumentedPdfrx,
+        type: ReaderDiagnosticEventType.pointerMove,
+        deviceKind: ReaderDiagnosticDeviceKind.fromRaw(unsafeValue),
+      );
+      final String encoded = jsonEncode(event.toJson());
+
+      expect(event.deviceKind, ReaderDiagnosticDeviceKind.unknown);
+      expect(event.toJson()['deviceKind'], 'unknown');
+      expect(encoded, isNot(contains(unsafeValue)));
+    }
   });
 
   test('finite offset and matrix translation report usable coordinates', () {

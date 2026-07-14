@@ -80,3 +80,21 @@ No Flutter or Dart command was run. The user should run:
 ```text
 flutter test test/reader_diagnostics/reader_diagnostic_event_test.dart test/reader_diagnostics/reader_diagnostics_recorder_test.dart
 ```
+
+## Final device-kind privacy fix
+
+- Replaced the raw `String? deviceKind` event and recorder API with
+  `ReaderDiagnosticDeviceKind`. The allowlist contains `unknown`, `mouse`,
+  `touch`, `stylus`, `invertedStylus`, and `trackpad`; `fromRaw` maps every
+  unrecognized value to `unknown` before event construction.
+- Event JSON, recorder export JSON, and logger output now serialize only the
+  enum's fixed JSON values. Focused tests cover path-like, document-text-like,
+  and model-like raw inputs plus normal device-kind serialization.
+
+### Final verification pending
+
+No Flutter or Dart command was run. The user should run:
+
+```text
+flutter test test/reader_diagnostics/reader_diagnostic_event_test.dart test/reader_diagnostics/reader_diagnostics_recorder_test.dart
+```

@@ -48,7 +48,7 @@ class ReaderDiagnosticsRecorder {
   void record({
     required ReaderDiagnosticSource source,
     required ReaderDiagnosticEventType type,
-    String? deviceKind,
+    ReaderDiagnosticDeviceKind? deviceKind,
     ReaderDiagnosticPoint? global,
     ReaderDiagnosticPoint? listenerLocal,
     ReaderDiagnosticPoint? viewerLocal,

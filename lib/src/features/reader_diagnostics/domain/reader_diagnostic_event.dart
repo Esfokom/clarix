@@ -50,6 +50,50 @@ enum ReaderDiagnosticSource {
   }
 }
 
+enum ReaderDiagnosticDeviceKind {
+  unknown,
+  mouse,
+  touch,
+  stylus,
+  invertedStylus,
+  trackpad;
+
+  static ReaderDiagnosticDeviceKind fromRaw(String value) {
+    switch (value) {
+      case 'mouse':
+        return ReaderDiagnosticDeviceKind.mouse;
+      case 'touch':
+        return ReaderDiagnosticDeviceKind.touch;
+      case 'stylus':
+        return ReaderDiagnosticDeviceKind.stylus;
+      case 'invertedStylus':
+      case 'inverted_stylus':
+        return ReaderDiagnosticDeviceKind.invertedStylus;
+      case 'trackpad':
+        return ReaderDiagnosticDeviceKind.trackpad;
+      default:
+        return ReaderDiagnosticDeviceKind.unknown;
+    }
+  }
+
+  String get jsonValue {
+    switch (this) {
+      case ReaderDiagnosticDeviceKind.unknown:
+        return 'unknown';
+      case ReaderDiagnosticDeviceKind.mouse:
+        return 'mouse';
+      case ReaderDiagnosticDeviceKind.touch:
+        return 'touch';
+      case ReaderDiagnosticDeviceKind.stylus:
+        return 'stylus';
+      case ReaderDiagnosticDeviceKind.invertedStylus:
+        return 'invertedStylus';
+      case ReaderDiagnosticDeviceKind.trackpad:
+        return 'trackpad';
+    }
+  }
+}
+
 const String readerDiagnosticNearBoundaryNote = 'near_boundary';
 const String _readerDiagnosticScaleUpdateNote = 'scale_update';
 
@@ -148,7 +192,7 @@ class ReaderDiagnosticEvent {
   final int elapsedMicros;
   final ReaderDiagnosticSource source;
   final ReaderDiagnosticEventType type;
-  final String? deviceKind;
+  final ReaderDiagnosticDeviceKind? deviceKind;
   final ReaderDiagnosticPoint? global;
   final ReaderDiagnosticPoint? listenerLocal;
   final ReaderDiagnosticPoint? viewerLocal;
@@ -166,7 +210,7 @@ class ReaderDiagnosticEvent {
     'elapsedMicros': elapsedMicros,
     'source': source.jsonValue,
     'type': type.name,
-    'deviceKind': deviceKind,
+    'deviceKind': deviceKind?.jsonValue,
     'global': global?.toJson(),
     'listenerLocal': listenerLocal?.toJson(),
     'viewerLocal': viewerLocal?.toJson(),
