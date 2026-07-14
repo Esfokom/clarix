@@ -183,4 +183,23 @@ void main() {
     expect(cursor.left, isNot(focal.left));
     await gesture.removePointer();
   });
+
+  test('pointer lab state keeps trackpad device kind for pan-zoom records', () {
+    const PointerLabState original = PointerLabState(
+      cursor: Offset(64, 96),
+      focal: Offset(240, 180),
+    );
+
+    final PointerLabState updated = original.withDeviceKind(
+      PointerDeviceKind.trackpad,
+    );
+
+    expect(updated.deviceKind, 'trackpad');
+    expect(updated.cursor, original.cursor);
+    expect(updated.focal, original.focal);
+    expect(
+      ReaderDiagnosticDeviceKind.fromRaw(updated.deviceKind),
+      ReaderDiagnosticDeviceKind.trackpad,
+    );
+  });
 }

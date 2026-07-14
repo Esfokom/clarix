@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_math.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/pointer_trackpad_lab_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart';
 
@@ -210,5 +211,31 @@ void main() {
     );
 
     expect(documentPoint * newScale + next, anchor);
+  });
+
+  test('pointer lab keeps an off-center local focal point fixed while zooming', () {
+    const Size canvasSize = Size(800, 600);
+    const Offset localFocalPoint = Offset(620, 180);
+    const Offset oldTranslation = Offset(24, -36);
+    const double oldScale = 1.25;
+    const double newScale = 2.5;
+    final Offset anchor = canvasCenteredFocalPoint(
+      localFocalPoint: localFocalPoint,
+      canvasSize: canvasSize,
+    );
+    final Offset worldPoint = (anchor - oldTranslation) / oldScale;
+    final Offset nextTranslation = anchoredTranslation(
+      anchor: anchor,
+      oldTranslation: oldTranslation,
+      oldScale: oldScale,
+      newScale: newScale,
+    );
+    final Offset renderedAfter =
+        canvasSize.center(Offset.zero) +
+        nextTranslation +
+        worldPoint * newScale;
+
+    expect(renderedAfter.dx, closeTo(localFocalPoint.dx, 0.000001));
+    expect(renderedAfter.dy, closeTo(localFocalPoint.dy, 0.000001));
   });
 }

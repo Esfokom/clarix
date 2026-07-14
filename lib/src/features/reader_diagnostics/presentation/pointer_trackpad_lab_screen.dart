@@ -43,6 +43,9 @@ class PointerLabState {
       deviceKind: deviceKind ?? this.deviceKind,
     );
   }
+
+  PointerLabState withDeviceKind(PointerDeviceKind value) =>
+      copyWith(deviceKind: value.name);
 }
 
 class PointerTrackpadLabScreen extends StatefulWidget {
@@ -182,7 +185,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   }
 
   void _onPointerHover(PointerHoverEvent event) {
-    _setCursor(event.localPosition, event.kind);
+    _setCursor(event.localPosition);
     _recordPointerEvent(
       type: ReaderDiagnosticEventType.pointerHover,
       event: event,
@@ -190,7 +193,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   }
 
   void _onPointerMove(PointerMoveEvent event) {
-    _setCursor(event.localPosition, event.kind);
+    _setCursor(event.localPosition);
     _recordPointerEvent(
       type: ReaderDiagnosticEventType.pointerMove,
       event: event,
@@ -228,12 +231,22 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     );
   }
 
-  void _setCursor(Offset cursor, PointerDeviceKind deviceKind) {
+  void _setCursor(Offset cursor) {
+    _state.value = _state.value.copyWith(cursor: cursor);
+  }
+
+  void _setDeviceKind(PointerDeviceKind deviceKind) {
     final PointerLabState current = _state.value;
-    _state.value = current.copyWith(
-      cursor: cursor,
-      deviceKind: deviceKind.name,
-    );
+    if (current.deviceKind == deviceKind.name) {
+      return;
+    }
+    _state.value = current.withDeviceKind(deviceKind);
+  }
+
+  Size _canvasSize() {
+    final RenderObject? renderObject = _canvasKey.currentContext
+        ?.findRenderObject();
+    return renderObject is RenderBox ? renderObject.size : Size.zero;
   }
 
   void _onScaleStart(ScaleStartDetails details) {
@@ -261,7 +274,10 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     final double oldScale = current.scale;
     final double newScale = (oldScale * scaleRatio).clamp(0.25, 8.0).toDouble();
     final Offset anchored = anchoredTranslation(
-      anchor: details.localFocalPoint,
+      anchor: canvasCenteredFocalPoint(
+        localFocalPoint: details.localFocalPoint,
+        canvasSize: _canvasSize(),
+      ),
       oldTranslation: current.translation,
       oldScale: oldScale,
       newScale: newScale,
@@ -299,6 +315,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     Offset? pan,
     Offset? panDelta,
   }) {
+    _setDeviceKind(event.kind);
     final PointerLabState state = _state.value;
     _recorder.record(
       source: ReaderDiagnosticSource.pointerListener,
@@ -336,6 +353,12 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     );
   }
 }
+
+Offset canvasCenteredFocalPoint({
+  required Offset localFocalPoint,
+  required Size canvasSize,
+}) =>
+    localFocalPoint - canvasSize.center(Offset.zero);
 
 ReaderDiagnosticPoint? _pointOrNull(Offset? value) =>
     value == null ? null : ReaderDiagnosticPoint.fromOffset(value);
