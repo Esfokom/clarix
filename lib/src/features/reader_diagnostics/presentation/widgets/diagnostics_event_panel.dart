@@ -79,9 +79,7 @@ class _DiagnosticsEventPanelState extends State<DiagnosticsEventPanel> {
                       itemBuilder: (BuildContext context, int index) {
                         final ReaderDiagnosticEvent event = newest[index];
                         return Padding(
-                          key: Key(
-                            'diagnostics-event-' + event.sequence.toString(),
-                          ),
+                          key: Key('diagnostics-event-${event.sequence}'),
                           padding: const EdgeInsets.only(bottom: 12),
                           child: SelectableText(
                             jsonEncode(event.toJson()),
