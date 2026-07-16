@@ -12,7 +12,14 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+
+void _useEmptyAsyncPreferences() {
+  SharedPreferencesAsyncPlatform.instance =
+      InMemorySharedPreferencesAsync.empty();
+  addTearDown(() => SharedPreferencesAsyncPlatform.instance = null);
+}
 
 void main() {
   test('workspace session round-trips through json', () {
@@ -217,7 +224,7 @@ void main() {
   test(
     'workspace startup continues when remembered inference model is inactive',
     () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
+      _useEmptyAsyncPreferences();
       final ProviderContainer container = ProviderContainer(
         overrides: <Override>[
           aiRuntimeServiceProvider.overrideWithValue(
@@ -263,7 +270,7 @@ void main() {
   test(
     'workspace restore marks active embedder available without loading it',
     () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
+      _useEmptyAsyncPreferences();
       final _EmbeddingRestoreAiRuntimeService aiRuntime =
           _EmbeddingRestoreAiRuntimeService();
       final ProviderContainer container = ProviderContainer(
