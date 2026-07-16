@@ -9,30 +9,55 @@ const double readerPointerZoomSensitivity = 0.65;
 
 typedef ReaderZoomAnchorProvider = Offset? Function();
 
+Offset trackpadFocalGlobalPosition({
+  required Offset gestureOriginGlobal,
+  required Offset cumulativePan,
+}) => gestureOriginGlobal + cumulativePan;
+
 Offset resolveReaderZoomFocalPoint({
   required Offset? trackedCursorLocal,
   required Offset reportedTrackpadFocalPoint,
   required Size viewportSize,
 }) {
+  final bool reportedIsValid = _isInsideViewport(
+    reportedTrackpadFocalPoint,
+    viewportSize,
+  );
+  if (reportedIsValid &&
+      !_isNearViewportCorner(reportedTrackpadFocalPoint, viewportSize)) {
+    return reportedTrackpadFocalPoint;
+  }
+
   final Offset? tracked = trackedCursorLocal;
-  if (tracked != null &&
-      tracked.dx.isFinite &&
-      tracked.dy.isFinite &&
-      tracked.dx >= 0 &&
-      tracked.dy >= 0 &&
-      tracked.dx <= viewportSize.width &&
-      tracked.dy <= viewportSize.height) {
+  if (tracked != null && _isInsideViewport(tracked, viewportSize)) {
     return tracked;
   }
-  if (reportedTrackpadFocalPoint.dx.isFinite &&
-      reportedTrackpadFocalPoint.dy.isFinite) {
+  if (reportedIsValid) {
     return reportedTrackpadFocalPoint;
   }
   return viewportSize.center(Offset.zero);
 }
 
-/// Uses the actual cursor tracked by the reader instead of trusting Windows'
-/// trackpad focal point, which can be quantized to viewport corners.
+bool _isInsideViewport(Offset point, Size viewportSize) {
+  return point.dx.isFinite &&
+      point.dy.isFinite &&
+      point.dx >= 0 &&
+      point.dy >= 0 &&
+      point.dx <= viewportSize.width &&
+      point.dy <= viewportSize.height;
+}
+
+bool _isNearViewportCorner(Offset point, Size viewportSize) {
+  const double tolerance = 1;
+  final bool nearHorizontalEdge =
+      point.dx <= tolerance || point.dx >= viewportSize.width - tolerance;
+  final bool nearVerticalEdge =
+      point.dy <= tolerance || point.dy >= viewportSize.height - tolerance;
+  return nearHorizontalEdge && nearVerticalEdge;
+}
+
+/// Uses pdfrx's current moving focal point while retaining the tracked cursor
+/// as a fallback for invalid or historically corner-quantized input.
 class ReaderCursorAnchoredInteractionDelegateProvider
     extends PdfViewerScrollInteractionDelegateProvider {
   ReaderCursorAnchoredInteractionDelegateProvider(this.anchorProvider);

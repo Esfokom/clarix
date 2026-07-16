@@ -537,6 +537,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                 onPointerMove: _rememberPointerPosition,
                 onPointerUp: _rememberPointerPosition,
                 onPointerCancel: _rememberPointerPosition,
+                onPointerPanZoomStart: _rememberTrackpadZoomStart,
+                onPointerPanZoomUpdate: _rememberTrackpadZoomUpdate,
                 child: PdfViewer(
                   widget.documentRef,
                   controller: _controller,
@@ -716,6 +718,17 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   }
   void _rememberPointerPosition(PointerEvent event) {
     _lastPointerGlobalPosition = event.position;
+  }
+
+  void _rememberTrackpadZoomStart(PointerPanZoomStartEvent event) {
+    _lastPointerGlobalPosition = event.position;
+  }
+
+  void _rememberTrackpadZoomUpdate(PointerPanZoomUpdateEvent event) {
+    _lastPointerGlobalPosition = trackpadFocalGlobalPosition(
+      gestureOriginGlobal: event.position,
+      cumulativePan: event.pan,
+    );
   }
 
   Future<void> _highlightSelection() async {
