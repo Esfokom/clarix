@@ -164,11 +164,14 @@ class _DestinationCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
                       eyebrow,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFF8FD3FF),
                         fontSize: 11,
@@ -179,6 +182,8 @@ class _DestinationCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -188,6 +193,8 @@ class _DestinationCard extends StatelessWidget {
                     const SizedBox(height: 6),
                     Text(
                       description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Color(0xFFBBC7D4),
                         height: 1.35,
