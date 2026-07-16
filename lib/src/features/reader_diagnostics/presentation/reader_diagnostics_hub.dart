@@ -52,7 +52,7 @@ class ReaderDiagnosticsHub extends StatelessWidget {
                           crossAxisCount: twoColumns ? 2 : 1,
                           crossAxisSpacing: 16,
                           mainAxisSpacing: 16,
-                          childAspectRatio: twoColumns ? 2.35 : 2.8,
+                          mainAxisExtent: 224,
                           children: <Widget>[
                             _DestinationCard(
                               key: const Key('open-stock-pdfrx'),

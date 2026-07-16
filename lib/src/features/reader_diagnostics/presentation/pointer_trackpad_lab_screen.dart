@@ -11,7 +11,9 @@ import 'package:flutter/material.dart';
 class PointerLabState {
   const PointerLabState({
     this.cursor,
+    this.cursorGlobal,
     this.focal,
+    this.focalGlobal,
     this.scale = 1,
     this.translation = Offset.zero,
     this.pan = Offset.zero,
@@ -19,7 +21,9 @@ class PointerLabState {
   });
 
   final Offset? cursor;
+  final Offset? cursorGlobal;
   final Offset? focal;
+  final Offset? focalGlobal;
   final double scale;
   final Offset translation;
   final Offset pan;
@@ -27,7 +31,9 @@ class PointerLabState {
 
   PointerLabState copyWith({
     Offset? cursor,
+    Offset? cursorGlobal,
     Offset? focal,
+    Offset? focalGlobal,
     double? scale,
     Offset? translation,
     Offset? pan,
@@ -35,7 +41,9 @@ class PointerLabState {
   }) {
     return PointerLabState(
       cursor: cursor ?? this.cursor,
+      cursorGlobal: cursorGlobal ?? this.cursorGlobal,
       focal: focal ?? this.focal,
+      focalGlobal: focalGlobal ?? this.focalGlobal,
       scale: scale ?? this.scale,
       translation: translation ?? this.translation,
       pan: pan ?? this.pan,
@@ -157,10 +165,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
                             Positioned(
                               top: 12,
                               right: 12,
-                              child: _PointerLabReadout(
-                                state: state,
-                                canvasKey: _canvasKey,
-                              ),
+                              child: _PointerLabReadout(state: state),
                             ),
                         ],
                       );
@@ -222,7 +227,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   }
 
   void _onPointerHover(PointerHoverEvent event) {
-    _setCursor(event.localPosition);
+    _setCursor(event.localPosition, event.position);
     _recordPointerEvent(
       type: ReaderDiagnosticEventType.pointerHover,
       event: event,
@@ -230,7 +235,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   }
 
   void _onPointerMove(PointerMoveEvent event) {
-    _setCursor(event.localPosition);
+    _setCursor(event.localPosition, event.position);
     _recordPointerEvent(
       type: ReaderDiagnosticEventType.pointerMove,
       event: event,
@@ -268,8 +273,11 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     );
   }
 
-  void _setCursor(Offset cursor) {
-    _state.value = _state.value.copyWith(cursor: cursor);
+  void _setCursor(Offset cursor, Offset cursorGlobal) {
+    _state.value = _state.value.copyWith(
+      cursor: cursor,
+      cursorGlobal: cursorGlobal,
+    );
   }
 
   void _setDeviceKind(PointerDeviceKind deviceKind) {
@@ -289,7 +297,10 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   void _onScaleStart(ScaleStartDetails details) {
     _lastGestureScale = 1;
     final PointerLabState current = _state.value;
-    _state.value = current.copyWith(focal: details.localFocalPoint);
+    _state.value = current.copyWith(
+      focal: details.localFocalPoint,
+      focalGlobal: details.focalPoint,
+    );
     _recordScaleEvent(
       type: ReaderDiagnosticEventType.scaleStart,
       globalPosition: details.focalPoint,
@@ -329,6 +340,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     _lastGestureScale = cumulativeScale;
     _state.value = current.copyWith(
       focal: details.localFocalPoint,
+      focalGlobal: details.focalPoint,
       scale: newScale,
       translation: translation,
       pan: details.focalPointDelta,
@@ -449,22 +461,12 @@ class _QuadrantLabel extends StatelessWidget {
 }
 
 class _PointerLabReadout extends StatelessWidget {
-  const _PointerLabReadout({
-    required this.state,
-    required this.canvasKey,
-  });
+  const _PointerLabReadout({required this.state});
 
   final PointerLabState state;
-  final GlobalKey canvasKey;
 
   @override
   Widget build(BuildContext context) {
-    final RenderObject? renderObject = canvasKey.currentContext
-        ?.findRenderObject();
-    final RenderBox? canvas = renderObject is RenderBox ? renderObject : null;
-    final Offset? cursorGlobal = _globalPosition(canvas, state.cursor);
-    final Offset? focalGlobal = _globalPosition(canvas, state.focal);
-
     return Material(
       color: const Color(0xE6141B24),
       borderRadius: BorderRadius.circular(8),
@@ -488,9 +490,9 @@ class _PointerLabReadout extends StatelessWidget {
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Text('cursor local: ${_formatOffset(state.cursor)}'),
-                Text('cursor global: ${_formatOffset(cursorGlobal)}'),
+                Text('cursor global: ${_formatOffset(state.cursorGlobal)}'),
                 Text('focal local:  ${_formatOffset(state.focal)}'),
-                Text('focal global: ${_formatOffset(focalGlobal)}'),
+                Text('focal global: ${_formatOffset(state.focalGlobal)}'),
                 Text('scale: ${state.scale.toStringAsFixed(4)}'),
                 Text('translation: ${_formatOffset(state.translation)}'),
                 Text('pan: ${_formatOffset(state.pan)}'),
@@ -502,9 +504,6 @@ class _PointerLabReadout extends StatelessWidget {
       ),
     );
   }
-
-  Offset? _globalPosition(RenderBox? box, Offset? local) =>
-      box == null || local == null ? null : box.localToGlobal(local);
 
   String _formatOffset(Offset? value) {
     if (value == null) {
