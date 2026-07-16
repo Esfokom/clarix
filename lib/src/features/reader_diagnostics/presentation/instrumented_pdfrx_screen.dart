@@ -1,5 +1,3 @@
-import 'dart:ui' show Offset, PointerDeviceKind;
-
 import 'package:clarix/src/features/reader_diagnostics/application/diagnostic_pdf_picker.dart';
 import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';

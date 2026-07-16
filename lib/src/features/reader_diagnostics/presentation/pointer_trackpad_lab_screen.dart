@@ -1,5 +1,3 @@
-import 'dart:ui' show Offset, PointerDeviceKind;
-
 import 'package:clarix/src/features/reader_diagnostics/application/reader_diagnostics_recorder.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_event.dart';
 import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_math.dart';
@@ -566,7 +564,7 @@ class _PointerLabCanvasPainter extends CustomPainter {
     canvas.drawLine(const Offset(-extent, 0), const Offset(extent, 0), axes);
     canvas.drawLine(const Offset(0, -extent), const Offset(0, extent), axes);
     canvas.drawRect(
-      const Rect.fromCenter(center: Offset.zero, width: 360, height: 240),
+      Rect.fromCenter(center: Offset.zero, width: 360, height: 240),
       camera,
     );
     canvas.restore();

@@ -14,7 +14,7 @@ Future<void> _copyTextToClipboard(String value) async {
 }
 
 class DiagnosticsEventPanel extends StatefulWidget {
-  DiagnosticsEventPanel({
+  const DiagnosticsEventPanel({
     required this.recorder,
     DiagnosticsCopyText? copyText,
     super.key,
