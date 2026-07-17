@@ -390,8 +390,6 @@ class _ReaderViewportMetrics {
 class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   late PdfViewerController _controller;
   late ValueNotifier<_ReaderViewportMetrics> _metrics;
-  late ReaderCursorAnchoredInteractionDelegateProvider
-      _interactionDelegateProvider;
   PdfTextSearcher? _searcher;
   VoidCallback? _searchListener;
   Timer? _viewerStateDebounce;
@@ -408,10 +406,6 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   void _createController() {
     _controller = PdfViewerController();
-    _interactionDelegateProvider =
-        ReaderCursorAnchoredInteractionDelegateProvider(
-      _trackedPointerAnchor,
-    );
     _metrics = ValueNotifier<_ReaderViewportMetrics>(
       _ReaderViewportMetrics(
         page: widget.tab.currentPage,
@@ -540,40 +534,49 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                 onPointerCancel: _rememberPointerPosition,
                 onPointerPanZoomStart: _rememberTrackpadZoomStart,
                 onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
-                child: PdfViewer(
-                  widget.documentRef,
+                child: ReaderCursorLockedPdfRegion(
                   controller: _controller,
-                  initialPageNumber: widget.tab.currentPage,
-                  params: PdfViewerParams(
-                    backgroundColor: WorkspaceColors.viewerBackground,
-                    margin: 14,
-                    pageDropShadow: const BoxShadow(
-                      color: Color(0x1A000000),
-                      blurRadius: 10,
-                      offset: Offset(0, 6),
-                    ),
-                    limitRenderingCache: true,
-                    maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
-                    horizontalCacheExtent: 0.5,
-                    verticalCacheExtent: 0.75,
-                    panEnabled: true,
-                    scaleEnabled: true,
-                    scaleByPointerScale: readerPointerZoomSensitivity,
-                    textSelectionParams: const PdfTextSelectionParams(
-                      enabled: true,
-                    ),
-                    interactionDelegateProvider:
-                        _interactionDelegateProvider,
-                    onInteractionEnd: (_) => _persistViewerState(),
-                    onPageChanged: _onPageChanged,
-                    onViewerReady: _onViewerReady,
-                    pagePaintCallbacks: <PdfViewerPagePaintCallback>[
-                      _paintAnnotations,
-                      if (_searcher != null)
-                        _searcher!.pageTextMatchPaintCallback,
-                    ],
-                    viewerOverlayBuilder: _buildViewerOverlay,
-                  ),
+                  builder: (
+                    BuildContext context,
+                    ReaderCursorLockedPdfInput input,
+                  ) {
+                    return PdfViewer(
+                      widget.documentRef,
+                      controller: _controller,
+                      initialPageNumber: widget.tab.currentPage,
+                      params: PdfViewerParams(
+                        backgroundColor: WorkspaceColors.viewerBackground,
+                        margin: 14,
+                        pageDropShadow: const BoxShadow(
+                          color: Color(0x1A000000),
+                          blurRadius: 10,
+                          offset: Offset(0, 6),
+                        ),
+                        limitRenderingCache: true,
+                        maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
+                        horizontalCacheExtent: 0.5,
+                        verticalCacheExtent: 0.75,
+                        panEnabled: true,
+                        scaleEnabled: true,
+                        scaleByPointerScale: readerPointerZoomSensitivity,
+                        textSelectionParams: const PdfTextSelectionParams(
+                          enabled: true,
+                        ),
+                        interactionDelegateProvider:
+                            input.interactionDelegateProvider,
+                        normalizeMatrix: input.normalizeMatrix,
+                        onInteractionEnd: (_) => _persistViewerState(),
+                        onPageChanged: _onPageChanged,
+                        onViewerReady: _onViewerReady,
+                        pagePaintCallbacks: <PdfViewerPagePaintCallback>[
+                          _paintAnnotations,
+                          if (_searcher != null)
+                            _searcher!.pageTextMatchPaintCallback,
+                        ],
+                        viewerOverlayBuilder: _buildViewerOverlay,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

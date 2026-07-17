@@ -6,6 +6,7 @@ import 'package:clarix/src/features/reader_diagnostics/presentation/pointer_trac
 import 'package:clarix/src/features/reader_diagnostics/presentation/stock_pdfrx_screen.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostic_crosshair.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostics_event_panel.dart';
+import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,6 +79,49 @@ void main() {
     expect(find.byType(PdfViewer), findsNothing);
   });
 
+  testWidgets('stock viewer uses the shared cursor-locked PDF input', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StockPdfrxScreen(pickPdf: () async => 'C:/fixtures/sample.pdf'),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('stock-open-pdf')));
+    await tester.pump();
+
+    expect(find.byType(ReaderCursorLockedPdfRegion), findsOneWidget);
+    final PdfViewer viewer = tester.widget<PdfViewer>(find.byType(PdfViewer));
+    expect(
+      viewer.params.interactionDelegateProvider,
+      isA<ReaderCursorAnchoredInteractionDelegateProvider>(),
+    );
+    expect(viewer.params.normalizeMatrix, isNotNull);
+  });
+
+  testWidgets('instrumented viewer uses the shared cursor-locked PDF input', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: InstrumentedPdfrxScreen(
+          pickPdf: () async => 'C:/fixtures/sample.pdf',
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('stock-open-pdf')));
+    await tester.pump();
+
+    expect(find.byType(ReaderCursorLockedPdfRegion), findsOneWidget);
+    final PdfViewer viewer = tester.widget<PdfViewer>(find.byType(PdfViewer));
+    expect(
+      viewer.params.interactionDelegateProvider,
+      isA<ReaderCursorAnchoredInteractionDelegateProvider>(),
+    );
+    expect(viewer.params.normalizeMatrix, isNotNull);
+  });
   testWidgets('stock screen exposes only minimal control chrome', (
     WidgetTester tester,
   ) async {

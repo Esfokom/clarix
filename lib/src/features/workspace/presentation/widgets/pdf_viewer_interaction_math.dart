@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -8,6 +9,115 @@ import 'package:pdfrx/pdfrx.dart';
 const double readerPointerZoomSensitivity = 0.65;
 
 typedef ReaderZoomAnchorProvider = Offset? Function();
+
+/// Keeps pdfrx from re-centering content at viewport boundaries during zoom.
+Matrix4 preserveReaderCursorLockedMatrix(Matrix4 matrix) => matrix;
+
+Offset resolveLockedPointerFocalPoint({
+  required Offset? lockedFocalPoint,
+  required Offset reportedFocalPoint,
+}) {
+  return lockedFocalPoint ?? reportedFocalPoint;
+}
+
+typedef ReaderCursorLockedPdfBuilder = Widget Function(
+  BuildContext context,
+  ReaderCursorLockedPdfInput input,
+);
+
+class ReaderCursorLockedPdfRegion extends StatefulWidget {
+  const ReaderCursorLockedPdfRegion({
+    required this.controller,
+    required this.builder,
+    super.key,
+  });
+
+  final PdfViewerController controller;
+  final ReaderCursorLockedPdfBuilder builder;
+
+  @override
+  State<ReaderCursorLockedPdfRegion> createState() =>
+      _ReaderCursorLockedPdfRegionState();
+}
+
+class _ReaderCursorLockedPdfRegionState
+    extends State<ReaderCursorLockedPdfRegion> {
+  late ReaderCursorLockedPdfInput _input;
+
+  @override
+  void initState() {
+    super.initState();
+    _input = ReaderCursorLockedPdfInput(widget.controller);
+  }
+
+  @override
+  void didUpdateWidget(covariant ReaderCursorLockedPdfRegion oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.controller, widget.controller)) {
+      _input = ReaderCursorLockedPdfInput(widget.controller);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerHover: _input.rememberPointer,
+      onPointerDown: _input.rememberPointer,
+      onPointerMove: _input.rememberPointer,
+      onPointerUp: _input.rememberPointer,
+      onPointerCancel: _input.rememberPointer,
+      onPointerSignal: _input.rememberPointer,
+      onPointerPanZoomStart: _input.rememberPointer,
+      onPointerPanZoomUpdate: _input.rememberPointer,
+      onPointerPanZoomEnd: _input.rememberPointer,
+      child: widget.builder(context, _input),
+    );
+  }
+}
+
+class ReaderCursorLockedPdfInput {
+  ReaderCursorLockedPdfInput(this.controller) {
+    interactionDelegateProvider =
+        ReaderCursorAnchoredInteractionDelegateProvider(localAnchor);
+  }
+
+  final PdfViewerController controller;
+  late final ReaderCursorAnchoredInteractionDelegateProvider
+      interactionDelegateProvider;
+  Offset? _lastPointerGlobalPosition;
+
+  void rememberPointer(PointerEvent event) {
+    _lastPointerGlobalPosition = event.position;
+  }
+
+  Offset? localAnchor() {
+    if (!controller.isReady) {
+      return null;
+    }
+    final Offset? global = _lastPointerGlobalPosition;
+    if (global == null) {
+      return null;
+    }
+    final Offset? local = controller.globalToLocal(global);
+    if (local == null ||
+        !local.dx.isFinite ||
+        !local.dy.isFinite ||
+        !_isInsideViewport(local, controller.viewSize)) {
+      return null;
+    }
+    return local;
+  }
+
+  Matrix4 normalizeMatrix(
+    Matrix4 matrix,
+    Size viewSize,
+    PdfPageLayout layout,
+    PdfViewerController? viewerController,
+  ) {
+    return preserveReaderCursorLockedMatrix(matrix);
+  }
+}
 
 Offset resolveReaderZoomFocalPoint({
   required Offset? trackedCursorLocal,

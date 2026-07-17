@@ -5,8 +5,28 @@ import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/features/workspace/infrastructure/document_metadata_store.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vector_math/vector_math_64.dart';
 
 void main() {
+  test('cursor-locked PDF normalization preserves the affine camera matrix', () {
+    final Matrix4 matrix = Matrix4.identity()
+      ..setEntry(0, 0, 1.72)
+      ..setEntry(1, 1, 1.72)
+      ..setEntry(0, 3, -232.704)
+      ..setEntry(1, 3, -175.68);
+
+    expect(preserveReaderCursorLockedMatrix(matrix), same(matrix));
+  });
+
+  test('instrumented focal remains at the pinch-start cursor', () {
+    final Offset focal = resolveLockedPointerFocalPoint(
+      lockedFocalPoint: const Offset(723.2, 544),
+      reportedFocalPoint: const Offset(191.746826171875, 144.234521484375),
+    );
+
+    expect(focal, const Offset(723.2, 544));
+  });
+
   test('reader zoom keeps the cursor fixed despite trackpad pan noise', () {
     final Offset anchor = resolveReaderZoomFocalPoint(
       trackedCursorLocal: const Offset(723.2, 544),

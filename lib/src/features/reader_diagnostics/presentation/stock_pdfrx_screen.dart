@@ -1,5 +1,6 @@
 import 'package:clarix/src/features/reader_diagnostics/application/diagnostic_pdf_picker.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/diagnostic_viewer_chrome.dart';
+import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -46,11 +47,27 @@ class _StockPdfrxScreenState extends State<StockPdfrxScreen> {
     final String? path = _path;
     final Widget viewer = path == null
         ? const SizedBox.expand()
-        : PdfViewer.file(
-            path,
-            key: ValueKey<String>(path),
+        : ReaderCursorLockedPdfRegion(
+            key: ValueKey<String>('cursor-locked-$path'),
             controller: _controller,
-            params: const PdfViewerParams(),
+            builder: (
+              BuildContext context,
+              ReaderCursorLockedPdfInput input,
+            ) {
+              return PdfViewer.file(
+                path,
+                key: ValueKey<String>(path),
+                controller: _controller,
+                params: PdfViewerParams(
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  scaleByPointerScale: readerPointerZoomSensitivity,
+                  interactionDelegateProvider:
+                      input.interactionDelegateProvider,
+                  normalizeMatrix: input.normalizeMatrix,
+                ),
+              );
+            },
           );
 
     return ValueListenableBuilder<DiagnosticViewerStatus>(

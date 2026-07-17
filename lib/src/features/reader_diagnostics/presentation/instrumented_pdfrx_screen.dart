@@ -5,6 +5,7 @@ import 'package:clarix/src/features/reader_diagnostics/domain/reader_diagnostic_
 import 'package:clarix/src/features/reader_diagnostics/presentation/diagnostic_viewer_chrome.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostic_crosshair.dart';
 import 'package:clarix/src/features/reader_diagnostics/presentation/widgets/diagnostics_event_panel.dart';
+import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -42,6 +43,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
   bool _controllerSnapshotScheduled = false;
   Type? _lastViewerErrorType;
   Offset _observedPan = Offset.zero;
+  Offset? _lockedInteractionFocal;
 
   @override
   void initState() {
@@ -72,34 +74,51 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
     final String? path = _path;
     final Widget pdf = path == null
         ? const SizedBox.expand()
-        : PdfViewer.file(
-            path,
-            key: ValueKey<String>(path),
+        : ReaderCursorLockedPdfRegion(
+            key: ValueKey<String>('cursor-locked-$path'),
             controller: _controller,
-            params: PdfViewerParams(
-              onInteractionStart: _onInteractionStart,
-              onInteractionUpdate: _onInteractionUpdate,
-              onInteractionEnd: _onInteractionEnd,
-              onViewerReady: (PdfDocument document, PdfViewerController value) {
-                _recordViewerReady();
-              },
-              errorBannerBuilder: (
-                BuildContext context,
-                Object error,
-                StackTrace? stackTrace,
-                PdfDocumentRef documentRef,
-              ) {
-                _recordViewerError(error);
-                return Center(
-                  child: Text(
-                    'Unable to open PDF: ${error.runtimeType}',
-                    textAlign: TextAlign.center,
-                  ),
-                );
-              },
-            ),
+            builder: (
+              BuildContext context,
+              ReaderCursorLockedPdfInput input,
+            ) {
+              return PdfViewer.file(
+                path,
+                key: ValueKey<String>(path),
+                controller: _controller,
+                params: PdfViewerParams(
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  scaleByPointerScale: readerPointerZoomSensitivity,
+                  interactionDelegateProvider:
+                      input.interactionDelegateProvider,
+                  normalizeMatrix: input.normalizeMatrix,
+                  onInteractionStart: _onInteractionStart,
+                  onInteractionUpdate: _onInteractionUpdate,
+                  onInteractionEnd: _onInteractionEnd,
+                  onViewerReady: (
+                    PdfDocument document,
+                    PdfViewerController value,
+                  ) {
+                    _recordViewerReady();
+                  },
+                  errorBannerBuilder: (
+                    BuildContext context,
+                    Object error,
+                    StackTrace? stackTrace,
+                    PdfDocumentRef documentRef,
+                  ) {
+                    _recordViewerError(error);
+                    return Center(
+                      child: Text(
+                        'Unable to open PDF: ${error.runtimeType}',
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           );
-
     final Widget viewer = Stack(
       fit: StackFit.expand,
       children: <Widget>[
@@ -272,6 +291,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
   }
 
   void _onInteractionStart(ScaleStartDetails details) {
+    _lockedInteractionFocal = details.localFocalPoint;
     _setFocal(details.localFocalPoint);
     _recordScaleEvent(
       type: ReaderDiagnosticEventType.scaleStart,
@@ -281,11 +301,15 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
   }
 
   void _onInteractionUpdate(ScaleUpdateDetails details) {
-    _setFocal(details.localFocalPoint);
+    final Offset effectiveFocal = resolveLockedPointerFocalPoint(
+      lockedFocalPoint: _lockedInteractionFocal,
+      reportedFocalPoint: details.localFocalPoint,
+    );
+    _setFocal(effectiveFocal);
     _recordScaleEvent(
       type: ReaderDiagnosticEventType.scaleUpdate,
       globalPosition: details.focalPoint,
-      localFocalPoint: details.localFocalPoint,
+      localFocalPoint: effectiveFocal,
       scale: details.scale,
       pan: details.focalPointDelta,
     );
@@ -293,6 +317,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
 
   void _onInteractionEnd(ScaleEndDetails details) {
     _recordScaleEvent(type: ReaderDiagnosticEventType.scaleEnd);
+    _lockedInteractionFocal = null;
   }
 
   void _recordScaleEvent({
