@@ -7,25 +7,17 @@ import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_in
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('trackpad focal follows cumulative pan from its fixed origin', () {
-    final Offset focal = trackpadFocalGlobalPosition(
-      gestureOriginGlobal: const Offset(566.4, 424),
-      cumulativePan: const Offset(-234.426953125, -175.489111328125),
-    );
-
-    expect(focal.dx, closeTo(331.973046875, 0.000001));
-    expect(focal.dy, closeTo(248.510888671875, 0.000001));
-  });
-
-  test('reader zoom follows a moving trackpad focal during the gesture', () {
+  test('reader zoom keeps the cursor fixed despite trackpad pan noise', () {
     final Offset anchor = resolveReaderZoomFocalPoint(
-      trackedCursorLocal: const Offset(566.4, 424),
-      reportedTrackpadFocalPoint: const Offset(331.973046875, 248.510888671875),
+      trackedCursorLocal: const Offset(723.2, 544),
+      reportedTrackpadFocalPoint: const Offset(
+        191.746826171875,
+        144.234521484375,
+      ),
       viewportSize: const Size(1485.6, 844),
     );
 
-    expect(anchor.dx, closeTo(331.973046875, 0.000001));
-    expect(anchor.dy, closeTo(248.510888671875, 0.000001));
+    expect(anchor, const Offset(723.2, 544));
   });
 
   test('reader zoom prefers the tracked cursor over trackpad focal corners', () {

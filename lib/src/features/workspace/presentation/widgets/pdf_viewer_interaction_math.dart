@@ -9,30 +9,16 @@ const double readerPointerZoomSensitivity = 0.65;
 
 typedef ReaderZoomAnchorProvider = Offset? Function();
 
-Offset trackpadFocalGlobalPosition({
-  required Offset gestureOriginGlobal,
-  required Offset cumulativePan,
-}) => gestureOriginGlobal + cumulativePan;
-
 Offset resolveReaderZoomFocalPoint({
   required Offset? trackedCursorLocal,
   required Offset reportedTrackpadFocalPoint,
   required Size viewportSize,
 }) {
-  final bool reportedIsValid = _isInsideViewport(
-    reportedTrackpadFocalPoint,
-    viewportSize,
-  );
-  if (reportedIsValid &&
-      !_isNearViewportCorner(reportedTrackpadFocalPoint, viewportSize)) {
-    return reportedTrackpadFocalPoint;
-  }
-
   final Offset? tracked = trackedCursorLocal;
   if (tracked != null && _isInsideViewport(tracked, viewportSize)) {
     return tracked;
   }
-  if (reportedIsValid) {
+  if (_isInsideViewport(reportedTrackpadFocalPoint, viewportSize)) {
     return reportedTrackpadFocalPoint;
   }
   return viewportSize.center(Offset.zero);
@@ -47,17 +33,9 @@ bool _isInsideViewport(Offset point, Size viewportSize) {
       point.dy <= viewportSize.height;
 }
 
-bool _isNearViewportCorner(Offset point, Size viewportSize) {
-  const double tolerance = 1;
-  final bool nearHorizontalEdge =
-      point.dx <= tolerance || point.dx >= viewportSize.width - tolerance;
-  final bool nearVerticalEdge =
-      point.dy <= tolerance || point.dy >= viewportSize.height - tolerance;
-  return nearHorizontalEdge && nearVerticalEdge;
-}
-
-/// Uses pdfrx's current moving focal point while retaining the tracked cursor
-/// as a fallback for invalid or historically corner-quantized input.
+/// Locks zoom to the actual cursor tracked by the reader. The focal point
+/// reported by a trackpad gesture may include cumulative two-finger pan and is
+/// used only when no valid cursor position is available.
 class ReaderCursorAnchoredInteractionDelegateProvider
     extends PdfViewerScrollInteractionDelegateProvider {
   ReaderCursorAnchoredInteractionDelegateProvider(this.anchorProvider);

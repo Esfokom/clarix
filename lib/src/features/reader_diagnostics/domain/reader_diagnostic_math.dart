@@ -28,3 +28,32 @@ Offset anchoredPanZoomTranslation({
   final Offset documentPoint = (previousAnchor - oldTranslation) / oldScale;
   return currentAnchor - documentPoint * newScale;
 }
+
+bool shouldLockTrackpadZoomAnchor({
+  required bool alreadyLocked,
+  required double cumulativeScale,
+  double scaleThreshold = 0.01,
+}) {
+  return alreadyLocked ||
+      (cumulativeScale.isFinite &&
+          (cumulativeScale - 1).abs() > scaleThreshold);
+}
+
+Offset trackpadGestureTranslation({
+  required Offset zoomAnchor,
+  required Offset focalPointDelta,
+  required Offset oldTranslation,
+  required double oldScale,
+  required double newScale,
+  required bool zoomAnchorLocked,
+}) {
+  if (!zoomAnchorLocked) {
+    return oldTranslation + focalPointDelta;
+  }
+  return anchoredTranslation(
+    anchor: zoomAnchor,
+    oldTranslation: oldTranslation,
+    oldScale: oldScale,
+    newScale: newScale,
+  );
+}

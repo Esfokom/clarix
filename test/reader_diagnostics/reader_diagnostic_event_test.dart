@@ -263,6 +263,58 @@ void main() {
     expect(renderedAfter.dy, closeTo(localFocalPoint.dy, 0.000001));
   });
 
+  test('pinch locks to its starting cursor despite cumulative pan noise', () {
+    const Offset anchor = Offset(323.2, 244);
+    const Offset oldTranslation = Offset.zero;
+    const double oldScale = 1;
+    const double newScale = 1.72;
+    final Offset worldPoint = (anchor - oldTranslation) / oldScale;
+
+    final Offset nextTranslation = trackpadGestureTranslation(
+      zoomAnchor: anchor,
+      focalPointDelta: const Offset(-531.453173828125, -399.765478515625),
+      oldTranslation: oldTranslation,
+      oldScale: oldScale,
+      newScale: newScale,
+      zoomAnchorLocked: true,
+    );
+
+    expect(worldPoint * newScale + nextTranslation, anchor);
+  });
+
+  test('two-finger pan still applies while no pinch scale is detected', () {
+    const Offset oldTranslation = Offset(22, -14);
+    const Offset panDelta = Offset(18, -7);
+
+    final Offset nextTranslation = trackpadGestureTranslation(
+      zoomAnchor: const Offset(100, 80),
+      focalPointDelta: panDelta,
+      oldTranslation: oldTranslation,
+      oldScale: 1,
+      newScale: 1,
+      zoomAnchorLocked: false,
+    );
+
+    expect(nextTranslation, oldTranslation + panDelta);
+  });
+
+  test('pinch mode remains locked after scale returns near one', () {
+    expect(
+      shouldLockTrackpadZoomAnchor(
+        alreadyLocked: false,
+        cumulativeScale: 1.2,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldLockTrackpadZoomAnchor(
+        alreadyLocked: true,
+        cumulativeScale: 1.001,
+      ),
+      isTrue,
+    );
+  });
+
   test('controller snapshots serialize typed boundary state for both values', () {
     final ReaderDiagnosticEvent near = ReaderDiagnosticEvent(
       sequence: 1,

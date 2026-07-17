@@ -79,6 +79,8 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
   final GlobalKey _canvasKey = GlobalKey();
 
   double _lastGestureScale = 1;
+  Offset? _gestureZoomAnchor;
+  bool _zoomAnchorLocked = false;
   bool _overlaysHidden = false;
 
   @override
@@ -296,6 +298,8 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
 
   void _onScaleStart(ScaleStartDetails details) {
     _lastGestureScale = 1;
+    _zoomAnchorLocked = false;
+    _gestureZoomAnchor = details.localFocalPoint;
     final PointerLabState current = _state.value;
     _state.value = current.copyWith(
       focal: details.localFocalPoint,
@@ -320,26 +324,33 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
 
     final PointerLabState current = _state.value;
     final double oldScale = current.scale;
-    final double newScale = (oldScale * scaleRatio).clamp(0.25, 8.0).toDouble();
-    final Size canvasSize = _canvasSize();
-    final Offset currentAnchor = canvasCenteredFocalPoint(
-      localFocalPoint: details.localFocalPoint,
-      canvasSize: canvasSize,
+    final double candidateScale = (oldScale * scaleRatio)
+        .clamp(0.25, 8.0)
+        .toDouble();
+    _zoomAnchorLocked = shouldLockTrackpadZoomAnchor(
+      alreadyLocked: _zoomAnchorLocked,
+      cumulativeScale: cumulativeScale,
     );
-    final Offset previousAnchor = canvasCenteredFocalPoint(
-      localFocalPoint: details.localFocalPoint - details.focalPointDelta,
-      canvasSize: canvasSize,
+    final double newScale = _zoomAnchorLocked ? candidateScale : oldScale;
+    final Offset localZoomAnchor =
+        _gestureZoomAnchor ?? details.localFocalPoint;
+    final Offset centeredZoomAnchor = canvasCenteredFocalPoint(
+      localFocalPoint: localZoomAnchor,
+      canvasSize: _canvasSize(),
     );
-    final Offset translation = anchoredPanZoomTranslation(
-      previousAnchor: previousAnchor,
-      currentAnchor: currentAnchor,
+    final Offset translation = trackpadGestureTranslation(
+      zoomAnchor: centeredZoomAnchor,
+      focalPointDelta: details.focalPointDelta,
       oldTranslation: current.translation,
       oldScale: oldScale,
       newScale: newScale,
+      zoomAnchorLocked: _zoomAnchorLocked,
     );
     _lastGestureScale = cumulativeScale;
     _state.value = current.copyWith(
-      focal: details.localFocalPoint,
+      focal: _zoomAnchorLocked
+          ? localZoomAnchor
+          : details.localFocalPoint,
       focalGlobal: details.focalPoint,
       scale: newScale,
       translation: translation,
@@ -348,7 +359,9 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     _recordScaleEvent(
       type: ReaderDiagnosticEventType.scaleUpdate,
       globalPosition: details.focalPoint,
-      localFocalPoint: details.localFocalPoint,
+      localFocalPoint: _zoomAnchorLocked
+          ? localZoomAnchor
+          : details.localFocalPoint,
       scale: newScale,
       pan: details.focalPointDelta,
     );
@@ -356,6 +369,8 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
 
   void _onScaleEnd(ScaleEndDetails details) {
     _lastGestureScale = 1;
+    _gestureZoomAnchor = null;
+    _zoomAnchorLocked = false;
     _recordScaleEvent(type: ReaderDiagnosticEventType.scaleEnd);
   }
 
