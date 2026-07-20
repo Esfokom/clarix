@@ -54,6 +54,7 @@ class AiRuntimeService {
 
   Future<AiReply> sendPrompt({
     required String prompt,
+    required String profileId,
     required bool useCurrentDocumentScope,
     String? currentDocumentId,
     required void Function(String token) onToken,
@@ -63,8 +64,8 @@ class AiRuntimeService {
     final chunks = _chunkStore;
     if (store == null || chunks == null) throw StateError('Configure a remote AI provider to chat.');
     final profiles = await store.readProfiles();
-    if (profiles.isEmpty) throw StateError('Configure a remote AI provider to chat.');
-    final profile = profiles.first;
+    final profile = profiles.where((item) => item.id == profileId).firstOrNull;
+    if (profile == null) throw StateError('Select a remote AI provider to chat.');
     final key = await store.readApiKey(profile.id);
     if (key == null || key.isEmpty) throw StateError('Add an API key for ${profile.label}.');
     onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');

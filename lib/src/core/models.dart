@@ -13,8 +13,12 @@ enum AiRuntimePhase {
   loadingInference,
   preparingGrounding,
   indexing,
+  validatingProvider,
   retrieving,
+  callingProvider,
+  executingTool,
   generating,
+  cancelled,
   failed,
 }
 
@@ -408,64 +412,83 @@ class DownloadTaskState {
 
 class AiWorkspaceState {
   const AiWorkspaceState({
-    required this.inferenceReady,
-    required this.embeddingReady,
-    required this.vectorStoreReady,
+    required this.providerReady,
+    required this.selectedProviderId,
     required this.chatBusy,
     required this.activityPhase,
     required this.statusMessage,
     required this.messages,
     required this.useCurrentDocumentScope,
     required this.lastRetrievalSnippets,
-    required this.activeInferenceModelId,
-    required this.activeEmbeddingModelId,
+    this.inferenceReady = false,
+    this.embeddingReady = false,
+    this.vectorStoreReady = false,
+    this.activeInferenceModelId,
+    this.activeEmbeddingModelId,
   });
 
-  final bool inferenceReady;
-  final bool embeddingReady;
-  final bool vectorStoreReady;
+  final bool providerReady;
+  final String? selectedProviderId;
   final bool chatBusy;
   final AiRuntimePhase activityPhase;
   final String statusMessage;
   final List<ComposerMessage> messages;
   final bool useCurrentDocumentScope;
   final List<CitationSnippet> lastRetrievalSnippets;
+  @Deprecated('Use providerReady instead.')
+  final bool inferenceReady;
+  @Deprecated('Remote providers do not require an embedder.')
+  final bool embeddingReady;
+  @Deprecated('Remote providers do not require a vector store.')
+  final bool vectorStoreReady;
+  @Deprecated('Use selectedProviderId instead.')
   final String? activeInferenceModelId;
+  @Deprecated('Remote providers do not require an embedder.')
   final String? activeEmbeddingModelId;
 
   factory AiWorkspaceState.initial() => const AiWorkspaceState(
-        inferenceReady: false,
-        embeddingReady: false,
-        vectorStoreReady: false,
+        providerReady: false,
+        selectedProviderId: null,
         chatBusy: false,
         activityPhase: AiRuntimePhase.idle,
-        statusMessage: 'Install a model to unlock local AI features.',
+        statusMessage: 'Add a provider to start a remote AI chat.',
         messages: <ComposerMessage>[],
         useCurrentDocumentScope: true,
         lastRetrievalSnippets: <CitationSnippet>[],
-        activeInferenceModelId: null,
-        activeEmbeddingModelId: null,
       );
 
   AiWorkspaceState copyWith({
+    bool? providerReady,
+    String? selectedProviderId,
+    bool clearSelectedProviderId = false,
     bool? inferenceReady,
     bool? embeddingReady,
     bool? vectorStoreReady,
+    String? activeInferenceModelId,
+    bool clearActiveInferenceModelId = false,
+    String? activeEmbeddingModelId,
+    bool clearActiveEmbeddingModelId = false,
     bool? chatBusy,
     AiRuntimePhase? activityPhase,
     String? statusMessage,
     List<ComposerMessage>? messages,
     bool? useCurrentDocumentScope,
     List<CitationSnippet>? lastRetrievalSnippets,
-    String? activeInferenceModelId,
-    bool clearActiveInferenceModelId = false,
-    String? activeEmbeddingModelId,
-    bool clearActiveEmbeddingModelId = false,
   }) {
     return AiWorkspaceState(
+      providerReady: providerReady ?? this.providerReady,
+      selectedProviderId: clearSelectedProviderId
+          ? null
+          : selectedProviderId ?? this.selectedProviderId,
       inferenceReady: inferenceReady ?? this.inferenceReady,
       embeddingReady: embeddingReady ?? this.embeddingReady,
       vectorStoreReady: vectorStoreReady ?? this.vectorStoreReady,
+      activeInferenceModelId: clearActiveInferenceModelId
+          ? null
+          : activeInferenceModelId ?? this.activeInferenceModelId,
+      activeEmbeddingModelId: clearActiveEmbeddingModelId
+          ? null
+          : activeEmbeddingModelId ?? this.activeEmbeddingModelId,
       chatBusy: chatBusy ?? this.chatBusy,
       activityPhase: activityPhase ?? this.activityPhase,
       statusMessage: statusMessage ?? this.statusMessage,
@@ -474,37 +497,27 @@ class AiWorkspaceState {
           useCurrentDocumentScope ?? this.useCurrentDocumentScope,
       lastRetrievalSnippets:
           lastRetrievalSnippets ?? this.lastRetrievalSnippets,
-      activeInferenceModelId: clearActiveInferenceModelId
-          ? null
-          : activeInferenceModelId ?? this.activeInferenceModelId,
-      activeEmbeddingModelId: clearActiveEmbeddingModelId
-          ? null
-          : activeEmbeddingModelId ?? this.activeEmbeddingModelId,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'inferenceReady': inferenceReady,
-        'embeddingReady': embeddingReady,
-        'vectorStoreReady': vectorStoreReady,
+        'providerReady': providerReady,
+        'selectedProviderId': selectedProviderId,
         'activityPhase': activityPhase.name,
         'statusMessage': statusMessage,
         'useCurrentDocumentScope': useCurrentDocumentScope,
-        'activeInferenceModelId': activeInferenceModelId,
-        'activeEmbeddingModelId': activeEmbeddingModelId,
       };
 
   factory AiWorkspaceState.fromJson(Map<String, dynamic> json) {
     return AiWorkspaceState.initial().copyWith(
-      inferenceReady: json['inferenceReady'] as bool? ?? false,
-      embeddingReady: json['embeddingReady'] as bool? ?? false,
-      vectorStoreReady: json['vectorStoreReady'] as bool? ?? false,
+      providerReady: json['providerReady'] as bool? ?? false,
+      selectedProviderId: json['selectedProviderId'] as String?,
       activityPhase: AiRuntimePhase.idle,
-      statusMessage: json['statusMessage'] as String?,
+      statusMessage: json['selectedProviderId'] == null
+          ? 'Add a provider to start a remote AI chat.'
+          : json['statusMessage'] as String?,
       useCurrentDocumentScope:
           json['useCurrentDocumentScope'] as bool? ?? true,
-      activeInferenceModelId: json['activeInferenceModelId'] as String?,
-      activeEmbeddingModelId: json['activeEmbeddingModelId'] as String?,
     );
   }
 }

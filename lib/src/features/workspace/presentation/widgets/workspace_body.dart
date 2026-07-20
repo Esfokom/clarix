@@ -7,7 +7,7 @@ import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'ai_side_pane.dart';
 import 'document_workspace.dart';
-import 'model_catalog_sheet.dart';
+import 'provider_settings_sheet.dart';
 import 'quickstart_surface.dart';
 import 'reader_inspector.dart';
 import 'workspace_common.dart';
@@ -165,20 +165,18 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                   ),
                 ),
               ),
-            if (widget.state.showModelCatalog) ...<Widget>[
+            if (widget.state.showProviderSettings) ...<Widget>[
               Positioned.fill(
                 child: GestureDetector(
-                  onTap: () => ref
-                      .read(workspaceNotifierProvider.notifier)
-                      .toggleModelCatalog(false),
+                  onTap: () => ref.read(workspaceNotifierProvider.notifier).toggleProviderSettings(false),
                   child: Container(color: WorkspaceColors.backdrop),
                 ),
               ),
-              const Positioned(
+              Positioned(
                 top: 0,
                 right: 0,
                 bottom: 0,
-                child: SizedBox(width: 388, child: ModelCatalogSheet()),
+                child: SizedBox(width: 388, child: ProviderSettingsSheet(state: widget.state)),
               ),
             ],
           ],

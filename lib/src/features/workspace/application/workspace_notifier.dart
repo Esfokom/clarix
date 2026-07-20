@@ -13,8 +13,10 @@ import '../../../core/models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../domain/workspace_feature_state.dart';
+import '../domain/ai_provider.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/provider_profile_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_providers.dart';
 
@@ -34,12 +36,16 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   Future<DocumentMetadataStore> get _metadataStore =>
       ref.read(documentMetadataStoreProvider.future);
   AiRuntimeService get _ai => ref.read(aiRuntimeServiceProvider);
+  ProviderProfileStore get _providerProfiles =>
+      ref.read(providerProfileStoreProvider);
 
   @override
   Future<WorkspaceFeatureState> build() async {
     final WorkspaceSession storedSession =
         await _sessionStore.readWorkspaceSession();
     final AiWorkspaceState storedAi = await _sessionStore.readAiWorkspaceState();
+    final List<AiProviderProfile> providerProfiles =
+        await _providerProfiles.readProfiles();
     final Map<String, DownloadTaskState> downloads =
         await _sessionStore.readDownloads();
     final WorkspaceSession restoredSession =
@@ -48,9 +54,23 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         await _loadDocumentMetadata(restoredSession);
     final List<ModelCatalogItem> catalog =
         _catalogService.buildCatalog(downloads: downloads);
-    final AiWorkspaceState restoredAi = await _restoreAiBestEffort(
+    AiWorkspaceState restoredAi = await _restoreAiBestEffort(
       storedAi,
       catalog,
+    );
+    final AiProviderProfile? selectedProfile = _profileById(
+      providerProfiles,
+      storedAi.selectedProviderId,
+    );
+    final bool providerReady = selectedProfile != null &&
+        (await _providerProfiles.readApiKey(selectedProfile.id))?.isNotEmpty == true;
+    restoredAi = restoredAi.copyWith(
+      selectedProviderId: selectedProfile?.id,
+      clearSelectedProviderId: selectedProfile == null,
+      providerReady: providerReady,
+      statusMessage: providerReady
+          ? '${selectedProfile!.label} is ready.'
+          : 'Add a provider to start a remote AI chat.',
     );
 
     return WorkspaceFeatureState(
@@ -63,6 +83,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       composerExpanded: false,
       showModelCatalog: false,
       bannerMessage: null,
+      providerProfiles: providerProfiles,
     );
   }
 
@@ -267,13 +288,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     state = AsyncData(current.copyWith(outlines: outlines));
   }
 
-  Future<void> toggleModelCatalog([bool? value]) async {
-    final WorkspaceFeatureState current = _requireState();
-    state = AsyncData(
-      current.copyWith(showModelCatalog: value ?? !current.showModelCatalog),
-    );
-  }
-
   Future<void> installModel(ModelCatalogItem item) async {
     final WorkspaceFeatureState current = _requireState();
     final CancelToken token = CancelToken();
@@ -459,10 +473,53 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(aiState: aiState));
   }
 
+  Future<void> toggleProviderSettings([bool? value]) async {
+    final WorkspaceFeatureState current = _requireState();
+    state = AsyncData(current.copyWith(
+      showProviderSettings: value ?? !current.showProviderSettings,
+    ));
+  }
+
+  Future<void> selectProvider(String? profileId) async {
+    final WorkspaceFeatureState current = _requireState();
+    final AiProviderProfile? profile = _profileById(current.providerProfiles, profileId);
+    final bool ready = profile != null &&
+        (await _providerProfiles.readApiKey(profile.id))?.isNotEmpty == true;
+    await _commit(current.copyWith(aiState: current.aiState.copyWith(
+      selectedProviderId: profile?.id,
+      clearSelectedProviderId: profile == null,
+      providerReady: ready,
+      statusMessage: ready
+          ? '${profile!.label} is ready.'
+          : 'Add an API key to use this provider.',
+    )));
+  }
+
+  Future<void> saveProvider(AiProviderProfile profile, {String? apiKey}) async {
+    await _providerProfiles.saveProfile(profile, apiKey: apiKey?.trim().isEmpty == true ? null : apiKey?.trim());
+    final WorkspaceFeatureState current = _requireState();
+    final List<AiProviderProfile> profiles = await _providerProfiles.readProfiles();
+    await _commit(current.copyWith(providerProfiles: profiles));
+    await selectProvider(profile.id);
+  }
+
+  Future<void> deleteProvider(String profileId) async {
+    await _providerProfiles.deleteProfile(profileId);
+    final WorkspaceFeatureState current = _requireState();
+    final List<AiProviderProfile> profiles = await _providerProfiles.readProfiles();
+    await _commit(current.copyWith(providerProfiles: profiles));
+    if (current.aiState.selectedProviderId == profileId) {
+      await selectProvider(null);
+    }
+  }
+
   Future<void> sendPrompt(String prompt) async {
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState? activeTab = activeTabState;
     if (prompt.trim().isEmpty || current.aiState.chatBusy) {
+      return;
+    }
+    if (!current.aiState.providerReady || current.aiState.selectedProviderId == null) {
       return;
     }
 
@@ -501,6 +558,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       final StringBuffer answerBuffer = StringBuffer();
       final _AiReplyData reply = await _generateReply(
         prompt: prompt.trim(),
+        profileId: current.aiState.selectedProviderId!,
         useCurrentDocumentScope: current.aiState.useCurrentDocumentScope,
         currentDocumentId: activeTab?.documentId,
         onStatus: _setAiActivity,
@@ -1037,6 +1095,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   Future<_AiReplyData> _generateReply({
     required String prompt,
+    required String profileId,
     required bool useCurrentDocumentScope,
     required String? currentDocumentId,
     required void Function(AiRuntimePhase phase, String message) onStatus,
@@ -1044,6 +1103,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   }) async {
     final AiReply reply = await _ai.sendPrompt(
       prompt: prompt,
+      profileId: profileId,
       useCurrentDocumentScope: useCurrentDocumentScope,
       currentDocumentId: currentDocumentId,
       onToken: onToken,
@@ -1142,6 +1202,17 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       if (item.id == modelId) {
         return item;
       }
+    }
+    return null;
+  }
+
+  AiProviderProfile? _profileById(
+    List<AiProviderProfile> profiles,
+    String? profileId,
+  ) {
+    if (profileId == null) return null;
+    for (final AiProviderProfile profile in profiles) {
+      if (profile.id == profileId) return profile;
     }
     return null;
   }

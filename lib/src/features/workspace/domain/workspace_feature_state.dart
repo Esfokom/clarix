@@ -1,4 +1,5 @@
 import '../../../core/models.dart';
+import 'ai_provider.dart';
 
 class OutlineNodeState {
   const OutlineNodeState({
@@ -23,6 +24,8 @@ class WorkspaceFeatureState {
     required this.composerExpanded,
     required this.showModelCatalog,
     required this.bannerMessage,
+    this.providerProfiles = const <AiProviderProfile>[],
+    this.showProviderSettings = false,
   });
 
   final WorkspaceSession session;
@@ -34,6 +37,8 @@ class WorkspaceFeatureState {
   final bool composerExpanded;
   final bool showModelCatalog;
   final String? bannerMessage;
+  final List<AiProviderProfile> providerProfiles;
+  final bool showProviderSettings;
 
   WorkspaceFeatureState copyWith({
     WorkspaceSession? session,
@@ -46,6 +51,8 @@ class WorkspaceFeatureState {
     bool? showModelCatalog,
     String? bannerMessage,
     bool clearBannerMessage = false,
+    List<AiProviderProfile>? providerProfiles,
+    bool? showProviderSettings,
   }) {
     return WorkspaceFeatureState(
       session: session ?? this.session,
@@ -58,6 +65,8 @@ class WorkspaceFeatureState {
       showModelCatalog: showModelCatalog ?? this.showModelCatalog,
       bannerMessage:
           clearBannerMessage ? null : bannerMessage ?? this.bannerMessage,
+      providerProfiles: providerProfiles ?? this.providerProfiles,
+      showProviderSettings: showProviderSettings ?? this.showProviderSettings,
     );
   }
 }

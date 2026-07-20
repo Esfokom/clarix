@@ -49,8 +49,8 @@ class QuickstartSurface extends ConsumerWidget {
                 leading: const Icon(LucideIcons.cpu, size: 15),
                 onPressed: () => ref
                     .read(workspaceNotifierProvider.notifier)
-                    .toggleModelCatalog(true),
-                child: const Text('Models'),
+                    .toggleProviderSettings(true),
+                child: const Text('AI providers'),
               ),
               const SizedBox(width: 8),
               ShadButton(

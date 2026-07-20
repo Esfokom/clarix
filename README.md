@@ -4,8 +4,8 @@ Clarix is a Windows-first Flutter PDF workspace with:
 
 - a left-side document rail for recent files, tabs, and page navigation
 - a central `pdfrx` reading surface
-- a bottom AI composer powered by `flutter_gemma`
-- persisted session restore and model/download state
+- a remote AI composer using user-configured OpenAI-compatible providers
+- persisted session restore and provider selection
 - a Rust `pdf_oxide` scaffold for extraction/search FFI work
 
 ## Current architecture
@@ -16,12 +16,13 @@ Clarix is a Windows-first Flutter PDF workspace with:
 - `lib/src/features/workspace/presentation`: desktop shell, viewer, and composer UI
 - `rust/clarix_pdf_oxide`: native extraction/search scaffold
 
-## Local AI and RAG
+## Remote AI and document context
 
-- Inference default: Gemma 4 `E2B IT`
-- Embeddings default: `EmbeddingGemma 1024`
-- Vector store: `flutter_gemma` native vector store path
-- PDF indexing: page-aware chunking with persisted chunk cache
+- Configurable OpenAI-compatible endpoints and models
+- API keys are stored through platform-secure storage, never in workspace preferences
+- Clarix sends only bounded retrieved PDF passages when passage sharing is enabled; it never sends a full PDF by default
+- PDF indexing remains page-aware with a persisted chunk cache
+- This release does not include local inference
 
 ## Run it
 

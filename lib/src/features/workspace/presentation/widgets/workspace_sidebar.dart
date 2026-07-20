@@ -74,7 +74,7 @@ class WorkspaceSidebar extends ConsumerWidget {
                     icon: const Icon(LucideIcons.settings2, size: 15),
                     onPressed: () => ref
                         .read(workspaceNotifierProvider.notifier)
-                        .toggleModelCatalog(true),
+                        .toggleProviderSettings(true),
                   ),
                 ],
               ),
