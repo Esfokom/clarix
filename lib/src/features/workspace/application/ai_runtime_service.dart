@@ -1,11 +1,21 @@
 import '../../../core/cancel_token.dart';
 import '../../../core/local_gemma_model_store.dart';
 import '../../../core/models.dart';
+import '../infrastructure/document_chunk_store.dart';
+import '../infrastructure/openai_compatible_provider.dart';
+import '../infrastructure/provider_profile_store.dart';
+import 'ai_agent_runtime.dart';
 
 class AiRuntimeService {
-  AiRuntimeService({this.localModelStore = const LocalGemmaModelStore()});
+  AiRuntimeService({
+    this.localModelStore = const LocalGemmaModelStore(),
+    ProviderProfileStore? providerProfiles,
+    DocumentChunkStore? chunkStore,
+  }) : _providerProfiles = providerProfiles, _chunkStore = chunkStore;
 
   final LocalGemmaModelStore localModelStore;
+  final ProviderProfileStore? _providerProfiles;
+  final DocumentChunkStore? _chunkStore;
 
   Future<void> restore(AiWorkspaceState state) async {}
   Future<void> restoreEmbedding() async {}
@@ -48,9 +58,29 @@ class AiRuntimeService {
     String? currentDocumentId,
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
-  }) => Future<AiReply>.error(
-    StateError('Configure a remote AI provider to chat.'),
-  );
+  }) async {
+    final store = _providerProfiles;
+    final chunks = _chunkStore;
+    if (store == null || chunks == null) throw StateError('Configure a remote AI provider to chat.');
+    final profiles = await store.readProfiles();
+    if (profiles.isEmpty) throw StateError('Configure a remote AI provider to chat.');
+    final profile = profiles.first;
+    final key = await store.readApiKey(profile.id);
+    if (key == null || key.isEmpty) throw StateError('Add an API key for ${profile.label}.');
+    onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
+    final reply = await AiAgentRuntime(
+      provider: OpenAiCompatibleProvider(),
+      readChunks: chunks.readChunks,
+    ).run(AiAgentRequest(
+      profile: profile,
+      apiKey: key,
+      prompt: prompt,
+      documentIds: useCurrentDocumentScope && currentDocumentId != null
+          ? <String>[currentDocumentId] : const <String>[],
+    ));
+    onToken(reply.text);
+    return AiReply(text: reply.text, citations: reply.citations);
+  }
 
   Future<void> stopGeneration() async {}
   Future<void> dispose() async {}

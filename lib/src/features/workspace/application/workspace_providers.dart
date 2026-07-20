@@ -11,6 +11,7 @@ import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/provider_profile_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
@@ -45,6 +46,11 @@ final pdfDocumentRefProvider =
 final chunkStoreProvider = Provider<DocumentChunkStore>(
   (Ref ref) => DocumentChunkStore(),
 );
+final providerProfileStoreProvider = Provider<ProviderProfileStore>((Ref ref) =>
+    ProviderProfileStore(
+      preferences: ref.watch(sharedPreferencesProvider),
+      secretStore: FlutterSecureProviderSecretStore(),
+    ));
 final documentIdentityServiceProvider = Provider<DocumentIdentityService>(
   (Ref ref) => DocumentIdentityService(),
 );
@@ -66,6 +72,8 @@ final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>(
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
     localModelStore: ref.watch(localGemmaModelStoreProvider),
+    providerProfiles: ref.watch(providerProfileStoreProvider),
+    chunkStore: ref.watch(chunkStoreProvider),
   );
   ref.onDispose(service.dispose);
   return service;
