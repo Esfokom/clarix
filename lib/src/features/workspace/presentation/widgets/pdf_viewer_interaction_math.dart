@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 /// A smaller delta gives mouse wheels finer steps while high-resolution
@@ -118,10 +121,10 @@ class _ReaderCursorLockedPdfRegionState
       onPointerMove: _input.rememberPointer,
       onPointerUp: _input.rememberPointer,
       onPointerCancel: _input.rememberPointer,
-      onPointerSignal: _input.rememberPointer,
-      onPointerPanZoomStart: _input.rememberPointer,
-      onPointerPanZoomUpdate: _input.rememberPointer,
-      onPointerPanZoomEnd: _input.rememberPointer,
+      onPointerSignal: _input.handlePointerSignal,
+      onPointerPanZoomStart: _input.handlePointerPanZoomStart,
+      onPointerPanZoomUpdate: _input.handlePointerPanZoomUpdate,
+      onPointerPanZoomEnd: _input.handlePointerPanZoomEnd,
       child: widget.builder(context, _input),
     );
   }
@@ -137,9 +140,104 @@ class ReaderCursorLockedPdfInput {
   late final ReaderCursorAnchoredInteractionDelegateProvider
   interactionDelegateProvider;
   Offset? _lastPointerGlobalPosition;
+  final ReaderTrackpadZoomGesture _trackpadZoom = ReaderTrackpadZoomGesture();
+
+  bool get pdfrxScaleEnabled => false;
 
   void rememberPointer(PointerEvent event) {
     _lastPointerGlobalPosition = event.position;
+  }
+
+  void handlePointerSignal(PointerSignalEvent event) {
+    rememberPointer(event);
+    if (!controller.isReady) {
+      return;
+    }
+    if (event is PointerScaleEvent) {
+      _applyIncrementalZoom(
+        globalPosition: event.position,
+        rawScale: event.scale,
+      );
+      return;
+    }
+    if (event is PointerScrollEvent &&
+        HardwareKeyboard.instance.isControlPressed) {
+      final double wheelSteps =
+          -(event.scrollDelta.dx + event.scrollDelta.dy) / 120;
+      _applyIncrementalZoom(
+        globalPosition: event.position,
+        rawScale: math.pow(1.2, wheelSteps).toDouble(),
+      );
+    }
+  }
+
+  void _applyIncrementalZoom({
+    required Offset globalPosition,
+    required double rawScale,
+  }) {
+    if (!rawScale.isFinite || rawScale <= 0) {
+      return;
+    }
+    final double scale = dampenReaderPointerScale(rawScale);
+    if (!scale.isFinite || scale <= 0) {
+      return;
+    }
+    final double newZoom = (controller.currentZoom * scale)
+        .clamp(controller.minScale, controller.maxScale)
+        .toDouble();
+    unawaited(
+      controller.zoomOnLocalPosition(
+        localPosition: _validLocalAnchor(globalPosition),
+        newZoom: newZoom,
+        duration: Duration.zero,
+      ),
+    );
+  }
+
+  void handlePointerPanZoomStart(PointerPanZoomStartEvent event) {
+    rememberPointer(event);
+    if (!controller.isReady) {
+      _trackpadZoom.end();
+      return;
+    }
+    final Offset anchor = _validLocalAnchor(event.position);
+    _trackpadZoom.start(startZoom: controller.currentZoom, anchor: anchor);
+  }
+
+  void handlePointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
+    rememberPointer(event);
+    if (!controller.isReady) {
+      return;
+    }
+    final double? newZoom = _trackpadZoom.update(
+      cumulativeScale: event.scale,
+      minZoom: controller.minScale,
+      maxZoom: controller.maxScale,
+    );
+    final Offset? anchor = _trackpadZoom.anchor;
+    if (newZoom == null || anchor == null) {
+      return;
+    }
+    unawaited(
+      controller.zoomOnLocalPosition(
+        localPosition: anchor,
+        newZoom: newZoom,
+        duration: Duration.zero,
+      ),
+    );
+  }
+
+  void handlePointerPanZoomEnd(PointerPanZoomEndEvent event) {
+    rememberPointer(event);
+    _trackpadZoom.end();
+  }
+
+  Offset _validLocalAnchor(Offset globalPosition) {
+    final Offset? local = controller.globalToLocal(globalPosition);
+    if (local != null && _isInsideViewport(local, controller.viewSize)) {
+      return local;
+    }
+    return controller.viewSize.center(Offset.zero);
   }
 
   Offset? localAnchor() {

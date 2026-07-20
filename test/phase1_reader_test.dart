@@ -4,7 +4,11 @@ import 'dart:ui';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/features/workspace/infrastructure/document_metadata_store.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 void main() {
   test('trackpad scale is dampened from the gesture start zoom', () {
@@ -120,6 +124,135 @@ void main() {
     expect(anchor, const Offset(400, 300));
   });
 
+  testWidgets('raw trackpad zoom ignores cumulative pan and locks the cursor', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController(zoom: 2);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: SizedBox(
+          width: 800,
+          height: 600,
+          child: ReaderCursorLockedPdfRegion(
+            controller: controller,
+            builder: (_, _) => const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+    const Offset cursor = Offset(420, 315);
+    final Offset documentPointBefore = controller.documentPointAt(cursor);
+    final TestGesture gesture = await tester.startGesture(
+      cursor,
+      kind: PointerDeviceKind.trackpad,
+    );
+
+    await gesture.panZoomUpdate(
+      cursor,
+      pan: const Offset(-280, -200),
+      scale: 1.5,
+    );
+    await gesture.panZoomUpdate(
+      cursor,
+      pan: const Offset(-470, -348),
+      scale: 1.75,
+    );
+    await gesture.panZoomEnd();
+
+    expect(controller.zoomCalls, hasLength(2));
+    expect(
+      controller.zoomCalls.map((_ZoomCall call) => call.localPosition),
+      everyElement(cursor),
+    );
+    expect(controller.zoomCalls.first.newZoom, closeTo(2.65, 0.000001));
+    expect(controller.zoomCalls.last.newZoom, closeTo(2.975, 0.000001));
+    expect(controller.documentPointAt(cursor), documentPointBefore);
+  });
+
+  testWidgets('raw scale noise does not take ownership from trackpad pan', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderCursorLockedPdfRegion(
+          controller: controller,
+          builder: (_, _) => const SizedBox.expand(),
+        ),
+      ),
+    );
+    final TestGesture gesture = await tester.startGesture(
+      const Offset(420, 315),
+      kind: PointerDeviceKind.trackpad,
+    );
+
+    await gesture.panZoomUpdate(
+      const Offset(420, 315),
+      pan: const Offset(0, -80),
+      scale: 1.009,
+    );
+    await gesture.panZoomEnd();
+
+    expect(controller.zoomCalls, isEmpty);
+  });
+
+  testWidgets('pointer scale zooms incrementally around the cursor', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderCursorLockedPdfRegion(
+          controller: controller,
+          builder: (_, _) => const SizedBox.expand(),
+        ),
+      ),
+    );
+    const Offset cursor = Offset(420, 315);
+
+    await tester.sendEventToBinding(
+      const PointerScaleEvent(position: cursor, scale: 1.2),
+    );
+
+    expect(controller.zoomCalls, hasLength(1));
+    expect(controller.zoomCalls.single.localPosition, cursor);
+    expect(controller.zoomCalls.single.newZoom, closeTo(2.26, 0.000001));
+  });
+
+  testWidgets('Ctrl-wheel zooms while plain wheel remains pdfrx-owned', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderCursorLockedPdfRegion(
+          controller: controller,
+          builder: (_, _) => const SizedBox.expand(),
+        ),
+      ),
+    );
+    const Offset cursor = Offset(420, 315);
+
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(position: cursor, scrollDelta: Offset(0, -120)),
+    );
+    expect(controller.zoomCalls, isEmpty);
+
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(position: cursor, scrollDelta: Offset(0, -120)),
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(controller.zoomCalls, hasLength(1));
+    expect(controller.zoomCalls.single.localPosition, cursor);
+    expect(controller.zoomCalls.single.newZoom, closeTo(2.26, 0.000001));
+  });
+
   test('document metadata round-trips through the sidecar store', () async {
     final Directory root = await Directory.systemTemp.createTemp(
       'clarix-metadata-',
@@ -188,4 +321,52 @@ void main() {
     expect(after.fingerprint, before.fingerprint);
     expect(after.path, moved.path);
   });
+}
+
+class _ZoomCall {
+  const _ZoomCall(this.localPosition, this.newZoom);
+
+  final Offset localPosition;
+  final double newZoom;
+}
+
+class _RecordingPdfViewerController extends PdfViewerController {
+  _RecordingPdfViewerController({this.zoom = 2});
+
+  double zoom;
+  Offset translation = Offset.zero;
+  final List<_ZoomCall> zoomCalls = <_ZoomCall>[];
+
+  Offset documentPointAt(Offset localPosition) =>
+      (localPosition - translation) / zoom;
+
+  @override
+  bool get isReady => true;
+
+  @override
+  double get currentZoom => zoom;
+
+  @override
+  double get minScale => 0.25;
+
+  @override
+  double get maxScale => 8;
+
+  @override
+  Size get viewSize => const Size(800, 600);
+
+  @override
+  Offset? globalToLocal(Offset global) => global;
+
+  @override
+  Future<void> zoomOnLocalPosition({
+    required Offset localPosition,
+    required double newZoom,
+    Duration duration = const Duration(milliseconds: 200),
+  }) async {
+    final Offset documentPoint = documentPointAt(localPosition);
+    zoomCalls.add(_ZoomCall(localPosition, newZoom));
+    zoom = newZoom;
+    translation = localPosition - documentPoint * newZoom;
+  }
 }
