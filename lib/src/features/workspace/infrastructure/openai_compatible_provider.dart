@@ -9,6 +9,7 @@ class AiChatMessage {
     required this.role,
     required this.content,
     this.toolCallId,
+    this.toolCalls = const <AiToolCall>[],
   });
 
   const AiChatMessage.user(String content)
@@ -22,14 +23,29 @@ class AiChatMessage {
     required String content,
   }) : this(role: 'tool', content: content, toolCallId: toolCallId);
 
+  AiChatMessage.assistantToolCalls(List<AiToolCall> toolCalls)
+      : this(role: 'assistant', content: '', toolCalls: toolCalls);
+
   final String role;
   final String content;
   final String? toolCallId;
+  final List<AiToolCall> toolCalls;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'role': role,
         'content': content,
         if (toolCallId != null) 'tool_call_id': toolCallId,
+        if (toolCalls.isNotEmpty)
+          'tool_calls': toolCalls
+              .map((AiToolCall call) => <String, dynamic>{
+                    'id': call.id,
+                    'type': 'function',
+                    'function': <String, dynamic>{
+                      'name': call.name,
+                      'arguments': call.argumentsJson,
+                    },
+                  })
+              .toList(),
       };
 }
 
