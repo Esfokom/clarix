@@ -1,4 +1,5 @@
 import '../../../core/models.dart';
+import '../domain/ai_provider.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/openai_compatible_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
@@ -14,6 +15,13 @@ class AiRuntimeService {
   final ProviderProfileStore providerProfiles;
   final DocumentChunkStore chunkStore;
   final OpenAiCompatibleProvider _provider;
+
+  Future<void> testProvider(AiProviderProfile profile, String apiKey) {
+    if (apiKey.trim().isEmpty) {
+      throw ArgumentError('Enter an API key before testing this provider.');
+    }
+    return _provider.testCredentials(profile: profile, apiKey: apiKey.trim());
+  }
 
   Future<AiReply> sendPrompt({
     required String prompt,

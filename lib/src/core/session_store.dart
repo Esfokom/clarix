@@ -9,7 +9,6 @@ class ClarixSessionStore {
 
   static const String _workspaceKey = 'clarix.workspace.session';
   static const String _aiKey = 'clarix.ai.state';
-  static const String _downloadKey = 'clarix.download.tasks';
 
   final SharedPreferencesAsync _preferences;
 
@@ -43,26 +42,4 @@ class ClarixSessionStore {
     return _preferences.setString(_aiKey, jsonEncode(state.toJson()));
   }
 
-  Future<Map<String, DownloadTaskState>> readDownloads() async {
-    final String? raw = await _preferences.getString(_downloadKey);
-    if (raw == null || raw.isEmpty) {
-      return <String, DownloadTaskState>{};
-    }
-
-    final Map<String, dynamic> decoded =
-        jsonDecode(raw) as Map<String, dynamic>;
-    return decoded.map(
-      (String key, dynamic value) => MapEntry(
-        key,
-        DownloadTaskState.fromJson(value as Map<String, dynamic>),
-      ),
-    );
-  }
-
-  Future<void> writeDownloads(Map<String, DownloadTaskState> downloads) {
-    final Map<String, dynamic> encoded = downloads.map(
-      (String key, DownloadTaskState value) => MapEntry(key, value.toJson()),
-    );
-    return _preferences.setString(_downloadKey, jsonEncode(encoded));
-  }
 }

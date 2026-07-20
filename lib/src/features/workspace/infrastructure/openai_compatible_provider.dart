@@ -156,6 +156,19 @@ class OpenAiCompatibleProvider {
 
   final OpenAiTransport _transport;
 
+  Future<void> testCredentials({
+    required AiProviderProfile profile,
+    required String apiKey,
+  }) async {
+    await streamChat(
+      OpenAiChatRequest(
+        profile: profile,
+        apiKey: apiKey,
+        messages: const <AiChatMessage>[AiChatMessage.user('Reply with OK.')],
+      ),
+    ).drain<void>();
+  }
+
   Stream<AiProviderEvent> streamChat(OpenAiChatRequest request) async* {
     final OpenAiTransportResponse response = await _transport.post(
       OpenAiTransportRequest(

@@ -48,6 +48,20 @@ void main() {
     );
   });
 
+  test('tests credentials with a minimal chat completion request', () async {
+    final _FakeTransport transport = _FakeTransport(<String>['data: [DONE]\n']);
+    final OpenAiCompatibleProvider provider = OpenAiCompatibleProvider(
+      transport: transport,
+    );
+
+    await provider.testCredentials(profile: profile, apiKey: 'sk-test');
+
+    final Map<String, dynamic> body =
+        jsonDecode(transport.request!.body) as Map<String, dynamic>;
+    expect(body['messages'], <dynamic>[<String, String>{'role': 'user', 'content': 'Reply with OK.'}]);
+    expect(body.containsKey('tools'), isFalse);
+  });
+
   test('streams text then tool call fragments before completion', () async {
     final _FakeTransport transport = _FakeTransport(<String>[
       'data: {"choices":[{"delta":{"content":"Hello "}}]}\n',
