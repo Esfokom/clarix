@@ -66,9 +66,6 @@ class ReaderTrackpadZoomGesture {
 
 typedef ReaderZoomAnchorProvider = Offset? Function();
 
-/// Keeps pdfrx from re-centering content at viewport boundaries during zoom.
-Matrix4 preserveReaderCursorLockedMatrix(Matrix4 matrix) => matrix;
-
 Offset resolveLockedPointerFocalPoint({
   required Offset? lockedFocalPoint,
   required Offset reportedFocalPoint,
@@ -256,15 +253,6 @@ class ReaderCursorLockedPdfInput {
       return null;
     }
     return local;
-  }
-
-  Matrix4 normalizeMatrix(
-    Matrix4 matrix,
-    Size viewSize,
-    PdfPageLayout layout,
-    PdfViewerController? viewerController,
-  ) {
-    return preserveReaderCursorLockedMatrix(matrix);
   }
 }
 

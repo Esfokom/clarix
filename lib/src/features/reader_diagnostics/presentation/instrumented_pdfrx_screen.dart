@@ -84,11 +84,10 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
                 controller: _controller,
                 params: PdfViewerParams(
                   panEnabled: true,
-                  scaleEnabled: true,
+                  scaleEnabled: input.pdfrxScaleEnabled,
                   scaleByPointerScale: readerPointerZoomSensitivity,
                   interactionDelegateProvider:
                       input.interactionDelegateProvider,
-                  normalizeMatrix: input.normalizeMatrix,
                   onInteractionStart: _onInteractionStart,
                   onInteractionUpdate: _onInteractionUpdate,
                   onInteractionEnd: _onInteractionEnd,

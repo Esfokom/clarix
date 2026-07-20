@@ -95,7 +95,8 @@ void main() {
       viewer.params.interactionDelegateProvider,
       isA<ReaderCursorAnchoredInteractionDelegateProvider>(),
     );
-    expect(viewer.params.normalizeMatrix, isNotNull);
+    expect(viewer.params.scaleEnabled, isFalse);
+    expect(viewer.params.normalizeMatrix, isNull);
   });
 
   testWidgets('instrumented viewer uses the shared cursor-locked PDF input', (
@@ -118,7 +119,8 @@ void main() {
       viewer.params.interactionDelegateProvider,
       isA<ReaderCursorAnchoredInteractionDelegateProvider>(),
     );
-    expect(viewer.params.normalizeMatrix, isNotNull);
+    expect(viewer.params.scaleEnabled, isFalse);
+    expect(viewer.params.normalizeMatrix, isNull);
   });
   testWidgets('stock screen exposes only minimal control chrome', (
     WidgetTester tester,

@@ -57,11 +57,10 @@ class _StockPdfrxScreenState extends State<StockPdfrxScreen> {
                 controller: _controller,
                 params: PdfViewerParams(
                   panEnabled: true,
-                  scaleEnabled: true,
+                  scaleEnabled: input.pdfrxScaleEnabled,
                   scaleByPointerScale: readerPointerZoomSensitivity,
                   interactionDelegateProvider:
                       input.interactionDelegateProvider,
-                  normalizeMatrix: input.normalizeMatrix,
                 ),
               );
             },

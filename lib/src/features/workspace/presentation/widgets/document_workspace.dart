@@ -562,14 +562,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             horizontalCacheExtent: 0.5,
                             verticalCacheExtent: 0.75,
                             panEnabled: true,
-                            scaleEnabled: true,
+                            scaleEnabled: input.pdfrxScaleEnabled,
                             scaleByPointerScale: readerPointerZoomSensitivity,
                             textSelectionParams: const PdfTextSelectionParams(
                               enabled: true,
                             ),
                             interactionDelegateProvider:
                                 input.interactionDelegateProvider,
-                            normalizeMatrix: input.normalizeMatrix,
                             onInteractionEnd: (_) => _persistViewerState(),
                             onPageChanged: _onPageChanged,
                             onViewerReady: _onViewerReady,
