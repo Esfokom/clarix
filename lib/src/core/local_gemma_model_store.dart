@@ -12,14 +12,14 @@ class LocalGemmaModelStore {
     if (Platform.isWindows) {
       final String? local = Platform.environment['LOCALAPPDATA'];
       if (local != null && local.isNotEmpty && p.isAbsolute(local)) {
-        return p.join(local, 'flutter_gemma');
+        return p.join(local, 'clarix_legacy_models');
       }
 
       final String? userProfile = Platform.environment['USERPROFILE'];
       if (userProfile != null &&
           userProfile.isNotEmpty &&
           p.isAbsolute(userProfile)) {
-        return p.join(userProfile, 'AppData', 'Local', 'flutter_gemma');
+        return p.join(userProfile, 'AppData', 'Local', 'clarix_legacy_models');
       }
       return null;
     }
