@@ -6,6 +6,60 @@ import 'package:pdfrx/pdfrx.dart';
 /// A smaller delta gives mouse wheels finer steps while high-resolution
 /// trackpads remain continuous.
 const double readerPointerZoomSensitivity = 0.65;
+const double readerTrackpadZoomThreshold = 0.01;
+
+double dampenReaderPointerScale(
+  double rawScale, {
+  double sensitivity = readerPointerZoomSensitivity,
+}) {
+  if (!rawScale.isFinite || rawScale <= 0) {
+    return 1;
+  }
+  return 1 + (rawScale - 1) * sensitivity;
+}
+
+class ReaderTrackpadZoomGesture {
+  double? _startZoom;
+  Offset? _anchor;
+  bool _isZooming = false;
+
+  Offset? get anchor => _anchor;
+  bool get isZooming => _isZooming;
+
+  void start({required double startZoom, required Offset anchor}) {
+    _startZoom = startZoom;
+    _anchor = anchor;
+    _isZooming = false;
+  }
+
+  double? update({
+    required double cumulativeScale,
+    required double minZoom,
+    required double maxZoom,
+  }) {
+    final double? startZoom = _startZoom;
+    if (startZoom == null ||
+        _anchor == null ||
+        !cumulativeScale.isFinite ||
+        cumulativeScale <= 0) {
+      return null;
+    }
+    _isZooming =
+        _isZooming || (cumulativeScale - 1).abs() > readerTrackpadZoomThreshold;
+    if (!_isZooming) {
+      return null;
+    }
+    return (startZoom * dampenReaderPointerScale(cumulativeScale))
+        .clamp(minZoom, maxZoom)
+        .toDouble();
+  }
+
+  void end() {
+    _startZoom = null;
+    _anchor = null;
+    _isZooming = false;
+  }
+}
 
 typedef ReaderZoomAnchorProvider = Offset? Function();
 

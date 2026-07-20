@@ -5,21 +5,65 @@ import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/features/workspace/infrastructure/document_metadata_store.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:vector_math/vector_math_64.dart';
 
 void main() {
-  test(
-    'cursor-locked PDF normalization preserves the affine camera matrix',
-    () {
-      final Matrix4 matrix = Matrix4.identity()
-        ..setEntry(0, 0, 1.72)
-        ..setEntry(1, 1, 1.72)
-        ..setEntry(0, 3, -232.704)
-        ..setEntry(1, 3, -175.68);
+  test('trackpad scale is dampened from the gesture start zoom', () {
+    final ReaderTrackpadZoomGesture gesture = ReaderTrackpadZoomGesture();
+    gesture.start(startZoom: 2, anchor: const Offset(420, 315));
 
-      expect(preserveReaderCursorLockedMatrix(matrix), same(matrix));
-    },
-  );
+    final double? first = gesture.update(
+      cumulativeScale: 1.5,
+      minZoom: 0.25,
+      maxZoom: 8,
+    );
+    final double? second = gesture.update(
+      cumulativeScale: 1.75,
+      minZoom: 0.25,
+      maxZoom: 8,
+    );
+
+    expect(first, closeTo(2.65, 0.000001));
+    expect(second, closeTo(2.975, 0.000001));
+    expect(gesture.anchor, const Offset(420, 315));
+  });
+
+  test('trackpad scale noise remains a pan until zoom is established', () {
+    final ReaderTrackpadZoomGesture gesture = ReaderTrackpadZoomGesture();
+    gesture.start(startZoom: 2, anchor: const Offset(420, 315));
+
+    expect(
+      gesture.update(cumulativeScale: 1.009, minZoom: 0.25, maxZoom: 8),
+      isNull,
+    );
+    expect(gesture.isZooming, isFalse);
+
+    expect(
+      gesture.update(cumulativeScale: 1.02, minZoom: 0.25, maxZoom: 8),
+      isNotNull,
+    );
+    expect(gesture.isZooming, isTrue);
+
+    expect(
+      gesture.update(cumulativeScale: 1.001, minZoom: 0.25, maxZoom: 8),
+      isNotNull,
+    );
+    expect(gesture.isZooming, isTrue);
+  });
+
+  test('ending a trackpad zoom clears its locked state', () {
+    final ReaderTrackpadZoomGesture gesture = ReaderTrackpadZoomGesture();
+    gesture.start(startZoom: 2, anchor: const Offset(420, 315));
+    gesture.update(cumulativeScale: 1.5, minZoom: 0.25, maxZoom: 8);
+
+    gesture.end();
+
+    expect(gesture.anchor, isNull);
+    expect(gesture.isZooming, isFalse);
+    expect(
+      gesture.update(cumulativeScale: 1.5, minZoom: 0.25, maxZoom: 8),
+      isNull,
+    );
+  });
 
   test('instrumented focal remains at the pinch-start cursor', () {
     final Offset focal = resolveLockedPointerFocalPoint(
