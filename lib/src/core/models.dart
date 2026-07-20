@@ -4,7 +4,14 @@ import 'package:flutter/material.dart';
 
 enum SidebarPane { thumbnails, outline }
 
-enum DocumentIndexStatus { idle, queued, indexing, indexed, unavailable, failed }
+enum DocumentIndexStatus {
+  idle,
+  queued,
+  indexing,
+  indexed,
+  unavailable,
+  failed,
+}
 
 enum AiRuntimePhase {
   idle,
@@ -22,14 +29,7 @@ enum AiRuntimePhase {
   failed,
 }
 
-enum DownloadTaskStatus {
-  idle,
-  running,
-  paused,
-  validating,
-  failed,
-  completed,
-}
+enum DownloadTaskStatus { idle, running, paused, validating, failed, completed }
 
 enum ModelCatalogType { inference, embedding }
 
@@ -50,13 +50,13 @@ class WorkspaceSession {
   });
 
   factory WorkspaceSession.initial() => WorkspaceSession(
-        restorePreviousSession: true,
-        tabs: const <DocumentTabState>[],
-        activeTabId: null,
-        lastOpenedAt: DateTime.now().toUtc(),
-        recentFiles: const <String>[],
-        sidebarPane: SidebarPane.thumbnails,
-      );
+    restorePreviousSession: true,
+    tabs: const <DocumentTabState>[],
+    activeTabId: null,
+    lastOpenedAt: DateTime.now().toUtc(),
+    recentFiles: const <String>[],
+    sidebarPane: SidebarPane.thumbnails,
+  );
 
   factory WorkspaceSession.fromJson(Map<String, dynamic> json) {
     return WorkspaceSession(
@@ -68,7 +68,8 @@ class WorkspaceSession {
           )
           .toList(growable: false),
       activeTabId: json['activeTabId'] as String?,
-      lastOpenedAt: DateTime.tryParse(json['lastOpenedAt'] as String? ?? '') ??
+      lastOpenedAt:
+          DateTime.tryParse(json['lastOpenedAt'] as String? ?? '') ??
           DateTime.now().toUtc(),
       recentFiles: (json['recentFiles'] as List<dynamic>? ?? const <dynamic>[])
           .cast<String>()
@@ -107,13 +108,13 @@ class WorkspaceSession {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'restorePreviousSession': restorePreviousSession,
-        'tabs': tabs.map((DocumentTabState tab) => tab.toJson()).toList(),
-        'activeTabId': activeTabId,
-        'lastOpenedAt': lastOpenedAt.toIso8601String(),
-        'recentFiles': recentFiles,
-        'sidebarPane': sidebarPane.name,
-      };
+    'restorePreviousSession': restorePreviousSession,
+    'tabs': tabs.map((DocumentTabState tab) => tab.toJson()).toList(),
+    'activeTabId': activeTabId,
+    'lastOpenedAt': lastOpenedAt.toIso8601String(),
+    'recentFiles': recentFiles,
+    'sidebarPane': sidebarPane.name,
+  };
 }
 
 class DocumentTabState {
@@ -177,7 +178,8 @@ class DocumentTabState {
         json['indexStatus'] as String? ?? DocumentIndexStatus.idle.name,
       ),
       missingFileMessage: json['missingFileMessage'] as String?,
-      lastOpenedAt: DateTime.tryParse(json['lastOpenedAt'] as String? ?? '') ??
+      lastOpenedAt:
+          DateTime.tryParse(json['lastOpenedAt'] as String? ?? '') ??
           DateTime.now().toUtc(),
       pageCountHint: json['pageCountHint'] as int?,
     );
@@ -240,22 +242,22 @@ class DocumentTabState {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'documentId': documentId,
-        'filePath': filePath,
-        'title': title,
-        'currentPage': currentPage,
-        'zoomScale': zoomScale,
-        'scrollOffsetX': scrollOffsetX,
-        'scrollOffsetY': scrollOffsetY,
-        'searchQuery': searchQuery,
-        'selectedSearchResult': selectedSearchResult,
-        'outlineExpanded': outlineExpanded,
-        'indexStatus': indexStatus.name,
-        'missingFileMessage': missingFileMessage,
-        'lastOpenedAt': lastOpenedAt.toIso8601String(),
-        'pageCountHint': pageCountHint,
-      };
+    'id': id,
+    'documentId': documentId,
+    'filePath': filePath,
+    'title': title,
+    'currentPage': currentPage,
+    'zoomScale': zoomScale,
+    'scrollOffsetX': scrollOffsetX,
+    'scrollOffsetY': scrollOffsetY,
+    'searchQuery': searchQuery,
+    'selectedSearchResult': selectedSearchResult,
+    'outlineExpanded': outlineExpanded,
+    'indexStatus': indexStatus.name,
+    'missingFileMessage': missingFileMessage,
+    'lastOpenedAt': lastOpenedAt.toIso8601String(),
+    'pageCountHint': pageCountHint,
+  };
 }
 
 class ModelCatalogItem {
@@ -310,8 +312,9 @@ class ModelCatalogItem {
       modelType: modelType,
       fileType: fileType,
       description: description,
-      installedPath:
-          clearInstalledPath ? null : installedPath ?? this.installedPath,
+      installedPath: clearInstalledPath
+          ? null
+          : installedPath ?? this.installedPath,
     );
   }
 }
@@ -355,7 +358,7 @@ class DownloadTaskState {
       totalBytes: json['totalBytes'] as int?,
       lastUpdatedAt:
           DateTime.tryParse(json['lastUpdatedAt'] as String? ?? '') ??
-              DateTime.now().toUtc(),
+          DateTime.now().toUtc(),
       errorMessage: json['errorMessage'] as String?,
       installedPath: json['installedPath'] as String?,
     );
@@ -390,24 +393,26 @@ class DownloadTaskState {
       downloadedBytes: downloadedBytes ?? this.downloadedBytes,
       totalBytes: totalBytes ?? this.totalBytes,
       lastUpdatedAt: lastUpdatedAt ?? this.lastUpdatedAt,
-      errorMessage:
-          clearErrorMessage ? null : errorMessage ?? this.errorMessage,
-      installedPath:
-          clearInstalledPath ? null : installedPath ?? this.installedPath,
+      errorMessage: clearErrorMessage
+          ? null
+          : errorMessage ?? this.errorMessage,
+      installedPath: clearInstalledPath
+          ? null
+          : installedPath ?? this.installedPath,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'taskId': taskId,
-        'modelId': modelId,
-        'status': status.name,
-        'progress': progress,
-        'downloadedBytes': downloadedBytes,
-        'totalBytes': totalBytes,
-        'lastUpdatedAt': lastUpdatedAt.toIso8601String(),
-        'errorMessage': errorMessage,
-        'installedPath': installedPath,
-      };
+    'taskId': taskId,
+    'modelId': modelId,
+    'status': status.name,
+    'progress': progress,
+    'downloadedBytes': downloadedBytes,
+    'totalBytes': totalBytes,
+    'lastUpdatedAt': lastUpdatedAt.toIso8601String(),
+    'errorMessage': errorMessage,
+    'installedPath': installedPath,
+  };
 }
 
 class AiWorkspaceState {
@@ -420,11 +425,6 @@ class AiWorkspaceState {
     required this.messages,
     required this.useCurrentDocumentScope,
     required this.lastRetrievalSnippets,
-    this.inferenceReady = false,
-    this.embeddingReady = false,
-    this.vectorStoreReady = false,
-    this.activeInferenceModelId,
-    this.activeEmbeddingModelId,
   });
 
   final bool providerReady;
@@ -435,39 +435,22 @@ class AiWorkspaceState {
   final List<ComposerMessage> messages;
   final bool useCurrentDocumentScope;
   final List<CitationSnippet> lastRetrievalSnippets;
-  @Deprecated('Use providerReady instead.')
-  final bool inferenceReady;
-  @Deprecated('Remote providers do not require an embedder.')
-  final bool embeddingReady;
-  @Deprecated('Remote providers do not require a vector store.')
-  final bool vectorStoreReady;
-  @Deprecated('Use selectedProviderId instead.')
-  final String? activeInferenceModelId;
-  @Deprecated('Remote providers do not require an embedder.')
-  final String? activeEmbeddingModelId;
 
   factory AiWorkspaceState.initial() => const AiWorkspaceState(
-        providerReady: false,
-        selectedProviderId: null,
-        chatBusy: false,
-        activityPhase: AiRuntimePhase.idle,
-        statusMessage: 'Add a provider to start a remote AI chat.',
-        messages: <ComposerMessage>[],
-        useCurrentDocumentScope: true,
-        lastRetrievalSnippets: <CitationSnippet>[],
-      );
+    providerReady: false,
+    selectedProviderId: null,
+    chatBusy: false,
+    activityPhase: AiRuntimePhase.idle,
+    statusMessage: 'Add a provider to start a remote AI chat.',
+    messages: <ComposerMessage>[],
+    useCurrentDocumentScope: true,
+    lastRetrievalSnippets: <CitationSnippet>[],
+  );
 
   AiWorkspaceState copyWith({
     bool? providerReady,
     String? selectedProviderId,
     bool clearSelectedProviderId = false,
-    bool? inferenceReady,
-    bool? embeddingReady,
-    bool? vectorStoreReady,
-    String? activeInferenceModelId,
-    bool clearActiveInferenceModelId = false,
-    String? activeEmbeddingModelId,
-    bool clearActiveEmbeddingModelId = false,
     bool? chatBusy,
     AiRuntimePhase? activityPhase,
     String? statusMessage,
@@ -480,15 +463,6 @@ class AiWorkspaceState {
       selectedProviderId: clearSelectedProviderId
           ? null
           : selectedProviderId ?? this.selectedProviderId,
-      inferenceReady: inferenceReady ?? this.inferenceReady,
-      embeddingReady: embeddingReady ?? this.embeddingReady,
-      vectorStoreReady: vectorStoreReady ?? this.vectorStoreReady,
-      activeInferenceModelId: clearActiveInferenceModelId
-          ? null
-          : activeInferenceModelId ?? this.activeInferenceModelId,
-      activeEmbeddingModelId: clearActiveEmbeddingModelId
-          ? null
-          : activeEmbeddingModelId ?? this.activeEmbeddingModelId,
       chatBusy: chatBusy ?? this.chatBusy,
       activityPhase: activityPhase ?? this.activityPhase,
       statusMessage: statusMessage ?? this.statusMessage,
@@ -501,12 +475,12 @@ class AiWorkspaceState {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'providerReady': providerReady,
-        'selectedProviderId': selectedProviderId,
-        'activityPhase': activityPhase.name,
-        'statusMessage': statusMessage,
-        'useCurrentDocumentScope': useCurrentDocumentScope,
-      };
+    'providerReady': providerReady,
+    'selectedProviderId': selectedProviderId,
+    'activityPhase': activityPhase.name,
+    'statusMessage': statusMessage,
+    'useCurrentDocumentScope': useCurrentDocumentScope,
+  };
 
   factory AiWorkspaceState.fromJson(Map<String, dynamic> json) {
     return AiWorkspaceState.initial().copyWith(
@@ -516,8 +490,7 @@ class AiWorkspaceState {
       statusMessage: json['selectedProviderId'] == null
           ? 'Add a provider to start a remote AI chat.'
           : json['statusMessage'] as String?,
-      useCurrentDocumentScope:
-          json['useCurrentDocumentScope'] as bool? ?? true,
+      useCurrentDocumentScope: json['useCurrentDocumentScope'] as bool? ?? true,
     );
   }
 }
@@ -539,10 +512,7 @@ class ComposerMessage {
 
   bool get isUser => role == 'user';
 
-  ComposerMessage copyWith({
-    String? text,
-    List<CitationSnippet>? citations,
-  }) {
+  ComposerMessage copyWith({String? text, List<CitationSnippet>? citations}) {
     return ComposerMessage(
       id: id,
       role: role,
@@ -704,14 +674,14 @@ class DocumentIdentity {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'fingerprint': fingerprint,
-        'path': path,
-        'title': title,
-        'byteLength': byteLength,
-        'modifiedAt': modifiedAt.toIso8601String(),
-        'pageCount': pageCount,
-        'isEncrypted': isEncrypted,
-      };
+    'fingerprint': fingerprint,
+    'path': path,
+    'title': title,
+    'byteLength': byteLength,
+    'modifiedAt': modifiedAt.toIso8601String(),
+    'pageCount': pageCount,
+    'isEncrypted': isEncrypted,
+  };
 }
 
 class DocumentBookmark {
@@ -737,11 +707,11 @@ class DocumentBookmark {
   final DateTime createdAt;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'pageNumber': pageNumber,
-        'label': label,
-        'createdAt': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'pageNumber': pageNumber,
+    'label': label,
+    'createdAt': createdAt.toIso8601String(),
+  };
 }
 
 class DocumentAnnotation {
@@ -765,14 +735,15 @@ class DocumentAnnotation {
       pageNumber: json['pageNumber'] as int,
       pageRects: (json['pageRects'] as List<dynamic>? ?? const <dynamic>[])
           .map((dynamic item) {
-        final Map<String, dynamic> rect = item as Map<String, dynamic>;
-        return Rect.fromLTWH(
-          (rect['left'] as num).toDouble(),
-          (rect['top'] as num).toDouble(),
-          (rect['width'] as num).toDouble(),
-          (rect['height'] as num).toDouble(),
-        );
-      }).toList(growable: false),
+            final Map<String, dynamic> rect = item as Map<String, dynamic>;
+            return Rect.fromLTWH(
+              (rect['left'] as num).toDouble(),
+              (rect['top'] as num).toDouble(),
+              (rect['width'] as num).toDouble(),
+              (rect['height'] as num).toDouble(),
+            );
+          })
+          .toList(growable: false),
       selectedText: json['selectedText'] as String? ?? '',
       note: json['note'] as String?,
       colorValue: json['colorValue'] as int? ?? 0x66FFD54F,
@@ -807,23 +778,25 @@ class DocumentAnnotation {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'kind': kind.name,
-        'pageNumber': pageNumber,
-        'pageRects': pageRects
-            .map((Rect rect) => <String, double>{
-                  'left': rect.left,
-                  'top': rect.top,
-                  'width': rect.width,
-                  'height': rect.height,
-                })
-            .toList(growable: false),
-        'selectedText': selectedText,
-        'note': note,
-        'colorValue': colorValue,
-        'createdAt': createdAt.toIso8601String(),
-        'modifiedAt': modifiedAt.toIso8601String(),
-      };
+    'id': id,
+    'kind': kind.name,
+    'pageNumber': pageNumber,
+    'pageRects': pageRects
+        .map(
+          (Rect rect) => <String, double>{
+            'left': rect.left,
+            'top': rect.top,
+            'width': rect.width,
+            'height': rect.height,
+          },
+        )
+        .toList(growable: false),
+    'selectedText': selectedText,
+    'note': note,
+    'colorValue': colorValue,
+    'createdAt': createdAt.toIso8601String(),
+    'modifiedAt': modifiedAt.toIso8601String(),
+  };
 }
 
 class OcrWordData {
@@ -834,8 +807,7 @@ class OcrWordData {
   });
 
   factory OcrWordData.fromJson(Map<String, dynamic> json) {
-    final Map<String, dynamic> bounds =
-        json['bounds'] as Map<String, dynamic>;
+    final Map<String, dynamic> bounds = json['bounds'] as Map<String, dynamic>;
     return OcrWordData(
       text: json['text'] as String,
       confidence: (json['confidence'] as num).toDouble(),
@@ -853,15 +825,15 @@ class OcrWordData {
   final Rect bounds;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'text': text,
-        'confidence': confidence,
-        'bounds': <String, double>{
-          'left': bounds.left,
-          'top': bounds.top,
-          'right': bounds.right,
-          'bottom': bounds.bottom,
-        },
-      };
+    'text': text,
+    'confidence': confidence,
+    'bounds': <String, double>{
+      'left': bounds.left,
+      'top': bounds.top,
+      'right': bounds.right,
+      'bottom': bounds.bottom,
+    },
+  };
 }
 
 class OcrPageData {
@@ -880,8 +852,10 @@ class OcrPageData {
       height: json['height'] as int,
       modelId: json['modelId'] as String,
       words: (json['words'] as List<dynamic>? ?? const <dynamic>[])
-          .map((dynamic item) =>
-              OcrWordData.fromJson(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) =>
+                OcrWordData.fromJson(item as Map<String, dynamic>),
+          )
           .toList(growable: false),
     );
   }
@@ -893,15 +867,16 @@ class OcrPageData {
   final List<OcrWordData> words;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'pageNumber': pageNumber,
-        'width': width,
-        'height': height,
-        'modelId': modelId,
-        'words': words
-            .map((OcrWordData word) => word.toJson())
-            .toList(growable: false),
-      };
+    'pageNumber': pageNumber,
+    'width': width,
+    'height': height,
+    'modelId': modelId,
+    'words': words
+        .map((OcrWordData word) => word.toJson())
+        .toList(growable: false),
+  };
 }
+
 class DocumentMetadata {
   const DocumentMetadata({
     required this.identity,
@@ -924,12 +899,16 @@ class DocumentMetadata {
         json['identity'] as Map<String, dynamic>,
       ),
       bookmarks: (json['bookmarks'] as List<dynamic>? ?? const <dynamic>[])
-          .map((dynamic item) =>
-              DocumentBookmark.fromJson(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) =>
+                DocumentBookmark.fromJson(item as Map<String, dynamic>),
+          )
           .toList(growable: false),
       annotations: (json['annotations'] as List<dynamic>? ?? const <dynamic>[])
-          .map((dynamic item) =>
-              DocumentAnnotation.fromJson(item as Map<String, dynamic>))
+          .map(
+            (dynamic item) =>
+                DocumentAnnotation.fromJson(item as Map<String, dynamic>),
+          )
           .toList(growable: false),
       ocrPages: <int, OcrPageData>{
         for (final dynamic item
@@ -960,15 +939,15 @@ class DocumentMetadata {
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'identity': identity.toJson(),
-        'bookmarks': bookmarks
-            .map((DocumentBookmark item) => item.toJson())
-            .toList(growable: false),
-        'annotations': annotations
-            .map((DocumentAnnotation item) => item.toJson())
-            .toList(growable: false),
-        'ocrPages': ocrPages.values
-            .map((OcrPageData page) => page.toJson())
-            .toList(growable: false),
-      };
+    'identity': identity.toJson(),
+    'bookmarks': bookmarks
+        .map((DocumentBookmark item) => item.toJson())
+        .toList(growable: false),
+    'annotations': annotations
+        .map((DocumentAnnotation item) => item.toJson())
+        .toList(growable: false),
+    'ocrPages': ocrPages.values
+        .map((OcrPageData page) => page.toJson())
+        .toList(growable: false),
+  };
 }

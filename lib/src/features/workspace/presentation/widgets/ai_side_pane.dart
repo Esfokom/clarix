@@ -8,11 +8,7 @@ import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
 
 class AiSidePane extends ConsumerStatefulWidget {
-  const AiSidePane({
-    required this.state,
-    required this.activeTab,
-    super.key,
-  });
+  const AiSidePane({required this.state, required this.activeTab, super.key});
 
   final WorkspaceFeatureState state;
   final DocumentTabState? activeTab;
@@ -125,7 +121,10 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Text(
                 _providerDisclosure(ai),
-                style: const TextStyle(color: WorkspaceColors.textMuted, fontSize: 10.5),
+                style: const TextStyle(
+                  color: WorkspaceColors.textMuted,
+                  fontSize: 10.5,
+                ),
               ),
             ),
           Padding(
@@ -221,7 +220,9 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                       ? const Icon(LucideIcons.square, size: 14)
                       : const Icon(LucideIcons.arrowUp, size: 14),
                   onPressed: ai.chatBusy
-                      ? () => ref.read(workspaceNotifierProvider.notifier).stopGeneration()
+                      ? () => ref
+                            .read(workspaceNotifierProvider.notifier)
+                            .stopGeneration()
                       : _send,
                 ),
               ],
@@ -260,7 +261,9 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
   }
 
   String _providerDisclosure(AiWorkspaceState ai) {
-    final profile = widget.state.providerProfiles.where((item) => item.id == ai.selectedProviderId).firstOrNull;
+    final profile = widget.state.providerProfiles
+        .where((item) => item.id == ai.selectedProviderId)
+        .firstOrNull;
     if (profile == null) return 'Remote provider not selected';
     return '${profile.label} · Remote${profile.shareRetrievedPassages ? ' — Retrieved PDF passages may be shared' : ' — PDF passages stay local'}';
   }
@@ -281,10 +284,14 @@ class _MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         constraints: const BoxConstraints(maxWidth: 300),
         decoration: BoxDecoration(
-          color: isUser ? WorkspaceColors.accentSoft : WorkspaceColors.panelRaised,
+          color: isUser
+              ? WorkspaceColors.accentSoft
+              : WorkspaceColors.panelRaised,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isUser ? WorkspaceColors.accentBorder : WorkspaceColors.border,
+            color: isUser
+                ? WorkspaceColors.accentBorder
+                : WorkspaceColors.border,
           ),
         ),
         child: Text(

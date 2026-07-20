@@ -8,15 +8,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 void main() {
-  test('cursor-locked PDF normalization preserves the affine camera matrix', () {
-    final Matrix4 matrix = Matrix4.identity()
-      ..setEntry(0, 0, 1.72)
-      ..setEntry(1, 1, 1.72)
-      ..setEntry(0, 3, -232.704)
-      ..setEntry(1, 3, -175.68);
+  test(
+    'cursor-locked PDF normalization preserves the affine camera matrix',
+    () {
+      final Matrix4 matrix = Matrix4.identity()
+        ..setEntry(0, 0, 1.72)
+        ..setEntry(1, 1, 1.72)
+        ..setEntry(0, 3, -232.704)
+        ..setEntry(1, 3, -175.68);
 
-    expect(preserveReaderCursorLockedMatrix(matrix), same(matrix));
-  });
+      expect(preserveReaderCursorLockedMatrix(matrix), same(matrix));
+    },
+  );
 
   test('instrumented focal remains at the pinch-start cursor', () {
     final Offset focal = resolveLockedPointerFocalPoint(
@@ -40,15 +43,18 @@ void main() {
     expect(anchor, const Offset(723.2, 544));
   });
 
-  test('reader zoom prefers the tracked cursor over trackpad focal corners', () {
-    final Offset anchor = resolveReaderZoomFocalPoint(
-      trackedCursorLocal: const Offset(237, 181),
-      reportedTrackpadFocalPoint: Offset.zero,
-      viewportSize: const Size(800, 600),
-    );
+  test(
+    'reader zoom prefers the tracked cursor over trackpad focal corners',
+    () {
+      final Offset anchor = resolveReaderZoomFocalPoint(
+        trackedCursorLocal: const Offset(237, 181),
+        reportedTrackpadFocalPoint: Offset.zero,
+        viewportSize: const Size(800, 600),
+      );
 
-    expect(anchor, const Offset(237, 181));
-  });
+      expect(anchor, const Offset(237, 181));
+    },
+  );
 
   test('reader zoom rejects a stale cursor outside the viewport', () {
     final Offset anchor = resolveReaderZoomFocalPoint(

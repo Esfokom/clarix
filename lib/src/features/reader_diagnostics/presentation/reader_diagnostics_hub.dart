@@ -61,10 +61,8 @@ class ReaderDiagnosticsHub extends StatelessWidget {
                               title: 'Stock pdfrx viewer',
                               description:
                                   'Run the unmodified pdfrx viewer as the comparison baseline.',
-                              onTap: () => _open(
-                                context,
-                                const StockPdfrxScreen(),
-                              ),
+                              onTap: () =>
+                                  _open(context, const StockPdfrxScreen()),
                             ),
                             _DestinationCard(
                               key: const Key('open-instrumented-pdfrx'),

@@ -13,10 +13,10 @@ class AiChatMessage {
   });
 
   const AiChatMessage.user(String content)
-      : this(role: 'user', content: content);
+    : this(role: 'user', content: content);
 
   const AiChatMessage.system(String content)
-      : this(role: 'system', content: content);
+    : this(role: 'system', content: content);
 
   const AiChatMessage.tool({
     required String toolCallId,
@@ -24,7 +24,7 @@ class AiChatMessage {
   }) : this(role: 'tool', content: content, toolCallId: toolCallId);
 
   AiChatMessage.assistantToolCalls(List<AiToolCall> toolCalls)
-      : this(role: 'assistant', content: '', toolCalls: toolCalls);
+    : this(role: 'assistant', content: '', toolCalls: toolCalls);
 
   final String role;
   final String content;
@@ -32,21 +32,23 @@ class AiChatMessage {
   final List<AiToolCall> toolCalls;
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'role': role,
-        'content': content,
-        if (toolCallId != null) 'tool_call_id': toolCallId,
-        if (toolCalls.isNotEmpty)
-          'tool_calls': toolCalls
-              .map((AiToolCall call) => <String, dynamic>{
-                    'id': call.id,
-                    'type': 'function',
-                    'function': <String, dynamic>{
-                      'name': call.name,
-                      'arguments': call.argumentsJson,
-                    },
-                  })
-              .toList(),
-      };
+    'role': role,
+    'content': content,
+    if (toolCallId != null) 'tool_call_id': toolCallId,
+    if (toolCalls.isNotEmpty)
+      'tool_calls': toolCalls
+          .map(
+            (AiToolCall call) => <String, dynamic>{
+              'id': call.id,
+              'type': 'function',
+              'function': <String, dynamic>{
+                'name': call.name,
+                'arguments': call.argumentsJson,
+              },
+            },
+          )
+          .toList(),
+  };
 }
 
 class AiToolCall {
@@ -111,10 +113,7 @@ class OpenAiTransportRequest {
 }
 
 class OpenAiTransportResponse {
-  const OpenAiTransportResponse({
-    required this.statusCode,
-    required this.body,
-  });
+  const OpenAiTransportResponse({required this.statusCode, required this.body});
 
   final int statusCode;
   final Stream<List<int>> body;
@@ -153,7 +152,7 @@ class IoOpenAiTransport implements OpenAiTransport {
 
 class OpenAiCompatibleProvider {
   OpenAiCompatibleProvider({OpenAiTransport? transport})
-      : _transport = transport ?? IoOpenAiTransport();
+    : _transport = transport ?? IoOpenAiTransport();
 
   final OpenAiTransport _transport;
 
@@ -170,7 +169,9 @@ class OpenAiCompatibleProvider {
         body: jsonEncode(<String, dynamic>{
           'model': request.profile.modelId,
           'stream': true,
-          'messages': request.messages.map((AiChatMessage item) => item.toJson()).toList(),
+          'messages': request.messages
+              .map((AiChatMessage item) => item.toJson())
+              .toList(),
           if (request.tools.isNotEmpty) 'tools': request.tools,
         }),
       ),
@@ -184,14 +185,15 @@ class OpenAiCompatibleProvider {
     }
 
     final Map<int, _ToolCallAccumulator> calls = <int, _ToolCallAccumulator>{};
-    await for (final String line in utf8.decoder
-        .bind(response.body)
-        .transform(const LineSplitter())) {
+    await for (final String line
+        in utf8.decoder.bind(response.body).transform(const LineSplitter())) {
       if (!line.startsWith('data: ')) continue;
       final String data = line.substring('data: '.length);
       if (data == '[DONE]') {
         yield AiCompletionFinished(
-          toolCalls: calls.values.map((item) => item.build()).toList(growable: false),
+          toolCalls: calls.values
+              .map((item) => item.build())
+              .toList(growable: false),
         );
         return;
       }
@@ -199,11 +201,16 @@ class OpenAiCompatibleProvider {
       try {
         decoded = jsonDecode(data);
       } on FormatException {
-        throw const AiProviderException(0, 'The provider sent an invalid streaming response.');
+        throw const AiProviderException(
+          0,
+          'The provider sent an invalid streaming response.',
+        );
       }
       if (decoded is! Map<String, dynamic>) continue;
       final Object? choices = decoded['choices'];
-      if (choices is! List || choices.isEmpty || choices.first is! Map) continue;
+      if (choices is! List || choices.isEmpty || choices.first is! Map) {
+        continue;
+      }
       final Object? delta = (choices.first as Map<Object?, Object?>)['delta'];
       if (delta is! Map) continue;
       final Object? content = delta['content'];
@@ -217,16 +224,25 @@ class OpenAiCompatibleProvider {
         }
       }
     }
-    throw const AiProviderException(0, 'The provider closed the stream before completion.');
+    throw const AiProviderException(
+      0,
+      'The provider closed the stream before completion.',
+    );
   }
 
   void cancel() => _transport.cancel();
 
   String _errorMessage(int statusCode, String body) {
-    if (statusCode == 401 || statusCode == 403) return 'The provider rejected this API key.';
-    if (statusCode == 429) return 'The provider is rate limiting requests. Try again shortly.';
+    if (statusCode == 401 || statusCode == 403) {
+      return 'The provider rejected this API key.';
+    }
+    if (statusCode == 429) {
+      return 'The provider is rate limiting requests. Try again shortly.';
+    }
     if (statusCode >= 500) return 'The provider is temporarily unavailable.';
-    return body.isEmpty ? 'The provider request failed (HTTP $statusCode).' : 'The provider request failed (HTTP $statusCode).';
+    return body.isEmpty
+        ? 'The provider request failed (HTTP $statusCode).'
+        : 'The provider request failed (HTTP $statusCode).';
   }
 }
 
@@ -246,9 +262,6 @@ class _ToolCallAccumulator {
     if (rawArguments is String) arguments.write(rawArguments);
   }
 
-  AiToolCall build() => AiToolCall(
-        id: id,
-        name: name,
-        argumentsJson: arguments.toString(),
-      );
+  AiToolCall build() =>
+      AiToolCall(id: id, name: name, argumentsJson: arguments.toString());
 }

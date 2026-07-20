@@ -15,8 +15,10 @@ class ReaderSearchService {
     if (needle.isEmpty) {
       return const <PdfSearchMatch>[];
     }
-    final List<PdfSearchMatch> results =
-        await _extraction.searchDocument(path, needle);
+    final List<PdfSearchMatch> results = await _extraction.searchDocument(
+      path,
+      needle,
+    );
     if (metadata != null) {
       for (final OcrPageData page in metadata.ocrPages.values) {
         for (final OcrWordData word in page.words) {

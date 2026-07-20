@@ -30,29 +30,31 @@ void main() {
     );
   });
 
-  test('profile store persists metadata but keeps key in secret storage',
-      () async {
-    final _MemorySecretStore secrets = _MemorySecretStore();
-    final ProviderProfileStore store = ProviderProfileStore(
-      preferences: SharedPreferencesAsync(),
-      secretStore: secrets,
-    );
-    final AiProviderProfile profile = AiProviderProfile.create(
-      id: 'openai',
-      label: 'OpenAI',
-      baseUrl: 'https://api.openai.com/v1',
-      modelId: 'gpt-5',
-      shareRetrievedPassages: true,
-    );
+  test(
+    'profile store persists metadata but keeps key in secret storage',
+    () async {
+      final _MemorySecretStore secrets = _MemorySecretStore();
+      final ProviderProfileStore store = ProviderProfileStore(
+        preferences: SharedPreferencesAsync(),
+        secretStore: secrets,
+      );
+      final AiProviderProfile profile = AiProviderProfile.create(
+        id: 'openai',
+        label: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        modelId: 'gpt-5',
+        shareRetrievedPassages: true,
+      );
 
-    await store.saveProfile(profile, apiKey: 'sk-secret');
+      await store.saveProfile(profile, apiKey: 'sk-secret');
 
-    expect(await store.readProfiles(), <AiProviderProfile>[profile]);
-    expect(await store.readApiKey(profile.id), 'sk-secret');
-    expect(secrets.values, <String, String>{
-      'clarix.provider.openai.api_key': 'sk-secret',
-    });
-  });
+      expect(await store.readProfiles(), <AiProviderProfile>[profile]);
+      expect(await store.readApiKey(profile.id), 'sk-secret');
+      expect(secrets.values, <String, String>{
+        'clarix.provider.openai.api_key': 'sk-secret',
+      });
+    },
+  );
 }
 
 class _MemorySecretStore implements ProviderSecretStore {

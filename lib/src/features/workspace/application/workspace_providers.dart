@@ -5,8 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../../core/local_gemma_model_store.dart';
-import '../../../core/model_catalog.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../infrastructure/document_chunk_store.dart';
@@ -24,54 +22,44 @@ final sessionStoreProvider = Provider<ClarixSessionStore>(
   (Ref ref) => ClarixSessionStore(ref.watch(sharedPreferencesProvider)),
 );
 
-final localGemmaModelStoreProvider = Provider<LocalGemmaModelStore>(
-  (Ref ref) => const LocalGemmaModelStore(),
-);
-
-final modelCatalogServiceProvider = Provider<ClarixModelCatalog>(
-  (Ref ref) => ClarixModelCatalog(
-    localModelStore: ref.watch(localGemmaModelStoreProvider),
-  ),
-);
-
 final pdfExtractionServiceProvider = Provider<HybridPdfExtractionService>(
   (Ref ref) => HybridPdfExtractionService(),
 );
 
-final pdfDocumentRefProvider =
-    Provider.autoDispose.family<PdfDocumentRefFile, String>(
-  (Ref ref, String path) => PdfDocumentRefFile(path),
-);
+final pdfDocumentRefProvider = Provider.autoDispose
+    .family<PdfDocumentRefFile, String>(
+      (Ref ref, String path) => PdfDocumentRefFile(path),
+    );
 
 final chunkStoreProvider = Provider<DocumentChunkStore>(
   (Ref ref) => DocumentChunkStore(),
 );
-final providerProfileStoreProvider = Provider<ProviderProfileStore>((Ref ref) =>
-    ProviderProfileStore(
-      preferences: ref.watch(sharedPreferencesProvider),
-      secretStore: FlutterSecureProviderSecretStore(),
-    ));
+final providerProfileStoreProvider = Provider<ProviderProfileStore>(
+  (Ref ref) => ProviderProfileStore(
+    preferences: ref.watch(sharedPreferencesProvider),
+    secretStore: FlutterSecureProviderSecretStore(),
+  ),
+);
 final documentIdentityServiceProvider = Provider<DocumentIdentityService>(
   (Ref ref) => DocumentIdentityService(),
 );
 
-final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>(
-  (Ref ref) async {
-    Directory root;
-    try {
-      root = await getApplicationSupportDirectory();
-    } catch (_) {
-      root = Directory(
-        '${Directory.systemTemp.path}${Platform.pathSeparator}clarix',
-      );
-    }
-    return DocumentMetadataStore(root: root);
-  },
-);
+final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>((
+  Ref ref,
+) async {
+  Directory root;
+  try {
+    root = await getApplicationSupportDirectory();
+  } catch (_) {
+    root = Directory(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}clarix',
+    );
+  }
+  return DocumentMetadataStore(root: root);
+});
 
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
-    localModelStore: ref.watch(localGemmaModelStoreProvider),
     providerProfiles: ref.watch(providerProfileStoreProvider),
     chunkStore: ref.watch(chunkStoreProvider),
   );
@@ -79,5 +67,7 @@ final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   return service;
 });
 
-final workspaceNotifierProvider = AsyncNotifierProvider<
-    WorkspaceNotifier, WorkspaceFeatureState>(WorkspaceNotifier.new);
+final workspaceNotifierProvider =
+    AsyncNotifierProvider<WorkspaceNotifier, WorkspaceFeatureState>(
+      WorkspaceNotifier.new,
+    );

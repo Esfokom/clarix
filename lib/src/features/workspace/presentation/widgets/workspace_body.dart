@@ -32,10 +32,10 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool showNavigation = constraints.maxWidth >= 900;
         final bool showInspector = constraints.maxWidth >= 1200;
-        final bool showAiInline = showInspector &&
-            activeTab != null &&
-            widget.state.composerExpanded;
-        final bool showAiOverlay = !showInspector &&
+        final bool showAiInline =
+            showInspector && activeTab != null && widget.state.composerExpanded;
+        final bool showAiOverlay =
+            !showInspector &&
             activeTab != null &&
             widget.state.composerExpanded;
 
@@ -45,10 +45,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
               child: Row(
                 children: <Widget>[
                   if (showNavigation)
-                    WorkspaceSidebar(
-                      state: widget.state,
-                      activeTab: activeTab,
-                    ),
+                    WorkspaceSidebar(state: widget.state, activeTab: activeTab),
                   Expanded(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
@@ -104,8 +101,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             if (!showNavigation && _mobileNavigationOpen) ...<Widget>[
               Positioned.fill(
                 child: GestureDetector(
-                  onTap: () =>
-                      setState(() => _mobileNavigationOpen = false),
+                  onTap: () => setState(() => _mobileNavigationOpen = false),
                   child: Container(color: WorkspaceColors.backdrop),
                 ),
               ),
@@ -137,10 +133,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                 bottom: 0,
                 child: SizedBox(
                   width: constraints.maxWidth.clamp(320, 380).toDouble(),
-                  child: AiSidePane(
-                    state: widget.state,
-                    activeTab: activeTab,
-                  ),
+                  child: AiSidePane(state: widget.state, activeTab: activeTab),
                 ),
               ),
             ],
@@ -168,7 +161,9 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             if (widget.state.showProviderSettings) ...<Widget>[
               Positioned.fill(
                 child: GestureDetector(
-                  onTap: () => ref.read(workspaceNotifierProvider.notifier).toggleProviderSettings(false),
+                  onTap: () => ref
+                      .read(workspaceNotifierProvider.notifier)
+                      .toggleProviderSettings(false),
                   child: Container(color: WorkspaceColors.backdrop),
                 ),
               ),
@@ -176,7 +171,10 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                 top: 0,
                 right: 0,
                 bottom: 0,
-                child: SizedBox(width: 388, child: ProviderSettingsSheet(state: widget.state)),
+                child: SizedBox(
+                  width: 388,
+                  child: ProviderSettingsSheet(state: widget.state),
+                ),
               ),
             ],
           ],

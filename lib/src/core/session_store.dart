@@ -25,10 +25,7 @@ class ClarixSessionStore {
   }
 
   Future<void> writeWorkspaceSession(WorkspaceSession session) {
-    return _preferences.setString(
-      _workspaceKey,
-      jsonEncode(session.toJson()),
-    );
+    return _preferences.setString(_workspaceKey, jsonEncode(session.toJson()));
   }
 
   Future<AiWorkspaceState> readAiWorkspaceState() async {
@@ -64,8 +61,7 @@ class ClarixSessionStore {
 
   Future<void> writeDownloads(Map<String, DownloadTaskState> downloads) {
     final Map<String, dynamic> encoded = downloads.map(
-      (String key, DownloadTaskState value) =>
-          MapEntry(key, value.toJson()),
+      (String key, DownloadTaskState value) => MapEntry(key, value.toJson()),
     );
     return _preferences.setString(_downloadKey, jsonEncode(encoded));
   }

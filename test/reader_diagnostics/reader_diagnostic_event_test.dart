@@ -96,10 +96,7 @@ void main() {
     expect(json['panDelta'], isNull);
     expect(before['zoom'], isNull);
     expect(before['translation'], isNull);
-    expect(before['viewport'], <String, Object?>{
-      'width': null,
-      'height': 600,
-    });
+    expect(before['viewport'], <String, Object?>{'width': null, 'height': 600});
     expect(before['document'], <String, Object?>{
       'width': 1200,
       'height': null,
@@ -190,10 +187,7 @@ void main() {
     final Matrix4 matrix = Matrix4.translationValues(22, -14, 0);
 
     expect(isFiniteOffset(const Offset(4, 9)), isTrue);
-    expect(
-      isFiniteOffset(const Offset(double.nan, double.infinity)),
-      isFalse,
-    );
+    expect(isFiniteOffset(const Offset(double.nan, double.infinity)), isFalse);
     expect(matrixTranslation(matrix), const Offset(22, -14));
   });
 
@@ -231,37 +225,37 @@ void main() {
     );
 
     expect(documentPoint * newScale + next, currentAnchor);
-    expect(
-      documentPoint * newScale + next - previousAnchor,
-      focalDelta,
-    );
+    expect(documentPoint * newScale + next - previousAnchor, focalDelta);
   });
 
-  test('pointer lab keeps an off-center local focal point fixed while zooming', () {
-    const Size canvasSize = Size(800, 600);
-    const Offset localFocalPoint = Offset(620, 180);
-    const Offset oldTranslation = Offset(24, -36);
-    const double oldScale = 1.25;
-    const double newScale = 2.5;
-    final Offset anchor = canvasCenteredFocalPoint(
-      localFocalPoint: localFocalPoint,
-      canvasSize: canvasSize,
-    );
-    final Offset worldPoint = (anchor - oldTranslation) / oldScale;
-    final Offset nextTranslation = anchoredTranslation(
-      anchor: anchor,
-      oldTranslation: oldTranslation,
-      oldScale: oldScale,
-      newScale: newScale,
-    );
-    final Offset renderedAfter =
-        canvasSize.center(Offset.zero) +
-        nextTranslation +
-        worldPoint * newScale;
+  test(
+    'pointer lab keeps an off-center local focal point fixed while zooming',
+    () {
+      const Size canvasSize = Size(800, 600);
+      const Offset localFocalPoint = Offset(620, 180);
+      const Offset oldTranslation = Offset(24, -36);
+      const double oldScale = 1.25;
+      const double newScale = 2.5;
+      final Offset anchor = canvasCenteredFocalPoint(
+        localFocalPoint: localFocalPoint,
+        canvasSize: canvasSize,
+      );
+      final Offset worldPoint = (anchor - oldTranslation) / oldScale;
+      final Offset nextTranslation = anchoredTranslation(
+        anchor: anchor,
+        oldTranslation: oldTranslation,
+        oldScale: oldScale,
+        newScale: newScale,
+      );
+      final Offset renderedAfter =
+          canvasSize.center(Offset.zero) +
+          nextTranslation +
+          worldPoint * newScale;
 
-    expect(renderedAfter.dx, closeTo(localFocalPoint.dx, 0.000001));
-    expect(renderedAfter.dy, closeTo(localFocalPoint.dy, 0.000001));
-  });
+      expect(renderedAfter.dx, closeTo(localFocalPoint.dx, 0.000001));
+      expect(renderedAfter.dy, closeTo(localFocalPoint.dy, 0.000001));
+    },
+  );
 
   test('pinch locks to its starting cursor despite cumulative pan noise', () {
     const Offset anchor = Offset(323.2, 244);
@@ -300,39 +294,36 @@ void main() {
 
   test('pinch mode remains locked after scale returns near one', () {
     expect(
-      shouldLockTrackpadZoomAnchor(
-        alreadyLocked: false,
-        cumulativeScale: 1.2,
-      ),
+      shouldLockTrackpadZoomAnchor(alreadyLocked: false, cumulativeScale: 1.2),
       isTrue,
     );
     expect(
-      shouldLockTrackpadZoomAnchor(
-        alreadyLocked: true,
-        cumulativeScale: 1.001,
-      ),
+      shouldLockTrackpadZoomAnchor(alreadyLocked: true, cumulativeScale: 1.001),
       isTrue,
     );
   });
 
-  test('controller snapshots serialize typed boundary state for both values', () {
-    final ReaderDiagnosticEvent near = ReaderDiagnosticEvent(
-      sequence: 1,
-      elapsedMicros: 2,
-      source: ReaderDiagnosticSource.controllerListener,
-      type: ReaderDiagnosticEventType.controllerSnapshot,
-      nearBoundary: true,
-    );
-    final ReaderDiagnosticEvent away = ReaderDiagnosticEvent(
-      sequence: 2,
-      elapsedMicros: 3,
-      source: ReaderDiagnosticSource.controllerListener,
-      type: ReaderDiagnosticEventType.controllerSnapshot,
-      nearBoundary: false,
-    );
+  test(
+    'controller snapshots serialize typed boundary state for both values',
+    () {
+      final ReaderDiagnosticEvent near = ReaderDiagnosticEvent(
+        sequence: 1,
+        elapsedMicros: 2,
+        source: ReaderDiagnosticSource.controllerListener,
+        type: ReaderDiagnosticEventType.controllerSnapshot,
+        nearBoundary: true,
+      );
+      final ReaderDiagnosticEvent away = ReaderDiagnosticEvent(
+        sequence: 2,
+        elapsedMicros: 3,
+        source: ReaderDiagnosticSource.controllerListener,
+        type: ReaderDiagnosticEventType.controllerSnapshot,
+        nearBoundary: false,
+      );
 
-    expect(near.toJson()['nearBoundary'], isTrue);
-    expect(away.toJson()['nearBoundary'], isFalse);
-    expect(jsonEncode(near.toJson()), isNot(contains('near_boundary')));
-  });
+      expect(near.toJson()['nearBoundary'], isTrue);
+      expect(away.toJson()['nearBoundary'], isFalse);
+      expect(jsonEncode(near.toJson()), isNot(contains('near_boundary')));
+    },
+  );
 }

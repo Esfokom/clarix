@@ -37,10 +37,7 @@ class SurfaceBlock extends StatelessWidget {
       side: const BorderSide(color: WorkspaceColors.border),
       child: DecoratedBox(
         decoration: const BoxDecoration(color: WorkspaceColors.panel),
-        child: Padding(
-          padding: padding,
-          child: child,
-        ),
+        child: Padding(padding: padding, child: child),
       ),
     );
   }

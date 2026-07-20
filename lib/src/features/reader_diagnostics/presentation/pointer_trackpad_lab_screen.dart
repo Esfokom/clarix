@@ -151,27 +151,28 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
                 Positioned.fill(
                   child: ValueListenableBuilder<PointerLabState>(
                     valueListenable: _state,
-                    builder: (
-                      BuildContext context,
-                      PointerLabState state,
-                      Widget? child,
-                    ) {
-                      return Stack(
-                        fit: StackFit.expand,
-                        children: <Widget>[
-                          DiagnosticCrosshairOverlay(
-                            cursor: state.cursor,
-                            focal: state.focal,
-                          ),
-                          if (!_overlaysHidden)
-                            Positioned(
-                              top: 12,
-                              right: 12,
-                              child: _PointerLabReadout(state: state),
-                            ),
-                        ],
-                      );
-                    },
+                    builder:
+                        (
+                          BuildContext context,
+                          PointerLabState state,
+                          Widget? child,
+                        ) {
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: <Widget>[
+                              DiagnosticCrosshairOverlay(
+                                cursor: state.cursor,
+                                focal: state.focal,
+                              ),
+                              if (!_overlaysHidden)
+                                Positioned(
+                                  top: 12,
+                                  right: 12,
+                                  child: _PointerLabReadout(state: state),
+                                ),
+                            ],
+                          );
+                        },
                   ),
                 ),
                 if (!_overlaysHidden)
@@ -190,7 +191,8 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
                     child: OutlinedButton.icon(
                       key: const Key('pointer-lab-back'),
                       onPressed:
-                          widget.onBack ?? () => Navigator.of(context).maybePop(),
+                          widget.onBack ??
+                          () => Navigator.of(context).maybePop(),
                       icon: const Icon(Icons.arrow_back),
                       label: const Text('Back'),
                     ),
@@ -208,9 +210,8 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
                         tooltip: _overlaysHidden
                             ? 'Show lab overlays'
                             : 'Hide lab overlays',
-                        onPressed: () => setState(
-                          () => _overlaysHidden = !_overlaysHidden,
-                        ),
+                        onPressed: () =>
+                            setState(() => _overlaysHidden = !_overlaysHidden),
                         icon: Icon(
                           _overlaysHidden
                               ? Icons.visibility
@@ -348,9 +349,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
     );
     _lastGestureScale = cumulativeScale;
     _state.value = current.copyWith(
-      focal: _zoomAnchorLocked
-          ? localZoomAnchor
-          : details.localFocalPoint,
+      focal: _zoomAnchorLocked ? localZoomAnchor : details.localFocalPoint,
       focalGlobal: details.focalPoint,
       scale: newScale,
       translation: translation,
@@ -423,8 +422,7 @@ class _PointerTrackpadLabScreenState extends State<PointerTrackpadLabScreen> {
 Offset canvasCenteredFocalPoint({
   required Offset localFocalPoint,
   required Size canvasSize,
-}) =>
-    localFocalPoint - canvasSize.center(Offset.zero);
+}) => localFocalPoint - canvasSize.center(Offset.zero);
 
 ReaderDiagnosticPoint? _pointOrNull(Offset? value) =>
     value == null ? null : ReaderDiagnosticPoint.fromOffset(value);
@@ -563,7 +561,11 @@ class _PointerLabCanvasPainter extends CustomPainter {
 
     const double extent = 2400;
     const double spacing = 40;
-    for (double coordinate = -extent; coordinate <= extent; coordinate += spacing) {
+    for (
+      double coordinate = -extent;
+      coordinate <= extent;
+      coordinate += spacing
+    ) {
       canvas.drawLine(
         Offset(coordinate, -extent),
         Offset(coordinate, extent),

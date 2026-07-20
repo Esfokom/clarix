@@ -52,48 +52,49 @@ class _DiagnosticsEventPanelState extends State<DiagnosticsEventPanel> {
                 height: 280,
                 child: ValueListenableBuilder<List<ReaderDiagnosticEvent>>(
                   valueListenable: widget.recorder.events,
-                  builder: (
-                    BuildContext context,
-                    List<ReaderDiagnosticEvent> events,
-                    Widget? child,
-                  ) {
-                    final int start = max(
-                      0,
-                      events.length - _visibleEventLimit,
-                    );
-                    final List<ReaderDiagnosticEvent> newest = events
-                        .sublist(start)
-                        .reversed
-                        .toList(growable: false);
-                    if (newest.isEmpty) {
-                      return const Center(
-                        child: Text(
-                          'No diagnostic events.',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      );
-                    }
-                    return ListView.builder(
-                      padding: const EdgeInsets.all(8),
-                      itemCount: newest.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        final ReaderDiagnosticEvent event = newest[index];
-                        return Padding(
-                          key: Key('diagnostics-event-${event.sequence}'),
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: SelectableText(
-                            jsonEncode(event.toJson()),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'monospace',
-                              fontSize: 11,
-                              height: 1.3,
+                  builder:
+                      (
+                        BuildContext context,
+                        List<ReaderDiagnosticEvent> events,
+                        Widget? child,
+                      ) {
+                        final int start = max(
+                          0,
+                          events.length - _visibleEventLimit,
+                        );
+                        final List<ReaderDiagnosticEvent> newest = events
+                            .sublist(start)
+                            .reversed
+                            .toList(growable: false);
+                        if (newest.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No diagnostic events.',
+                              style: TextStyle(color: Colors.white70),
                             ),
-                          ),
+                          );
+                        }
+                        return ListView.builder(
+                          padding: const EdgeInsets.all(8),
+                          itemCount: newest.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final ReaderDiagnosticEvent event = newest[index];
+                            return Padding(
+                              key: Key('diagnostics-event-${event.sequence}'),
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: SelectableText(
+                                jsonEncode(event.toJson()),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                  height: 1.3,
+                                ),
+                              ),
+                            );
+                          },
                         );
                       },
-                    );
-                  },
                 ),
               ),
           ],
@@ -138,9 +139,7 @@ class _DiagnosticsEventPanelState extends State<DiagnosticsEventPanel> {
             key: const Key('diagnostics-collapse'),
             tooltip: _collapsed ? 'Expand events' : 'Collapse events',
             onPressed: () => setState(() => _collapsed = !_collapsed),
-            icon: Icon(
-              _collapsed ? Icons.expand_more : Icons.expand_less,
-            ),
+            icon: Icon(_collapsed ? Icons.expand_more : Icons.expand_less),
             color: Colors.white,
           ),
         ],
@@ -184,37 +183,31 @@ class _RecorderBufferStatus extends StatelessWidget {
       children: <Widget>[
         const Text(
           'Events',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
         ValueListenableBuilder<List<ReaderDiagnosticEvent>>(
           valueListenable: recorder.events,
-          builder: (
-            BuildContext context,
-            List<ReaderDiagnosticEvent> events,
-            Widget? child,
-          ) {
-            return ValueListenableBuilder<int>(
-              valueListenable: recorder.evictedEventCount,
-              builder: (
+          builder:
+              (
                 BuildContext context,
-                int evicted,
+                List<ReaderDiagnosticEvent> events,
                 Widget? child,
               ) {
-                return Text(
-                  '${events.length} buffered · $evicted evicted',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: evicted > 0 ? Colors.amber : Colors.white70,
-                    fontSize: 10,
-                  ),
+                return ValueListenableBuilder<int>(
+                  valueListenable: recorder.evictedEventCount,
+                  builder: (BuildContext context, int evicted, Widget? child) {
+                    return Text(
+                      '${events.length} buffered · $evicted evicted',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: evicted > 0 ? Colors.amber : Colors.white70,
+                        fontSize: 10,
+                      ),
+                    );
+                  },
                 );
               },
-            );
-          },
         ),
       ],
     );

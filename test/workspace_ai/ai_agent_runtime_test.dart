@@ -8,52 +8,89 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final AiProviderProfile profile = AiProviderProfile.create(
-    id: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1',
-    modelId: 'gpt-5', shareRetrievedPassages: true,
+    id: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    modelId: 'gpt-5',
+    shareRetrievedPassages: true,
   );
   final List<PdfChunkRecord> chunks = <PdfChunkRecord>[
     const PdfChunkRecord(
-      id: 'chunk-1', documentId: 'document-1', title: 'contract.pdf',
-      pageNumber: 4, chunkOrder: 0, text: 'The termination clause is here.',
+      id: 'chunk-1',
+      documentId: 'document-1',
+      title: 'contract.pdf',
+      pageNumber: 4,
+      chunkOrder: 0,
+      text: 'The termination clause is here.',
     ),
   ];
 
   test('does not send passages when provider sharing is disabled', () async {
     final _FakeProvider provider = _FakeProvider(<List<AiProviderEvent>>[
-      <AiProviderEvent>[const AiTextDelta('Answer'), const AiCompletionFinished()],
+      <AiProviderEvent>[
+        const AiTextDelta('Answer'),
+        const AiCompletionFinished(),
+      ],
     ]);
     final AiAgentRuntime runtime = AiAgentRuntime(
       provider: provider,
       readChunks: (_) async => chunks,
     );
 
-    await runtime.run(AiAgentRequest(
-      profile: AiProviderProfile.create(
-        id: profile.id, label: profile.label, baseUrl: profile.baseUrl,
-        modelId: profile.modelId, shareRetrievedPassages: false,
+    await runtime.run(
+      AiAgentRequest(
+        profile: AiProviderProfile.create(
+          id: profile.id,
+          label: profile.label,
+          baseUrl: profile.baseUrl,
+          modelId: profile.modelId,
+          shareRetrievedPassages: false,
+        ),
+        apiKey: 'sk-test',
+        prompt: 'What is termination?',
+        documentIds: const <String>['document-1'],
       ),
-      apiKey: 'sk-test', prompt: 'What is termination?', documentIds: const <String>['document-1'],
-    ));
+    );
 
-    expect(provider.requests.single.messages.map((AiChatMessage item) => item.content).join(),
-        isNot(contains('[source')));
+    expect(
+      provider.requests.single.messages
+          .map((AiChatMessage item) => item.content)
+          .join(),
+      isNot(contains('[source')),
+    );
   });
 
   test('executes valid search tool and completes next model round', () async {
     final _FakeProvider provider = _FakeProvider(<List<AiProviderEvent>>[
       <AiProviderEvent>[
-        const AiCompletionFinished(toolCalls: <AiToolCall>[
-          AiToolCall(id: 'call_1', name: 'search_document', argumentsJson: '{"query":"termination"}'),
-        ]),
+        const AiCompletionFinished(
+          toolCalls: <AiToolCall>[
+            AiToolCall(
+              id: 'call_1',
+              name: 'search_document',
+              argumentsJson: '{"query":"termination"}',
+            ),
+          ],
+        ),
       ],
-      <AiProviderEvent>[const AiTextDelta('It is on page 4.'), const AiCompletionFinished()],
+      <AiProviderEvent>[
+        const AiTextDelta('It is on page 4.'),
+        const AiCompletionFinished(),
+      ],
     ]);
-    final AiAgentRuntime runtime = AiAgentRuntime(provider: provider, readChunks: (_) async => chunks);
+    final AiAgentRuntime runtime = AiAgentRuntime(
+      provider: provider,
+      readChunks: (_) async => chunks,
+    );
 
-    final AiAgentReply reply = await runtime.run(AiAgentRequest(
-      profile: profile, apiKey: 'sk-test', prompt: 'Find termination',
-      documentIds: const <String>['document-1'],
-    ));
+    final AiAgentReply reply = await runtime.run(
+      AiAgentRequest(
+        profile: profile,
+        apiKey: 'sk-test',
+        prompt: 'Find termination',
+        documentIds: const <String>['document-1'],
+      ),
+    );
 
     expect(reply.text, 'It is on page 4.');
     expect(reply.citations.single.pageNumber, 4);

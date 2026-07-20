@@ -77,10 +77,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
         : ReaderCursorLockedPdfRegion(
             key: ValueKey<String>('cursor-locked-$path'),
             controller: _controller,
-            builder: (
-              BuildContext context,
-              ReaderCursorLockedPdfInput input,
-            ) {
+            builder: (BuildContext context, ReaderCursorLockedPdfInput input) {
               return PdfViewer.file(
                 path,
                 key: ValueKey<String>(path),
@@ -95,26 +92,25 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
                   onInteractionStart: _onInteractionStart,
                   onInteractionUpdate: _onInteractionUpdate,
                   onInteractionEnd: _onInteractionEnd,
-                  onViewerReady: (
-                    PdfDocument document,
-                    PdfViewerController value,
-                  ) {
-                    _recordViewerReady();
-                  },
-                  errorBannerBuilder: (
-                    BuildContext context,
-                    Object error,
-                    StackTrace? stackTrace,
-                    PdfDocumentRef documentRef,
-                  ) {
-                    _recordViewerError(error);
-                    return Center(
-                      child: Text(
-                        'Unable to open PDF: ${error.runtimeType}',
-                        textAlign: TextAlign.center,
-                      ),
-                    );
-                  },
+                  onViewerReady:
+                      (PdfDocument document, PdfViewerController value) {
+                        _recordViewerReady();
+                      },
+                  errorBannerBuilder:
+                      (
+                        BuildContext context,
+                        Object error,
+                        StackTrace? stackTrace,
+                        PdfDocumentRef documentRef,
+                      ) {
+                        _recordViewerError(error);
+                        return Center(
+                          child: Text(
+                            'Unable to open PDF: ${error.runtimeType}',
+                            textAlign: TextAlign.center,
+                          ),
+                        );
+                      },
                 ),
               );
             },
@@ -125,16 +121,17 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
         pdf,
         ValueListenableBuilder<_CrosshairPositions>(
           valueListenable: _crosshairs,
-          builder: (
-            BuildContext context,
-            _CrosshairPositions positions,
-            Widget? child,
-          ) {
-            return DiagnosticCrosshairOverlay(
-              cursor: positions.cursor,
-              focal: positions.focal,
-            );
-          },
+          builder:
+              (
+                BuildContext context,
+                _CrosshairPositions positions,
+                Widget? child,
+              ) {
+                return DiagnosticCrosshairOverlay(
+                  cursor: positions.cursor,
+                  focal: positions.focal,
+                );
+              },
         ),
       ],
     );
@@ -179,8 +176,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
     setState(() => _path = path);
   }
 
-  void _trackCursor(PointerHoverEvent event) =>
-      _setCursor(event.localPosition);
+  void _trackCursor(PointerHoverEvent event) => _setCursor(event.localPosition);
 
   void _setCursor(Offset? cursor) {
     final _CrosshairPositions current = _crosshairs.value;
@@ -427,9 +423,7 @@ class _InstrumentedPdfrxScreenState extends State<InstrumentedPdfrxScreen> {
     final matrix = _controller.value;
     return ReaderViewerSnapshot(
       zoom: _controller.currentZoom,
-      translation: ReaderDiagnosticPoint.fromOffset(
-        matrixTranslation(matrix),
-      ),
+      translation: ReaderDiagnosticPoint.fromOffset(matrixTranslation(matrix)),
       viewportSize: _controller.viewSize,
       documentSize: _controller.documentSize,
       visibleRect: _controller.visibleRect,

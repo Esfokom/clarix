@@ -13,7 +13,7 @@ abstract interface class ProviderSecretStore {
 
 class FlutterSecureProviderSecretStore implements ProviderSecretStore {
   FlutterSecureProviderSecretStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+    : _storage = storage ?? const FlutterSecureStorage();
 
   final FlutterSecureStorage _storage;
 
@@ -29,22 +29,21 @@ class FlutterSecureProviderSecretStore implements ProviderSecretStore {
 }
 
 class ProviderProfileStore {
-  ProviderProfileStore({
-    required SharedPreferencesAsync preferences,
-    required ProviderSecretStore secretStore,
-  })  : _preferences = preferences,
-        _secretStore = secretStore;
+  ProviderProfileStore({required this.preferences, required this.secretStore});
 
   static const String _profilesKey = 'clarix.ai.providers';
-  final SharedPreferencesAsync _preferences;
-  final ProviderSecretStore _secretStore;
+  final SharedPreferencesAsync preferences;
+  final ProviderSecretStore secretStore;
 
   Future<List<AiProviderProfile>> readProfiles() async {
-    final String? encoded = await _preferences.getString(_profilesKey);
+    final String? encoded = await preferences.getString(_profilesKey);
     if (encoded == null || encoded.isEmpty) return const <AiProviderProfile>[];
     final List<dynamic> values = jsonDecode(encoded) as List<dynamic>;
     return values
-        .map((dynamic value) => AiProviderProfile.fromJson(value as Map<String, dynamic>))
+        .map(
+          (dynamic value) =>
+              AiProviderProfile.fromJson(value as Map<String, dynamic>),
+        )
         .toList(growable: false);
   }
 
@@ -55,21 +54,23 @@ class ProviderProfileStore {
         if (item.id != profile.id) item,
       profile,
     ];
-    await _preferences.setString(
+    await preferences.setString(
       _profilesKey,
-      jsonEncode(updated.map((AiProviderProfile item) => item.toJson()).toList()),
+      jsonEncode(
+        updated.map((AiProviderProfile item) => item.toJson()).toList(),
+      ),
     );
     if (apiKey != null) {
-      await _secretStore.write(key: _secretKey(profile.id), value: apiKey);
+      await secretStore.write(key: _secretKey(profile.id), value: apiKey);
     }
   }
 
   Future<String?> readApiKey(String profileId) =>
-      _secretStore.read(_secretKey(profileId));
+      secretStore.read(_secretKey(profileId));
 
   Future<void> deleteProfile(String profileId) async {
     final List<AiProviderProfile> profiles = await readProfiles();
-    await _preferences.setString(
+    await preferences.setString(
       _profilesKey,
       jsonEncode(
         profiles
@@ -78,7 +79,7 @@ class ProviderProfileStore {
             .toList(),
       ),
     );
-    await _secretStore.delete(_secretKey(profileId));
+    await secretStore.delete(_secretKey(profileId));
   }
 
   String _secretKey(String profileId) => 'clarix.provider.$profileId.api_key';

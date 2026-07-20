@@ -17,8 +17,7 @@ class DiagnosticViewerChrome extends StatefulWidget {
   final Widget? trailing;
 
   @override
-  State<DiagnosticViewerChrome> createState() =>
-      _DiagnosticViewerChromeState();
+  State<DiagnosticViewerChrome> createState() => _DiagnosticViewerChromeState();
 }
 
 class _DiagnosticViewerChromeState extends State<DiagnosticViewerChrome> {
@@ -29,74 +28,69 @@ class _DiagnosticViewerChromeState extends State<DiagnosticViewerChrome> {
     return Material(
       color: Colors.black,
       child: Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: KeyedSubtree(
-            key: const Key('diagnostic-viewer-surface'),
-            child: widget.viewer,
-          ),
-        ),
-        if (!_chromeHidden)
+        children: <Widget>[
           Positioned.fill(
-            child: Stack(
-              key: const Key('diagnostic-chrome-controls'),
-              children: <Widget>[
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: TextButton(
-                    key: const Key('diagnostic-back'),
-                    onPressed: widget.onBack,
-                    child: const Text('Back'),
-                  ),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      TextButton(
-                        key: const Key('stock-open-pdf'),
-                        onPressed: widget.onOpenPdf,
-                        child: const Text('Open PDF'),
-                      ),
-                      if (widget.trailing != null) widget.trailing!,
-                    ],
-                  ),
-                ),
-                Positioned(
-                  left: 12,
-                  bottom: 12,
-                  child: Text(widget.status),
-                ),
-              ],
+            child: KeyedSubtree(
+              key: const Key('diagnostic-viewer-surface'),
+              child: widget.viewer,
             ),
           ),
-        Positioned(
-          top: 12,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: Material(
-              color: const Color(0xD91B1D22),
-              shape: const CircleBorder(),
-              child: IconButton(
-                key: const Key('diagnostic-chrome-toggle'),
-                tooltip: _chromeHidden
-                    ? 'Show viewer controls'
-                    : 'Hide viewer controls',
-                onPressed: () => setState(
-                  () => _chromeHidden = !_chromeHidden,
-                ),
-                icon: Icon(
-                  _chromeHidden ? Icons.visibility : Icons.visibility_off,
+          if (!_chromeHidden)
+            Positioned.fill(
+              child: Stack(
+                key: const Key('diagnostic-chrome-controls'),
+                children: <Widget>[
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: TextButton(
+                      key: const Key('diagnostic-back'),
+                      onPressed: widget.onBack,
+                      child: const Text('Back'),
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        TextButton(
+                          key: const Key('stock-open-pdf'),
+                          onPressed: widget.onOpenPdf,
+                          child: const Text('Open PDF'),
+                        ),
+                        if (widget.trailing != null) widget.trailing!,
+                      ],
+                    ),
+                  ),
+                  Positioned(left: 12, bottom: 12, child: Text(widget.status)),
+                ],
+              ),
+            ),
+          Positioned(
+            top: 12,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Material(
+                color: const Color(0xD91B1D22),
+                shape: const CircleBorder(),
+                child: IconButton(
+                  key: const Key('diagnostic-chrome-toggle'),
+                  tooltip: _chromeHidden
+                      ? 'Show viewer controls'
+                      : 'Hide viewer controls',
+                  onPressed: () =>
+                      setState(() => _chromeHidden = !_chromeHidden),
+                  icon: Icon(
+                    _chromeHidden ? Icons.visibility : Icons.visibility_off,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
       ),
     );
   }

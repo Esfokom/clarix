@@ -6,7 +6,14 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('workspace session round-trips through json', () {
     final session = WorkspaceSession.initial().copyWith(
-      tabs: <DocumentTabState>[DocumentTabState.create(id: 'tab-1', documentId: 'doc-1', filePath: 'C:/docs/report.pdf', title: 'report.pdf').copyWith(currentPage: 8)],
+      tabs: <DocumentTabState>[
+        DocumentTabState.create(
+          id: 'tab-1',
+          documentId: 'doc-1',
+          filePath: 'C:/docs/report.pdf',
+          title: 'report.pdf',
+        ).copyWith(currentPage: 8),
+      ],
       activeTabId: 'tab-1',
     );
     final restored = WorkspaceSession.fromJson(session.toJson());
@@ -27,10 +34,13 @@ void main() {
   });
 
   test('PDF zoom anchor falls back to center when conversion fails', () {
-    expect(resolvePdfZoomAnchor(
-      globalPosition: const Offset(520, 340),
-      fallbackLocalPosition: const Offset(400, 300),
-      globalToLocal: (_) => null,
-    ), const Offset(400, 300));
+    expect(
+      resolvePdfZoomAnchor(
+        globalPosition: const Offset(520, 340),
+        fallbackLocalPosition: const Offset(400, 300),
+        globalToLocal: (_) => null,
+      ),
+      const Offset(400, 300),
+    );
   });
 }

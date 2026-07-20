@@ -83,7 +83,10 @@ class DocumentChunkStore {
     if (await jsonLines.exists()) {
       final List<PdfChunkRecord> output = <PdfChunkRecord>[];
       await for (final String line
-          in jsonLines.openRead().transform(utf8.decoder).transform(const LineSplitter())) {
+          in jsonLines
+              .openRead()
+              .transform(utf8.decoder)
+              .transform(const LineSplitter())) {
         if (line.trim().isEmpty) {
           continue;
         }
@@ -99,29 +102,27 @@ class DocumentChunkStore {
     final List<dynamic> decoded =
         jsonDecode(await legacy.readAsString()) as List<dynamic>;
     return decoded
-        .map(
-          (dynamic item) => _decode(item as Map<String, dynamic>),
-        )
+        .map((dynamic item) => _decode(item as Map<String, dynamic>))
         .toList(growable: false);
   }
 
   Map<String, dynamic> _encode(PdfChunkRecord chunk) => <String, dynamic>{
-        'id': chunk.id,
-        'documentId': chunk.documentId,
-        'title': chunk.title,
-        'pageNumber': chunk.pageNumber,
-        'chunkOrder': chunk.chunkOrder,
-        'text': chunk.text,
-        'sectionTitle': chunk.sectionTitle,
-      };
+    'id': chunk.id,
+    'documentId': chunk.documentId,
+    'title': chunk.title,
+    'pageNumber': chunk.pageNumber,
+    'chunkOrder': chunk.chunkOrder,
+    'text': chunk.text,
+    'sectionTitle': chunk.sectionTitle,
+  };
 
   PdfChunkRecord _decode(Map<String, dynamic> json) => PdfChunkRecord(
-        id: json['id'] as String,
-        documentId: json['documentId'] as String,
-        title: json['title'] as String,
-        pageNumber: json['pageNumber'] as int,
-        chunkOrder: json['chunkOrder'] as int,
-        text: json['text'] as String,
-        sectionTitle: json['sectionTitle'] as String?,
-      );
+    id: json['id'] as String,
+    documentId: json['documentId'] as String,
+    title: json['title'] as String,
+    pageNumber: json['pageNumber'] as int,
+    chunkOrder: json['chunkOrder'] as int,
+    text: json['text'] as String,
+    sectionTitle: json['sectionTitle'] as String?,
+  );
 }
