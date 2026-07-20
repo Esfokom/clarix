@@ -8,7 +8,7 @@ import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dar
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/model_catalog_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
+import 'package:clarix/src/core/cancel_token.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_gemma/flutter_gemma.dart';
 
 enum SidebarPane { thumbnails, outline }
 
@@ -29,6 +28,10 @@ enum DownloadTaskStatus {
 }
 
 enum ModelCatalogType { inference, embedding }
+
+enum ModelType { gemma4 }
+
+enum ModelFileType { task, litertlm }
 
 enum ModelInstallState { notInstalled, downloading, installed, failed }
 

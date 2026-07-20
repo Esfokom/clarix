@@ -36,10 +36,6 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.9
   shadcn_ui: ^0.55.0
-  flutter_gemma: ^1.2.3
-  flutter_gemma_litertlm: ^1.1.0
-  flutter_gemma_embeddings: ^1.0.2
-  flutter_gemma_rag_qdrant: ^1.1.0
   path: ^1.9.1
   crypto: ^3.0.7
   file_picker: ^11.0.2

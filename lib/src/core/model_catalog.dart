@@ -1,4 +1,3 @@
-import 'package:flutter_gemma/flutter_gemma.dart';
 
 import 'local_gemma_model_store.dart';
 import 'models.dart';
