@@ -543,6 +543,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                 onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
                 child: ReaderCursorLockedPdfRegion(
                   controller: _controller,
+                  onViewChanged: _queueViewerStatePersistence,
                   builder:
                       (BuildContext context, ReaderCursorLockedPdfInput input) {
                         return PdfViewer(

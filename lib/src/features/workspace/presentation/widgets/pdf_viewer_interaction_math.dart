@@ -80,11 +80,13 @@ class ReaderCursorLockedPdfRegion extends StatefulWidget {
   const ReaderCursorLockedPdfRegion({
     required this.controller,
     required this.builder,
+    this.onViewChanged,
     super.key,
   });
 
   final PdfViewerController controller;
   final ReaderCursorLockedPdfBuilder builder;
+  final VoidCallback? onViewChanged;
 
   @override
   State<ReaderCursorLockedPdfRegion> createState() =>
@@ -98,14 +100,22 @@ class _ReaderCursorLockedPdfRegionState
   @override
   void initState() {
     super.initState();
-    _input = ReaderCursorLockedPdfInput(widget.controller);
+    _input = ReaderCursorLockedPdfInput(
+      widget.controller,
+      onViewChanged: widget.onViewChanged,
+    );
   }
 
   @override
   void didUpdateWidget(covariant ReaderCursorLockedPdfRegion oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.controller, widget.controller)) {
-      _input = ReaderCursorLockedPdfInput(widget.controller);
+      _input = ReaderCursorLockedPdfInput(
+        widget.controller,
+        onViewChanged: widget.onViewChanged,
+      );
+    } else {
+      _input.onViewChanged = widget.onViewChanged;
     }
   }
 
@@ -128,16 +138,18 @@ class _ReaderCursorLockedPdfRegionState
 }
 
 class ReaderCursorLockedPdfInput {
-  ReaderCursorLockedPdfInput(this.controller) {
+  ReaderCursorLockedPdfInput(this.controller, {this.onViewChanged}) {
     interactionDelegateProvider =
         ReaderCursorAnchoredInteractionDelegateProvider(localAnchor);
   }
 
   final PdfViewerController controller;
+  VoidCallback? onViewChanged;
   late final ReaderCursorAnchoredInteractionDelegateProvider
   interactionDelegateProvider;
   Offset? _lastPointerGlobalPosition;
   final ReaderTrackpadZoomGesture _trackpadZoom = ReaderTrackpadZoomGesture();
+  Matrix4? _trackpadStartMatrix;
 
   bool get pdfrxScaleEnabled => false;
 
@@ -189,21 +201,24 @@ class ReaderCursorLockedPdfInput {
         duration: Duration.zero,
       ),
     );
+    onViewChanged?.call();
   }
 
   void handlePointerPanZoomStart(PointerPanZoomStartEvent event) {
     rememberPointer(event);
     if (!controller.isReady) {
       _trackpadZoom.end();
+      _trackpadStartMatrix = null;
       return;
     }
     final Offset anchor = _validLocalAnchor(event.position);
     _trackpadZoom.start(startZoom: controller.currentZoom, anchor: anchor);
+    _trackpadStartMatrix = controller.value.clone();
   }
 
   void handlePointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
     rememberPointer(event);
-    if (!controller.isReady) {
+    if (!controller.isReady || !event.scale.isFinite || event.scale <= 0) {
       return;
     }
     final double? newZoom = _trackpadZoom.update(
@@ -212,9 +227,20 @@ class ReaderCursorLockedPdfInput {
       maxZoom: controller.maxScale,
     );
     final Offset? anchor = _trackpadZoom.anchor;
-    if (newZoom == null || anchor == null) {
+    if (newZoom == null) {
+      if (!_trackpadZoom.isZooming) {
+        _applyTrackpadPan(event.pan);
+      }
       return;
     }
+    final Matrix4? startMatrix = _trackpadStartMatrix;
+    if (anchor == null || startMatrix == null) {
+      return;
+    }
+    // pdfrx's recognizer also sees the raw event. Re-establish the gesture
+    // start transform before applying cumulative scale so neither an earlier
+    // noise pan nor a later exact-1 update can shift the locked anchor.
+    controller.value = startMatrix.clone();
     unawaited(
       controller.zoomOnLocalPosition(
         localPosition: anchor,
@@ -222,11 +248,31 @@ class ReaderCursorLockedPdfInput {
         duration: Duration.zero,
       ),
     );
+    onViewChanged?.call();
+  }
+
+  void _applyTrackpadPan(Offset cumulativePan) {
+    final Matrix4? startMatrix = _trackpadStartMatrix;
+    if (startMatrix == null) {
+      return;
+    }
+    // Use the cumulative pan from the captured start matrix. pdfrx also sees
+    // exact-1 scale updates and may pan first; this absolute transform replaces
+    // that mutation instead of applying the same delta twice.
+    final Matrix4 matrix = startMatrix.clone()
+      ..setEntry(0, 3, startMatrix.entry(0, 3) + cumulativePan.dx)
+      ..setEntry(1, 3, startMatrix.entry(1, 3) + cumulativePan.dy);
+    controller.value = controller.makeMatrixInSafeRange(
+      matrix,
+      forceClamp: true,
+    );
+    onViewChanged?.call();
   }
 
   void handlePointerPanZoomEnd(PointerPanZoomEndEvent event) {
     rememberPointer(event);
     _trackpadZoom.end();
+    _trackpadStartMatrix = null;
   }
 
   Offset _validLocalAnchor(Offset globalPosition) {

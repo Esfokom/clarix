@@ -198,6 +198,104 @@ void main() {
     expect(controller.zoomCalls, isEmpty);
   });
 
+  testWidgets(
+    'raw trackpad owner pans through scale noise and corrects child pan',
+    (WidgetTester tester) async {
+      final _RecordingPdfViewerController controller =
+          _RecordingPdfViewerController();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ReaderCursorLockedPdfRegion(
+            controller: controller,
+            builder: (_, _) {
+              return Listener(
+                behavior: HitTestBehavior.opaque,
+                onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+                  // This models pdfrx with scale disabled: non-1 scale updates
+                  // are discarded, while exact-1 updates mutate its matrix.
+                  if (event.scale == 1) {
+                    final Matrix4 matrix = controller.value.clone()
+                      ..setEntry(
+                        0,
+                        3,
+                        controller.translation.dx + event.panDelta.dx,
+                      )
+                      ..setEntry(
+                        1,
+                        3,
+                        controller.translation.dy + event.panDelta.dy,
+                      );
+                    controller.value = matrix;
+                  }
+                },
+                child: const SizedBox.expand(),
+              );
+            },
+          ),
+        ),
+      );
+      const Offset cursor = Offset(420, 315);
+      final Offset documentPointAtStart = controller.documentPointAt(cursor);
+      final TestGesture gesture = await tester.startGesture(
+        cursor,
+        kind: PointerDeviceKind.trackpad,
+      );
+
+      await gesture.panZoomUpdate(
+        cursor,
+        pan: const Offset(0, -80),
+        scale: 1.009,
+      );
+      expect(controller.translation, const Offset(0, -80));
+
+      await gesture.panZoomUpdate(cursor, pan: const Offset(0, -100), scale: 1);
+      expect(controller.translation, const Offset(0, -100));
+
+      await gesture.panZoomUpdate(
+        cursor,
+        pan: const Offset(0, -130),
+        scale: 1.2,
+      );
+      expect(controller.documentPointAt(cursor), documentPointAtStart);
+
+      await gesture.panZoomUpdate(cursor, pan: const Offset(0, -30), scale: 1);
+      await gesture.panZoomEnd();
+
+      expect(controller.zoom, 2);
+      expect(controller.translation, Offset.zero);
+      expect(controller.documentPointAt(cursor), documentPointAtStart);
+    },
+  );
+
+  testWidgets('invalid trackpad scale does not mutate the viewer matrix', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderCursorLockedPdfRegion(
+          controller: controller,
+          builder: (_, _) => const SizedBox.expand(),
+        ),
+      ),
+    );
+    final TestGesture gesture = await tester.startGesture(
+      const Offset(420, 315),
+      kind: PointerDeviceKind.trackpad,
+    );
+
+    await gesture.panZoomUpdate(
+      const Offset(420, 315),
+      pan: const Offset(0, -80),
+      scale: 0,
+    );
+    await gesture.panZoomEnd();
+
+    expect(controller.translation, Offset.zero);
+    expect(controller.zoomCalls, isEmpty);
+  });
+
   testWidgets('pointer scale zooms incrementally around the cursor', (
     WidgetTester tester,
   ) async {
@@ -251,6 +349,35 @@ void main() {
     expect(controller.zoomCalls, hasLength(1));
     expect(controller.zoomCalls.single.localPosition, cursor);
     expect(controller.zoomCalls.single.newZoom, closeTo(2.26, 0.000001));
+  });
+
+  testWidgets('adapter zoom signals notify the workspace persistence hook', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController();
+    int persistenceRequests = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderCursorLockedPdfRegion(
+          controller: controller,
+          onViewChanged: () => persistenceRequests++,
+          builder: (_, _) => const SizedBox.expand(),
+        ),
+      ),
+    );
+    const Offset cursor = Offset(420, 315);
+
+    await tester.sendEventToBinding(
+      const PointerScaleEvent(position: cursor, scale: 1.2),
+    );
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendEventToBinding(
+      const PointerScrollEvent(position: cursor, scrollDelta: Offset(0, -120)),
+    );
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+
+    expect(persistenceRequests, 2);
   });
 
   test('document metadata round-trips through the sidecar store', () async {
@@ -336,6 +463,23 @@ class _RecordingPdfViewerController extends PdfViewerController {
   double zoom;
   Offset translation = Offset.zero;
   final List<_ZoomCall> zoomCalls = <_ZoomCall>[];
+
+  @override
+  Matrix4 get value => Matrix4.identity()
+    ..setEntry(0, 0, zoom)
+    ..setEntry(1, 1, zoom)
+    ..setEntry(0, 3, translation.dx)
+    ..setEntry(1, 3, translation.dy);
+
+  @override
+  set value(Matrix4 matrix) {
+    zoom = matrix.getMaxScaleOnAxis();
+    translation = Offset(matrix.entry(0, 3), matrix.entry(1, 3));
+  }
+
+  @override
+  Matrix4 makeMatrixInSafeRange(Matrix4 newValue, {bool forceClamp = false}) =>
+      newValue;
 
   Offset documentPointAt(Offset localPosition) =>
       (localPosition - translation) / zoom;
