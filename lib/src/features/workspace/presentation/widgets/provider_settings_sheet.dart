@@ -24,6 +24,9 @@ class _ProviderSettingsSheetState extends ConsumerState<ProviderSettingsSheet> {
   final TextEditingController _model = TextEditingController(text: 'gpt-5');
   final TextEditingController _key = TextEditingController();
   bool _sharePassages = true;
+  String? _editingId;
+  bool _testing = false;
+  String? _testResult;
   String? _error;
 
   @override
@@ -87,13 +90,9 @@ class _ProviderSettingsSheetState extends ConsumerState<ProviderSettingsSheet> {
                       ),
                       trailing: IconButton(
                         icon: const Icon(LucideIcons.trash2, size: 16),
-                        onPressed: () => ref
-                            .read(workspaceNotifierProvider.notifier)
-                            .deleteProvider(profile.id),
+                        onPressed: () => _confirmDelete(profile),
                       ),
-                      onTap: () => ref
-                          .read(workspaceNotifierProvider.notifier)
-                          .selectProvider(profile.id),
+                      onTap: () => _edit(profile),
                     ),
                   const Divider(),
                   const Text(
@@ -140,10 +139,25 @@ class _ProviderSettingsSheetState extends ConsumerState<ProviderSettingsSheet> {
                         fontSize: 11,
                       ),
                     ),
+                  if (_testResult != null)
+                    Text(
+                      _testResult!,
+                      style: const TextStyle(
+                        color: WorkspaceColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
+                  ShadButton.outline(
+                    onPressed: _testing ? null : _testCredentials,
+                    child: Text(_testing ? 'Testing…' : 'Test credentials'),
+                  ),
                   const SizedBox(height: 8),
                   ShadButton(
                     onPressed: _save,
-                    child: const Text('Save provider'),
+                    child: Text(
+                      _editingId == null ? 'Save provider' : 'Save changes',
+                    ),
                   ),
                 ],
               ),
@@ -172,10 +186,12 @@ class _ProviderSettingsSheetState extends ConsumerState<ProviderSettingsSheet> {
   Future<void> _save() async {
     try {
       final profile = AiProviderProfile.create(
-        id: _label.text.trim().toLowerCase().replaceAll(
-          RegExp('[^a-z0-9]+'),
-          '-',
-        ),
+        id:
+            _editingId ??
+            _label.text.trim().toLowerCase().replaceAll(
+              RegExp('[^a-z0-9]+'),
+              '-',
+            ),
         label: _label.text,
         baseUrl: _baseUrl.text,
         modelId: _model.text,
@@ -190,6 +206,76 @@ class _ProviderSettingsSheetState extends ConsumerState<ProviderSettingsSheet> {
         () =>
             _error = error.message?.toString() ?? 'Check the provider details.',
       );
+    }
+  }
+
+  void _edit(AiProviderProfile profile) {
+    setState(() {
+      _editingId = profile.id;
+      _label.text = profile.label;
+      _baseUrl.text = profile.baseUrl;
+      _model.text = profile.modelId;
+      _key.clear();
+      _sharePassages = profile.shareRetrievedPassages;
+      _error = null;
+      _testResult = null;
+    });
+  }
+
+  Future<void> _testCredentials() async {
+    try {
+      final profile = AiProviderProfile.create(
+        id:
+            _editingId ??
+            _label.text.trim().toLowerCase().replaceAll(
+              RegExp('[^a-z0-9]+'),
+              '-',
+            ),
+        label: _label.text,
+        baseUrl: _baseUrl.text,
+        modelId: _model.text,
+        shareRetrievedPassages: _sharePassages,
+      );
+      setState(() {
+        _testing = true;
+        _error = null;
+        _testResult = null;
+      });
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .testProvider(profile, apiKey: _key.text);
+      if (mounted) setState(() => _testResult = 'Credentials accepted.');
+    } on Object catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _testing = false);
+    }
+  }
+
+  Future<void> _confirmDelete(AiProviderProfile profile) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Delete provider?'),
+        content: Text(
+          'Remove ${profile.label} and its securely stored API key?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .deleteProvider(profile.id);
     }
   }
 }

@@ -326,6 +326,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await selectProvider(profile.id);
   }
 
+  Future<void> testProvider(
+    AiProviderProfile profile, {
+    required String apiKey,
+  }) => _ai.testProvider(profile, apiKey);
+
   Future<void> deleteProvider(String profileId) async {
     await _providerProfiles.deleteProfile(profileId);
     final WorkspaceFeatureState current = _requireState();
