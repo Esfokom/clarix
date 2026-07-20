@@ -267,6 +267,55 @@ void main() {
     },
   );
 
+  testWidgets('trackpad pan reverses immediately after boundary clamping', (
+    WidgetTester tester,
+  ) async {
+    final _ClampingPdfViewerController controller =
+        _ClampingPdfViewerController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReaderCursorLockedPdfRegion(
+          controller: controller,
+          builder: (_, _) => Listener(
+            behavior: HitTestBehavior.opaque,
+            onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+              if (event.scale == 1) {
+                final Matrix4 matrix = controller.value.clone()
+                  ..setEntry(
+                    1,
+                    3,
+                    controller.translation.dy + event.panDelta.dy,
+                  );
+                controller.value = matrix;
+              }
+            },
+            child: const SizedBox.expand(),
+          ),
+        ),
+      ),
+    );
+    final TestGesture gesture = await tester.startGesture(
+      const Offset(420, 315),
+      kind: PointerDeviceKind.trackpad,
+    );
+
+    await gesture.panZoomUpdate(
+      const Offset(420, 315),
+      pan: const Offset(0, -120),
+      scale: 1,
+    );
+    expect(controller.translation.dy, -100);
+
+    await gesture.panZoomUpdate(
+      const Offset(420, 315),
+      pan: const Offset(0, -115),
+      scale: 1,
+    );
+    await gesture.panZoomEnd();
+
+    expect(controller.translation.dy, -95);
+  });
+
   testWidgets('invalid trackpad scale does not mutate the viewer matrix', (
     WidgetTester tester,
   ) async {
@@ -512,5 +561,20 @@ class _RecordingPdfViewerController extends PdfViewerController {
     zoomCalls.add(_ZoomCall(localPosition, newZoom));
     zoom = newZoom;
     translation = localPosition - documentPoint * newZoom;
+  }
+}
+
+class _ClampingPdfViewerController extends _RecordingPdfViewerController {
+  @override
+  set value(Matrix4 matrix) {
+    super.value = makeMatrixInSafeRange(matrix, forceClamp: true);
+  }
+
+  @override
+  Matrix4 makeMatrixInSafeRange(Matrix4 newValue, {bool forceClamp = false}) {
+    final Matrix4 clamped = newValue.clone();
+    clamped.setEntry(0, 3, clamped.entry(0, 3).clamp(-100, 100).toDouble());
+    clamped.setEntry(1, 3, clamped.entry(1, 3).clamp(-100, 100).toDouble());
+    return clamped;
   }
 }

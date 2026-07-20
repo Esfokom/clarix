@@ -150,6 +150,7 @@ class ReaderCursorLockedPdfInput {
   Offset? _lastPointerGlobalPosition;
   final ReaderTrackpadZoomGesture _trackpadZoom = ReaderTrackpadZoomGesture();
   Matrix4? _trackpadStartMatrix;
+  Matrix4? _trackpadPanMatrix;
 
   bool get pdfrxScaleEnabled => false;
 
@@ -209,11 +210,13 @@ class ReaderCursorLockedPdfInput {
     if (!controller.isReady) {
       _trackpadZoom.end();
       _trackpadStartMatrix = null;
+      _trackpadPanMatrix = null;
       return;
     }
     final Offset anchor = _validLocalAnchor(event.position);
     _trackpadZoom.start(startZoom: controller.currentZoom, anchor: anchor);
     _trackpadStartMatrix = controller.value.clone();
+    _trackpadPanMatrix = controller.value.clone();
   }
 
   void handlePointerPanZoomUpdate(PointerPanZoomUpdateEvent event) {
@@ -229,7 +232,7 @@ class ReaderCursorLockedPdfInput {
     final Offset? anchor = _trackpadZoom.anchor;
     if (newZoom == null) {
       if (!_trackpadZoom.isZooming) {
-        _applyTrackpadPan(event.pan);
+        _applyTrackpadPan(event.panDelta);
       }
       return;
     }
@@ -251,21 +254,23 @@ class ReaderCursorLockedPdfInput {
     onViewChanged?.call();
   }
 
-  void _applyTrackpadPan(Offset cumulativePan) {
-    final Matrix4? startMatrix = _trackpadStartMatrix;
-    if (startMatrix == null) {
+  void _applyTrackpadPan(Offset panDelta) {
+    final Matrix4? panMatrix = _trackpadPanMatrix;
+    if (panMatrix == null) {
       return;
     }
-    // Use the cumulative pan from the captured start matrix. pdfrx also sees
-    // exact-1 scale updates and may pan first; this absolute transform replaces
-    // that mutation instead of applying the same delta twice.
-    final Matrix4 matrix = startMatrix.clone()
-      ..setEntry(0, 3, startMatrix.entry(0, 3) + cumulativePan.dx)
-      ..setEntry(1, 3, startMatrix.entry(1, 3) + cumulativePan.dy);
+    // Build from the last matrix Clarix committed, not controller.value: pdfrx
+    // may already have applied this exact-1 update. Retaining the clamped result
+    // as the next base also lets a reverse delta move away from a boundary
+    // immediately instead of first paying back discarded cumulative motion.
+    final Matrix4 matrix = panMatrix.clone()
+      ..setEntry(0, 3, panMatrix.entry(0, 3) + panDelta.dx)
+      ..setEntry(1, 3, panMatrix.entry(1, 3) + panDelta.dy);
     controller.value = controller.makeMatrixInSafeRange(
       matrix,
       forceClamp: true,
     );
+    _trackpadPanMatrix = controller.value.clone();
     onViewChanged?.call();
   }
 
@@ -273,6 +278,7 @@ class ReaderCursorLockedPdfInput {
     rememberPointer(event);
     _trackpadZoom.end();
     _trackpadStartMatrix = null;
+    _trackpadPanMatrix = null;
   }
 
   Offset _validLocalAnchor(Offset globalPosition) {
