@@ -49,8 +49,8 @@ class QuickstartSurface extends ConsumerWidget {
                 leading: const Icon(LucideIcons.cpu, size: 15),
                 onPressed: () => ref
                     .read(workspaceNotifierProvider.notifier)
-                    .toggleModelCatalog(true),
-                child: const Text('Models'),
+                    .toggleProviderSettings(true),
+                child: const Text('AI providers'),
               ),
               const SizedBox(width: 8),
               ShadButton(
@@ -131,11 +131,9 @@ class QuickstartSurface extends ConsumerWidget {
                           child: _StatusPanel(
                             title: 'AI',
                             value: state.aiState.statusMessage,
-                            detail:
-                                state.aiState.embeddingReady &&
-                                    state.aiState.vectorStoreReady
-                                ? 'Grounded PDF chat is ready after indexing.'
-                                : 'Install local models to enable retrieval.',
+                            detail: state.aiState.providerReady
+                                ? 'Grounded PDF passages are retrieved on demand.'
+                                : 'Add a remote provider to enable retrieval.',
                           ),
                         ),
                       ),

@@ -40,7 +40,7 @@ class DocumentIdentityService {
 
 class DocumentMetadataStore {
   DocumentMetadataStore({required Directory root})
-      : _root = Directory(p.join(root.path, 'documents'));
+    : _root = Directory(p.join(root.path, 'documents'));
 
   final Directory _root;
 
@@ -74,10 +74,7 @@ class DocumentMetadataStore {
     final File temporary = File(
       '${target.path}.${DateTime.now().microsecondsSinceEpoch}.tmp',
     );
-    await temporary.writeAsString(
-      jsonEncode(metadata.toJson()),
-      flush: true,
-    );
+    await temporary.writeAsString(jsonEncode(metadata.toJson()), flush: true);
     if (await backup.exists()) {
       await backup.delete();
     }
@@ -101,13 +98,11 @@ class DocumentMetadataStore {
     }
   }
 
-  File _fileFor(String fingerprint) => File(
-        p.join(_root.path, '$fingerprint.json'),
-      );
+  File _fileFor(String fingerprint) =>
+      File(p.join(_root.path, '$fingerprint.json'));
 
-  File _backupFor(String fingerprint) => File(
-        p.join(_root.path, '$fingerprint.json.bak'),
-      );
+  File _backupFor(String fingerprint) =>
+      File(p.join(_root.path, '$fingerprint.json.bak'));
 
   void _validateFingerprint(String fingerprint) {
     if (!RegExp(r'^[a-f0-9]{64}$').hasMatch(fingerprint)) {

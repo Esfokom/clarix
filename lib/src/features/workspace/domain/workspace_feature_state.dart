@@ -1,4 +1,5 @@
 import '../../../core/models.dart';
+import 'ai_provider.dart';
 
 class OutlineNodeState {
   const OutlineNodeState({
@@ -16,48 +17,45 @@ class WorkspaceFeatureState {
   const WorkspaceFeatureState({
     required this.session,
     required this.aiState,
-    required this.downloads,
-    required this.catalog,
     required this.outlines,
     required this.documentMetadata,
     required this.composerExpanded,
-    required this.showModelCatalog,
     required this.bannerMessage,
+    this.providerProfiles = const <AiProviderProfile>[],
+    this.showProviderSettings = false,
   });
 
   final WorkspaceSession session;
   final AiWorkspaceState aiState;
-  final Map<String, DownloadTaskState> downloads;
-  final List<ModelCatalogItem> catalog;
   final Map<String, List<OutlineNodeState>> outlines;
   final Map<String, DocumentMetadata> documentMetadata;
   final bool composerExpanded;
-  final bool showModelCatalog;
   final String? bannerMessage;
+  final List<AiProviderProfile> providerProfiles;
+  final bool showProviderSettings;
 
   WorkspaceFeatureState copyWith({
     WorkspaceSession? session,
     AiWorkspaceState? aiState,
-    Map<String, DownloadTaskState>? downloads,
-    List<ModelCatalogItem>? catalog,
     Map<String, List<OutlineNodeState>>? outlines,
     Map<String, DocumentMetadata>? documentMetadata,
     bool? composerExpanded,
-    bool? showModelCatalog,
     String? bannerMessage,
     bool clearBannerMessage = false,
+    List<AiProviderProfile>? providerProfiles,
+    bool? showProviderSettings,
   }) {
     return WorkspaceFeatureState(
       session: session ?? this.session,
       aiState: aiState ?? this.aiState,
-      downloads: downloads ?? this.downloads,
-      catalog: catalog ?? this.catalog,
       outlines: outlines ?? this.outlines,
       documentMetadata: documentMetadata ?? this.documentMetadata,
       composerExpanded: composerExpanded ?? this.composerExpanded,
-      showModelCatalog: showModelCatalog ?? this.showModelCatalog,
-      bannerMessage:
-          clearBannerMessage ? null : bannerMessage ?? this.bannerMessage,
+      bannerMessage: clearBannerMessage
+          ? null
+          : bannerMessage ?? this.bannerMessage,
+      providerProfiles: providerProfiles ?? this.providerProfiles,
+      showProviderSettings: showProviderSettings ?? this.showProviderSettings,
     );
   }
 }

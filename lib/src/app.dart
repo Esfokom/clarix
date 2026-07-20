@@ -27,9 +27,7 @@ class ClarixApp extends StatelessWidget {
     return ShadThemeData(
       brightness: Brightness.dark,
       colorScheme: const ShadZincColorScheme.dark(),
-      textTheme: ShadTextTheme.fromGoogleFont(
-        GoogleFonts.instrumentSans,
-      ),
+      textTheme: ShadTextTheme.fromGoogleFont(GoogleFonts.instrumentSans),
     );
   }
 }

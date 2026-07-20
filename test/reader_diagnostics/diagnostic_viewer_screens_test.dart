@@ -30,9 +30,7 @@ void main() {
         ),
       );
 
-      final Finder surface = find.byKey(
-        const Key('diagnostic-viewer-surface'),
-      );
+      final Finder surface = find.byKey(const Key('diagnostic-viewer-surface'));
       final Rect hostRect = tester.getRect(
         find.byKey(const Key('diagnostic-viewer-host')),
       );
@@ -158,9 +156,7 @@ void main() {
     WidgetTester tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        home: InstrumentedPdfrxScreen(pickPdf: () async => null),
-      ),
+      MaterialApp(home: InstrumentedPdfrxScreen(pickPdf: () async => null)),
     );
 
     await tester.tap(find.byKey(const Key('stock-open-pdf')));
@@ -177,9 +173,7 @@ void main() {
     'instrumented viewer can hide chrome without resizing its surface',
     (WidgetTester tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: InstrumentedPdfrxScreen(pickPdf: () async => null),
-        ),
+        MaterialApp(home: InstrumentedPdfrxScreen(pickPdf: () async => null)),
       );
       final Rect before = tester.getRect(
         find.byKey(const Key('diagnostic-viewer-surface')),
@@ -188,10 +182,7 @@ void main() {
       await tester.tap(find.byKey(const Key('diagnostic-chrome-toggle')));
       await tester.pump();
 
-      expect(
-        find.byKey(const Key('diagnostic-chrome-controls')),
-        findsNothing,
-      );
+      expect(find.byKey(const Key('diagnostic-chrome-controls')), findsNothing);
       expect(
         tester.getRect(find.byKey(const Key('diagnostic-viewer-surface'))),
         before,
@@ -342,10 +333,7 @@ void main() {
 
     expect(find.byKey(const Key('diagnostics-event-panel')), findsNothing);
     expect(find.byKey(const Key('pointer-lab-back')), findsNothing);
-    expect(
-      tester.getRect(find.byKey(const Key('pointer-lab-canvas'))),
-      before,
-    );
+    expect(tester.getRect(find.byKey(const Key('pointer-lab-canvas'))), before);
   });
 
   testWidgets('pointer lab panel pauses clears and copies its recorder', (

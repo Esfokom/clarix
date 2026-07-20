@@ -22,7 +22,9 @@ class AiProviderProfile {
     final String normalizedLabel = label.trim();
     final String normalizedModel = modelId.trim();
     final String normalizedUrl = _normalizeUrl(baseUrl);
-    if (normalizedId.isEmpty || normalizedLabel.isEmpty || normalizedModel.isEmpty) {
+    if (normalizedId.isEmpty ||
+        normalizedLabel.isEmpty ||
+        normalizedModel.isEmpty) {
       throw ArgumentError('Provider ID, label, and model are required.');
     }
     for (final MapEntry<String, String> header in headers.entries) {
@@ -30,7 +32,9 @@ class AiProviderProfile {
         throw ArgumentError('Custom headers must have a name and value.');
       }
       if (header.key.toLowerCase() == 'authorization') {
-        throw ArgumentError('Authorization is managed by the provider API key.');
+        throw ArgumentError(
+          'Authorization is managed by the provider API key.',
+        );
       }
     }
     return AiProviderProfile(
@@ -47,7 +51,8 @@ class AiProviderProfile {
     final Object? rawHeaders = json['headers'];
     final Map<String, String> headers = rawHeaders is Map
         ? rawHeaders.map<String, String>(
-            (Object? key, Object? value) => MapEntry(key! as String, value! as String),
+            (Object? key, Object? value) =>
+                MapEntry(key! as String, value! as String),
           )
         : const <String, String>{};
     return AiProviderProfile.create(
@@ -71,20 +76,25 @@ class AiProviderProfile {
   Uri get chatCompletionsUri => normalizedBaseUri.resolve('chat/completions');
 
   Map<String, dynamic> toJson() => <String, dynamic>{
-        'id': id,
-        'label': label,
-        'baseUrl': baseUrl,
-        'modelId': modelId,
-        'shareRetrievedPassages': shareRetrievedPassages,
-        'headers': headers,
-      };
+    'id': id,
+    'label': label,
+    'baseUrl': baseUrl,
+    'modelId': modelId,
+    'shareRetrievedPassages': shareRetrievedPassages,
+    'headers': headers,
+  };
 
   static String _normalizeUrl(String rawUrl) {
     final Uri? uri = Uri.tryParse(rawUrl.trim());
-    final bool localHttp = uri?.scheme == 'http' &&
+    final bool localHttp =
+        uri?.scheme == 'http' &&
         (uri?.host == 'localhost' || uri?.host == '127.0.0.1');
-    if (uri == null || uri.host.isEmpty || (uri.scheme != 'https' && !localHttp)) {
-      throw ArgumentError('Provider URLs must use HTTPS, except localhost endpoints.');
+    if (uri == null ||
+        uri.host.isEmpty ||
+        (uri.scheme != 'https' && !localHttp)) {
+      throw ArgumentError(
+        'Provider URLs must use HTTPS, except localhost endpoints.',
+      );
     }
     final String path = uri.path.endsWith('/') ? uri.path : '${uri.path}/';
     return uri.replace(path: path).toString();
@@ -102,16 +112,18 @@ class AiProviderProfile {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        label,
-        baseUrl,
-        modelId,
-        shareRetrievedPassages,
-        Object.hashAll(headers.entries),
-      );
+    id,
+    label,
+    baseUrl,
+    modelId,
+    shareRetrievedPassages,
+    Object.hashAll(headers.entries),
+  );
 
   static bool _mapsEqual(Map<String, String> left, Map<String, String> right) {
     if (left.length != right.length) return false;
-    return left.entries.every((MapEntry<String, String> entry) => right[entry.key] == entry.value);
+    return left.entries.every(
+      (MapEntry<String, String> entry) => right[entry.key] == entry.value,
+    );
   }
 }

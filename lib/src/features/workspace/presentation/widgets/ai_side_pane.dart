@@ -8,11 +8,7 @@ import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
 
 class AiSidePane extends ConsumerStatefulWidget {
-  const AiSidePane({
-    required this.state,
-    required this.activeTab,
-    super.key,
-  });
+  const AiSidePane({required this.state, required this.activeTab, super.key});
 
   final WorkspaceFeatureState state;
   final DocumentTabState? activeTab;
@@ -69,7 +65,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   icon: const Icon(LucideIcons.cpu, size: 14),
                   onPressed: () => ref
                       .read(workspaceNotifierProvider.notifier)
-                      .toggleModelCatalog(true),
+                      .toggleProviderSettings(true),
                 ),
                 const SizedBox(width: 4),
                 ShadIconButton.ghost(
@@ -120,6 +116,17 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               ],
             ),
           ),
+          if (widget.state.providerProfiles.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: Text(
+                _providerDisclosure(ai),
+                style: const TextStyle(
+                  color: WorkspaceColors.textMuted,
+                  fontSize: 10.5,
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -164,9 +171,9 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
-                        ai.inferenceReady
+                        ai.providerReady
                             ? 'Ask about the active PDF, summarize a section, or query all open documents.'
-                            : 'Install a local inference model to enable chat.',
+                            : 'Choose a remote AI provider in settings to enable chat.',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: WorkspaceColors.textMuted,
@@ -194,11 +201,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                 Expanded(
                   child: ShadInput(
                     controller: _controller,
-                    enabled: ai.inferenceReady && !ai.chatBusy,
+                    enabled: ai.providerReady && !ai.chatBusy,
                     placeholder: Text(
-                      ai.inferenceReady
+                      ai.providerReady
                           ? 'Ask Clarix AI'
-                          : 'Download a model first',
+                          : 'Add a provider first',
                     ),
                     onSubmitted: (_) => _send(),
                   ),
@@ -208,15 +215,15 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   width: 32,
                   height: 32,
                   padding: EdgeInsets.zero,
-                  enabled: ai.inferenceReady && !ai.chatBusy,
+                  enabled: ai.providerReady && !ai.chatBusy,
                   icon: ai.chatBusy
-                      ? const SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
+                      ? const Icon(LucideIcons.square, size: 14)
                       : const Icon(LucideIcons.arrowUp, size: 14),
-                  onPressed: _send,
+                  onPressed: ai.chatBusy
+                      ? () => ref
+                            .read(workspaceNotifierProvider.notifier)
+                            .stopGeneration()
+                      : _send,
                 ),
               ],
             ),
@@ -252,6 +259,14 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       _ => LucideIcons.cpu,
     };
   }
+
+  String _providerDisclosure(AiWorkspaceState ai) {
+    final profile = widget.state.providerProfiles
+        .where((item) => item.id == ai.selectedProviderId)
+        .firstOrNull;
+    if (profile == null) return 'Remote provider not selected';
+    return '${profile.label} · Remote${profile.shareRetrievedPassages ? ' — Retrieved PDF passages may be shared' : ' — PDF passages stay local'}';
+  }
 }
 
 class _MessageBubble extends StatelessWidget {
@@ -269,10 +284,14 @@ class _MessageBubble extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         constraints: const BoxConstraints(maxWidth: 300),
         decoration: BoxDecoration(
-          color: isUser ? WorkspaceColors.accentSoft : WorkspaceColors.panelRaised,
+          color: isUser
+              ? WorkspaceColors.accentSoft
+              : WorkspaceColors.panelRaised,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isUser ? WorkspaceColors.accentBorder : WorkspaceColors.border,
+            color: isUser
+                ? WorkspaceColors.accentBorder
+                : WorkspaceColors.border,
           ),
         ),
         child: Text(

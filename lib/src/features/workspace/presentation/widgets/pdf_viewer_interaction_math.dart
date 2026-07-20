@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -20,10 +19,8 @@ Offset resolveLockedPointerFocalPoint({
   return lockedFocalPoint ?? reportedFocalPoint;
 }
 
-typedef ReaderCursorLockedPdfBuilder = Widget Function(
-  BuildContext context,
-  ReaderCursorLockedPdfInput input,
-);
+typedef ReaderCursorLockedPdfBuilder =
+    Widget Function(BuildContext context, ReaderCursorLockedPdfInput input);
 
 class ReaderCursorLockedPdfRegion extends StatefulWidget {
   const ReaderCursorLockedPdfRegion({
@@ -84,7 +81,7 @@ class ReaderCursorLockedPdfInput {
 
   final PdfViewerController controller;
   late final ReaderCursorAnchoredInteractionDelegateProvider
-      interactionDelegateProvider;
+  interactionDelegateProvider;
   Offset? _lastPointerGlobalPosition;
 
   void rememberPointer(PointerEvent event) {
@@ -280,26 +277,38 @@ PdfScrollbarGeometry? calculatePdfScrollbarGeometry({
   required Size documentSize,
   double minThumbExtent = 28,
 }) {
-  final double trackExtent =
-      axis == PdfScrollbarAxis.vertical ? viewportSize.height : viewportSize.width;
-  final double visibleExtent =
-      axis == PdfScrollbarAxis.vertical ? visibleRect.height : visibleRect.width;
-  final double visibleLeading =
-      axis == PdfScrollbarAxis.vertical ? visibleRect.top : visibleRect.left;
-  final double documentExtent =
-      axis == PdfScrollbarAxis.vertical ? documentSize.height : documentSize.width;
+  final double trackExtent = axis == PdfScrollbarAxis.vertical
+      ? viewportSize.height
+      : viewportSize.width;
+  final double visibleExtent = axis == PdfScrollbarAxis.vertical
+      ? visibleRect.height
+      : visibleRect.width;
+  final double visibleLeading = axis == PdfScrollbarAxis.vertical
+      ? visibleRect.top
+      : visibleRect.left;
+  final double documentExtent = axis == PdfScrollbarAxis.vertical
+      ? documentSize.height
+      : documentSize.width;
 
-  if (trackExtent <= 0 || visibleExtent <= 0 || documentExtent <= visibleExtent) {
+  if (trackExtent <= 0 ||
+      visibleExtent <= 0 ||
+      documentExtent <= visibleExtent) {
     return null;
   }
 
-  final double visibleRatio = (visibleExtent / documentExtent).clamp(0, 1).toDouble();
-  final double thumbExtent =
-      (trackExtent * visibleRatio).clamp(minThumbExtent, trackExtent).toDouble();
-  final double maxThumbLeading = (trackExtent - thumbExtent).clamp(0, double.infinity).toDouble();
+  final double visibleRatio = (visibleExtent / documentExtent)
+      .clamp(0, 1)
+      .toDouble();
+  final double thumbExtent = (trackExtent * visibleRatio)
+      .clamp(minThumbExtent, trackExtent)
+      .toDouble();
+  final double maxThumbLeading = (trackExtent - thumbExtent)
+      .clamp(0, double.infinity)
+      .toDouble();
   final double maxVisibleLeading = documentExtent - visibleExtent;
-  final double scrollRatio =
-      maxVisibleLeading == 0 ? 0 : (visibleLeading / maxVisibleLeading).clamp(0, 1).toDouble();
+  final double scrollRatio = maxVisibleLeading == 0
+      ? 0
+      : (visibleLeading / maxVisibleLeading).clamp(0, 1).toDouble();
 
   return PdfScrollbarGeometry(
     axis: axis,

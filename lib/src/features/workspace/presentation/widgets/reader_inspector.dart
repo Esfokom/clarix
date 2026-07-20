@@ -134,6 +134,7 @@ class ReaderInspector extends ConsumerWidget {
       ),
     );
   }
+
   Future<void> _showEditNote(
     BuildContext context,
     WidgetRef ref,
@@ -168,7 +169,9 @@ class ReaderInspector extends ConsumerWidget {
     if (value == null || value.trim().isEmpty) {
       return;
     }
-    await ref.read(workspaceNotifierProvider.notifier).updateAnnotationNote(
+    await ref
+        .read(workspaceNotifierProvider.notifier)
+        .updateAnnotationNote(
           tabId: activeTab.id,
           annotationId: annotation.id,
           note: value,

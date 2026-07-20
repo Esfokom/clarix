@@ -32,8 +32,8 @@ class DocumentWorkspace extends ConsumerWidget {
           child: _PdfViewerPane(
             tab: activeTab,
             documentRef: ref.watch(pdfDocumentRefProvider(activeTab.filePath)),
-            annotations: state.documentMetadata[activeTab.documentId]
-                    ?.annotations ??
+            annotations:
+                state.documentMetadata[activeTab.documentId]?.annotations ??
                 const <DocumentAnnotation>[],
           ),
         ),
@@ -82,7 +82,8 @@ class _TabStripState extends ConsumerState<_TabStrip> {
   Widget build(BuildContext context) {
     final DocumentMetadata? metadata =
         widget.state.documentMetadata[widget.activeTab.documentId];
-    final bool bookmarked = metadata?.bookmarks.any(
+    final bool bookmarked =
+        metadata?.bookmarks.any(
           (DocumentBookmark item) =>
               item.pageNumber == widget.activeTab.currentPage,
         ) ??
@@ -117,8 +118,7 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: widget.state.session.tabs.length,
-                  separatorBuilder: (_, int index) =>
-                      const SizedBox(width: 4),
+                  separatorBuilder: (_, int index) => const SizedBox(width: 4),
                   itemBuilder: (BuildContext context, int index) {
                     final DocumentTabState tab =
                         widget.state.session.tabs[index];
@@ -332,7 +332,9 @@ class _TabStripState extends ConsumerState<_TabStrip> {
     );
     controller.dispose();
     if (note != null) {
-      await ref.read(workspaceNotifierProvider.notifier).addNote(
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .addNote(
             tabId: widget.activeTab.id,
             pageNumber: widget.activeTab.currentPage,
             note: note,
@@ -369,8 +371,13 @@ class _ToolbarButton extends StatelessWidget {
     );
   }
 }
+
 class _PdfViewerPane extends ConsumerStatefulWidget {
-  const _PdfViewerPane({required this.tab, required this.documentRef, required this.annotations});
+  const _PdfViewerPane({
+    required this.tab,
+    required this.documentRef,
+    required this.annotations,
+  });
 
   final DocumentTabState tab;
   final PdfDocumentRefFile documentRef;
@@ -536,47 +543,45 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                 onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
                 child: ReaderCursorLockedPdfRegion(
                   controller: _controller,
-                  builder: (
-                    BuildContext context,
-                    ReaderCursorLockedPdfInput input,
-                  ) {
-                    return PdfViewer(
-                      widget.documentRef,
-                      controller: _controller,
-                      initialPageNumber: widget.tab.currentPage,
-                      params: PdfViewerParams(
-                        backgroundColor: WorkspaceColors.viewerBackground,
-                        margin: 14,
-                        pageDropShadow: const BoxShadow(
-                          color: Color(0x1A000000),
-                          blurRadius: 10,
-                          offset: Offset(0, 6),
-                        ),
-                        limitRenderingCache: true,
-                        maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
-                        horizontalCacheExtent: 0.5,
-                        verticalCacheExtent: 0.75,
-                        panEnabled: true,
-                        scaleEnabled: true,
-                        scaleByPointerScale: readerPointerZoomSensitivity,
-                        textSelectionParams: const PdfTextSelectionParams(
-                          enabled: true,
-                        ),
-                        interactionDelegateProvider:
-                            input.interactionDelegateProvider,
-                        normalizeMatrix: input.normalizeMatrix,
-                        onInteractionEnd: (_) => _persistViewerState(),
-                        onPageChanged: _onPageChanged,
-                        onViewerReady: _onViewerReady,
-                        pagePaintCallbacks: <PdfViewerPagePaintCallback>[
-                          _paintAnnotations,
-                          if (_searcher != null)
-                            _searcher!.pageTextMatchPaintCallback,
-                        ],
-                        viewerOverlayBuilder: _buildViewerOverlay,
-                      ),
-                    );
-                  },
+                  builder:
+                      (BuildContext context, ReaderCursorLockedPdfInput input) {
+                        return PdfViewer(
+                          widget.documentRef,
+                          controller: _controller,
+                          initialPageNumber: widget.tab.currentPage,
+                          params: PdfViewerParams(
+                            backgroundColor: WorkspaceColors.viewerBackground,
+                            margin: 14,
+                            pageDropShadow: const BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 6),
+                            ),
+                            limitRenderingCache: true,
+                            maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
+                            horizontalCacheExtent: 0.5,
+                            verticalCacheExtent: 0.75,
+                            panEnabled: true,
+                            scaleEnabled: true,
+                            scaleByPointerScale: readerPointerZoomSensitivity,
+                            textSelectionParams: const PdfTextSelectionParams(
+                              enabled: true,
+                            ),
+                            interactionDelegateProvider:
+                                input.interactionDelegateProvider,
+                            normalizeMatrix: input.normalizeMatrix,
+                            onInteractionEnd: (_) => _persistViewerState(),
+                            onPageChanged: _onPageChanged,
+                            onViewerReady: _onViewerReady,
+                            pagePaintCallbacks: <PdfViewerPagePaintCallback>[
+                              _paintAnnotations,
+                              if (_searcher != null)
+                                _searcher!.pageTextMatchPaintCallback,
+                            ],
+                            viewerOverlayBuilder: _buildViewerOverlay,
+                          ),
+                        );
+                      },
                 ),
               ),
             ),
@@ -590,36 +595,45 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                   alignment: Alignment.bottomCenter,
                   child: ValueListenableBuilder<_ReaderViewportMetrics>(
                     valueListenable: _metrics,
-                    builder: (
-                      BuildContext context,
-                      _ReaderViewportMetrics metrics,
-                      Widget? child,
-                    ) {
-                      return _ViewerHud(
-                        page: metrics.page,
-                        pageCount: widget.tab.pageCountHint,
-                        zoom: metrics.zoom,
-                        onPreviousPage: _controller.isReady && metrics.page > 1
-                            ? () => _controller.goToPage(
-                                  pageNumber: metrics.page - 1,
-                                )
-                            : null,
-                        onNextPage: _controller.isReady &&
-                                (widget.tab.pageCountHint == null ||
-                                    metrics.page < widget.tab.pageCountHint!)
-                            ? () => _controller.goToPage(
-                                  pageNumber: metrics.page + 1,
-                                )
-                            : null,
-                        onZoomOut:
-                            _controller.isReady ? _zoomOutAtPointer : null,
-                        onZoomIn: _controller.isReady ? _zoomInAtPointer : null,
-                        onSelectZoomPreset:
-                            _controller.isReady ? _applyZoomPreset : null,
-                        onHighlightSelection:
-                            _controller.isReady ? _highlightSelection : null,
-                      );
-                    },
+                    builder:
+                        (
+                          BuildContext context,
+                          _ReaderViewportMetrics metrics,
+                          Widget? child,
+                        ) {
+                          return _ViewerHud(
+                            page: metrics.page,
+                            pageCount: widget.tab.pageCountHint,
+                            zoom: metrics.zoom,
+                            onPreviousPage:
+                                _controller.isReady && metrics.page > 1
+                                ? () => _controller.goToPage(
+                                    pageNumber: metrics.page - 1,
+                                  )
+                                : null,
+                            onNextPage:
+                                _controller.isReady &&
+                                    (widget.tab.pageCountHint == null ||
+                                        metrics.page <
+                                            widget.tab.pageCountHint!)
+                                ? () => _controller.goToPage(
+                                    pageNumber: metrics.page + 1,
+                                  )
+                                : null,
+                            onZoomOut: _controller.isReady
+                                ? _zoomOutAtPointer
+                                : null,
+                            onZoomIn: _controller.isReady
+                                ? _zoomInAtPointer
+                                : null,
+                            onSelectZoomPreset: _controller.isReady
+                                ? _applyZoomPreset
+                                : null,
+                            onHighlightSelection: _controller.isReady
+                                ? _highlightSelection
+                                : null,
+                          );
+                        },
                   ),
                 ),
               ),
@@ -720,6 +734,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       }
     }
   }
+
   void _rememberPointerPosition(PointerEvent event) {
     _lastPointerGlobalPosition = event.position;
   }
@@ -735,11 +750,14 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   }
 
   Future<void> _highlightSelection() async {
-    final List<PdfPageTextRange> ranges =
-        await _controller.textSelectionDelegate.getSelectedTextRanges();
+    final List<PdfPageTextRange> ranges = await _controller
+        .textSelectionDelegate
+        .getSelectedTextRanges();
     for (final PdfPageTextRange range in ranges) {
       final PdfRect bounds = range.bounds;
-      await ref.read(workspaceNotifierProvider.notifier).addHighlight(
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .addHighlight(
             tabId: widget.tab.id,
             pageNumber: range.pageNumber,
             pageRect: Rect.fromLTRB(
@@ -753,6 +771,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     }
     await _controller.textSelectionDelegate.clearTextSelection();
   }
+
   Future<void> _zoomInAtPointer() async {
     await _controller.zoomUpOnLocalPosition(
       localPosition: _lastPointerAnchor(),
@@ -863,7 +882,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       return;
     }
     _syncViewerMetrics();
-    await ref.read(workspaceNotifierProvider.notifier).updateViewerState(
+    await ref
+        .read(workspaceNotifierProvider.notifier)
+        .updateViewerState(
           tabId: widget.tab.id,
           currentPage: _page,
           zoomScale: _zoom,
@@ -996,13 +1017,20 @@ class _PdfScrollbarTrack extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderSide = const BorderSide(color: WorkspaceColors.border, width: 0.5);
+    final borderSide = const BorderSide(
+      color: WorkspaceColors.border,
+      width: 0.5,
+    );
     return DecoratedBox(
       decoration: BoxDecoration(
         color: WorkspaceColors.canvasRaised,
         border: Border(
-          left: axis == PdfScrollbarAxis.vertical ? borderSide : BorderSide.none,
-          top: axis == PdfScrollbarAxis.horizontal ? borderSide : BorderSide.none,
+          left: axis == PdfScrollbarAxis.vertical
+              ? borderSide
+              : BorderSide.none,
+          top: axis == PdfScrollbarAxis.horizontal
+              ? borderSide
+              : BorderSide.none,
         ),
       ),
       child: child,
@@ -1028,8 +1056,8 @@ class _PdfScrollbarThumbState extends State<_PdfScrollbarThumb> {
     final Color thumbColor = _isDragging
         ? const Color(0xFF71717A)
         : _isHovered
-            ? const Color(0xFF52525B)
-            : const Color(0xFF3F3F46);
+        ? const Color(0xFF52525B)
+        : const Color(0xFF3F3F46);
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,

@@ -42,14 +42,45 @@ void main() {
     final Map<String, dynamic> body =
         jsonDecode(transport.request!.body) as Map<String, dynamic>;
     expect(body['stream'], isTrue);
-    expect((body['tools'] as List<dynamic>).single, containsPair('type', 'function'));
+    expect(
+      (body['tools'] as List<dynamic>).single,
+      containsPair('type', 'function'),
+    );
   });
 
   test('streams text then tool call fragments before completion', () async {
     final _FakeTransport transport = _FakeTransport(<String>[
       'data: {"choices":[{"delta":{"content":"Hello "}}]}\n',
-      'data: {"choices":[{"delta":{"content":"world","tool_calls":[{"index":0,"id":"call_1","function":{"name":"search_document","arguments":"{\\\"query\\\":\\\"term"}}]}}]}\n',
-      'data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"ination\\\"}"}}]}}]}\n',
+      'data: ${jsonEncode(<String, dynamic>{
+        'choices': <Object>[
+          <String, dynamic>{
+            'delta': <String, dynamic>{
+              'content': 'world',
+              'tool_calls': <Object>[
+                <String, dynamic>{
+                  'index': 0,
+                  'id': 'call_1',
+                  'function': <String, String>{'name': 'search_document', 'arguments': r'{"query":"term'},
+                },
+              ],
+            },
+          },
+        ],
+      })}\n',
+      'data: ${jsonEncode(<String, dynamic>{
+        'choices': <Object>[
+          <String, dynamic>{
+            'delta': <String, dynamic>{
+              'tool_calls': <Object>[
+                <String, dynamic>{
+                  'index': 0,
+                  'function': <String, String>{'arguments': r'ination"}'},
+                },
+              ],
+            },
+          },
+        ],
+      })}\n',
       'data: [DONE]\n',
     ]);
     final OpenAiCompatibleProvider provider = OpenAiCompatibleProvider(
@@ -66,7 +97,13 @@ void main() {
         )
         .toList();
 
-    expect(events.whereType<AiTextDelta>().map((AiTextDelta item) => item.text).join(), 'Hello world');
+    expect(
+      events
+          .whereType<AiTextDelta>()
+          .map((AiTextDelta item) => item.text)
+          .join(),
+      'Hello world',
+    );
     final AiCompletionFinished completed = events.last as AiCompletionFinished;
     expect(completed.toolCalls.single.name, 'search_document');
     expect(completed.toolCalls.single.argumentsJson, '{"query":"termination"}');
@@ -84,9 +121,7 @@ class _FakeTransport implements OpenAiTransport {
     request = value;
     return OpenAiTransportResponse(
       statusCode: 200,
-      body: Stream<List<int>>.fromIterable(
-        lines.map(utf8.encode),
-      ),
+      body: Stream<List<int>>.fromIterable(lines.map(utf8.encode)),
     );
   }
 

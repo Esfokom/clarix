@@ -31,19 +31,23 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
 
   @override
   void onWindowClose() async {
-    final WorkspaceFeatureState? state =
-        ref.read(workspaceNotifierProvider).value;
+    final WorkspaceFeatureState? state = ref
+        .read(workspaceNotifierProvider)
+        .value;
     if (state == null) {
       await windowManager.destroy();
       return;
     }
 
-    if (!state.session.restorePreviousSession && state.session.tabs.isNotEmpty) {
+    if (!state.session.restorePreviousSession &&
+        state.session.tabs.isNotEmpty) {
       final bool shouldClose = await _showDiscardDialog();
       if (!shouldClose || !mounted) {
         return;
       }
-      await ref.read(workspaceNotifierProvider.notifier).discardSessionOnClose();
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .discardSessionOnClose();
     }
 
     await windowManager.setPreventClose(false);
@@ -52,8 +56,9 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
 
   @override
   Widget build(BuildContext context) {
-    final AsyncValue<WorkspaceFeatureState> asyncState =
-        ref.watch(workspaceNotifierProvider);
+    final AsyncValue<WorkspaceFeatureState> asyncState = ref.watch(
+      workspaceNotifierProvider,
+    );
 
     return Scaffold(
       backgroundColor: WorkspaceColors.canvas,

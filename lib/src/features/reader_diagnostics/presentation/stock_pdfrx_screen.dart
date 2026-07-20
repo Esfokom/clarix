@@ -50,10 +50,7 @@ class _StockPdfrxScreenState extends State<StockPdfrxScreen> {
         : ReaderCursorLockedPdfRegion(
             key: ValueKey<String>('cursor-locked-$path'),
             controller: _controller,
-            builder: (
-              BuildContext context,
-              ReaderCursorLockedPdfInput input,
-            ) {
+            builder: (BuildContext context, ReaderCursorLockedPdfInput input) {
               return PdfViewer.file(
                 path,
                 key: ValueKey<String>(path),
@@ -72,18 +69,15 @@ class _StockPdfrxScreenState extends State<StockPdfrxScreen> {
 
     return ValueListenableBuilder<DiagnosticViewerStatus>(
       valueListenable: _status,
-      builder: (
-        BuildContext context,
-        DiagnosticViewerStatus status,
-        Widget? child,
-      ) {
-        return DiagnosticViewerChrome(
-          viewer: viewer,
-          status: status.label,
-          onBack: widget.onBack ?? () => Navigator.of(context).maybePop(),
-          onOpenPdf: _openPdf,
-        );
-      },
+      builder:
+          (BuildContext context, DiagnosticViewerStatus status, Widget? child) {
+            return DiagnosticViewerChrome(
+              viewer: viewer,
+              status: status.label,
+              onBack: widget.onBack ?? () => Navigator.of(context).maybePop(),
+              onOpenPdf: _openPdf,
+            );
+          },
     );
   }
 

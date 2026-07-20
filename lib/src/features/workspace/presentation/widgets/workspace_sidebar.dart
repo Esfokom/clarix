@@ -74,7 +74,7 @@ class WorkspaceSidebar extends ConsumerWidget {
                     icon: const Icon(LucideIcons.settings2, size: 15),
                     onPressed: () => ref
                         .read(workspaceNotifierProvider.notifier)
-                        .toggleModelCatalog(true),
+                        .toggleProviderSettings(true),
                   ),
                 ],
               ),
@@ -96,7 +96,8 @@ class WorkspaceSidebar extends ConsumerWidget {
                       height: 172,
                       child: state.session.sidebarPane == SidebarPane.outline
                           ? OutlinePane(
-                              outline: state.outlines[activeTab!.id] ??
+                              outline:
+                                  state.outlines[activeTab!.id] ??
                                   const <OutlineNodeState>[],
                             )
                           : ThumbnailPane(tab: activeTab!),
@@ -180,56 +181,56 @@ class _SidebarPaneToggle extends ConsumerWidget {
         border: Border.all(color: WorkspaceColors.border),
       ),
       child: Row(
-        children: SidebarPane.values.map((SidebarPane pane) {
-          final bool isSelected = pane == selected;
-          final String label =
-              pane == SidebarPane.thumbnails ? 'Pages' : 'Outline';
-          final IconData icon = pane == SidebarPane.thumbnails
-              ? LucideIcons.layoutGrid
-              : LucideIcons.listTree;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => ref
-                  .read(workspaceNotifierProvider.notifier)
-                  .setSidebarPane(pane),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 140),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? WorkspaceColors.accentSoft
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    Icon(icon, size: 12, color: WorkspaceColors.textStrong),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: const TextStyle(
-                        color: WorkspaceColors.textStrong,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                      ),
+        children: SidebarPane.values
+            .map((SidebarPane pane) {
+              final bool isSelected = pane == selected;
+              final String label = pane == SidebarPane.thumbnails
+                  ? 'Pages'
+                  : 'Outline';
+              final IconData icon = pane == SidebarPane.thumbnails
+                  ? LucideIcons.layoutGrid
+                  : LucideIcons.listTree;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => ref
+                      .read(workspaceNotifierProvider.notifier)
+                      .setSidebarPane(pane),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? WorkspaceColors.accentSoft
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
                     ),
-                  ],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: <Widget>[
+                        Icon(icon, size: 12, color: WorkspaceColors.textStrong),
+                        const SizedBox(width: 6),
+                        Text(
+                          label,
+                          style: const TextStyle(
+                            color: WorkspaceColors.textStrong,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          );
-        }).toList(growable: false),
+              );
+            })
+            .toList(growable: false),
       ),
     );
   }
 }
 
 class _SidebarTabTile extends ConsumerWidget {
-  const _SidebarTabTile({
-    required this.tab,
-    required this.selected,
-  });
+  const _SidebarTabTile({required this.tab, required this.selected});
 
   final DocumentTabState tab;
   final bool selected;
@@ -245,8 +246,9 @@ class _SidebarTabTile extends ConsumerWidget {
           color: selected ? WorkspaceColors.panelRaised : WorkspaceColors.panel,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color:
-                selected ? WorkspaceColors.accentBorder : WorkspaceColors.border,
+            color: selected
+                ? WorkspaceColors.accentBorder
+                : WorkspaceColors.border,
           ),
         ),
         child: Row(
@@ -293,9 +295,8 @@ class _SidebarTabTile extends ConsumerWidget {
               height: 24,
               padding: EdgeInsets.zero,
               icon: const Icon(LucideIcons.x, size: 13),
-              onPressed: () => ref
-                  .read(workspaceNotifierProvider.notifier)
-                  .closeTab(tab.id),
+              onPressed: () =>
+                  ref.read(workspaceNotifierProvider.notifier).closeTab(tab.id),
             ),
           ],
         ),
@@ -398,10 +399,7 @@ class OutlinePane extends StatelessWidget {
       return const Center(
         child: Text(
           'Outline appears after the document loads.',
-          style: TextStyle(
-            color: WorkspaceColors.textFaint,
-            fontSize: 10.5,
-          ),
+          style: TextStyle(color: WorkspaceColors.textFaint, fontSize: 10.5),
           textAlign: TextAlign.center,
         ),
       );
@@ -409,17 +407,16 @@ class OutlinePane extends StatelessWidget {
 
     return ListView(
       children: outline
-          .map((OutlineNodeState node) => _OutlineNodeTile(node: node, depth: 0))
+          .map(
+            (OutlineNodeState node) => _OutlineNodeTile(node: node, depth: 0),
+          )
           .toList(growable: false),
     );
   }
 }
 
 class _OutlineNodeTile extends StatelessWidget {
-  const _OutlineNodeTile({
-    required this.node,
-    required this.depth,
-  });
+  const _OutlineNodeTile({required this.node, required this.depth});
 
   final OutlineNodeState node;
   final int depth;
@@ -454,10 +451,8 @@ class _OutlineNodeTile extends StatelessWidget {
               ),
         children: node.children
             .map(
-              (OutlineNodeState child) => _OutlineNodeTile(
-                node: child,
-                depth: depth + 1,
-              ),
+              (OutlineNodeState child) =>
+                  _OutlineNodeTile(node: child, depth: depth + 1),
             )
             .toList(growable: false),
       ),

@@ -3,29 +3,22 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
-import '../../../core/cancel_token.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clarix_logger.dart';
-import '../../../core/local_gemma_model_store.dart';
-import '../../../core/model_catalog.dart';
 import '../../../core/models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../domain/workspace_feature_state.dart';
+import '../domain/ai_provider.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/provider_profile_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
-  final Map<String, CancelToken> _downloadTokens = <String, CancelToken>{};
-  final Map<String, int> _downloadLogBuckets = <String, int>{};
-
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
-  ClarixModelCatalog get _catalogService => ref.read(modelCatalogServiceProvider);
-  LocalGemmaModelStore get _localModelStore =>
-      ref.read(localGemmaModelStoreProvider);
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
   DocumentChunkStore get _chunkStore => ref.read(chunkStoreProvider);
@@ -34,35 +27,48 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   Future<DocumentMetadataStore> get _metadataStore =>
       ref.read(documentMetadataStoreProvider.future);
   AiRuntimeService get _ai => ref.read(aiRuntimeServiceProvider);
+  ProviderProfileStore get _providerProfiles =>
+      ref.read(providerProfileStoreProvider);
 
   @override
   Future<WorkspaceFeatureState> build() async {
-    final WorkspaceSession storedSession =
-        await _sessionStore.readWorkspaceSession();
-    final AiWorkspaceState storedAi = await _sessionStore.readAiWorkspaceState();
-    final Map<String, DownloadTaskState> downloads =
-        await _sessionStore.readDownloads();
-    final WorkspaceSession restoredSession =
-        await _rehydrateWorkspace(storedSession);
+    final WorkspaceSession storedSession = await _sessionStore
+        .readWorkspaceSession();
+    final AiWorkspaceState storedAi = await _sessionStore
+        .readAiWorkspaceState();
+    final List<AiProviderProfile> providerProfiles = await _providerProfiles
+        .readProfiles();
+    final WorkspaceSession restoredSession = await _rehydrateWorkspace(
+      storedSession,
+    );
     final Map<String, DocumentMetadata> documentMetadata =
         await _loadDocumentMetadata(restoredSession);
-    final List<ModelCatalogItem> catalog =
-        _catalogService.buildCatalog(downloads: downloads);
-    final AiWorkspaceState restoredAi = await _restoreAiBestEffort(
-      storedAi,
-      catalog,
+    AiWorkspaceState restoredAi = storedAi.copyWith(chatBusy: false);
+    final AiProviderProfile? selectedProfile = _profileById(
+      providerProfiles,
+      storedAi.selectedProviderId,
+    );
+    final bool providerReady =
+        selectedProfile != null &&
+        (await _providerProfiles.readApiKey(selectedProfile.id))?.isNotEmpty ==
+            true;
+    restoredAi = restoredAi.copyWith(
+      selectedProviderId: selectedProfile?.id,
+      clearSelectedProviderId: selectedProfile == null,
+      providerReady: providerReady,
+      statusMessage: providerReady
+          ? '${selectedProfile.label} is ready.'
+          : 'Add a provider to start a remote AI chat.',
     );
 
     return WorkspaceFeatureState(
       session: restoredSession,
       aiState: restoredAi,
-      downloads: downloads,
-      catalog: _catalogService.buildCatalog(downloads: downloads),
       outlines: const <String, List<OutlineNodeState>>{},
       documentMetadata: documentMetadata,
       composerExpanded: false,
-      showModelCatalog: false,
       bannerMessage: null,
+      providerProfiles: providerProfiles,
     );
   }
 
@@ -91,8 +97,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
     final Map<String, DocumentMetadata> metadata =
         Map<String, DocumentMetadata>.from(current.documentMetadata);
-    final List<String> recentFiles =
-        List<String>.from(current.session.recentFiles);
+    final List<String> recentFiles = List<String>.from(
+      current.session.recentFiles,
+    );
     final List<DocumentTabState> tabsToIndex = <DocumentTabState>[];
     String? activeTabId = current.session.activeTabId;
     final DocumentMetadataStore store = await _metadataStore;
@@ -121,7 +128,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
       DocumentMetadata documentMetadata =
           await store.read(identity.fingerprint) ??
-              DocumentMetadata.empty(identity);
+          DocumentMetadata.empty(identity);
       if (documentMetadata.identity.path != identity.path) {
         documentMetadata = documentMetadata.copyWith(identity: identity);
       }
@@ -185,7 +192,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   Future<void> setActiveTab(String tabId) async {
     final WorkspaceFeatureState current = _requireState();
-    final WorkspaceSession session = current.session.copyWith(activeTabId: tabId);
+    final WorkspaceSession session = current.session.copyWith(
+      activeTabId: tabId,
+    );
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
@@ -208,8 +217,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   Future<void> setSidebarPane(SidebarPane pane) async {
     final WorkspaceFeatureState current = _requireState();
-    final WorkspaceSession session =
-        current.session.copyWith(sidebarPane: pane);
+    final WorkspaceSession session = current.session.copyWith(
+      sidebarPane: pane,
+    );
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
@@ -256,199 +266,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
-  Future<void> setOutline(
-    String tabId,
-    List<OutlineNodeState> outline,
-  ) async {
+  Future<void> setOutline(String tabId, List<OutlineNodeState> outline) async {
     final WorkspaceFeatureState current = _requireState();
     final Map<String, List<OutlineNodeState>> outlines =
         Map<String, List<OutlineNodeState>>.from(current.outlines)
           ..[tabId] = outline;
     state = AsyncData(current.copyWith(outlines: outlines));
-  }
-
-  Future<void> toggleModelCatalog([bool? value]) async {
-    final WorkspaceFeatureState current = _requireState();
-    state = AsyncData(
-      current.copyWith(showModelCatalog: value ?? !current.showModelCatalog),
-    );
-  }
-
-  Future<void> installModel(ModelCatalogItem item) async {
-    final WorkspaceFeatureState current = _requireState();
-    final CancelToken token = CancelToken();
-    _downloadTokens[item.id] = token;
-    _downloadLogBuckets.remove(item.id);
-    clarixLog.i('Model install started: ${item.id}');
-    await _setDownload(
-      item.id,
-      (current.downloads[item.id] ?? DownloadTaskState.initial(item.id))
-          .copyWith(
-        status: DownloadTaskStatus.running,
-        progress: 0,
-        downloadedBytes: 0,
-        totalBytes: item.sizeBytes,
-        clearErrorMessage: true,
-      ),
-    );
-
-    try {
-      final ModelInstallResult installResult;
-      if (item.type == ModelCatalogType.inference) {
-        installResult = await _ai.installInferenceModel(
-          item: item,
-          cancelToken: token,
-          onProgress: (int progress) {
-            _logDownloadProgress(item.id, progress);
-            unawaited(
-              _setDownload(
-                item.id,
-                (state.value?.downloads[item.id] ??
-                        DownloadTaskState.initial(item.id))
-                    .copyWith(
-                  status: DownloadTaskStatus.running,
-                  progress: progress,
-                  downloadedBytes: _estimateDownloadedBytes(
-                    progress: progress,
-                    totalBytes: item.sizeBytes,
-                  ),
-                  totalBytes: item.sizeBytes,
-                ),
-              ),
-            );
-          },
-        );
-      } else {
-        installResult = await _ai.installEmbeddingModel(
-          item: item,
-          cancelToken: token,
-          onModelProgress: (int progress) {
-            _logDownloadProgress(item.id, progress);
-            unawaited(
-              _setDownload(
-                item.id,
-                (state.value?.downloads[item.id] ??
-                        DownloadTaskState.initial(item.id))
-                    .copyWith(
-                  status: DownloadTaskStatus.running,
-                  progress: progress,
-                  downloadedBytes: _estimateDownloadedBytes(
-                    progress: progress,
-                    totalBytes: item.sizeBytes,
-                  ),
-                  totalBytes: item.sizeBytes,
-                ),
-              ),
-            );
-          },
-          onTokenizerProgress: (int progress) {
-            _logDownloadProgress(item.id, progress);
-            unawaited(
-              _setDownload(
-                item.id,
-                (state.value?.downloads[item.id] ??
-                        DownloadTaskState.initial(item.id))
-                    .copyWith(
-                  status: DownloadTaskStatus.validating,
-                  progress: progress,
-                  downloadedBytes: _estimateDownloadedBytes(
-                    progress: progress,
-                    totalBytes: item.sizeBytes,
-                  ),
-                  totalBytes: item.sizeBytes,
-                ),
-              ),
-            );
-          },
-        );
-      }
-
-      final WorkspaceFeatureState refreshed = _requireState();
-      final AiWorkspaceState aiState = item.type == ModelCatalogType.inference
-          ? refreshed.aiState.copyWith(
-              inferenceReady: true,
-              activityPhase: AiRuntimePhase.idle,
-              statusMessage: 'Inference model ready.',
-              activeInferenceModelId: item.id,
-            )
-          : refreshed.aiState.copyWith(
-              embeddingReady: true,
-              vectorStoreReady: true,
-              activityPhase: AiRuntimePhase.idle,
-              statusMessage: 'Embedding model ready. PDF grounding unlocked.',
-              activeEmbeddingModelId: item.id,
-            );
-
-      await _setDownload(
-        item.id,
-        (state.value?.downloads[item.id] ?? DownloadTaskState.initial(item.id))
-            .copyWith(
-          status: DownloadTaskStatus.completed,
-          progress: 100,
-          downloadedBytes: installResult.sizeBytes,
-          totalBytes: installResult.sizeBytes,
-          installedPath: installResult.installedPath,
-          clearErrorMessage: true,
-        ),
-      );
-      clarixLog.i(
-        'Model install completed: ${item.id} at ${installResult.installedPath}',
-      );
-      final WorkspaceFeatureState completedState = _requireState();
-      await _commit(completedState.copyWith(aiState: aiState));
-
-      if (item.type == ModelCatalogType.embedding) {
-        for (final DocumentTabState tab in refreshed.session.tabs) {
-          unawaited(_syncTabIndexToVectorStore(tab));
-        }
-      }
-    } catch (error) {
-      final DownloadTaskStatus status = CancelToken.isCancel(error)
-          ? DownloadTaskStatus.paused
-          : DownloadTaskStatus.failed;
-      clarixLog.w(
-        'Model install ${status.name}: ${item.id}',
-        error: error,
-      );
-      await _setDownload(
-        item.id,
-        (state.value?.downloads[item.id] ?? DownloadTaskState.initial(item.id))
-            .copyWith(
-          status: status,
-          errorMessage: error.toString(),
-        ),
-      );
-    } finally {
-      _downloadTokens.remove(item.id);
-      _downloadLogBuckets.remove(item.id);
-    }
-  }
-
-  void pauseDownload(String modelId) {
-    final CancelToken? token = _downloadTokens[modelId];
-    token?.cancel('Paused by user');
-  }
-
-  Future<void> cancelDownload(String modelId) async {
-    final CancelToken? token = _downloadTokens[modelId];
-    token?.cancel('Cancelled by user');
-    _downloadTokens.remove(modelId);
-    await _setDownload(
-      modelId,
-      DownloadTaskState.initial(modelId),
-    );
-  }
-
-  Future<void> openModelLocation(ModelCatalogItem item) async {
-    final WorkspaceFeatureState current = _requireState();
-    final String? path = item.installedPath ??
-        current.downloads[item.id]?.installedPath ??
-        _localModelStore.installedPathSync(item);
-    if (path == null) {
-      clarixLog.w('No installed path available for ${item.id}');
-      return;
-    }
-    await _localModelStore.reveal(path);
   }
 
   Future<void> toggleScopeMode() async {
@@ -459,10 +282,69 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(aiState: aiState));
   }
 
+  Future<void> toggleProviderSettings([bool? value]) async {
+    final WorkspaceFeatureState current = _requireState();
+    state = AsyncData(
+      current.copyWith(
+        showProviderSettings: value ?? !current.showProviderSettings,
+      ),
+    );
+  }
+
+  Future<void> selectProvider(String? profileId) async {
+    final WorkspaceFeatureState current = _requireState();
+    final AiProviderProfile? profile = _profileById(
+      current.providerProfiles,
+      profileId,
+    );
+    final bool ready =
+        profile != null &&
+        (await _providerProfiles.readApiKey(profile.id))?.isNotEmpty == true;
+    await _commit(
+      current.copyWith(
+        aiState: current.aiState.copyWith(
+          selectedProviderId: profile?.id,
+          clearSelectedProviderId: profile == null,
+          providerReady: ready,
+          statusMessage: ready
+              ? '${profile.label} is ready.'
+              : 'Add an API key to use this provider.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> saveProvider(AiProviderProfile profile, {String? apiKey}) async {
+    await _providerProfiles.saveProfile(
+      profile,
+      apiKey: apiKey?.trim().isEmpty == true ? null : apiKey?.trim(),
+    );
+    final WorkspaceFeatureState current = _requireState();
+    final List<AiProviderProfile> profiles = await _providerProfiles
+        .readProfiles();
+    await _commit(current.copyWith(providerProfiles: profiles));
+    await selectProvider(profile.id);
+  }
+
+  Future<void> deleteProvider(String profileId) async {
+    await _providerProfiles.deleteProfile(profileId);
+    final WorkspaceFeatureState current = _requireState();
+    final List<AiProviderProfile> profiles = await _providerProfiles
+        .readProfiles();
+    await _commit(current.copyWith(providerProfiles: profiles));
+    if (current.aiState.selectedProviderId == profileId) {
+      await selectProvider(null);
+    }
+  }
+
   Future<void> sendPrompt(String prompt) async {
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState? activeTab = activeTabState;
     if (prompt.trim().isEmpty || current.aiState.chatBusy) {
+      return;
+    }
+    if (!current.aiState.providerReady ||
+        current.aiState.selectedProviderId == null) {
       return;
     }
 
@@ -486,7 +368,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         aiState: current.aiState.copyWith(
           chatBusy: true,
           activityPhase: AiRuntimePhase.loadingInference,
-          statusMessage: 'Loading inference model. First response can take a minute.',
+          statusMessage:
+              'Loading inference model. First response can take a minute.',
           messages: <ComposerMessage>[
             ...current.aiState.messages,
             userMessage,
@@ -501,6 +384,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       final StringBuffer answerBuffer = StringBuffer();
       final _AiReplyData reply = await _generateReply(
         prompt: prompt.trim(),
+        profileId: current.aiState.selectedProviderId!,
         useCurrentDocumentScope: current.aiState.useCurrentDocumentScope,
         currentDocumentId: activeTab?.documentId,
         onStatus: _setAiActivity,
@@ -509,8 +393,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
           final WorkspaceFeatureState live = _requireState();
           final List<ComposerMessage> updatedMessages =
               List<ComposerMessage>.from(live.aiState.messages);
-          updatedMessages[updatedMessages.length - 1] =
-              updatedMessages.last.copyWith(text: answerBuffer.toString());
+          updatedMessages[updatedMessages.length - 1] = updatedMessages.last
+              .copyWith(text: answerBuffer.toString());
           state = AsyncData(
             live.copyWith(
               aiState: live.aiState.copyWith(
@@ -524,8 +408,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       );
 
       final WorkspaceFeatureState refreshed = _requireState();
-      final List<ComposerMessage> messages =
-          List<ComposerMessage>.from(refreshed.aiState.messages);
+      final List<ComposerMessage> messages = List<ComposerMessage>.from(
+        refreshed.aiState.messages,
+      );
       messages[messages.length - 1] = messages.last.copyWith(
         text: reply.text,
         citations: reply.citations,
@@ -535,7 +420,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
           aiState: refreshed.aiState.copyWith(
             chatBusy: false,
             activityPhase: AiRuntimePhase.idle,
-            statusMessage: _readyStatusMessage(refreshed.aiState),
+            statusMessage: 'Ready to chat with your remote provider.',
             messages: messages,
             lastRetrievalSnippets: reply.citations,
           ),
@@ -548,8 +433,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         stackTrace: stackTrace,
       );
       final WorkspaceFeatureState refreshed = _requireState();
-      final List<ComposerMessage> messages =
-          List<ComposerMessage>.from(refreshed.aiState.messages);
+      final List<ComposerMessage> messages = List<ComposerMessage>.from(
+        refreshed.aiState.messages,
+      );
       messages[messages.length - 1] = messages.last.copyWith(
         text: 'I could not generate a response.\n\n$error',
       );
@@ -578,19 +464,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         ),
       ),
     );
-  }
-
-  int _estimateDownloadedBytes({
-    required int progress,
-    required int totalBytes,
-  }) {
-    if (progress <= 0) {
-      return 0;
-    }
-    if (progress >= 100) {
-      return totalBytes;
-    }
-    return ((totalBytes * progress) / 100).round();
   }
 
   DocumentTabState? get activeTabState {
@@ -626,10 +499,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       return;
     }
 
-    final DocumentIdentity identity =
-        await _identityService.identify(selectedPath);
-    final bool hasStableFingerprint =
-        RegExp(r'^[a-f0-9]{64}$').hasMatch(tab.documentId);
+    final DocumentIdentity identity = await _identityService.identify(
+      selectedPath,
+    );
+    final bool hasStableFingerprint = RegExp(
+      r'^[a-f0-9]{64}$',
+    ).hasMatch(tab.documentId);
     if (hasStableFingerprint && identity.fingerprint != tab.documentId) {
       state = AsyncData(
         current.copyWith(
@@ -640,7 +515,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     }
 
     final DocumentMetadataStore store = await _metadataStore;
-    final DocumentMetadata existing = current.documentMetadata[tab.documentId] ??
+    final DocumentMetadata existing =
+        current.documentMetadata[tab.documentId] ??
         await store.read(identity.fingerprint) ??
         DocumentMetadata.empty(identity);
     final DocumentMetadata updatedMetadata = existing.copyWith(
@@ -682,7 +558,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       persistAi: false,
     );
     unawaited(
-      _indexDocument(tabs.firstWhere((DocumentTabState item) => item.id == tabId)),
+      _indexDocument(
+        tabs.firstWhere((DocumentTabState item) => item.id == tabId),
+      ),
     );
   }
 
@@ -695,8 +573,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     if (document == null) {
       return;
     }
-    final List<DocumentBookmark> bookmarks =
-        List<DocumentBookmark>.from(document.bookmarks);
+    final List<DocumentBookmark> bookmarks = List<DocumentBookmark>.from(
+      document.bookmarks,
+    );
     final int existing = bookmarks.indexWhere(
       (DocumentBookmark item) => item.pageNumber == pageNumber,
     );
@@ -740,19 +619,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       return;
     }
     final List<DocumentAnnotation> annotations =
-        List<DocumentAnnotation>.from(document.annotations)
-          ..add(
-            DocumentAnnotation(
-              id: 'note_${DateTime.now().microsecondsSinceEpoch}',
-              kind: AnnotationKind.note,
-              pageNumber: pageNumber,
-              pageRects: const <Rect>[],
-              selectedText: '',
-              note: trimmed,
-              colorValue: 0x66FFD54F,
-              createdAt: DateTime.now().toUtc(),
-            ),
-          );
+        List<DocumentAnnotation>.from(document.annotations)..add(
+          DocumentAnnotation(
+            id: 'note_${DateTime.now().microsecondsSinceEpoch}',
+            kind: AnnotationKind.note,
+            pageNumber: pageNumber,
+            pageRects: const <Rect>[],
+            selectedText: '',
+            note: trimmed,
+            colorValue: 0x66FFD54F,
+            createdAt: DateTime.now().toUtc(),
+          ),
+        );
     await _saveDocumentMetadata(
       current,
       document.copyWith(annotations: annotations),
@@ -774,24 +652,24 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       return;
     }
     final List<DocumentAnnotation> annotations =
-        List<DocumentAnnotation>.from(document.annotations)
-          ..add(
-            DocumentAnnotation(
-              id: 'highlight_${DateTime.now().microsecondsSinceEpoch}',
-              kind: AnnotationKind.highlight,
-              pageNumber: pageNumber,
-              pageRects: <Rect>[pageRect],
-              selectedText: selectedText,
-              note: null,
-              colorValue: 0x66FFD54F,
-              createdAt: DateTime.now().toUtc(),
-            ),
-          );
+        List<DocumentAnnotation>.from(document.annotations)..add(
+          DocumentAnnotation(
+            id: 'highlight_${DateTime.now().microsecondsSinceEpoch}',
+            kind: AnnotationKind.highlight,
+            pageNumber: pageNumber,
+            pageRects: <Rect>[pageRect],
+            selectedText: selectedText,
+            note: null,
+            colorValue: 0x66FFD54F,
+            createdAt: DateTime.now().toUtc(),
+          ),
+        );
     await _saveDocumentMetadata(
       current,
       document.copyWith(annotations: annotations),
     );
   }
+
   Future<void> updateAnnotationNote({
     required String tabId,
     required String annotationId,
@@ -814,14 +692,14 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       document.copyWith(
         annotations: document.annotations
             .map(
-              (DocumentAnnotation item) => item.id == annotationId
-                  ? item.copyWith(note: trimmed)
-                  : item,
+              (DocumentAnnotation item) =>
+                  item.id == annotationId ? item.copyWith(note: trimmed) : item,
             )
             .toList(growable: false),
       ),
     );
   }
+
   Future<void> removeAnnotation(String tabId, String annotationId) async {
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState tab = current.session.tabs.firstWhere(
@@ -921,13 +799,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       );
     }
 
-    final String? activeTabId = tabs.any(
-      (DocumentTabState tab) => tab.id == session.activeTabId,
-    )
+    final String? activeTabId =
+        tabs.any((DocumentTabState tab) => tab.id == session.activeTabId)
         ? session.activeTabId
         : tabs.isEmpty
-            ? null
-            : tabs.first.id;
+        ? null
+        : tabs.first.id;
 
     return session.copyWith(
       tabs: tabs,
@@ -935,6 +812,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       clearActiveTabId: activeTabId == null,
     );
   }
+
   Future<void> _indexDocument(DocumentTabState tab) async {
     await _markTabIndexStatus(tab.id, DocumentIndexStatus.indexing);
     try {
@@ -954,7 +832,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
             ? DocumentIndexStatus.unavailable
             : DocumentIndexStatus.indexed,
       );
-      await _syncTabIndexToVectorStore(tab);
     } catch (error, stackTrace) {
       clarixLog.w(
         'PDF indexing failed: ${tab.filePath}',
@@ -962,43 +839,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         stackTrace: stackTrace,
       );
       await _markTabIndexStatus(tab.id, DocumentIndexStatus.failed);
-    }
-  }
-
-  Future<void> _syncTabIndexToVectorStore(DocumentTabState tab) async {
-    final WorkspaceFeatureState? current = state.value;
-    if (current == null || !current.aiState.embeddingReady) {
-      return;
-    }
-    final List<PdfChunkRecord> chunks = await _chunkStore.readChunks(tab.documentId);
-    try {
-      if (!current.aiState.chatBusy) {
-        _setAiActivity(
-          AiRuntimePhase.indexing,
-          'Preparing PDF grounding for ${tab.title}.',
-        );
-      }
-      await _ai.ensureDocumentIndexed(chunks);
-      final WorkspaceFeatureState? refreshed = state.value;
-      if (refreshed != null && !refreshed.aiState.chatBusy) {
-        _setAiActivity(
-          AiRuntimePhase.idle,
-          _readyStatusMessage(refreshed.aiState),
-        );
-      }
-    } catch (error, stackTrace) {
-      clarixLog.w(
-        'Vector-store sync failed for ${tab.documentId}',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      final WorkspaceFeatureState? refreshed = state.value;
-      if (refreshed != null && !refreshed.aiState.chatBusy) {
-        _setAiActivity(
-          AiRuntimePhase.failed,
-          'PDF grounding is unavailable. Chat will continue without context.',
-        );
-      }
     }
   }
 
@@ -1017,26 +857,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
-  Future<void> _setDownload(String modelId, DownloadTaskState task) async {
-    final WorkspaceFeatureState current = _requireState();
-    final DownloadTaskState stampedTask = task.copyWith(
-      lastUpdatedAt: DateTime.now().toUtc(),
-    );
-    final Map<String, DownloadTaskState> downloads =
-        Map<String, DownloadTaskState>.from(current.downloads)
-          ..[modelId] = stampedTask;
-    final List<ModelCatalogItem> catalog =
-        _catalogService.buildCatalog(downloads: downloads);
-    await _commit(
-      current.copyWith(downloads: downloads, catalog: catalog),
-      persistSession: false,
-      persistAi: false,
-    );
-    await _sessionStore.writeDownloads(downloads);
-  }
-
   Future<_AiReplyData> _generateReply({
     required String prompt,
+    required String profileId,
     required bool useCurrentDocumentScope,
     required String? currentDocumentId,
     required void Function(AiRuntimePhase phase, String message) onStatus,
@@ -1044,115 +867,24 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   }) async {
     final AiReply reply = await _ai.sendPrompt(
       prompt: prompt,
+      profileId: profileId,
       useCurrentDocumentScope: useCurrentDocumentScope,
       currentDocumentId: currentDocumentId,
       onToken: onToken,
       onStatus: onStatus,
     );
-    return _AiReplyData(
-      text: reply.text,
-      citations: reply.citations,
-    );
+    return _AiReplyData(text: reply.text, citations: reply.citations);
   }
 
-  Future<AiWorkspaceState> _restoreAiBestEffort(
-    AiWorkspaceState storedAi,
-    List<ModelCatalogItem> catalog,
-  ) async {
-    AiWorkspaceState restored = storedAi.copyWith(chatBusy: false);
-
-    if (storedAi.activeEmbeddingModelId != null) {
-      try {
-        clarixLog.i(
-          'Restoring embedding model: ${storedAi.activeEmbeddingModelId}',
-        );
-        if (!_ai.hasActiveEmbedder) {
-          throw StateError(
-            'No active embedding model set. Use FlutterGemma.installEmbedder() first.',
-          );
-        }
-        restored = restored.copyWith(embeddingReady: true);
-      } catch (error, stackTrace) {
-        clarixLog.w(
-          'Embedding restore failed; PDF reader will continue.',
-          error: error,
-          stackTrace: stackTrace,
-        );
-        restored = restored.copyWith(
-          embeddingReady: false,
-          vectorStoreReady: false,
-          clearActiveEmbeddingModelId: true,
-          statusMessage: 'Install a model to unlock local AI features.',
-        );
-      }
-    }
-
-    if (storedAi.activeInferenceModelId == null) {
-      return restored.copyWith(inferenceReady: false);
-    }
-
-    final ModelCatalogItem? activeItem = _findCatalogItem(
-      catalog,
-      storedAi.activeInferenceModelId!,
-    );
-    if (activeItem == null) {
-      clarixLog.w(
-        'Saved inference model is no longer in the catalog: '
-        '${storedAi.activeInferenceModelId}',
-      );
-      return restored.copyWith(
-        inferenceReady: false,
-        clearActiveInferenceModelId: true,
-        statusMessage: 'Install a model to unlock local AI features.',
-      );
-    }
-
-    try {
-      final ModelInstallResult result =
-          await _ai.activateInferenceModel(activeItem);
-      clarixLog.i(
-        'Inference model restored: ${activeItem.id} at ${result.installedPath}',
-      );
-      return restored.copyWith(
-        inferenceReady: true,
-        activityPhase: AiRuntimePhase.idle,
-        activeInferenceModelId: activeItem.id,
-        statusMessage: 'Inference model ready.',
-      );
-    } catch (error, stackTrace) {
-      clarixLog.w(
-        'Inference restore failed; PDF reader will continue.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      return restored.copyWith(
-        inferenceReady: false,
-        activityPhase: AiRuntimePhase.idle,
-        clearActiveInferenceModelId: true,
-        statusMessage: 'Install a model to unlock local AI features.',
-      );
-    }
-  }
-
-  ModelCatalogItem? _findCatalogItem(
-    List<ModelCatalogItem> catalog,
-    String modelId,
+  AiProviderProfile? _profileById(
+    List<AiProviderProfile> profiles,
+    String? profileId,
   ) {
-    for (final ModelCatalogItem item in catalog) {
-      if (item.id == modelId) {
-        return item;
-      }
+    if (profileId == null) return null;
+    for (final AiProviderProfile profile in profiles) {
+      if (profile.id == profileId) return profile;
     }
     return null;
-  }
-
-  void _logDownloadProgress(String modelId, int progress) {
-    final int bucket = progress ~/ 10;
-    if (_downloadLogBuckets[modelId] == bucket) {
-      return;
-    }
-    _downloadLogBuckets[modelId] = bucket;
-    clarixLog.i('Model download progress: $modelId $progress%');
   }
 
   void _setAiActivity(AiRuntimePhase phase, String message) {
@@ -1164,10 +896,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       current.copyWith(
         aiState: current.aiState.copyWith(
           activityPhase: phase,
-          embeddingReady:
-              phase == AiRuntimePhase.retrieving ? true : null,
-          vectorStoreReady:
-              phase == AiRuntimePhase.retrieving ? true : null,
           statusMessage: message,
         ),
       ),
@@ -1175,33 +903,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     clarixLog.i('AI activity: ${phase.name} - $message');
   }
 
-  String _readyStatusMessage(AiWorkspaceState aiState) {
-    if (aiState.inferenceReady && aiState.embeddingReady) {
-      return 'AI ready. PDF grounding available.';
-    }
-    if (aiState.inferenceReady) {
-      return 'AI ready. PDF grounding unavailable.';
-    }
-    return 'Install a model to unlock local AI features.';
-  }
-
   Future<void> _commit(
     WorkspaceFeatureState newState, {
     bool persistSession = true,
     bool persistAi = true,
   }) async {
-    state = AsyncData(
-      newState.copyWith(
-        catalog: _catalogService.buildCatalog(downloads: newState.downloads),
-      ),
-    );
+    state = AsyncData(newState);
     if (persistSession) {
       await _sessionStore.writeWorkspaceSession(newState.session);
     }
     if (persistAi) {
       await _sessionStore.writeAiWorkspaceState(newState.aiState);
     }
-    await _sessionStore.writeDownloads(newState.downloads);
   }
 
   WorkspaceFeatureState _requireState() {
@@ -1214,10 +927,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 }
 
 class _AiReplyData {
-  const _AiReplyData({
-    required this.text,
-    required this.citations,
-  });
+  const _AiReplyData({required this.text, required this.citations});
 
   final String text;
   final List<CitationSnippet> citations;

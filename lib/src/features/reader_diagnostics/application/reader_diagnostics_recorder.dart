@@ -11,9 +11,9 @@ class ReaderDiagnosticsRecorder {
     int capacity = maxCapacity,
     int Function()? nowMicros,
     ReaderDiagnosticLogSink? logSink,
-  })  : capacity = _boundedCapacity(capacity),
-        _nowMicros = nowMicros ?? _stopwatchMicros,
-        _logSink = logSink ?? _defaultLogSink {
+  }) : capacity = _boundedCapacity(capacity),
+       _nowMicros = nowMicros ?? _stopwatchMicros,
+       _logSink = logSink ?? _defaultLogSink {
     _originMicros = _nowMicros();
   }
 
@@ -106,9 +106,7 @@ class ReaderDiagnosticsRecorder {
     }
     events.value = next.length <= capacity
         ? List<ReaderDiagnosticEvent>.unmodifiable(next)
-        : List<ReaderDiagnosticEvent>.unmodifiable(
-            next.sublist(overflow),
-          );
+        : List<ReaderDiagnosticEvent>.unmodifiable(next.sublist(overflow));
     _logSink(jsonEncode(event.toJson()));
   }
 

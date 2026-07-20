@@ -20,7 +20,9 @@ void main() {
     }
 
     expect(
-      recorder.events.value.map((ReaderDiagnosticEvent event) => event.sequence),
+      recorder.events.value.map(
+        (ReaderDiagnosticEvent event) => event.sequence,
+      ),
       <int>[3, 4, 5],
     );
     expect(recorder.evictedEventCount.value, 2);
@@ -227,18 +229,12 @@ void main() {
       panDelta: const ReaderDiagnosticPoint(4, -3),
     );
 
-    expect(
-      recorder.events.value.single.panDelta?.toJson(),
-      <String, double>{'x': 4, 'y': -3},
-    );
-    expect(
-      recorder.exportJson(),
-      contains('"panDelta":{"x":4.0,"y":-3.0}'),
-    );
-    expect(
-      logged.single,
-      contains('"panDelta":{"x":4.0,"y":-3.0}'),
-    );
+    expect(recorder.events.value.single.panDelta?.toJson(), <String, double>{
+      'x': 4,
+      'y': -3,
+    });
+    expect(recorder.exportJson(), contains('"panDelta":{"x":4.0,"y":-3.0}'));
+    expect(logged.single, contains('"panDelta":{"x":4.0,"y":-3.0}'));
   });
 }
 
