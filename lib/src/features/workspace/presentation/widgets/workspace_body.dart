@@ -13,9 +13,14 @@ import 'workspace_common.dart';
 import 'workspace_sidebar.dart';
 
 class WorkspaceBody extends ConsumerStatefulWidget {
-  const WorkspaceBody({required this.state, super.key});
+  const WorkspaceBody({
+    required this.state,
+    required this.onOpenSettings,
+    super.key,
+  });
 
   final WorkspaceFeatureState state;
+  final VoidCallback onOpenSettings;
 
   @override
   ConsumerState<WorkspaceBody> createState() => _WorkspaceBodyState();
@@ -44,7 +49,11 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
               child: Row(
                 children: <Widget>[
                   if (showNavigation)
-                    WorkspaceSidebar(state: widget.state, activeTab: activeTab),
+                    WorkspaceSidebar(
+                      state: widget.state,
+                      activeTab: activeTab,
+                      onOpenSettings: widget.onOpenSettings,
+                    ),
                   Expanded(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
@@ -113,6 +122,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                   child: WorkspaceSidebar(
                     state: widget.state,
                     activeTab: activeTab,
+                    onOpenSettings: widget.onOpenSettings,
                   ),
                 ),
               ),

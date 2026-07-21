@@ -107,6 +107,37 @@ void main() {
       expect(await store.readApiKey(openAi.id), isNull);
     },
   );
+
+  test(
+    'deleting a non-default profile preserves the default profile ID',
+    () async {
+      final ProviderProfileStore store = ProviderProfileStore(
+        preferences: SharedPreferencesAsync(),
+        secretStore: _MemorySecretStore(),
+      );
+      final AiProviderProfile openAi = AiProviderProfile.create(
+        id: 'openai',
+        label: 'OpenAI',
+        baseUrl: 'https://api.openai.com/v1',
+        modelId: 'gpt-5',
+        shareRetrievedPassages: true,
+      );
+      final AiProviderProfile other = AiProviderProfile.create(
+        id: 'other',
+        label: 'Other',
+        baseUrl: 'https://api.example.com/v1',
+        modelId: 'example-model',
+        shareRetrievedPassages: false,
+      );
+
+      await store.saveProfile(openAi);
+      await store.saveProfile(other);
+      await store.saveDefaultProfileId(openAi.id);
+      await store.deleteProfile(other.id);
+
+      expect(await store.readDefaultProfileId(), openAi.id);
+    },
+  );
 }
 
 class _MemorySecretStore implements ProviderSecretStore {

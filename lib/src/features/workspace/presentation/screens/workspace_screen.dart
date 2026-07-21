@@ -6,6 +6,7 @@ import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../widgets/workspace_body.dart';
 import '../widgets/workspace_common.dart';
+import '../widgets/app_settings_dialog.dart';
 
 class WorkspaceScreen extends ConsumerStatefulWidget {
   const WorkspaceScreen({super.key});
@@ -63,7 +64,10 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     return Scaffold(
       backgroundColor: WorkspaceColors.canvas,
       body: asyncState.when(
-        data: (WorkspaceFeatureState state) => WorkspaceBody(state: state),
+        data: (WorkspaceFeatureState state) => WorkspaceBody(
+          state: state,
+          onOpenSettings: () => showAppSettingsDialog(context),
+        ),
         error: (Object error, StackTrace stackTrace) => Center(
           child: SurfaceBlock(
             padding: const EdgeInsets.all(20),

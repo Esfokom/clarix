@@ -12,11 +12,13 @@ class WorkspaceSidebar extends ConsumerWidget {
   const WorkspaceSidebar({
     required this.state,
     required this.activeTab,
+    required this.onOpenSettings,
     super.key,
   });
 
   final WorkspaceFeatureState state;
   final DocumentTabState? activeTab;
+  final VoidCallback onOpenSettings;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,6 +67,16 @@ class WorkspaceSidebar extends ConsumerWidget {
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  Tooltip(
+                    message: 'Settings',
+                    child: ShadIconButton.ghost(
+                      width: 30,
+                      height: 30,
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(LucideIcons.settings, size: 15),
+                      onPressed: onOpenSettings,
                     ),
                   ),
                 ],
