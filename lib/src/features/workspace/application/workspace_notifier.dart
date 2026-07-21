@@ -38,16 +38,17 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         .readAiWorkspaceState();
     final List<AiProviderProfile> providerProfiles = await _providerProfiles
         .readProfiles();
+    final String? defaultProfileId = await _providerProfiles
+        .readDefaultProfileId();
     final WorkspaceSession restoredSession = await _rehydrateWorkspace(
       storedSession,
     );
     final Map<String, DocumentMetadata> documentMetadata =
         await _loadDocumentMetadata(restoredSession);
     AiWorkspaceState restoredAi = storedAi.copyWith(chatBusy: false);
-    final AiProviderProfile? selectedProfile = _profileById(
-      providerProfiles,
-      storedAi.selectedProviderId,
-    );
+    final AiProviderProfile? selectedProfile =
+        _profileById(providerProfiles, defaultProfileId) ??
+        (providerProfiles.isEmpty ? null : providerProfiles.first);
     final bool providerReady =
         selectedProfile != null &&
         (await _providerProfiles.readApiKey(selectedProfile.id))?.isNotEmpty ==
@@ -282,15 +283,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(aiState: aiState));
   }
 
-  Future<void> toggleProviderSettings([bool? value]) async {
-    final WorkspaceFeatureState current = _requireState();
-    state = AsyncData(
-      current.copyWith(
-        showProviderSettings: value ?? !current.showProviderSettings,
-      ),
-    );
-  }
-
   Future<void> selectProvider(String? profileId) async {
     final WorkspaceFeatureState current = _requireState();
     final AiProviderProfile? profile = _profileById(
@@ -300,6 +292,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final bool ready =
         profile != null &&
         (await _providerProfiles.readApiKey(profile.id))?.isNotEmpty == true;
+    if (profile != null) {
+      await _providerProfiles.saveDefaultProfileId(profile.id);
+    }
     await _commit(
       current.copyWith(
         aiState: current.aiState.copyWith(

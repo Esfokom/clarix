@@ -67,15 +67,6 @@ class WorkspaceSidebar extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  ShadIconButton.ghost(
-                    width: 28,
-                    height: 28,
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(LucideIcons.settings2, size: 15),
-                    onPressed: () => ref
-                        .read(workspaceNotifierProvider.notifier)
-                        .toggleProviderSettings(true),
-                  ),
                 ],
               ),
             ),

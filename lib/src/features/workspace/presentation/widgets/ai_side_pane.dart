@@ -62,16 +62,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   width: 28,
                   height: 28,
                   padding: EdgeInsets.zero,
-                  icon: const Icon(LucideIcons.cpu, size: 14),
-                  onPressed: () => ref
-                      .read(workspaceNotifierProvider.notifier)
-                      .toggleProviderSettings(true),
-                ),
-                const SizedBox(width: 4),
-                ShadIconButton.ghost(
-                  width: 28,
-                  height: 28,
-                  padding: EdgeInsets.zero,
                   icon: const Icon(LucideIcons.chevronRight, size: 14),
                   onPressed: () => ref
                       .read(workspaceNotifierProvider.notifier)

@@ -22,7 +22,6 @@ class WorkspaceFeatureState {
     required this.composerExpanded,
     required this.bannerMessage,
     this.providerProfiles = const <AiProviderProfile>[],
-    this.showProviderSettings = false,
   });
 
   final WorkspaceSession session;
@@ -32,7 +31,6 @@ class WorkspaceFeatureState {
   final bool composerExpanded;
   final String? bannerMessage;
   final List<AiProviderProfile> providerProfiles;
-  final bool showProviderSettings;
 
   WorkspaceFeatureState copyWith({
     WorkspaceSession? session,
@@ -43,7 +41,6 @@ class WorkspaceFeatureState {
     String? bannerMessage,
     bool clearBannerMessage = false,
     List<AiProviderProfile>? providerProfiles,
-    bool? showProviderSettings,
   }) {
     return WorkspaceFeatureState(
       session: session ?? this.session,
@@ -55,7 +52,6 @@ class WorkspaceFeatureState {
           ? null
           : bannerMessage ?? this.bannerMessage,
       providerProfiles: providerProfiles ?? this.providerProfiles,
-      showProviderSettings: showProviderSettings ?? this.showProviderSettings,
     );
   }
 }

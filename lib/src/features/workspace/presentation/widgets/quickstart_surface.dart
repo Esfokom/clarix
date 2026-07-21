@@ -44,15 +44,6 @@ class QuickstartSurface extends ConsumerWidget {
                   ],
                 ),
               ),
-              ShadButton.secondary(
-                height: 34,
-                leading: const Icon(LucideIcons.cpu, size: 15),
-                onPressed: () => ref
-                    .read(workspaceNotifierProvider.notifier)
-                    .toggleProviderSettings(true),
-                child: const Text('AI providers'),
-              ),
-              const SizedBox(width: 8),
               ShadButton(
                 height: 34,
                 leading: const Icon(LucideIcons.filePlus2, size: 15),
