@@ -4,6 +4,8 @@ flutter_rust_bridge::frb_generated_stream_sink!(default_stream_sink_codec = DcoC
 pub mod api;
 #[cfg(feature = "ocr")]
 pub mod ocr;
+#[cfg(feature = "rag")]
+pub mod rag;
 
 use std::collections::VecDeque;
 use std::path::Path;
