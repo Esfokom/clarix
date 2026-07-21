@@ -32,6 +32,7 @@ class ProviderProfileStore {
   ProviderProfileStore({required this.preferences, required this.secretStore});
 
   static const String _profilesKey = 'clarix.ai.providers';
+  static const String _defaultProfileKey = 'clarix.ai.default_provider';
   final SharedPreferencesAsync preferences;
   final ProviderSecretStore secretStore;
 
@@ -68,6 +69,12 @@ class ProviderProfileStore {
   Future<String?> readApiKey(String profileId) =>
       secretStore.read(_secretKey(profileId));
 
+  Future<String?> readDefaultProfileId() =>
+      preferences.getString(_defaultProfileKey);
+
+  Future<void> saveDefaultProfileId(String profileId) =>
+      preferences.setString(_defaultProfileKey, profileId);
+
   Future<void> deleteProfile(String profileId) async {
     final List<AiProviderProfile> profiles = await readProfiles();
     await preferences.setString(
@@ -80,6 +87,9 @@ class ProviderProfileStore {
       ),
     );
     await secretStore.delete(_secretKey(profileId));
+    if (await readDefaultProfileId() == profileId) {
+      await preferences.remove(_defaultProfileKey);
+    }
   }
 
   String _secretKey(String profileId) => 'clarix.provider.$profileId.api_key';
