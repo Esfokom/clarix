@@ -4,6 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
+use std::time::{SystemTime, UNIX_EPOCH};
 use usearch::{new_index, Index, IndexOptions, MetricKind, ScalarKind};
 
 const MANIFEST_VERSION: u32 = 1;
@@ -149,7 +150,11 @@ impl<'a> VectorRagEngine<'a> {
                 self.embeddings.dimensions(),
                 chunks,
             )?;
-            validate_index(&paths.index_path, self.embeddings.dimensions())?;
+            validate_index(
+                &paths.index_path,
+                self.embeddings.dimensions(),
+                manifest.chunk_ids.len(),
+            )?;
             return Ok(RagIndexOutcome::Loaded);
         }
         self.build(document_fingerprint, paths, chunks)
@@ -166,7 +171,9 @@ impl<'a> VectorRagEngine<'a> {
 
     pub fn query(
         &self,
+        document_fingerprint: &str,
         paths: &RagIndexPaths,
+        chunks: &[RagChunk],
         query: &str,
         limit: usize,
     ) -> Result<Vec<RagSearchResult>, RagError> {
@@ -174,16 +181,18 @@ impl<'a> VectorRagEngine<'a> {
             return Ok(Vec::new());
         }
         let manifest = read_manifest(&paths.manifest_path)?;
-        if manifest.version != MANIFEST_VERSION || manifest.model_id != self.embeddings.model_id() {
-            return Err(RagError::RebuildRequired {
-                reason: "the persisted model identity is not current".to_string(),
-            });
-        }
-        if manifest.dimensions != self.embeddings.dimensions() {
-            return Err(RagError::RebuildRequired {
-                reason: "the persisted vector dimensions are not current".to_string(),
-            });
-        }
+        validate_manifest(
+            &manifest,
+            document_fingerprint,
+            self.embeddings.model_id(),
+            self.embeddings.dimensions(),
+            chunks,
+        )?;
+        validate_index(
+            &paths.index_path,
+            self.embeddings.dimensions(),
+            manifest.chunk_ids.len(),
+        )?;
         let index = restore_index(&paths.index_path)?;
         let query_vector = self.embed_one(&format!("query: {}", query.trim()))?;
         validate_vector_dimensions(&query_vector, manifest.dimensions)?;
@@ -243,11 +252,7 @@ impl<'a> VectorRagEngine<'a> {
                 .add(key as u64, vector)
                 .map_err(|error| RagError::Storage(format!("add vector {key}: {error}")))?;
         }
-        index
-            .save(path_as_str(&paths.index_path)?)
-            .map_err(|error| {
-                RagError::Storage(format!("save {}: {error}", paths.index_path.display()))
-            })?;
+        save_index_atomically(&index, &paths.index_path)?;
         let manifest = RagManifest {
             version: MANIFEST_VERSION,
             document_fingerprint: document_fingerprint.to_string(),
@@ -288,8 +293,14 @@ fn read_manifest(path: &Path) -> Result<RagManifest, RagError> {
 fn write_manifest(path: &Path, manifest: &RagManifest) -> Result<(), RagError> {
     let contents = serde_json::to_vec_pretty(manifest)
         .map_err(|error| RagError::Storage(format!("serialize manifest: {error}")))?;
-    fs::write(path, contents)
-        .map_err(|error| RagError::Storage(format!("write manifest {}: {error}", path.display())))
+    let temporary_path = temporary_path(path)?;
+    fs::write(&temporary_path, contents).map_err(|error| {
+        RagError::Storage(format!(
+            "write temporary manifest {}: {error}",
+            temporary_path.display()
+        ))
+    })?;
+    replace_atomically(&temporary_path, path)
 }
 
 fn validate_manifest(
@@ -321,12 +332,17 @@ fn validate_manifest(
     })
 }
 
-fn validate_index(path: &Path, dimensions: usize) -> Result<(), RagError> {
+fn validate_index(path: &Path, dimensions: usize, expected_count: usize) -> Result<(), RagError> {
     let metadata =
         Index::metadata(path_as_str(path)?).map_err(|error| RagError::RebuildRequired {
             reason: format!("cannot read index {}: {error}", path.display()),
         })?;
-    if metadata.dimensions != dimensions as u64 || metadata.metric != MetricKind::Cos {
+    if metadata.dimensions != dimensions as u64
+        || metadata.metric != MetricKind::Cos
+        || metadata.quantization != ScalarKind::F32
+        || metadata.multi
+        || metadata.count_present != expected_count as u64
+    {
         return Err(RagError::RebuildRequired {
             reason: "the persisted index configuration is not current".to_string(),
         });
@@ -350,6 +366,41 @@ fn create_index(dimensions: usize) -> Result<Index, RagError> {
 fn restore_index(path: &Path) -> Result<Index, RagError> {
     Index::restore(path_as_str(path)?).map_err(|error| RagError::RebuildRequired {
         reason: format!("cannot restore index {}: {error}", path.display()),
+    })
+}
+
+fn save_index_atomically(index: &Index, path: &Path) -> Result<(), RagError> {
+    let temporary_path = temporary_path(path)?;
+    index.save(path_as_str(&temporary_path)?).map_err(|error| {
+        RagError::Storage(format!(
+            "save temporary index {}: {error}",
+            temporary_path.display()
+        ))
+    })?;
+    replace_atomically(&temporary_path, path)
+}
+
+fn temporary_path(path: &Path) -> Result<PathBuf, RagError> {
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| {
+            RagError::Storage(format!("path {} has no UTF-8 file name", path.display()))
+        })?;
+    let nonce = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| RagError::Storage(format!("read system clock: {error}")))?
+        .as_nanos();
+    Ok(path.with_file_name(format!(".{file_name}.{}.{}.tmp", std::process::id(), nonce)))
+}
+
+fn replace_atomically(temporary_path: &Path, destination_path: &Path) -> Result<(), RagError> {
+    fs::rename(temporary_path, destination_path).map_err(|error| {
+        RagError::Storage(format!(
+            "replace {} with {}: {error}",
+            destination_path.display(),
+            temporary_path.display()
+        ))
     })
 }
 
@@ -476,7 +527,7 @@ mod tests {
             .index_or_load("fingerprint-a", &paths, &chunks)
             .expect("index should build");
         let results = engine
-            .query(&paths, "where do apples grow", 2)
+            .query("fingerprint-a", &paths, &chunks, "where do apples grow", 2)
             .expect("query should work");
 
         assert_eq!(results[0].chunk_id, "fruit");
@@ -491,16 +542,72 @@ mod tests {
         let engine = VectorRagEngine::new(&embeddings);
         let chunks = vec![RagChunk::new("a", "a")];
 
-        std::fs::create_dir_all(&root).expect("temporary root should exist");
-        std::fs::write(
-            &paths.manifest_path,
-            r#"{"version":1,"document_fingerprint":"fingerprint-b","model_id":"deterministic-test","dimensions":3,"chunk_ids":["a"]}"#,
-        )
-        .expect("manifest should be written");
+        engine
+            .index_or_load("fingerprint-b", &paths, &chunks)
+            .expect("matching persisted index should build");
+        let mut manifest =
+            super::read_manifest(&paths.manifest_path).expect("fresh manifest should be readable");
+        manifest.dimensions = 3;
+        super::write_manifest(&paths.manifest_path, &manifest)
+            .expect("altered manifest should be written");
 
         let error = engine
             .index_or_load("fingerprint-b", &paths, &chunks)
             .expect_err("wrong dimensions must be rejected");
+
+        assert!(matches!(error, super::RagError::RebuildRequired { .. }));
+    }
+
+    #[test]
+    fn rag_rejects_a_persisted_index_with_the_wrong_vector_count() {
+        let root = temporary_root();
+        let paths = RagIndexPaths::for_document(&root, "fingerprint-c");
+        let embeddings = DeterministicEmbeddings::new([
+            ("passage: a", vec![1.0, 0.0]),
+            ("passage: b", vec![0.0, 1.0]),
+        ]);
+        let engine = VectorRagEngine::new(&embeddings);
+        let first_chunks = vec![RagChunk::new("a", "a")];
+        let current_chunks = vec![RagChunk::new("a", "a"), RagChunk::new("b", "b")];
+
+        engine
+            .index_or_load("fingerprint-c", &paths, &first_chunks)
+            .expect("first index should build");
+        let mut manifest =
+            super::read_manifest(&paths.manifest_path).expect("fresh manifest should be readable");
+        manifest.chunk_ids = current_chunks
+            .iter()
+            .map(|chunk| chunk.id.clone())
+            .collect();
+        super::write_manifest(&paths.manifest_path, &manifest)
+            .expect("matching-but-wrong-count manifest should be written");
+
+        let error = engine
+            .index_or_load("fingerprint-c", &paths, &current_chunks)
+            .expect_err("wrong vector count must require a rebuild");
+
+        assert!(matches!(error, super::RagError::RebuildRequired { .. }));
+    }
+
+    #[test]
+    fn rag_query_rejects_a_different_document_identity() {
+        let root = temporary_root();
+        let paths = RagIndexPaths::for_document(&root, "fingerprint-d");
+        let embeddings = DeterministicEmbeddings::new([
+            ("passage: a", vec![1.0, 0.0]),
+            ("passage: b", vec![0.0, 1.0]),
+            ("query: find a", vec![1.0, 0.0]),
+        ]);
+        let engine = VectorRagEngine::new(&embeddings);
+        let indexed_chunks = vec![RagChunk::new("a", "a")];
+        let other_chunks = vec![RagChunk::new("b", "b")];
+
+        engine
+            .index_or_load("fingerprint-d", &paths, &indexed_chunks)
+            .expect("index should build");
+        let error = engine
+            .query("different-document", &paths, &other_chunks, "find a", 1)
+            .expect_err("query must validate the current document identity");
 
         assert!(matches!(error, super::RagError::RebuildRequired { .. }));
     }
