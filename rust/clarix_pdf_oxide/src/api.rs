@@ -103,8 +103,17 @@ pub fn local_rag_index(request: NativeRagIndexRequest) -> NativeRagIndexResponse
             .into_iter()
             .map(|chunk| crate::rag::RagChunk::new(chunk.id, chunk.text))
             .collect::<Vec<_>>();
-        engine
-            .index_or_load(&request.document_fingerprint, &paths, &chunks)
+        let outcome = match engine.index_or_load(&request.document_fingerprint, &paths, &chunks) {
+            Ok(outcome) => Ok(outcome),
+            // The document identity can remain stable while a saved chunk set
+            // changes (for example after re-extraction). Rebuild atomically
+            // instead of leaving an unusable stale vector index behind.
+            Err(crate::rag::RagError::RebuildRequired { .. }) => {
+                engine.rebuild(&request.document_fingerprint, &paths, &chunks)
+            }
+            Err(error) => Err(error),
+        };
+        outcome
             .map(|outcome| match outcome {
                 crate::rag::RagIndexOutcome::Built => "ready".to_string(),
                 crate::rag::RagIndexOutcome::Loaded => "ready".to_string(),

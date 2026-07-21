@@ -2,7 +2,7 @@ import '../../../core/models.dart';
 import 'local_rag_store.dart';
 
 abstract interface class LocalRagRetriever {
-  LocalRagIndexStatus get status;
+  LocalRagIndexStatus statusFor(String documentId);
 
   Future<List<PdfChunkRecord>?> retrieve(
     String documentId,
@@ -34,7 +34,8 @@ class LocalRagService {
     }
 
     final LocalRagRetriever? retriever = nativeRetriever;
-    if (retriever != null && retriever.status == LocalRagIndexStatus.ready) {
+    if (retriever != null &&
+        retriever.statusFor(documentId) == LocalRagIndexStatus.ready) {
       List<PdfChunkRecord>? native;
       try {
         native = await retriever.retrieve(

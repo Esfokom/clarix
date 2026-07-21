@@ -110,6 +110,7 @@ void main() {
           ),
           readChunks: (_) async => const <PdfChunkRecord>[],
           isNativeAvailable: () => false,
+          ensureNativeInitialized: () async => false,
         ),
       );
 
@@ -164,8 +165,10 @@ PdfChunkRecord _chunk({
 class _FakeRetriever implements LocalRagRetriever {
   _FakeRetriever({required this.status, this.result});
 
-  @override
   final LocalRagIndexStatus status;
+
+  @override
+  LocalRagIndexStatus statusFor(String documentId) => status;
   final List<PdfChunkRecord>? result;
 
   @override
@@ -178,7 +181,7 @@ class _FakeRetriever implements LocalRagRetriever {
 
 class _ThrowingRetriever implements LocalRagRetriever {
   @override
-  LocalRagIndexStatus get status => LocalRagIndexStatus.ready;
+  LocalRagIndexStatus statusFor(String documentId) => LocalRagIndexStatus.ready;
 
   @override
   Future<List<PdfChunkRecord>?> retrieve(

@@ -1,3 +1,8 @@
+import 'dart:io';
+
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart'
+    as frb_base;
+
 import '../../../core/ffi/api.dart' as ffi;
 import '../../../core/ffi/frb_generated.dart' as frb;
 import '../../../core/models.dart';
@@ -17,31 +22,37 @@ class NativeLocalRagRetriever implements LocalRagRetriever, LocalRagIndexer {
     required LocalRagStore store,
     required PdfChunkReader readChunks,
     bool Function()? isNativeAvailable,
+    Future<bool> Function()? ensureNativeInitialized,
   }) : _store = store,
        _readChunks = readChunks,
        _isNativeAvailable =
-           isNativeAvailable ?? (() => LocalRagNativeRuntime.isAvailable);
+           isNativeAvailable ?? (() => LocalRagNativeRuntime.isAvailable),
+       _ensureNativeInitialized =
+           ensureNativeInitialized ?? LocalRagNativeRuntime.ensureInitialized;
 
   final LocalRagStore _store;
   final PdfChunkReader _readChunks;
   final bool Function() _isNativeAvailable;
-  LocalRagIndexStatus _status = LocalRagIndexStatus.idle;
+  final Future<bool> Function() _ensureNativeInitialized;
+  final Map<String, LocalRagIndexStatus> _statuses =
+      <String, LocalRagIndexStatus>{};
 
   @override
-  LocalRagIndexStatus get status =>
-      _isNativeAvailable() ? _status : LocalRagIndexStatus.unavailable;
+  LocalRagIndexStatus statusFor(String documentId) => _isNativeAvailable()
+      ? (_statuses[documentId] ?? LocalRagIndexStatus.idle)
+      : LocalRagIndexStatus.unavailable;
 
   @override
   Future<void> index(String documentId, List<PdfChunkRecord> chunks) async {
-    if (!_isNativeAvailable()) {
-      _status = LocalRagIndexStatus.unavailable;
+    if (!_isNativeAvailable() && !await _ensureNativeInitialized()) {
+      _statuses[documentId] = LocalRagIndexStatus.unavailable;
       return;
     }
     if (chunks.isEmpty) {
-      _status = LocalRagIndexStatus.idle;
+      _statuses[documentId] = LocalRagIndexStatus.idle;
       return;
     }
-    _status = LocalRagIndexStatus.indexing;
+    _statuses[documentId] = LocalRagIndexStatus.indexing;
     try {
       final storage = await _store.directory();
       final modelCache = await _store.modelCacheDirectory();
@@ -58,11 +69,11 @@ class NativeLocalRagRetriever implements LocalRagRetriever, LocalRagIndexer {
               .toList(growable: false),
         ),
       );
-      _status = response.status == 'ready'
+      _statuses[documentId] = response.status == 'ready'
           ? LocalRagIndexStatus.ready
           : LocalRagIndexStatus.failed;
     } catch (_) {
-      _status = LocalRagIndexStatus.failed;
+      _statuses[documentId] = LocalRagIndexStatus.failed;
     }
   }
 
@@ -72,7 +83,7 @@ class NativeLocalRagRetriever implements LocalRagRetriever, LocalRagIndexer {
     String query, {
     int limit = 6,
   }) async {
-    if (status != LocalRagIndexStatus.ready) {
+    if (statusFor(documentId) != LocalRagIndexStatus.ready) {
       return null;
     }
     try {
@@ -92,7 +103,7 @@ class NativeLocalRagRetriever implements LocalRagRetriever, LocalRagIndexer {
         ),
       );
       if (response.status != 'ready') {
-        _status = LocalRagIndexStatus.failed;
+        _statuses[documentId] = LocalRagIndexStatus.failed;
         return null;
       }
       final Map<String, PdfChunkRecord> byId = <String, PdfChunkRecord>{
@@ -103,7 +114,7 @@ class NativeLocalRagRetriever implements LocalRagRetriever, LocalRagIndexer {
           .whereType<PdfChunkRecord>()
           .toList(growable: false);
     } catch (_) {
-      _status = LocalRagIndexStatus.failed;
+      _statuses[documentId] = LocalRagIndexStatus.failed;
       return null;
     }
   }
@@ -115,12 +126,29 @@ class LocalRagNativeRuntime {
   static bool _available = false;
   static bool get isAvailable => _available;
 
-  static Future<void> initialize() async {
+  static Future<bool>? _initializing;
+
+  static Future<bool> ensureInitialized() => _initializing ??= _initialize();
+
+  static Future<bool> _initialize() async {
     try {
-      await frb.RustLib.init();
+      if (Platform.isWindows) {
+        final File bundledDll = File(
+          '${File(Platform.resolvedExecutable).parent.path}${Platform.pathSeparator}clarix_pdf_oxide.dll',
+        );
+        await frb.RustLib.init(
+          externalLibrary: frb_base.ExternalLibrary.open(
+            bundledDll.path,
+            debugInfo: 'bundled Clarix Rust runtime',
+          ),
+        );
+      } else {
+        await frb.RustLib.init();
+      }
       _available = true;
     } catch (_) {
       _available = false;
     }
+    return _available;
   }
 }
