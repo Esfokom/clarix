@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:clarix/src/core/models.dart';
+import 'package:clarix/src/features/workspace/infrastructure/local_rag_native_retriever.dart';
 import 'package:clarix/src/features/workspace/infrastructure/local_rag_service.dart';
 import 'package:clarix/src/features/workspace/infrastructure/local_rag_store.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -84,6 +85,32 @@ void main() {
       final LocalRagService service = LocalRagService(
         readChunks: (_) async => chunks,
         nativeRetriever: _ThrowingRetriever(),
+      );
+
+      final List<PdfChunkRecord> result = await service.retrieve(
+        documentId,
+        'alpha',
+      );
+
+      expect(result.map((PdfChunkRecord chunk) => chunk.id), <String>[
+        'second',
+        'first',
+      ]);
+    },
+  );
+
+  test(
+    'uses lexical retrieval when the native runtime is unavailable',
+    () async {
+      final LocalRagService service = LocalRagService(
+        readChunks: (_) async => chunks,
+        nativeRetriever: NativeLocalRagRetriever(
+          store: LocalRagStore(
+            directoryProvider: () async => Directory.systemTemp,
+          ),
+          readChunks: (_) async => const <PdfChunkRecord>[],
+          isNativeAvailable: () => false,
+        ),
       );
 
       final List<PdfChunkRecord> result = await service.retrieve(

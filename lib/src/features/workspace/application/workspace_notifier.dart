@@ -13,6 +13,7 @@ import '../domain/workspace_feature_state.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/provider_profile_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_providers.dart';
@@ -22,6 +23,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
   DocumentChunkStore get _chunkStore => ref.read(chunkStoreProvider);
+  LocalRagIndexer get _localRagIndexer => ref.read(localRagIndexerProvider);
   DocumentIdentityService get _identityService =>
       ref.read(documentIdentityServiceProvider);
   Future<DocumentMetadataStore> get _metadataStore =>
@@ -826,6 +828,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
           batchSize: 32,
         ),
       );
+      if (chunkCount > 0) {
+        // Persistence is deliberately complete before loading/downloading the
+        // embedding model. This background task never affects the normal PDF
+        // text-index status.
+        unawaited(_indexLocalRag(tab.documentId));
+      }
       await _markTabIndexStatus(
         tab.id,
         chunkCount == 0
@@ -839,6 +847,23 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         stackTrace: stackTrace,
       );
       await _markTabIndexStatus(tab.id, DocumentIndexStatus.failed);
+    }
+  }
+
+  Future<void> _indexLocalRag(String documentId) async {
+    try {
+      final List<PdfChunkRecord> chunks = await _chunkStore.readChunks(
+        documentId,
+      );
+      await _localRagIndexer.index(documentId, chunks);
+    } catch (error, stackTrace) {
+      // Native RAG is optional; LocalRagService will use persisted lexical
+      // retrieval, so this must not alter document indexing state.
+      clarixLog.w(
+        'Local RAG indexing failed: $documentId',
+        error: error,
+        stackTrace: stackTrace,
+      );
     }
   }
 

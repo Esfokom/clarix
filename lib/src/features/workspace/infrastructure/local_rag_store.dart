@@ -98,6 +98,18 @@ class LocalRagStore {
     await temporary.rename(target.path);
   }
 
+  /// The native index and its downloaded embedding assets live below the same
+  /// app-support root as the Dart manifest. The directories are created before
+  /// a background task starts so Rust receives explicit, stable paths.
+  Future<Directory> directory() => _directoryProvider();
+
+  Future<Directory> modelCacheDirectory() async {
+    final Directory root = await directory();
+    final Directory cache = Directory(p.join(root.path, 'models'));
+    await cache.create(recursive: true);
+    return cache;
+  }
+
   Future<LocalRagManifest?> readManifest(String documentId) async {
     final Map<String, dynamic>? json = await readManifestJson(documentId);
     return json == null ? null : LocalRagManifest.fromJson(json);

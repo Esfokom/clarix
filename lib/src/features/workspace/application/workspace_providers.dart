@@ -9,6 +9,8 @@ import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/local_rag_native_retriever.dart';
+import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_notifier.dart';
@@ -34,6 +36,16 @@ final pdfDocumentRefProvider = Provider.autoDispose
 final chunkStoreProvider = Provider<DocumentChunkStore>(
   (Ref ref) => DocumentChunkStore(),
 );
+final localRagStoreProvider = Provider<LocalRagStore>(
+  (Ref ref) => LocalRagStore(),
+);
+final localRagIndexerProvider = Provider<LocalRagIndexer>((Ref ref) {
+  final DocumentChunkStore chunks = ref.watch(chunkStoreProvider);
+  return NativeLocalRagRetriever(
+    store: ref.watch(localRagStoreProvider),
+    readChunks: chunks.readChunks,
+  );
+});
 final providerProfileStoreProvider = Provider<ProviderProfileStore>(
   (Ref ref) => ProviderProfileStore(
     preferences: ref.watch(sharedPreferencesProvider),

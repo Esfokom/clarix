@@ -1,5 +1,11 @@
-use crate::StreamSink;
+use crate::frb_generated::StreamSink;
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "rag")]
+use std::collections::HashMap;
+#[cfg(feature = "rag")]
+use std::path::Path;
+#[cfg(feature = "rag")]
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::{
     PdfDocumentMetadata, PdfDocumentSession, PdfIndexingProgress, PdfSearchMatch, PdfTextChunk,
@@ -9,6 +15,174 @@ use crate::{
 pub enum PdfIndexEvent {
     Progress(PdfIndexingProgress),
     ChunkBatch(Vec<PdfTextChunk>),
+}
+
+/// A persisted Dart chunk represented at the native RAG boundary. The
+/// fingerprint and ids are supplied by Flutter so an index can never be used
+/// for a different persisted document.
+#[cfg(feature = "rag")]
+#[derive(Debug, Clone)]
+pub struct NativeRagChunk {
+    pub id: String,
+    pub text: String,
+}
+
+#[cfg(feature = "rag")]
+#[derive(Debug, Clone)]
+pub struct NativeRagIndexRequest {
+    pub storage_directory: String,
+    pub model_cache_directory: String,
+    pub document_fingerprint: String,
+    pub chunks: Vec<NativeRagChunk>,
+}
+
+#[cfg(feature = "rag")]
+#[derive(Debug, Clone)]
+pub struct NativeRagIndexResponse {
+    pub status: String,
+    pub message: Option<String>,
+}
+
+#[cfg(feature = "rag")]
+#[derive(Debug, Clone)]
+pub struct NativeRagQueryRequest {
+    pub storage_directory: String,
+    pub model_cache_directory: String,
+    pub document_fingerprint: String,
+    pub chunk_ids: Vec<String>,
+    pub query: String,
+    pub limit: usize,
+}
+
+#[cfg(feature = "rag")]
+#[derive(Debug, Clone)]
+pub struct NativeRagQueryResult {
+    pub chunk_id: String,
+    pub score: f32,
+}
+
+#[cfg(feature = "rag")]
+#[derive(Debug, Clone)]
+pub struct NativeRagQueryResponse {
+    pub status: String,
+    pub message: Option<String>,
+    pub results: Vec<NativeRagQueryResult>,
+}
+
+#[cfg(feature = "rag")]
+static RAG_BACKENDS: OnceLock<Mutex<HashMap<String, Arc<crate::rag::FastEmbedBackend>>>> =
+    OnceLock::new();
+
+#[cfg(feature = "rag")]
+fn rag_backend(cache_directory: &str) -> Result<Arc<crate::rag::FastEmbedBackend>, String> {
+    let backends = RAG_BACKENDS.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut backends = backends
+        .lock()
+        .map_err(|_| "local RAG model registry lock was poisoned".to_string())?;
+    if let Some(existing) = backends.get(cache_directory) {
+        return Ok(Arc::clone(existing));
+    }
+    let backend = Arc::new(
+        crate::rag::FastEmbedBackend::new(cache_directory).map_err(|error| error.to_string())?,
+    );
+    backends.insert(cache_directory.to_string(), Arc::clone(&backend));
+    Ok(backend)
+}
+
+#[cfg(feature = "rag")]
+pub fn local_rag_index(request: NativeRagIndexRequest) -> NativeRagIndexResponse {
+    let result = (|| {
+        let backend = rag_backend(&request.model_cache_directory)?;
+        let engine = crate::rag::VectorRagEngine::new(backend.as_ref());
+        let paths = crate::rag::RagIndexPaths::for_document(
+            &request.storage_directory,
+            &request.document_fingerprint,
+        );
+        let chunks = request
+            .chunks
+            .into_iter()
+            .map(|chunk| crate::rag::RagChunk::new(chunk.id, chunk.text))
+            .collect::<Vec<_>>();
+        engine
+            .index_or_load(&request.document_fingerprint, &paths, &chunks)
+            .map(|outcome| match outcome {
+                crate::rag::RagIndexOutcome::Built => "ready".to_string(),
+                crate::rag::RagIndexOutcome::Loaded => "ready".to_string(),
+            })
+            .map_err(|error| error.to_string())
+    })();
+    match result {
+        Ok(status) => NativeRagIndexResponse {
+            status,
+            message: None,
+        },
+        Err(message) => NativeRagIndexResponse {
+            status: "failed".to_string(),
+            message: Some(message),
+        },
+    }
+}
+
+#[cfg(feature = "rag")]
+pub fn local_rag_query(request: NativeRagQueryRequest) -> NativeRagQueryResponse {
+    let result = (|| {
+        let backend = rag_backend(&request.model_cache_directory)?;
+        let engine = crate::rag::VectorRagEngine::new(backend.as_ref());
+        let paths = crate::rag::RagIndexPaths::for_document(
+            &request.storage_directory,
+            &request.document_fingerprint,
+        );
+        // Query validation intentionally receives every persisted chunk id.
+        // Text is not needed after indexing, and an empty value prevents this
+        // boundary from duplicating the entire JSONL corpus in memory.
+        let chunks = request
+            .chunk_ids
+            .into_iter()
+            .map(|id| crate::rag::RagChunk::new(id, String::new()))
+            .collect::<Vec<_>>();
+        engine
+            .query(
+                &request.document_fingerprint,
+                &paths,
+                &chunks,
+                &request.query,
+                request.limit,
+            )
+            .map(|results| {
+                results
+                    .into_iter()
+                    .map(|result| NativeRagQueryResult {
+                        chunk_id: result.chunk_id,
+                        score: result.score,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .map_err(|error| error.to_string())
+    })();
+    match result {
+        Ok(results) => NativeRagQueryResponse {
+            status: "ready".to_string(),
+            message: None,
+            results,
+        },
+        Err(message) => NativeRagQueryResponse {
+            status: "failed".to_string(),
+            message: Some(message),
+            results: Vec::new(),
+        },
+    }
+}
+
+#[cfg(feature = "rag")]
+pub fn local_rag_status(storage_directory: String, document_fingerprint: String) -> String {
+    let paths = crate::rag::RagIndexPaths::for_document(storage_directory, &document_fingerprint);
+    if paths.index_path.exists() && paths.manifest_path.exists() {
+        "ready".to_string()
+    } else if Path::new(&paths.index_path).exists() || Path::new(&paths.manifest_path).exists() {
+        "failed".to_string()
+    } else {
+        "idle".to_string()
+    }
 }
 
 pub struct NativePdfSession {
