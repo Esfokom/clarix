@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'features/reader_diagnostics/presentation/reader_diagnostics_hub.dart';
+import 'features/workspace/presentation/screens/workspace_screen.dart';
 
 class ClarixApp extends StatelessWidget {
   const ClarixApp({super.key});
@@ -18,7 +18,7 @@ class ClarixApp extends StatelessWidget {
         themeMode: ThemeMode.dark,
         theme: _buildTheme(),
         darkTheme: _buildTheme(),
-        home: const _WindowBootstrap(child: ReaderDiagnosticsHub()),
+        home: const _WindowBootstrap(child: WorkspaceScreen()),
       ),
     );
   }

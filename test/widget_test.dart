@@ -1,9 +1,34 @@
 import 'package:clarix/src/core/models.dart';
+import 'package:clarix/src/app.dart';
+import 'package:clarix/src/features/reader_diagnostics/presentation/reader_diagnostics_hub.dart';
+import 'package:clarix/src/features/workspace/presentation/screens/workspace_screen.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
 void main() {
+  testWidgets('Clarix launches directly into the workspace', (tester) async {
+    final SharedPreferencesAsyncPlatform? previousPreferencesPlatform =
+        SharedPreferencesAsyncPlatform.instance;
+    SharedPreferencesAsyncPlatform.instance =
+        InMemorySharedPreferencesAsync.empty();
+    addTearDown(
+      () =>
+          SharedPreferencesAsyncPlatform.instance = previousPreferencesPlatform,
+    );
+    tester.view.physicalSize = const Size(1500, 940);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(const ClarixApp());
+    await tester.pump();
+    expect(find.byType(WorkspaceScreen), findsOneWidget);
+    expect(find.byType(ReaderDiagnosticsHub), findsNothing);
+  });
+
   test('workspace session round-trips through json', () {
     final session = WorkspaceSession.initial().copyWith(
       tabs: <DocumentTabState>[
