@@ -9,6 +9,9 @@ import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/local_rag_native_retriever.dart';
+import '../infrastructure/local_rag_service.dart';
+import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_notifier.dart';
@@ -34,6 +37,28 @@ final pdfDocumentRefProvider = Provider.autoDispose
 final chunkStoreProvider = Provider<DocumentChunkStore>(
   (Ref ref) => DocumentChunkStore(),
 );
+final localRagStoreProvider = Provider<LocalRagStore>(
+  (Ref ref) => LocalRagStore(),
+);
+final localRagNativeRetrieverProvider = Provider<NativeLocalRagRetriever>((
+  Ref ref,
+) {
+  final DocumentChunkStore chunks = ref.watch(chunkStoreProvider);
+  return NativeLocalRagRetriever(
+    store: ref.watch(localRagStoreProvider),
+    readChunks: chunks.readChunks,
+  );
+});
+final localRagIndexerProvider = Provider<LocalRagIndexer>(
+  (Ref ref) => ref.watch(localRagNativeRetrieverProvider),
+);
+final localRagServiceProvider = Provider<LocalRagService>((Ref ref) {
+  final DocumentChunkStore chunks = ref.watch(chunkStoreProvider);
+  return LocalRagService(
+    readChunks: chunks.readChunks,
+    nativeRetriever: ref.watch(localRagNativeRetrieverProvider),
+  );
+});
 final providerProfileStoreProvider = Provider<ProviderProfileStore>(
   (Ref ref) => ProviderProfileStore(
     preferences: ref.watch(sharedPreferencesProvider),
@@ -62,6 +87,7 @@ final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
     providerProfiles: ref.watch(providerProfileStoreProvider),
     chunkStore: ref.watch(chunkStoreProvider),
+    localRag: ref.watch(localRagServiceProvider),
   );
   ref.onDispose(service.dispose);
   return service;

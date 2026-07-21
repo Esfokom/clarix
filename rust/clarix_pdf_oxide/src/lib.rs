@@ -1,9 +1,11 @@
+mod frb_generated; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accurate, and you can change it according to your needs. */
 flutter_rust_bridge::frb_generated_sse_codec!();
-flutter_rust_bridge::frb_generated_stream_sink!(default_stream_sink_codec = DcoCodec);
 
 pub mod api;
 #[cfg(feature = "ocr")]
 pub mod ocr;
+#[cfg(feature = "rag")]
+pub mod rag;
 
 use std::collections::VecDeque;
 use std::path::Path;
