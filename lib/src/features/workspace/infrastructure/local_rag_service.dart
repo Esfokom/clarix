@@ -25,23 +25,36 @@ class LocalRagService {
     String query, {
     int limit = 6,
   }) async {
+    final String normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) {
+      return const <PdfChunkRecord>[];
+    }
     if (limit <= 0) {
       return const <PdfChunkRecord>[];
     }
 
     final LocalRagRetriever? retriever = nativeRetriever;
     if (retriever != null && retriever.status == LocalRagIndexStatus.ready) {
-      final List<PdfChunkRecord>? native = await retriever.retrieve(
-        documentId,
-        query,
-        limit: limit,
-      );
+      List<PdfChunkRecord>? native;
+      try {
+        native = await retriever.retrieve(
+          documentId,
+          normalizedQuery,
+          limit: limit,
+        );
+      } catch (_) {
+        native = null;
+      }
       if (native != null) {
         return native.take(limit).toList(growable: false);
       }
     }
 
-    return _lexicalRetrieve(await readChunks(documentId), query, limit);
+    return _lexicalRetrieve(
+      await readChunks(documentId),
+      normalizedQuery,
+      limit,
+    );
   }
 
   List<PdfChunkRecord> _lexicalRetrieve(

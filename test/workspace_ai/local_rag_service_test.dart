@@ -64,6 +64,41 @@ void main() {
   });
 
   test(
+    'returns no results for a blank query when native retrieval is ready',
+    () async {
+      final LocalRagService service = LocalRagService(
+        readChunks: (_) async => chunks,
+        nativeRetriever: _FakeRetriever(
+          status: LocalRagIndexStatus.ready,
+          result: <PdfChunkRecord>[chunks[0]],
+        ),
+      );
+
+      expect(await service.retrieve(documentId, '  \n  '), isEmpty);
+    },
+  );
+
+  test(
+    'falls back to lexical results when ready native retrieval throws',
+    () async {
+      final LocalRagService service = LocalRagService(
+        readChunks: (_) async => chunks,
+        nativeRetriever: _ThrowingRetriever(),
+      );
+
+      final List<PdfChunkRecord> result = await service.retrieve(
+        documentId,
+        'alpha',
+      );
+
+      expect(result.map((PdfChunkRecord chunk) => chunk.id), <String>[
+        'second',
+        'first',
+      ]);
+    },
+  );
+
+  test(
     'persists a versioned manifest with native index compatibility data',
     () async {
       final Directory directory = await Directory.systemTemp.createTemp('rag');
@@ -112,4 +147,16 @@ class _FakeRetriever implements LocalRagRetriever {
     String query, {
     int limit = 6,
   }) async => result;
+}
+
+class _ThrowingRetriever implements LocalRagRetriever {
+  @override
+  LocalRagIndexStatus get status => LocalRagIndexStatus.ready;
+
+  @override
+  Future<List<PdfChunkRecord>?> retrieve(
+    String documentId,
+    String query, {
+    int limit = 6,
+  }) => Future<List<PdfChunkRecord>?>.error(StateError('native unavailable'));
 }
