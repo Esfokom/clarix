@@ -1,6 +1,7 @@
 import '../../../core/models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/document_chunk_store.dart';
+import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/openai_compatible_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
 import 'ai_agent_runtime.dart';
@@ -9,12 +10,16 @@ class AiRuntimeService {
   AiRuntimeService({
     required this.providerProfiles,
     required this.chunkStore,
+    LocalRagService? localRag,
     OpenAiCompatibleProvider? provider,
-  }) : _provider = provider ?? OpenAiCompatibleProvider();
+  }) : _provider = provider ?? OpenAiCompatibleProvider(),
+       _localRag =
+           localRag ?? LocalRagService(readChunks: chunkStore.readChunks);
 
   final ProviderProfileStore providerProfiles;
   final DocumentChunkStore chunkStore;
   final OpenAiCompatibleProvider _provider;
+  final LocalRagService _localRag;
 
   Future<void> testProvider(AiProviderProfile profile, String apiKey) {
     if (apiKey.trim().isEmpty) {
@@ -41,11 +46,8 @@ class AiRuntimeService {
       throw StateError('Add an API key for ${profile.label}.');
     }
     onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
-    final reply =
-        await AiAgentRuntime(
-          provider: _provider,
-          readChunks: chunkStore.readChunks,
-        ).run(
+    final reply = await AiAgentRuntime(provider: _provider, localRag: _localRag)
+        .run(
           AiAgentRequest(
             profile: profile,
             apiKey: key,
