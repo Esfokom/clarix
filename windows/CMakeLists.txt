@@ -53,28 +53,18 @@ add_subdirectory(${FLUTTER_MANAGED_DIR})
 add_subdirectory("runner")
 
 # === Rust local-RAG runtime ===
-# Build the FRB crate as part of every Windows runner build. The generated Dart
-# loader opens clarix_pdf_oxide.dll next to the executable, so the CMake target
-# and install rules intentionally place it there for Debug, Profile, and
-# Release builds rather than relying on a source-tree target/release path.
-find_program(CARGO_EXECUTABLE cargo REQUIRED)
+# Do not make every Flutter build wait for FastEmbed/ONNX Runtime. The initial
+# optimized Rust build can take many minutes, while Clarix is fully usable with
+# lexical retrieval until the optional DLL has been prepared. Run
+# `tool\build_local_rag.ps1` once before a RAG-enabled run or package build;
+# this install step then copies the prebuilt library beside clarix.exe.
 set(CLARIX_RUST_CRATE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/clarix_pdf_oxide")
 set(CLARIX_RUST_MANIFEST "${CLARIX_RUST_CRATE_DIR}/Cargo.toml")
 set(CLARIX_RUST_RELEASE_DIR "${CLARIX_RUST_CRATE_DIR}/target/release")
 set(CLARIX_RUST_DLL "${CLARIX_RUST_RELEASE_DIR}/clarix_pdf_oxide.dll")
-file(GLOB_RECURSE CLARIX_RUST_SOURCES CONFIGURE_DEPENDS
-  "${CLARIX_RUST_CRATE_DIR}/src/*.rs")
-
-add_custom_command(
-  OUTPUT "${CLARIX_RUST_DLL}"
-  COMMAND "${CARGO_EXECUTABLE}" build --release --manifest-path "${CLARIX_RUST_MANIFEST}"
-  DEPENDS "${CLARIX_RUST_MANIFEST}" "${CLARIX_RUST_CRATE_DIR}/Cargo.lock" ${CLARIX_RUST_SOURCES}
-  WORKING_DIRECTORY "${CLARIX_RUST_CRATE_DIR}"
-  COMMENT "Building Clarix Rust local-RAG runtime"
-  VERBATIM
-)
-add_custom_target(clarix_rust_ffi DEPENDS "${CLARIX_RUST_DLL}")
-add_dependencies(${BINARY_NAME} clarix_rust_ffi)
+if(NOT EXISTS "${CLARIX_RUST_DLL}")
+  message(STATUS "Clarix local RAG DLL is not prebuilt; Windows launch will use lexical retrieval. Run tool\\build_local_rag.ps1 to enable semantic retrieval.")
+endif()
 
 
 # Generated plugin build rules, which manage building the plugins and adding

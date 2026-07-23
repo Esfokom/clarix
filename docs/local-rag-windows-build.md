@@ -1,9 +1,9 @@
 # Windows local-RAG build
 
-Clarix packages its Flutter Rust Bridge library as part of the Windows runner.
-The `clarix_rust_ffi` CMake target runs Cargo in release mode and the Windows
-install step places `clarix_pdf_oxide.dll`, plus any Rust-side runtime DLLs
-such as ONNX Runtime, next to `clarix.exe`.
+Clarix packages a prebuilt Flutter Rust Bridge library with the Windows runner.
+The optional build step produces `clarix_pdf_oxide.dll`; the Windows install
+step then places it, plus any Rust-side runtime DLLs such as ONNX Runtime,
+next to `clarix.exe`.
 
 ## Prerequisites
 
@@ -15,12 +15,16 @@ such as ONNX Runtime, next to `clarix.exe`.
 ## Build
 
 ```powershell
+.\tool\build_local_rag.ps1
 flutter build windows --release
 ```
 
-For development use `flutter run -d windows` or `flutter build windows
---debug`. The first build can take several minutes because Cargo compiles the
-FastEmbed/ORT dependency graph. Verify the resulting bundle contains
+For normal development use `flutter run -d windows` directly. It does not
+compile Rust and launches with lexical retrieval immediately. Run
+`.\tool\build_local_rag.ps1` only when you need semantic local retrieval; the
+next Flutter build copies the cached DLL into the bundle. The first Rust build
+can take many minutes because Cargo compiles the FastEmbed/ORT dependency
+graph, but later builds are incremental. Verify the resulting bundle contains
 `clarix.exe` and `clarix_pdf_oxide.dll` in the same directory.
 
 The Flutter runtime opens the DLL adjacent to its executable on Windows. If
