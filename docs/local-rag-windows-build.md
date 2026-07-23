@@ -30,3 +30,7 @@ graph, but later builds are incremental. Verify the resulting bundle contains
 The Flutter runtime opens the DLL adjacent to its executable on Windows. If
 the bundled DLL is missing or cannot load, Clarix still launches and uses
 lexical local retrieval; no PDF text is sent to a provider.
+
+The same `clarix_pdf_oxide.dll` is also the native PDF extraction/search
+runtime. Clarix initializes it once and shares it between PDF operations and
+local RAG; it never loads a separate source-tree DLL for either feature.

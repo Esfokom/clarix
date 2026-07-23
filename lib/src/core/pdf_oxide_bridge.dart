@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
@@ -6,6 +7,10 @@ import 'dart:ui';
 import 'package:path/path.dart' as p;
 import 'package:pdfrx/pdfrx.dart';
 
+import 'clarix_rust_runtime.dart';
+import 'ffi/api.dart' as ffi;
+import 'ffi/lib.dart' as ffi_types;
+import 'models.dart' as core_models;
 import 'models.dart';
 
 abstract class PdfOxideBridge {
@@ -45,10 +50,13 @@ abstract class PdfOxideBridge {
 class FrbPdfOxideBridge implements PdfOxideBridge {
   const FrbPdfOxideBridge();
 
-  Never _unavailable() {
-    throw UnimplementedError(
-      'Generate flutter_rust_bridge bindings from crate::api to enable pdf_oxide.',
-    );
+  Future<ffi.NativePdfSession> _session(String path) async {
+    if (!await ClarixRustRuntime.ensureInitialized()) {
+      throw UnimplementedError(
+        'The bundled Clarix Rust runtime is unavailable.',
+      );
+    }
+    return ffi.NativePdfSession.open(path: path);
   }
 
   @override
@@ -59,7 +67,30 @@ class FrbPdfOxideBridge implements PdfOxideBridge {
     int maxCharsPerChunk = 1200,
     int batchSize = 32,
   }) async* {
-    _unavailable();
+    final ffi.NativePdfSession session = await _session(path);
+    await for (final String event in session.index(
+      maxCharsPerChunk: BigInt.from(maxCharsPerChunk),
+      batchSize: BigInt.from(batchSize),
+    )) {
+      final Map<String, dynamic> decoded =
+          jsonDecode(event) as Map<String, dynamic>;
+      final List<dynamic>? values = decoded['ChunkBatch'] as List<dynamic>?;
+      if (values == null) continue;
+      yield values
+          .map((dynamic value) {
+            final Map<String, dynamic> chunk = value as Map<String, dynamic>;
+            return PdfChunkRecord(
+              id: '$documentId:${chunk['page_number']}:${chunk['chunk_order']}',
+              documentId: documentId,
+              title: title,
+              pageNumber: chunk['page_number'] as int,
+              chunkOrder: chunk['chunk_order'] as int,
+              text: chunk['text'] as String,
+              sectionTitle: chunk['section_title'] as String?,
+            );
+          })
+          .toList(growable: false);
+    }
   }
 
   @override
@@ -68,23 +99,67 @@ class FrbPdfOxideBridge implements PdfOxideBridge {
     required String documentId,
     required String title,
     int maxCharsPerChunk = 1200,
-  }) async => _unavailable();
+  }) async {
+    final List<PdfChunkRecord> chunks = <PdfChunkRecord>[];
+    await for (final List<PdfChunkRecord> batch in buildChunkBatches(
+      path,
+      documentId: documentId,
+      title: title,
+      maxCharsPerChunk: maxCharsPerChunk,
+    )) {
+      chunks.addAll(batch);
+    }
+    return chunks;
+  }
 
   @override
-  Future<List<String>> extractDocumentText(String path) async => _unavailable();
+  Future<List<String>> extractDocumentText(String path) async {
+    final core_models.PdfDocumentMetadata metadata = await openDocument(path);
+    final List<String> text = <String>[];
+    for (var page = 1; page <= metadata.pageCount; page++) {
+      text.add(await extractPageText(path, page) ?? '');
+    }
+    return text;
+  }
 
   @override
   Future<String?> extractPageText(String path, int pageNumber) async =>
-      _unavailable();
+      (await _session(path)).pageText(pageNumber: BigInt.from(pageNumber));
 
   @override
-  Future<PdfDocumentMetadata> openDocument(String path) async => _unavailable();
+  Future<core_models.PdfDocumentMetadata> openDocument(String path) async {
+    final ffi_types.PdfDocumentMetadata metadata = await (await _session(
+      path,
+    )).metadata();
+    return core_models.PdfDocumentMetadata(
+      documentId: metadata.documentId,
+      title: metadata.title,
+      pageCount: metadata.pageCount.toInt(),
+      isEncrypted: metadata.isEncrypted,
+    );
+  }
 
   @override
   Future<List<PdfSearchMatch>> searchDocument(
     String path,
     Pattern query,
-  ) async => _unavailable();
+  ) async {
+    final String queryText = query is String ? query : query.toString();
+    return (await (await _session(path)).search(query: queryText))
+        .map(
+          (ffi_types.PdfSearchMatch match) => core_models.PdfSearchMatch(
+            pageNumber: match.pageNumber.toInt(),
+            text: match.text,
+            bounds: Rect.fromLTRB(
+              match.bounds.$1,
+              match.bounds.$2,
+              match.bounds.$3,
+              match.bounds.$4,
+            ),
+          ),
+        )
+        .toList(growable: false);
+  }
 }
 
 class PdfrxFallbackBridge extends PdfOxideBridge {
