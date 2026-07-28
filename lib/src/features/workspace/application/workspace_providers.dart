@@ -7,6 +7,7 @@ import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
+import '../../utilities/application/pdf_utility_service.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
@@ -28,6 +29,12 @@ final sessionStoreProvider = Provider<ClarixSessionStore>(
 final pdfExtractionServiceProvider = Provider<HybridPdfExtractionService>(
   (Ref ref) => HybridPdfExtractionService(),
 );
+
+final pdfUtilityServiceProvider = Provider<PdfUtilityService>((Ref ref) {
+  return PdfUtilityService(
+    openPdfFiles: ref.read(workspaceNotifierProvider.notifier).openPdfFiles,
+  );
+});
 
 final pdfDocumentRefProvider = Provider.autoDispose
     .family<PdfDocumentRefFile, String>(
