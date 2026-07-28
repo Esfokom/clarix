@@ -1,0 +1,239 @@
+import 'package:clarix/src/core/ffi/api.dart';
+import 'package:clarix/src/features/utilities/application/pdf_utility_service.dart';
+import 'package:clarix/src/features/utilities/domain/utility_job.dart';
+import 'package:clarix/src/features/workspace/presentation/widgets/pdf_utilities_dialogs.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shadcn_ui/shadcn_ui.dart';
+
+void main() {
+  late _FakePdfComposeNative native;
+  late PdfUtilityService service;
+  late List<UtilityResult> openedResults;
+
+  setUp(() {
+    native = _FakePdfComposeNative();
+    service = PdfUtilityService(native: native, fileExists: (_) async => true);
+    openedResults = <UtilityResult>[];
+  });
+
+  testWidgets('combine adds, reorders, and removes selected PDFs', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        CombinePdfDialog(
+          service: service,
+          pickSources: () async => <String>[
+            'C:/docs/alpha.pdf',
+            'C:/docs/bravo.pdf',
+            'C:/docs/charlie.pdf',
+          ],
+          pickDestination: () async => 'C:/docs/combined.pdf',
+          onCompleted: openedResults.add,
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<ShadButton>(find.widgetWithText(ShadButton, 'Combine'))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.tap(find.text('Add PDFs'));
+    await tester.pump();
+    expect(find.text('alpha.pdf'), findsOneWidget);
+    expect(find.text('bravo.pdf'), findsOneWidget);
+    expect(find.text('charlie.pdf'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('combine-move-up-1')));
+    await tester.pump();
+    expect(_selectedFileLabels(tester), <String>[
+      'bravo.pdf',
+      'alpha.pdf',
+      'charlie.pdf',
+    ]);
+
+    await tester.drag(
+      find.byKey(const Key('combine-drag-2')),
+      const Offset(0, -180),
+    );
+    await tester.pumpAndSettle();
+    expect(_selectedFileLabels(tester), <String>[
+      'bravo.pdf',
+      'charlie.pdf',
+      'alpha.pdf',
+    ]);
+
+    await tester.tap(find.byKey(const Key('combine-remove-1')));
+    await tester.pump();
+    expect(find.text('charlie.pdf'), findsNothing);
+    expect(find.byType(ReorderableListView), findsOneWidget);
+  });
+
+  testWidgets('combine opens only the successful generated result', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        CombinePdfDialog(
+          service: service,
+          pickSources: () async => <String>[
+            'C:/docs/alpha.pdf',
+            'C:/docs/bravo.pdf',
+          ],
+          pickDestination: () async => 'C:/docs/combined.pdf',
+          onCompleted: openedResults.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add PDFs'));
+    await tester.pump();
+    await tester.tap(find.text('Combine'));
+    await tester.pumpAndSettle();
+
+    expect(
+      native.requests.single.sources.map(
+        (NativePdfSource source) => source.path,
+      ),
+      <String>['C:/docs/alpha.pdf', 'C:/docs/bravo.pdf'],
+    );
+    expect(openedResults.single.outputPath, 'C:/docs/combined.pdf');
+  });
+
+  testWidgets('combine failure stays open and does not open an output', (
+    WidgetTester tester,
+  ) async {
+    native.error = StateError('write failed');
+    await tester.pumpWidget(
+      _app(
+        CombinePdfDialog(
+          service: service,
+          pickSources: () async => <String>['a.pdf', 'b.pdf'],
+          pickDestination: () async => 'out.pdf',
+          onCompleted: openedResults.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add PDFs'));
+    await tester.pump();
+    await tester.tap(find.text('Combine'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('write failed'), findsOneWidget);
+    expect(openedResults, isEmpty);
+    expect(find.text('Combine PDF files'), findsOneWidget);
+  });
+
+  testWidgets('extract validates pages against the loaded PDF page count', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        ExtractPagesDialog(
+          service: service,
+          pickSource: () async => 'C:/docs/source.pdf',
+          pickDestination: () async => 'C:/docs/extracted.pdf',
+          loadPageCount: (_) async => 7,
+          onCompleted: openedResults.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Select PDF'));
+    await tester.pump();
+    expect(find.text('source.pdf'), findsOneWidget);
+    expect(find.text('7 pages'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('extract-page-selection')),
+      '1-3, 8',
+    );
+    await tester.pump();
+    expect(find.text('Page selection is outside 1-7.'), findsOneWidget);
+    expect(
+      tester
+          .widget<ShadButton>(find.widgetWithText(ShadButton, 'Extract'))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('extract-page-selection')),
+      '3-4, 1, 3',
+    );
+    await tester.pump();
+    expect(find.text('3 pages selected'), findsOneWidget);
+
+    await tester.tap(find.text('Extract'));
+    await tester.pumpAndSettle();
+    expect(
+      native.requests.single.sources.single.pages.map(
+        (BigInt page) => page.toInt(),
+      ),
+      <int>[3, 4, 1],
+    );
+    expect(openedResults.single.outputPath, 'C:/docs/extracted.pdf');
+  });
+}
+
+List<String> _selectedFileLabels(WidgetTester tester) => tester
+    .widgetList<Text>(
+      find.descendant(
+        of: find.byKey(const Key('combine-selected-files')),
+        matching: find.byType(Text),
+      ),
+    )
+    .map((Text widget) => widget.data)
+    .whereType<String>()
+    .where(
+      (String text) =>
+          text.endsWith('.pdf') && !text.contains('/') && !text.contains('\\'),
+    )
+    .toList(growable: false);
+
+Widget _app(Widget child) => ProviderScope(
+  child: ShadApp(
+    themeMode: ThemeMode.dark,
+    theme: ShadThemeData(
+      brightness: Brightness.dark,
+      colorScheme: const ShadZincColorScheme.dark(),
+    ),
+    darkTheme: ShadThemeData(
+      brightness: Brightness.dark,
+      colorScheme: const ShadZincColorScheme.dark(),
+    ),
+    home: Scaffold(body: Center(child: child)),
+  ),
+);
+
+final class _FakePdfComposeNative implements PdfComposeNative {
+  final List<NativePdfComposeRequest> requests = <NativePdfComposeRequest>[];
+  Object? error;
+
+  @override
+  Future<NativePdfComposeResponse> compose(
+    NativePdfComposeRequest request,
+  ) async {
+    requests.add(request);
+    if (error != null) {
+      throw error!;
+    }
+    return NativePdfComposeResponse(
+      outputPath: request.outputPath,
+      pageCount: BigInt.from(
+        request.sources.fold<int>(
+          0,
+          (int total, NativePdfSource source) =>
+              total + (source.pages.isEmpty ? 1 : source.pages.length),
+        ),
+      ),
+      message: null,
+    );
+  }
+}

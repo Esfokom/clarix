@@ -9,6 +9,7 @@ import '../../../core/clarix_logger.dart';
 import '../../../core/models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
+import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/document_chunk_store.dart';
@@ -169,6 +170,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   }
 
   Future<void> reopenRecent(String path) => openPdfFiles(<String>[path]);
+
+  Future<void> openUtilityResult(UtilityResult result) {
+    return ref
+        .read(pdfUtilityServiceProvider)
+        .openGeneratedPdf(result.outputPath);
+  }
 
   Future<void> closeTab(String tabId) async {
     final WorkspaceFeatureState current = _requireState();

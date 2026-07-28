@@ -4,6 +4,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
+import 'pdf_utilities_dialogs.dart';
 import 'workspace_common.dart';
 
 class QuickstartSurface extends ConsumerWidget {
@@ -20,7 +21,7 @@ class QuickstartSurface extends ConsumerWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Expanded(
+              const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -33,9 +34,9 @@ class QuickstartSurface extends ConsumerWidget {
                         height: 1.12,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Open a PDF or continue from a recent document.',
+                    SizedBox(height: 6),
+                    Text(
+                      'Open a PDF or use a local document utility.',
                       style: TextStyle(
                         color: WorkspaceColors.textMuted,
                         fontSize: 12.5,
@@ -54,87 +55,205 @@ class QuickstartSurface extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          const SizedBox(height: 18),
+          const _QuickstartSectionLabel(label: 'Utilities'),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 208,
+            child: GridView.count(
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: 2,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 4.1,
               children: <Widget>[
-                Expanded(
-                  flex: 3,
-                  child: SurfaceBlock(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const SectionLabel(label: 'Recent documents'),
-                        Expanded(
-                          child: state.session.recentFiles.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No recent PDFs yet.',
-                                    style: TextStyle(
-                                      color: WorkspaceColors.textMuted,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                )
-                              : ListView.separated(
-                                  itemCount: state.session.recentFiles.length,
-                                  separatorBuilder: (_, int index) =>
-                                      const SizedBox(height: 8),
-                                  itemBuilder:
-                                      (BuildContext context, int index) {
-                                        final String path =
-                                            state.session.recentFiles[index];
-                                        return _QuickstartRecentTile(
-                                          path: path,
-                                        );
-                                      },
-                                ),
-                        ),
-                      ],
-                    ),
+                _UtilityCard(
+                  icon: LucideIcons.files,
+                  title: 'Combine PDFs',
+                  detail: 'Order multiple PDFs and save them as one file.',
+                  onTap: () => showCombinePdfDialog(context),
+                ),
+                const _UtilityCard(
+                  icon: LucideIcons.fileOutput,
+                  title: 'Convert to PDF',
+                  detail: 'Create PDFs from documents, text, and images.',
+                ),
+                _UtilityCard(
+                  icon: LucideIcons.fileStack,
+                  title: 'Extract pages',
+                  detail: 'Choose page ranges and save a new PDF.',
+                  onTap: () => showExtractPagesDialog(context),
+                ),
+                const _UtilityCard(
+                  icon: LucideIcons.share2,
+                  title: 'Export PDF',
+                  detail: 'Export content to Markdown, Word, or PowerPoint.',
+                ),
+              ],
+            ),
+          ),
+          const Spacer(),
+          SizedBox(
+            height: 190,
+            child: SurfaceBlock(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const _QuickstartSectionLabel(label: 'Recent documents'),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: state.session.recentFiles.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'No recent PDFs yet.',
+                              style: TextStyle(
+                                color: WorkspaceColors.textMuted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: state.session.recentFiles.length,
+                            separatorBuilder: (_, int index) =>
+                                const SizedBox(height: 6),
+                            itemBuilder: (BuildContext context, int index) {
+                              return _QuickstartRecentTile(
+                                path: state.session.recentFiles[index],
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickstartSectionLabel extends StatelessWidget {
+  const _QuickstartSectionLabel({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: const TextStyle(
+        color: WorkspaceColors.textFaint,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.8,
+      ),
+    );
+  }
+}
+
+class _UtilityCard extends StatelessWidget {
+  const _UtilityCard({
+    required this.icon,
+    required this.title,
+    required this.detail,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String detail;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool enabled = onTap != null;
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      label: title,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onTap,
+          child: Ink(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: WorkspaceColors.panel,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: WorkspaceColors.border),
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: enabled
+                        ? WorkspaceColors.accentSoft
+                        : WorkspaceColors.panelRaised,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 18,
+                    color: enabled
+                        ? WorkspaceColors.textStrong
+                        : WorkspaceColors.textFaint,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  flex: 2,
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Expanded(
-                        child: SurfaceBlock(
-                          padding: const EdgeInsets.all(14),
-                          child: _StatusPanel(
-                            title: 'Session',
-                            value: state.session.restorePreviousSession
-                                ? 'Restore enabled'
-                                : 'Fresh launch mode',
-                            detail: state.session.restorePreviousSession
-                                ? 'Valid tabs reopen automatically.'
-                                : 'Closing with tabs asks for confirmation.',
-                          ),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: enabled
+                              ? WorkspaceColors.textStrong
+                              : WorkspaceColors.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: SurfaceBlock(
-                          padding: const EdgeInsets.all(14),
-                          child: _StatusPanel(
-                            title: 'AI',
-                            value: state.aiState.statusMessage,
-                            detail: state.aiState.providerReady
-                                ? 'Grounded PDF passages are retrieved on demand.'
-                                : 'Add a remote provider to enable retrieval.',
-                          ),
+                      const SizedBox(height: 4),
+                      Text(
+                        detail,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: WorkspaceColors.textMuted,
+                          fontSize: 10.5,
+                          height: 1.25,
                         ),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
+                if (enabled)
+                  const Icon(
+                    LucideIcons.arrowUpRight,
+                    size: 15,
+                    color: WorkspaceColors.textFaint,
+                  )
+                else
+                  const Text(
+                    'Soon',
+                    style: TextStyle(
+                      color: WorkspaceColors.textFaint,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -152,112 +271,54 @@ class _QuickstartRecentTile extends ConsumerWidget {
       onTap: () =>
           ref.read(workspaceNotifierProvider.notifier).reopenRecent(path),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: WorkspaceColors.panelRaised,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(9),
           border: Border.all(color: WorkspaceColors.border),
         ),
         child: Row(
           children: <Widget>[
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: WorkspaceColors.accentSoft,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                LucideIcons.fileText,
-                size: 16,
-                color: WorkspaceColors.textStrong,
+            const Icon(
+              LucideIcons.fileText,
+              size: 15,
+              color: WorkspaceColors.textMuted,
+            ),
+            const SizedBox(width: 9),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: WorkspaceColors.textStrong,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
             const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: WorkspaceColors.textStrong,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    path,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: WorkspaceColors.textFaint,
-                      fontSize: 10.5,
-                    ),
-                  ),
-                ],
+            Flexible(
+              child: Text(
+                path,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: const TextStyle(
+                  color: WorkspaceColors.textFaint,
+                  fontSize: 10,
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             const Icon(
               LucideIcons.arrowRight,
-              size: 14,
+              size: 13,
               color: WorkspaceColors.textFaint,
             ),
           ],
         ),
       ),
-    );
-  }
-}
-
-class _StatusPanel extends StatelessWidget {
-  const _StatusPanel({
-    required this.title,
-    required this.value,
-    required this.detail,
-  });
-
-  final String title;
-  final String value;
-  final String detail;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            color: WorkspaceColors.textFaint,
-            fontSize: 10,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(
-          value,
-          style: const TextStyle(
-            color: WorkspaceColors.textStrong,
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            height: 1.2,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          detail,
-          style: const TextStyle(
-            color: WorkspaceColors.textMuted,
-            fontSize: 11.5,
-            height: 1.4,
-          ),
-        ),
-      ],
     );
   }
 }
