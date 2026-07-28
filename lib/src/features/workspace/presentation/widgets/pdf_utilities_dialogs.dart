@@ -10,6 +10,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../utilities/application/pdf_utility_service.dart';
 import '../../../utilities/domain/pdf_page_selection.dart';
 import '../../../utilities/domain/utility_job.dart';
+import '../../../utilities/infrastructure/document_conversion_service.dart';
 import '../../application/workspace_providers.dart';
 import 'workspace_common.dart';
 
@@ -18,6 +19,10 @@ typedef PickPdfSource = Future<String?> Function();
 typedef PickPdfDestination = Future<String?> Function();
 typedef LoadPdfPageCount = Future<int> Function(String sourcePath);
 typedef UtilityCompleted = FutureOr<void> Function(UtilityResult result);
+typedef PickConversionSources = Future<List<String>> Function();
+typedef PickConversionOutputDirectory = Future<String?> Function();
+typedef ConversionCompleted =
+    FutureOr<void> Function(List<UtilityResult> results);
 
 Future<void> showCombinePdfDialog(BuildContext context) => showShadDialog<void>(
   context: context,
@@ -34,6 +39,250 @@ Future<void> showExtractPagesDialog(BuildContext context) =>
         child: ExtractPagesDialog(),
       ),
     );
+
+Future<void> showConvertToPdfDialog(BuildContext context) =>
+    showShadDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Material(
+        type: MaterialType.transparency,
+        child: ConvertToPdfDialog(),
+      ),
+    );
+
+class ConvertToPdfDialog extends ConsumerStatefulWidget {
+  const ConvertToPdfDialog({
+    this.service,
+    this.pickSources,
+    this.pickOutputDirectory,
+    this.onCompleted,
+    super.key,
+  });
+
+  final DocumentConversionService? service;
+  final PickConversionSources? pickSources;
+  final PickConversionOutputDirectory? pickOutputDirectory;
+  final ConversionCompleted? onCompleted;
+
+  @override
+  ConsumerState<ConvertToPdfDialog> createState() => _ConvertToPdfDialogState();
+}
+
+class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
+  final List<String> _files = <String>[];
+  bool _busy = false;
+  String? _error;
+
+  DocumentConversionService get _service =>
+      widget.service ?? DocumentConversionService();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShadDialog(
+      constraints: const BoxConstraints(maxWidth: 680, maxHeight: 620),
+      title: const Text('Convert files to PDF'),
+      description: const Text(
+        'Create local PDFs from images, text, Markdown, and Office documents.',
+      ),
+      actions: <Widget>[
+        ShadButton.outline(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ShadButton(
+          onPressed: _files.isNotEmpty && !_busy ? _convert : null,
+          child: Text(_busy ? 'Converting…' : 'Convert'),
+        ),
+      ],
+      child: SizedBox(
+        width: 620,
+        height: 410,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                ShadButton.outline(
+                  leading: const Icon(LucideIcons.filePlus2, size: 15),
+                  onPressed: _busy ? null : _addFiles,
+                  child: const Text('Add files'),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _files.isEmpty
+                        ? 'PNG, JPG, WEBP, TXT, MD, DOCX, PPTX, or XLSX'
+                        : '${_files.length} ${_files.length == 1 ? 'file' : 'files'} selected',
+                    style: const TextStyle(
+                      color: WorkspaceColors.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: WorkspaceColors.panelRaised,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: WorkspaceColors.border),
+                ),
+                child: _files.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'Add one or more files to create a PDF for each.',
+                          style: TextStyle(
+                            color: WorkspaceColors.textMuted,
+                            fontSize: 12,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(8),
+                        itemCount: _files.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 6),
+                        itemBuilder: (BuildContext context, int index) {
+                          final String source = _files[index];
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 7,
+                            ),
+                            decoration: BoxDecoration(
+                              color: WorkspaceColors.panel,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: WorkspaceColors.border),
+                            ),
+                            child: Row(
+                              children: <Widget>[
+                                const Icon(
+                                  LucideIcons.fileText,
+                                  size: 15,
+                                  color: WorkspaceColors.textMuted,
+                                ),
+                                const SizedBox(width: 9),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        path.basename(source),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: WorkspaceColors.textStrong,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        source,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: WorkspaceColors.textFaint,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  key: Key('convert-remove-$index'),
+                                  tooltip: 'Remove ${path.basename(source)}',
+                                  onPressed: _busy
+                                      ? null
+                                      : () => setState(() {
+                                          _files.removeAt(index);
+                                          _error = null;
+                                        }),
+                                  icon: const Icon(LucideIcons.x, size: 15),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ),
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: 10),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: WorkspaceColors.warning,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addFiles() async {
+    final List<String> selected =
+        await (widget.pickSources ?? _pickConversionSources)();
+    if (!mounted || selected.isEmpty) {
+      return;
+    }
+    setState(() {
+      for (final String source in selected) {
+        if (!_files.contains(source)) {
+          _files.add(source);
+        }
+      }
+      _error = null;
+    });
+  }
+
+  Future<void> _convert() async {
+    final String? outputDirectory =
+        await (widget.pickOutputDirectory ?? _pickConversionOutputDirectory)();
+    if (!mounted || outputDirectory == null) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final List<UtilityResult> results = await _service.convert(
+        List<String>.unmodifiable(_files),
+        outputDirectory,
+      );
+      await _complete(results);
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = _messageFor(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+
+  Future<void> _complete(List<UtilityResult> results) async {
+    final ConversionCompleted? callback = widget.onCompleted;
+    if (callback != null) {
+      await callback(results);
+      return;
+    }
+    for (final UtilityResult result in results) {
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .openUtilityResult(result);
+    }
+  }
+}
 
 class CombinePdfDialog extends ConsumerStatefulWidget {
   const CombinePdfDialog({
@@ -633,6 +882,28 @@ Future<String?> _pickExtractedPdfDestination() => FilePicker.saveFile(
   fileName: 'extracted-pages.pdf',
   type: FileType.custom,
   allowedExtensions: const <String>['pdf'],
+  lockParentWindow: true,
+);
+
+Future<List<String>> _pickConversionSources() async {
+  final FilePickerResult? result = await FilePicker.pickFiles(
+    dialogTitle: 'Select files to convert to PDF',
+    type: FileType.custom,
+    allowedExtensions: DocumentConversionService.supportedExtensions
+        .map((String extension) => extension.substring(1))
+        .toList(growable: false),
+    allowMultiple: true,
+    lockParentWindow: true,
+  );
+  return result?.files
+          .map((PlatformFile file) => file.path)
+          .whereType<String>()
+          .toList(growable: false) ??
+      const <String>[];
+}
+
+Future<String?> _pickConversionOutputDirectory() => FilePicker.getDirectoryPath(
+  dialogTitle: 'Choose a folder for converted PDFs',
   lockParentWindow: true,
 );
 

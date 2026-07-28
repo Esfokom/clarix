@@ -1,6 +1,7 @@
 import 'package:clarix/src/core/ffi/api.dart';
 import 'package:clarix/src/features/utilities/application/pdf_utility_service.dart';
 import 'package:clarix/src/features/utilities/domain/utility_job.dart';
+import 'package:clarix/src/features/utilities/infrastructure/document_conversion_service.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_utilities_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -213,6 +214,120 @@ void main() {
       isNull,
     );
   });
+
+  testWidgets('convert selects and removes supported local sources', (
+    WidgetTester tester,
+  ) async {
+    final _FakeDirectPdfConverter direct = _FakeDirectPdfConverter();
+    await tester.pumpWidget(
+      _app(
+        ConvertToPdfDialog(
+          service: DocumentConversionService(
+            direct: direct,
+            office: _FakeOfficePdfConverter(),
+          ),
+          pickSources: () async => <String>[
+            'C:/docs/notes.md',
+            'C:/docs/photo.png',
+          ],
+          pickOutputDirectory: () async => r'C:\output',
+          onCompleted: (_) {},
+        ),
+      ),
+    );
+
+    expect(
+      tester
+          .widget<ShadButton>(find.widgetWithText(ShadButton, 'Convert'))
+          .onPressed,
+      isNull,
+    );
+    await tester.tap(find.text('Add files'));
+    await tester.pump();
+
+    expect(find.text('notes.md'), findsOneWidget);
+    expect(find.text('photo.png'), findsOneWidget);
+    expect(
+      tester
+          .widget<ShadButton>(find.widgetWithText(ShadButton, 'Convert'))
+          .onPressed,
+      isNotNull,
+    );
+
+    await tester.tap(find.byKey(const Key('convert-remove-0')));
+    await tester.pump();
+    expect(find.text('notes.md'), findsNothing);
+    expect(find.text('photo.png'), findsOneWidget);
+  });
+
+  testWidgets('convert sends the selected batch to the output directory', (
+    WidgetTester tester,
+  ) async {
+    final _FakeDirectPdfConverter direct = _FakeDirectPdfConverter();
+    final List<List<UtilityResult>> completed = <List<UtilityResult>>[];
+    await tester.pumpWidget(
+      _app(
+        ConvertToPdfDialog(
+          service: DocumentConversionService(
+            direct: direct,
+            office: _FakeOfficePdfConverter(),
+          ),
+          pickSources: () async => <String>[
+            'C:/docs/notes.md',
+            'C:/docs/photo.png',
+          ],
+          pickOutputDirectory: () async => r'C:\output',
+          onCompleted: completed.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add files'));
+    await tester.pump();
+    await tester.tap(find.text('Convert'));
+    await tester.pumpAndSettle();
+
+    expect(direct.markdownCalls, <String>[
+      r'C:/docs/notes.md|C:\output\notes.pdf',
+    ]);
+    expect(direct.imageCalls, <String>[
+      r'C:/docs/photo.png|C:\output\photo.pdf',
+    ]);
+    expect(
+      completed.single.map((UtilityResult result) => result.outputPath),
+      <String>[r'C:\output\notes.pdf', r'C:\output\photo.pdf'],
+    );
+  });
+
+  testWidgets('convert failure stays open and does not publish outputs', (
+    WidgetTester tester,
+  ) async {
+    final _FakeDirectPdfConverter direct = _FakeDirectPdfConverter()
+      ..error = const UtilityFailure('Markdown input is unreadable.');
+    final List<List<UtilityResult>> completed = <List<UtilityResult>>[];
+    await tester.pumpWidget(
+      _app(
+        ConvertToPdfDialog(
+          service: DocumentConversionService(
+            direct: direct,
+            office: _FakeOfficePdfConverter(),
+          ),
+          pickSources: () async => <String>['C:/docs/notes.md'],
+          pickOutputDirectory: () async => 'C:/output',
+          onCompleted: completed.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Add files'));
+    await tester.pump();
+    await tester.tap(find.text('Convert'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Markdown input is unreadable.'), findsOneWidget);
+    expect(completed, isEmpty);
+    expect(find.text('Convert files to PDF'), findsOneWidget);
+  });
 }
 
 List<String> _selectedFileLabels(WidgetTester tester) => tester
@@ -269,4 +384,43 @@ final class _FakePdfComposeNative implements PdfComposeNative {
       message: null,
     );
   }
+}
+
+final class _FakeDirectPdfConverter implements DirectPdfConverter {
+  final List<String> imageCalls = <String>[];
+  final List<String> textCalls = <String>[];
+  final List<String> markdownCalls = <String>[];
+  Object? error;
+
+  @override
+  Future<int> imagesToPdf(List<String> sourcePaths, String outputPath) async {
+    _throwIfNeeded();
+    imageCalls.add('${sourcePaths.single}|$outputPath');
+    return sourcePaths.length;
+  }
+
+  @override
+  Future<int> markdownToPdf(String sourcePath, String outputPath) async {
+    _throwIfNeeded();
+    markdownCalls.add('$sourcePath|$outputPath');
+    return 1;
+  }
+
+  @override
+  Future<int> textToPdf(String sourcePath, String outputPath) async {
+    _throwIfNeeded();
+    textCalls.add('$sourcePath|$outputPath');
+    return 1;
+  }
+
+  void _throwIfNeeded() {
+    if (error != null) {
+      throw error!;
+    }
+  }
+}
+
+final class _FakeOfficePdfConverter implements OfficePdfConverter {
+  @override
+  Future<void> convert(String inputPath, String outputPath) async {}
 }

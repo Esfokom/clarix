@@ -73,10 +73,11 @@ class QuickstartSurface extends ConsumerWidget {
                   detail: 'Order multiple PDFs and save them as one file.',
                   onTap: () => showCombinePdfDialog(context),
                 ),
-                const _UtilityCard(
+                _UtilityCard(
                   icon: LucideIcons.fileOutput,
                   title: 'Convert to PDF',
                   detail: 'Create PDFs from documents, text, and images.',
+                  onTap: () => showConvertToPdfDialog(context),
                 ),
                 _UtilityCard(
                   icon: LucideIcons.fileStack,

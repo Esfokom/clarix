@@ -44,6 +44,22 @@ void main() {
     expect(find.text('Combine PDF files'), findsOneWidget);
   });
 
+  testWidgets('Convert to PDF card opens the local conversion workflow', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_app(QuickstartSurface(state: _workspaceState())));
+    await tester.tap(find.text('Convert to PDF'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Add files'), findsOneWidget);
+    expect(find.text('Convert files to PDF'), findsOneWidget);
+  });
+
   testWidgets('all utility cards are fully visible and hit-testable', (
     WidgetTester tester,
   ) async {
