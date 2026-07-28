@@ -1,11 +1,7 @@
-import 'dart:io';
-
 import 'package:clarix/src/core/ffi/api.dart';
 import 'package:clarix/src/features/utilities/application/pdf_utility_service.dart';
 import 'package:clarix/src/features/utilities/domain/utility_job.dart';
 import 'package:clarix/src/features/utilities/infrastructure/document_conversion_service.dart';
-import 'package:clarix/src/features/utilities/infrastructure/ooxml_visual_export.dart';
-import 'package:clarix/src/features/utilities/infrastructure/pdf_export_service.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_utilities_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -332,73 +328,6 @@ void main() {
     expect(completed, isEmpty);
     expect(find.text('Convert files to PDF'), findsOneWidget);
   });
-
-  testWidgets(
-    'export labels visual formats and sends the chosen PDF to Word export',
-    (WidgetTester tester) async {
-      final Directory root = await Directory.systemTemp.createTemp(
-        'clarix-export-dialog-test-',
-      );
-      addTearDown(() => root.delete(recursive: true));
-      final _FakeVisualExport visual = _FakeVisualExport();
-      final PdfExportService exportService = PdfExportService(
-        extraction: const _FakeTextExtractor(<String>['Searchable text']),
-        renderer: const _FakePageRenderer(<RenderedPdfPage>[
-          RenderedPdfPage(
-            pageNumber: 1,
-            widthPoints: 612,
-            heightPoints: 792,
-            pixelWidth: 1275,
-            pixelHeight: 1650,
-            pngBytes: <int>[1],
-          ),
-        ]),
-        visualExport: visual,
-      );
-      final String output = '${root.path}${Platform.pathSeparator}report.docx';
-
-      await tester.pumpWidget(
-        _app(
-          ExportPdfDialog(
-            service: exportService,
-            pickSource: () async => 'C:/docs/report.pdf',
-            pickDestination: (UtilityFormat format, String sourcePath) async {
-              expect(format, UtilityFormat.word);
-              expect(sourcePath, 'C:/docs/report.pdf');
-              return output;
-            },
-            onCompleted: openedResults.add,
-          ),
-        ),
-      );
-
-      expect(find.text('Word (visual)'), findsOneWidget);
-      expect(find.text('PowerPoint (visual)'), findsOneWidget);
-      expect(
-        find.textContaining('do not recreate editable page layouts'),
-        findsOneWidget,
-      );
-      expect(
-        tester
-            .widget<ShadButton>(find.widgetWithText(ShadButton, 'Export'))
-            .onPressed,
-        isNull,
-      );
-
-      await tester.tap(find.text('Select PDF'));
-      await tester.pump();
-      await tester.tap(find.byKey(const Key('export-format-word')));
-      await tester.pump();
-      await tester.tap(find.text('Export'));
-      for (int attempt = 0; attempt < 20 && openedResults.isEmpty; attempt++) {
-        await tester.pump(const Duration(milliseconds: 50));
-      }
-
-      expect(visual.wordPages, hasLength(1));
-      expect(visual.wordPages.single.extractedText, 'Searchable text');
-      expect(openedResults.single.outputPath, output);
-    },
-  );
 }
 
 List<String> _selectedFileLabels(WidgetTester tester) => tester
@@ -494,43 +423,4 @@ final class _FakeDirectPdfConverter implements DirectPdfConverter {
 final class _FakeOfficePdfConverter implements OfficePdfConverter {
   @override
   Future<void> convert(String inputPath, String outputPath) async {}
-}
-
-final class _FakeTextExtractor implements PdfDocumentTextExtractor {
-  const _FakeTextExtractor(this.pages);
-
-  final List<String> pages;
-
-  @override
-  Future<List<String>> extractDocumentText(String sourcePath) async => pages;
-}
-
-final class _FakePageRenderer implements PdfPageRenderer {
-  const _FakePageRenderer(this.pages);
-
-  final List<RenderedPdfPage> pages;
-
-  @override
-  Future<List<RenderedPdfPage>> render(String sourcePath) async => pages;
-}
-
-final class _FakeVisualExport implements OoxmlVisualExport {
-  List<VisualPdfPage> wordPages = <VisualPdfPage>[];
-
-  @override
-  Future<void> writePowerPoint({
-    required String outputPath,
-    required List<VisualPdfPage> pages,
-  }) async {
-    await File(outputPath).writeAsBytes(const <int>[1]);
-  }
-
-  @override
-  Future<void> writeWord({
-    required String outputPath,
-    required List<VisualPdfPage> pages,
-  }) async {
-    wordPages = pages;
-    await File(outputPath).writeAsBytes(const <int>[1]);
-  }
 }

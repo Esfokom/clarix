@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'dart:math' as math;
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 
 /// A rendered PDF page and the text that accompanies it in a visual export.
 final class VisualPdfPage {
@@ -11,7 +11,7 @@ final class VisualPdfPage {
     required this.heightPoints,
     required this.pixelWidth,
     required this.pixelHeight,
-    required this.pngBytes,
+    required this.imagePath,
     required this.extractedText,
   }) : assert(pageNumber > 0),
        assert(widthPoints > 0),
@@ -24,7 +24,7 @@ final class VisualPdfPage {
   final double heightPoints;
   final int pixelWidth;
   final int pixelHeight;
-  final List<int> pngBytes;
+  final String imagePath;
   final String extractedText;
 }
 
@@ -56,27 +56,23 @@ final class ArchiveOoxmlVisualExport implements OoxmlVisualExport {
     required List<VisualPdfPage> pages,
   }) async {
     _requirePages(pages);
-    final Archive archive = Archive()
-      ..add(ArchiveFile.string('[Content_Types].xml', _wordContentTypes))
-      ..add(ArchiveFile.string('_rels/.rels', _wordRootRelationships))
-      ..add(ArchiveFile.string('docProps/core.xml', _coreProperties))
-      ..add(ArchiveFile.string('docProps/app.xml', _wordAppProperties))
-      ..add(ArchiveFile.string('word/document.xml', _wordDocument(pages)))
-      ..add(
-        ArchiveFile.string(
-          'word/_rels/document.xml.rels',
-          _wordDocumentRelationships(pages),
-        ),
-      );
-    for (final VisualPdfPage page in pages) {
-      archive.add(
-        ArchiveFile.bytes(
-          'word/media/page-${page.pageNumber}.png',
-          page.pngBytes,
-        ),
-      );
-    }
-    await _writeArchive(outputPath, archive);
+    final List<ArchiveFile> parts = <ArchiveFile>[
+      ArchiveFile.string('[Content_Types].xml', _wordContentTypes),
+      ArchiveFile.string('_rels/.rels', _wordRootRelationships),
+      ArchiveFile.string('docProps/core.xml', _coreProperties),
+      ArchiveFile.string('docProps/app.xml', _wordAppProperties),
+      ArchiveFile.string('word/document.xml', _wordDocument(pages)),
+      ArchiveFile.string(
+        'word/_rels/document.xml.rels',
+        _wordDocumentRelationships(pages),
+      ),
+    ];
+    await _writePackage(
+      outputPath: outputPath,
+      parts: parts,
+      pages: pages,
+      imageDirectory: 'word/media',
+    );
   }
 
   @override
@@ -85,49 +81,36 @@ final class ArchiveOoxmlVisualExport implements OoxmlVisualExport {
     required List<VisualPdfPage> pages,
   }) async {
     _requirePages(pages);
-    final Archive archive = Archive()
-      ..add(
-        ArchiveFile.string(
-          '[Content_Types].xml',
-          _powerPointContentTypes(pages.length),
-        ),
-      )
-      ..add(ArchiveFile.string('_rels/.rels', _powerPointRootRelationships))
-      ..add(ArchiveFile.string('docProps/core.xml', _coreProperties))
-      ..add(ArchiveFile.string('docProps/app.xml', _powerPointAppProperties))
-      ..add(
-        ArchiveFile.string(
-          'ppt/presentation.xml',
-          _powerPointPresentation(pages.length),
-        ),
-      )
-      ..add(
-        ArchiveFile.string(
-          'ppt/_rels/presentation.xml.rels',
-          _powerPointPresentationRelationships(pages.length),
-        ),
-      )
-      ..add(
-        ArchiveFile.string('ppt/slideMasters/slideMaster1.xml', _slideMaster),
-      )
-      ..add(
-        ArchiveFile.string(
-          'ppt/slideMasters/_rels/slideMaster1.xml.rels',
-          _slideMasterRelationships,
-        ),
-      )
-      ..add(
-        ArchiveFile.string('ppt/slideLayouts/slideLayout1.xml', _slideLayout),
-      )
-      ..add(
-        ArchiveFile.string(
-          'ppt/slideLayouts/_rels/slideLayout1.xml.rels',
-          _slideLayoutRelationships,
-        ),
-      )
-      ..add(ArchiveFile.string('ppt/theme/theme1.xml', _theme));
+    final List<ArchiveFile> parts = <ArchiveFile>[
+      ArchiveFile.string(
+        '[Content_Types].xml',
+        _powerPointContentTypes(pages.length),
+      ),
+      ArchiveFile.string('_rels/.rels', _powerPointRootRelationships),
+      ArchiveFile.string('docProps/core.xml', _coreProperties),
+      ArchiveFile.string('docProps/app.xml', _powerPointAppProperties),
+      ArchiveFile.string(
+        'ppt/presentation.xml',
+        _powerPointPresentation(pages.length),
+      ),
+      ArchiveFile.string(
+        'ppt/_rels/presentation.xml.rels',
+        _powerPointPresentationRelationships(pages.length),
+      ),
+      ArchiveFile.string('ppt/slideMasters/slideMaster1.xml', _slideMaster),
+      ArchiveFile.string(
+        'ppt/slideMasters/_rels/slideMaster1.xml.rels',
+        _slideMasterRelationships,
+      ),
+      ArchiveFile.string('ppt/slideLayouts/slideLayout1.xml', _slideLayout),
+      ArchiveFile.string(
+        'ppt/slideLayouts/_rels/slideLayout1.xml.rels',
+        _slideLayoutRelationships,
+      ),
+      ArchiveFile.string('ppt/theme/theme1.xml', _theme),
+    ];
     for (final VisualPdfPage page in pages) {
-      archive
+      parts
         ..add(
           ArchiveFile.string(
             'ppt/slides/slide${page.pageNumber}.xml',
@@ -139,23 +122,52 @@ final class ArchiveOoxmlVisualExport implements OoxmlVisualExport {
             'ppt/slides/_rels/slide${page.pageNumber}.xml.rels',
             _slideRelationships(page),
           ),
-        )
-        ..add(
-          ArchiveFile.bytes(
-            'ppt/media/page-${page.pageNumber}.png',
-            page.pngBytes,
-          ),
         );
     }
-    await _writeArchive(outputPath, archive);
+    await _writePackage(
+      outputPath: outputPath,
+      parts: parts,
+      pages: pages,
+      imageDirectory: 'ppt/media',
+    );
   }
 
-  Future<void> _writeArchive(String outputPath, Archive archive) async {
-    final List<int> bytes = ZipEncoder().encodeBytes(
-      archive,
-      modified: DateTime.utc(2026),
-    );
-    await File(outputPath).writeAsBytes(bytes, flush: true);
+  Future<void> _writePackage({
+    required String outputPath,
+    required List<ArchiveFile> parts,
+    required List<VisualPdfPage> pages,
+    required String imageDirectory,
+  }) async {
+    final ZipFileEncoder encoder = ZipFileEncoder();
+    bool open = false;
+    try {
+      encoder.create(outputPath, modified: DateTime.utc(2026));
+      open = true;
+      for (final ArchiveFile part in parts) {
+        encoder.addArchiveFile(part);
+      }
+      for (final VisualPdfPage page in pages) {
+        await encoder.addFile(
+          File(page.imagePath),
+          '$imageDirectory/page-${page.pageNumber}.png',
+        );
+      }
+      await encoder.close();
+      open = false;
+    } catch (_) {
+      if (open) {
+        try {
+          await encoder.close();
+        } catch (_) {
+          // The partial package is removed below.
+        }
+      }
+      final File partial = File(outputPath);
+      if (await partial.exists()) {
+        await partial.delete();
+      }
+      rethrow;
+    }
   }
 
   void _requirePages(List<VisualPdfPage> pages) {
@@ -354,12 +366,23 @@ final class ArchiveOoxmlVisualExport implements OoxmlVisualExport {
 String _xml(String body) =>
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>$body';
 
-String _escapeXml(String value) => value
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&apos;');
+String _escapeXml(String value) =>
+    String.fromCharCodes(
+          value.runes.where(
+            (int rune) =>
+                rune == 0x9 ||
+                rune == 0xA ||
+                rune == 0xD ||
+                (rune >= 0x20 && rune <= 0xD7FF) ||
+                (rune >= 0xE000 && rune <= 0xFFFD) ||
+                (rune >= 0x10000 && rune <= 0x10FFFF),
+          ),
+        )
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&apos;');
 
 const String _wordContentTypes =
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -468,9 +491,24 @@ const String _theme =
     '<a:majorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:majorFont>'
     '<a:minorFont><a:latin typeface="Arial"/><a:ea typeface=""/><a:cs typeface=""/></a:minorFont>'
     '</a:fontScheme><a:fmtScheme name="Clarix">'
-    '<a:fillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:fillStyleLst>'
-    '<a:lnStyleLst><a:ln w="9525"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'
-    '<a:prstDash val="solid"/></a:ln></a:lnStyleLst>'
-    '<a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst>'
-    '<a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst>'
+    '<a:fillStyleLst>'
+    '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'
+    '<a:solidFill><a:schemeClr val="phClr"><a:tint val="50000"/></a:schemeClr></a:solidFill>'
+    '<a:solidFill><a:schemeClr val="phClr"><a:shade val="50000"/></a:schemeClr></a:solidFill>'
+    '</a:fillStyleLst>'
+    '<a:lnStyleLst>'
+    '<a:ln w="6350" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/><a:miter lim="800000"/></a:ln>'
+    '<a:ln w="12700" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/><a:miter lim="800000"/></a:ln>'
+    '<a:ln w="19050" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:prstDash val="solid"/><a:miter lim="800000"/></a:ln>'
+    '</a:lnStyleLst>'
+    '<a:effectStyleLst>'
+    '<a:effectStyle><a:effectLst/></a:effectStyle>'
+    '<a:effectStyle><a:effectLst/></a:effectStyle>'
+    '<a:effectStyle><a:effectLst/></a:effectStyle>'
+    '</a:effectStyleLst>'
+    '<a:bgFillStyleLst>'
+    '<a:solidFill><a:schemeClr val="phClr"/></a:solidFill>'
+    '<a:solidFill><a:schemeClr val="phClr"><a:tint val="95000"/></a:schemeClr></a:solidFill>'
+    '<a:solidFill><a:schemeClr val="phClr"><a:shade val="95000"/></a:schemeClr></a:solidFill>'
+    '</a:bgFillStyleLst>'
     '</a:fmtScheme></a:themeElements></a:theme>';

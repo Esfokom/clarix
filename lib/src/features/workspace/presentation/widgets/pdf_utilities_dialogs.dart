@@ -26,6 +26,12 @@ typedef ConversionCompleted =
     FutureOr<void> Function(List<UtilityResult> results);
 typedef PickExportDestination =
     Future<String?> Function(UtilityFormat format, String sourcePath);
+typedef RunPdfExport =
+    Future<UtilityResult> Function({
+      required String sourcePath,
+      required UtilityFormat format,
+      required String outputPath,
+    });
 
 Future<void> showCombinePdfDialog(BuildContext context) => showShadDialog<void>(
   context: context,
@@ -65,6 +71,7 @@ class ExportPdfDialog extends ConsumerStatefulWidget {
     this.service,
     this.pickSource,
     this.pickDestination,
+    this.runExport,
     this.onCompleted,
     super.key,
   });
@@ -72,6 +79,7 @@ class ExportPdfDialog extends ConsumerStatefulWidget {
   final PdfExportService? service;
   final PickPdfSource? pickSource;
   final PickExportDestination? pickDestination;
+  final RunPdfExport? runExport;
   final UtilityCompleted? onCompleted;
 
   @override
@@ -264,11 +272,18 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
       _error = null;
     });
     try {
-      final UtilityResult result = await _service.export(
-        sourcePath: source,
-        format: _format,
-        outputPath: destination,
-      );
+      final RunPdfExport? runExport = widget.runExport;
+      final UtilityResult result = runExport != null
+          ? await runExport(
+              sourcePath: source,
+              format: _format,
+              outputPath: destination,
+            )
+          : await _service.export(
+              sourcePath: source,
+              format: _format,
+              outputPath: destination,
+            );
       final UtilityCompleted? callback = widget.onCompleted;
       if (callback != null) {
         await callback(result);
@@ -310,7 +325,7 @@ class _ExportFormatOption extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         onTap: onTap,
         child: Ink(
-          height: 76,
+          height: 84,
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
             color: selected

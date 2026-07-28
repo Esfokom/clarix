@@ -4,6 +4,7 @@ import 'package:clarix/src/features/utilities/domain/utility_job.dart';
 import 'package:clarix/src/features/utilities/infrastructure/ooxml_visual_export.dart';
 import 'package:clarix/src/features/utilities/infrastructure/pdf_export_service.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:path/path.dart' as path;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -65,7 +66,7 @@ First page
             heightPoints: 792,
             pixelWidth: 1275,
             pixelHeight: 1650,
-            pngBytes: <int>[1],
+            imagePath: '',
           ),
           RenderedPdfPage(
             pageNumber: 2,
@@ -73,7 +74,7 @@ First page
             heightPoints: 612,
             pixelWidth: 1650,
             pixelHeight: 1275,
-            pngBytes: <int>[2],
+            imagePath: '',
           ),
         ]),
         visualExport: visual,
@@ -92,6 +93,13 @@ First page
         '[No extractable text on this page.]',
       );
       expect(visual.wordPages[1].pixelWidth, 1650);
+      expect(
+        visual.wordPages.every(
+          (VisualPdfPage page) => !File(page.imagePath).existsSync(),
+        ),
+        isTrue,
+        reason: 'The page-image spool must be removed after export.',
+      );
       expect(result.pageCount, 2);
     },
   );
@@ -107,16 +115,54 @@ First page
     );
     await source.writeAsBytes(await document.save());
 
+    final Directory spool = await root.createTemp('render-spool-');
     final List<RenderedPdfPage> pages = await const PdfrxPdfPageRenderer()
-        .render(source.path);
+        .render(source.path, spoolDirectory: spool);
 
     expect(pages, hasLength(1));
     expect(pages.single.pixelWidth, 150);
     expect(pages.single.pixelHeight, 300);
     expect(pages.single.widthPoints, closeTo(72, 0.1));
     expect(pages.single.heightPoints, closeTo(144, 0.1));
-    expect(pages.single.pngBytes.take(4), <int>[137, 80, 78, 71]);
+    expect((await File(pages.single.imagePath).readAsBytes()).take(4), <int>[
+      137,
+      80,
+      78,
+      71,
+    ]);
   });
+
+  test(
+    'replacement rolls the original destination back when install fails',
+    () async {
+      final _MemoryOutputFileSystem files = _MemoryOutputFileSystem(
+        <String, List<int>>{
+          'report.docx': <int>[1, 2, 3],
+          'report.tmp': <int>[9, 8, 7],
+        },
+      )..failedInstallSource = 'report.tmp';
+      final BackupOutputFileReplacer replacer = BackupOutputFileReplacer(
+        fileSystem: files,
+      );
+
+      await expectLater(
+        replacer.replace(
+          temporary: File('report.tmp'),
+          output: File('report.docx'),
+        ),
+        throwsA(isA<FileSystemException>()),
+      );
+
+      expect(files.contents['report.docx'], <int>[1, 2, 3]);
+      expect(
+        files.contents.entries.where(
+          (MapEntry<String, List<int>> entry) =>
+              entry.key.contains('clarix-backup'),
+        ),
+        isEmpty,
+      );
+    },
+  );
 }
 
 String _path(Directory directory, String name) =>
@@ -137,7 +183,29 @@ final class _FakePageRenderer implements PdfPageRenderer {
   final List<RenderedPdfPage> pages;
 
   @override
-  Future<List<RenderedPdfPage>> render(String sourcePath) async => pages;
+  Future<List<RenderedPdfPage>> render(
+    String sourcePath, {
+    required Directory spoolDirectory,
+  }) async {
+    final List<RenderedPdfPage> rendered = <RenderedPdfPage>[];
+    for (final RenderedPdfPage page in pages) {
+      final File image = File(
+        path.join(spoolDirectory.path, 'page-${page.pageNumber}.png'),
+      );
+      await image.writeAsBytes(<int>[page.pageNumber]);
+      rendered.add(
+        RenderedPdfPage(
+          pageNumber: page.pageNumber,
+          widthPoints: page.widthPoints,
+          heightPoints: page.heightPoints,
+          pixelWidth: page.pixelWidth,
+          pixelHeight: page.pixelHeight,
+          imagePath: image.path,
+        ),
+      );
+    }
+    return rendered;
+  }
 }
 
 final class _RecordingVisualExport implements OoxmlVisualExport {
@@ -160,5 +228,33 @@ final class _RecordingVisualExport implements OoxmlVisualExport {
   }) async {
     wordPages = pages;
     await File(outputPath).writeAsBytes(const <int>[1]);
+  }
+}
+
+final class _MemoryOutputFileSystem implements OutputFileSystem {
+  _MemoryOutputFileSystem(Map<String, List<int>> initial)
+    : contents = Map<String, List<int>>.from(initial);
+
+  final Map<String, List<int>> contents;
+  String? failedInstallSource;
+
+  @override
+  Future<void> delete(String filePath) async {
+    contents.remove(filePath);
+  }
+
+  @override
+  Future<bool> exists(String filePath) async => contents.containsKey(filePath);
+
+  @override
+  Future<void> rename(String sourcePath, String destinationPath) async {
+    if (sourcePath == failedInstallSource && destinationPath == 'report.docx') {
+      throw FileSystemException('simulated install failure', destinationPath);
+    }
+    final List<int>? bytes = contents.remove(sourcePath);
+    if (bytes == null) {
+      throw FileSystemException('missing source', sourcePath);
+    }
+    contents[destinationPath] = bytes;
   }
 }

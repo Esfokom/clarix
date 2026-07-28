@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:image/image.dart' as image;
 import 'package:path/path.dart' as path;
@@ -34,7 +33,7 @@ final class RenderedPdfPage {
     required this.heightPoints,
     required this.pixelWidth,
     required this.pixelHeight,
-    required this.pngBytes,
+    required this.imagePath,
   });
 
   final int pageNumber;
@@ -42,11 +41,14 @@ final class RenderedPdfPage {
   final double heightPoints;
   final int pixelWidth;
   final int pixelHeight;
-  final List<int> pngBytes;
+  final String imagePath;
 }
 
 abstract interface class PdfPageRenderer {
-  Future<List<RenderedPdfPage>> render(String sourcePath);
+  Future<List<RenderedPdfPage>> render(
+    String sourcePath, {
+    required Directory spoolDirectory,
+  });
 }
 
 /// Uses PDFium through pdfrx and rasterizes each page at exactly 150 DPI.
@@ -56,7 +58,10 @@ final class PdfrxPdfPageRenderer implements PdfPageRenderer {
   static const double dpi = 150;
 
   @override
-  Future<List<RenderedPdfPage>> render(String sourcePath) async {
+  Future<List<RenderedPdfPage>> render(
+    String sourcePath, {
+    required Directory spoolDirectory,
+  }) async {
     await pdfrx.pdfrxInitialize();
     final pdfrx.PdfDocument document = await pdfrx.PdfDocument.openFile(
       sourcePath,
@@ -79,6 +84,10 @@ final class PdfrxPdfPageRenderer implements PdfPageRenderer {
         }
         try {
           final image.Image raster = rendered.createImageNF();
+          final File imageFile = File(
+            path.join(spoolDirectory.path, 'page-${page.pageNumber}.png'),
+          );
+          await imageFile.writeAsBytes(image.encodePng(raster), flush: true);
           output.add(
             RenderedPdfPage(
               pageNumber: page.pageNumber,
@@ -86,7 +95,7 @@ final class PdfrxPdfPageRenderer implements PdfPageRenderer {
               heightPoints: page.height,
               pixelWidth: rendered.width,
               pixelHeight: rendered.height,
-              pngBytes: Uint8List.fromList(image.encodePng(raster)),
+              imagePath: imageFile.path,
             ),
           );
         } finally {
@@ -100,19 +109,96 @@ final class PdfrxPdfPageRenderer implements PdfPageRenderer {
   }
 }
 
+abstract interface class OutputFileSystem {
+  Future<bool> exists(String filePath);
+
+  Future<void> rename(String sourcePath, String destinationPath);
+
+  Future<void> delete(String filePath);
+}
+
+final class LocalOutputFileSystem implements OutputFileSystem {
+  const LocalOutputFileSystem();
+
+  @override
+  Future<void> delete(String filePath) => File(filePath).delete();
+
+  @override
+  Future<bool> exists(String filePath) => File(filePath).exists();
+
+  @override
+  Future<void> rename(String sourcePath, String destinationPath) async {
+    await File(sourcePath).rename(destinationPath);
+  }
+}
+
+abstract interface class OutputFileReplacer {
+  Future<void> replace({required File temporary, required File output});
+}
+
+/// Installs a completed export and restores an existing destination on failure.
+final class BackupOutputFileReplacer implements OutputFileReplacer {
+  BackupOutputFileReplacer({OutputFileSystem? fileSystem})
+    : _fileSystem = fileSystem ?? const LocalOutputFileSystem();
+
+  final OutputFileSystem _fileSystem;
+
+  @override
+  Future<void> replace({required File temporary, required File output}) async {
+    if (!await _fileSystem.exists(temporary.path)) {
+      throw const UtilityFailure('The export did not produce an output file.');
+    }
+    String? backupPath;
+    if (await _fileSystem.exists(output.path)) {
+      backupPath = _backupPath(output.path);
+      await _fileSystem.rename(output.path, backupPath);
+    }
+    try {
+      await _fileSystem.rename(temporary.path, output.path);
+    } catch (error, stackTrace) {
+      if (backupPath != null) {
+        if (await _fileSystem.exists(output.path)) {
+          await _fileSystem.delete(output.path);
+        }
+        await _fileSystem.rename(backupPath, output.path);
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+    if (backupPath != null) {
+      try {
+        await _fileSystem.delete(backupPath);
+      } on FileSystemException {
+        // The new output is installed. A stale backup is safer than removing it.
+      }
+    }
+  }
+
+  String _backupPath(String outputPath) {
+    final String parent = path.dirname(outputPath);
+    final String name = path.basename(outputPath);
+    return path.join(
+      parent,
+      '.$name.clarix-backup-${DateTime.now().microsecondsSinceEpoch}',
+    );
+  }
+}
+
 /// Exports a local PDF to Markdown or an image-first Word/PowerPoint package.
 final class PdfExportService {
   PdfExportService({
     PdfDocumentTextExtractor? extraction,
     PdfPageRenderer? renderer,
     OoxmlVisualExport? visualExport,
+    OutputFileReplacer? outputReplacer,
   }) : _extraction = extraction ?? HybridPdfDocumentTextExtractor(),
        _renderer = renderer ?? const PdfrxPdfPageRenderer(),
-       _visualExport = visualExport ?? const ArchiveOoxmlVisualExport();
+       _visualExport = visualExport ?? const ArchiveOoxmlVisualExport(),
+       _outputReplacer = outputReplacer ?? BackupOutputFileReplacer();
 
   final PdfDocumentTextExtractor _extraction;
   final PdfPageRenderer _renderer;
   final OoxmlVisualExport _visualExport;
+  final OutputFileReplacer _outputReplacer;
 
   Future<UtilityResult> export({
     required String sourcePath,
@@ -144,14 +230,19 @@ final class PdfExportService {
     }
 
     final File temporary = File(_temporaryPath(outputPath));
+    Directory? spoolDirectory;
     try {
       final int pageCount;
       if (format == UtilityFormat.markdown) {
         pageCount = extracted.length;
         await temporary.writeAsString(_markdown(extracted), flush: true);
       } else {
+        spoolDirectory = await Directory.systemTemp.createTemp(
+          'clarix-pdf-export-pages-',
+        );
         final List<RenderedPdfPage> rendered = await _renderer.render(
           sourcePath,
+          spoolDirectory: spoolDirectory,
         );
         if (rendered.isEmpty) {
           throw const UtilityFailure('The selected PDF has no pages.');
@@ -164,7 +255,7 @@ final class PdfExportService {
               heightPoints: rendered[index].heightPoints,
               pixelWidth: rendered[index].pixelWidth,
               pixelHeight: rendered[index].pixelHeight,
-              pngBytes: rendered[index].pngBytes,
+              imagePath: rendered[index].imagePath,
               extractedText: _pageText(
                 index < extracted.length ? extracted[index] : '',
               ),
@@ -183,7 +274,10 @@ final class PdfExportService {
           );
         }
       }
-      await _replaceOutput(temporary, File(outputPath));
+      await _outputReplacer.replace(
+        temporary: temporary,
+        output: File(outputPath),
+      );
       return UtilityResult(outputPath: outputPath, pageCount: pageCount);
     } catch (error) {
       if (await temporary.exists()) {
@@ -193,6 +287,10 @@ final class PdfExportService {
         rethrow;
       }
       throw UtilityFailure('Could not write the exported document: $error');
+    } finally {
+      if (spoolDirectory != null && await spoolDirectory.exists()) {
+        await spoolDirectory.delete(recursive: true);
+      }
     }
   }
 
@@ -225,15 +323,5 @@ final class PdfExportService {
       parent,
       '.$name.clarix-${DateTime.now().microsecondsSinceEpoch}.tmp',
     );
-  }
-
-  Future<void> _replaceOutput(File temporary, File output) async {
-    if (!await temporary.exists()) {
-      throw const UtilityFailure('The export did not produce an output file.');
-    }
-    if (await output.exists()) {
-      await output.delete();
-    }
-    await temporary.rename(output.path);
   }
 }
