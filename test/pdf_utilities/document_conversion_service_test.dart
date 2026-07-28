@@ -5,6 +5,8 @@ import 'package:clarix/src/features/utilities/domain/utility_job.dart';
 import 'package:clarix/src/features/utilities/infrastructure/document_conversion_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
+import 'package:pdf/pdf.dart' show PdfPageFormat;
+import 'package:pdf/widgets.dart' as pdf_widgets;
 
 void main() {
   late Directory root;
@@ -115,6 +117,19 @@ void main() {
       ),
     );
     expect(direct.calls, isEmpty);
+  });
+
+  test('reports the generated Office PDF page count', () async {
+    final DocumentConversionService service = DocumentConversionService(
+      direct: _RecordingDirectPdfConverter(),
+      office: _RecordingOfficePdfConverter(generatedPageCount: 3),
+    );
+
+    final List<UtilityResult> results = await service.convert(<String>[
+      'C:/sources/report.docx',
+    ], root.path);
+
+    expect(results.single.pageCount, 3);
   });
 
   test('direct text conversion paginates UTF-8 input on A4 pages', () async {
@@ -242,11 +257,24 @@ final class _RecordingDirectPdfConverter implements DirectPdfConverter {
 }
 
 final class _RecordingOfficePdfConverter implements OfficePdfConverter {
+  _RecordingOfficePdfConverter({this.generatedPageCount = 1});
+
   final List<_ConversionCall> calls = <_ConversionCall>[];
+  final int generatedPageCount;
 
   @override
   Future<void> convert(String inputPath, String outputPath) async {
     calls.add(_ConversionCall(<String>[inputPath], outputPath));
+    final pdf_widgets.Document document = pdf_widgets.Document();
+    for (int page = 1; page <= generatedPageCount; page++) {
+      document.addPage(
+        pdf_widgets.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (_) => pdf_widgets.SizedBox(),
+        ),
+      );
+    }
+    await File(outputPath).writeAsBytes(await document.save());
   }
 }
 

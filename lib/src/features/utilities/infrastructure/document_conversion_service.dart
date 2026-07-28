@@ -4,6 +4,7 @@ import 'dart:typed_data';
 
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:path/path.dart' as path;
+import 'package:pdfrx/pdfrx.dart' as pdfrx show PdfDocument;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pdf_widgets;
 
@@ -130,7 +131,14 @@ final class DocumentConversionService {
 
   Future<int> _convertOffice(_ConversionRoute route) async {
     await _office.convert(route.sourcePath, route.outputPath);
-    return 0;
+    final pdfrx.PdfDocument document = await pdfrx.PdfDocument.openFile(
+      route.outputPath,
+    );
+    try {
+      return document.pages.length;
+    } finally {
+      await document.dispose();
+    }
   }
 
   static Future<void> _removeCreatedOutputs(List<UtilityResult> results) async {
