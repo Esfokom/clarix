@@ -11,6 +11,29 @@ use crate::{
     PdfDocumentMetadata, PdfDocumentSession, PdfIndexingProgress, PdfSearchMatch, PdfTextChunk,
 };
 
+#[derive(Debug, Clone)]
+pub struct NativePdfSource {
+    pub path: String,
+    pub pages: Vec<usize>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePdfComposeRequest {
+    pub sources: Vec<NativePdfSource>,
+    pub output_path: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePdfComposeResponse {
+    pub output_path: String,
+    pub page_count: usize,
+    pub message: Option<String>,
+}
+
+pub fn compose_pdfs(request: NativePdfComposeRequest) -> NativePdfComposeResponse {
+    crate::pdf_compose::compose_pdfs(request)
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PdfIndexEvent {
     Progress(PdfIndexingProgress),

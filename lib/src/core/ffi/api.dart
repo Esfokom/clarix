@@ -9,7 +9,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `rag_backend`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PdfIndexEvent`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+Future<NativePdfComposeResponse> composePdfs({
+  required NativePdfComposeRequest request,
+}) => RustLib.instance.api.crateApiComposePdfs(request: request);
 
 Future<NativeRagIndexResponse> localRagIndex({
   required NativeRagIndexRequest request,
@@ -42,6 +46,70 @@ abstract class NativePdfSession implements RustOpaqueInterface {
   Future<String> pageText({required BigInt pageNumber});
 
   Future<List<PdfSearchMatch>> search({required String query});
+}
+
+class NativePdfComposeRequest {
+  final List<NativePdfSource> sources;
+  final String outputPath;
+
+  const NativePdfComposeRequest({
+    required this.sources,
+    required this.outputPath,
+  });
+
+  @override
+  int get hashCode => sources.hashCode ^ outputPath.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfComposeRequest &&
+          runtimeType == other.runtimeType &&
+          sources == other.sources &&
+          outputPath == other.outputPath;
+}
+
+class NativePdfComposeResponse {
+  final String outputPath;
+  final BigInt pageCount;
+  final String? message;
+
+  const NativePdfComposeResponse({
+    required this.outputPath,
+    required this.pageCount,
+    this.message,
+  });
+
+  @override
+  int get hashCode =>
+      outputPath.hashCode ^ pageCount.hashCode ^ message.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfComposeResponse &&
+          runtimeType == other.runtimeType &&
+          outputPath == other.outputPath &&
+          pageCount == other.pageCount &&
+          message == other.message;
+}
+
+class NativePdfSource {
+  final String path;
+  final Uint64List pages;
+
+  const NativePdfSource({required this.path, required this.pages});
+
+  @override
+  int get hashCode => path.hashCode ^ pages.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfSource &&
+          runtimeType == other.runtimeType &&
+          path == other.path &&
+          pages == other.pages;
 }
 
 /// A persisted Dart chunk represented at the native RAG boundary. The

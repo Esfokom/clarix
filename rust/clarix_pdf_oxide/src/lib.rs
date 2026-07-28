@@ -4,6 +4,7 @@ flutter_rust_bridge::frb_generated_sse_codec!();
 pub mod api;
 #[cfg(feature = "ocr")]
 pub mod ocr;
+pub mod pdf_compose;
 #[cfg(feature = "rag")]
 pub mod rag;
 

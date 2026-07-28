@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1422730037;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 730399807;
 
 // Section: executor
 
@@ -295,6 +295,39 @@ fn wire__crate__api__NativePdfSession_search_impl(
         },
     )
 }
+fn wire__crate__api__compose_pdfs_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "compose_pdfs",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_request = <crate::api::NativePdfComposeRequest>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Result::<_, ()>::Ok(crate::api::compose_pdfs(api_request))?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__local_rag_index_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -477,6 +510,18 @@ impl SseDecode for Vec<String> {
     }
 }
 
+impl SseDecode for Vec<crate::api::NativePdfSource> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::NativePdfSource>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::NativeRagChunk> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -522,6 +567,56 @@ impl SseDecode for Vec<u8> {
             ans_.push(<u8>::sse_decode(deserializer));
         }
         return ans_;
+    }
+}
+
+impl SseDecode for Vec<usize> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<usize>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for crate::api::NativePdfComposeRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_sources = <Vec<crate::api::NativePdfSource>>::sse_decode(deserializer);
+        let mut var_outputPath = <String>::sse_decode(deserializer);
+        return crate::api::NativePdfComposeRequest {
+            sources: var_sources,
+            output_path: var_outputPath,
+        };
+    }
+}
+
+impl SseDecode for crate::api::NativePdfComposeResponse {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_outputPath = <String>::sse_decode(deserializer);
+        let mut var_pageCount = <usize>::sse_decode(deserializer);
+        let mut var_message = <Option<String>>::sse_decode(deserializer);
+        return crate::api::NativePdfComposeResponse {
+            output_path: var_outputPath,
+            page_count: var_pageCount,
+            message: var_message,
+        };
+    }
+}
+
+impl SseDecode for crate::api::NativePdfSource {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_path = <String>::sse_decode(deserializer);
+        let mut var_pages = <Vec<usize>>::sse_decode(deserializer);
+        return crate::api::NativePdfSource {
+            path: var_path,
+            pages: var_pages,
+        };
     }
 }
 
@@ -703,9 +798,10 @@ fn pde_ffi_dispatcher_primary_impl(
         3 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
         4 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
         5 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
-        6 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -739,6 +835,67 @@ impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<NativePdfSession>> for NativeP
     }
 }
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::NativePdfComposeRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.sources.into_into_dart().into_dart(),
+            self.output_path.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::NativePdfComposeRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfComposeRequest>
+    for crate::api::NativePdfComposeRequest
+{
+    fn into_into_dart(self) -> crate::api::NativePdfComposeRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::NativePdfComposeResponse {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.output_path.into_into_dart().into_dart(),
+            self.page_count.into_into_dart().into_dart(),
+            self.message.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::NativePdfComposeResponse
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfComposeResponse>
+    for crate::api::NativePdfComposeResponse
+{
+    fn into_into_dart(self) -> crate::api::NativePdfComposeResponse {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::NativePdfSource {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.path.into_into_dart().into_dart(),
+            self.pages.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::NativePdfSource {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfSource>
+    for crate::api::NativePdfSource
+{
+    fn into_into_dart(self) -> crate::api::NativePdfSource {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::NativeRagChunk {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -966,6 +1123,16 @@ impl SseEncode for Vec<String> {
     }
 }
 
+impl SseEncode for Vec<crate::api::NativePdfSource> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::NativePdfSource>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::NativeRagChunk> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1003,6 +1170,41 @@ impl SseEncode for Vec<u8> {
         for item in self {
             <u8>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for Vec<usize> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <usize>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for crate::api::NativePdfComposeRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::NativePdfSource>>::sse_encode(self.sources, serializer);
+        <String>::sse_encode(self.output_path, serializer);
+    }
+}
+
+impl SseEncode for crate::api::NativePdfComposeResponse {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.output_path, serializer);
+        <usize>::sse_encode(self.page_count, serializer);
+        <Option<String>>::sse_encode(self.message, serializer);
+    }
+}
+
+impl SseEncode for crate::api::NativePdfSource {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.path, serializer);
+        <Vec<usize>>::sse_encode(self.pages, serializer);
     }
 }
 
