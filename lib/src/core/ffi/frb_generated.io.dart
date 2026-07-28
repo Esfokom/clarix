@@ -60,6 +60,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
+  NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(
+    dynamic raw,
+  );
+
+  @protected
   NativeRagIndexRequest dco_decode_box_autoadd_native_rag_index_request(
     dynamic raw,
   );
@@ -76,6 +81,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw);
+
+  @protected
   List<NativeRagChunk> dco_decode_list_native_rag_chunk(dynamic raw);
 
   @protected
@@ -88,6 +96,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  Uint64List dco_decode_list_prim_usize_strict(dynamic raw);
+
+  @protected
+  NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw);
+
+  @protected
+  NativePdfComposeResponse dco_decode_native_pdf_compose_response(dynamic raw);
+
+  @protected
+  NativePdfSource dco_decode_native_pdf_source(dynamic raw);
 
   @protected
   NativeRagChunk dco_decode_native_rag_chunk(dynamic raw);
@@ -169,6 +189,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
+  NativePdfComposeRequest sse_decode_box_autoadd_native_pdf_compose_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(
     SseDeserializer deserializer,
   );
@@ -183,6 +208,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<NativePdfSource> sse_decode_list_native_pdf_source(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<NativeRagChunk> sse_decode_list_native_rag_chunk(
@@ -201,6 +231,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer);
+
+  @protected
+  NativePdfComposeRequest sse_decode_native_pdf_compose_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePdfComposeResponse sse_decode_native_pdf_compose_response(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer);
 
   @protected
   NativeRagChunk sse_decode_native_rag_chunk(SseDeserializer deserializer);
@@ -305,6 +351,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_native_pdf_compose_request(
+    NativePdfComposeRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_rag_index_request(
     NativeRagIndexRequest self,
     SseSerializer serializer,
@@ -321,6 +373,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_native_pdf_source(
+    List<NativePdfSource> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_native_rag_chunk(
@@ -343,6 +401,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_prim_usize_strict(
+    Uint64List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_pdf_compose_request(
+    NativePdfComposeRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_pdf_compose_response(
+    NativePdfComposeResponse self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_pdf_source(
+    NativePdfSource self,
     SseSerializer serializer,
   );
 

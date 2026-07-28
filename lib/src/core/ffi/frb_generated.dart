@@ -65,7 +65,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1422730037;
+  int get rustContentHash => 730399807;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -97,6 +97,10 @@ abstract class RustLibApi extends BaseApi {
   Future<List<PdfSearchMatch>> crateApiNativePdfSessionSearch({
     required NativePdfSession that,
     required String query,
+  });
+
+  Future<NativePdfComposeResponse> crateApiComposePdfs({
+    required NativePdfComposeRequest request,
   });
 
   Future<NativeRagIndexResponse> crateApiLocalRagIndex({
@@ -322,6 +326,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<NativePdfComposeResponse> crateApiComposePdfs({
+    required NativePdfComposeRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_pdf_compose_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_pdf_compose_response,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiComposePdfsConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiComposePdfsConstMeta =>
+      const TaskConstMeta(debugName: "compose_pdfs", argNames: ["request"]);
+
+  @override
   Future<NativeRagIndexResponse> crateApiLocalRagIndex({
     required NativeRagIndexRequest request,
   }) {
@@ -333,7 +370,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 7,
             port: port_,
           );
         },
@@ -363,7 +400,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -395,7 +432,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 9,
             port: port_,
           );
         },
@@ -484,6 +521,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_pdf_compose_request(raw);
+  }
+
+  @protected
   NativeRagIndexRequest dco_decode_box_autoadd_native_rag_index_request(
     dynamic raw,
   ) {
@@ -512,6 +557,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_pdf_source).toList();
+  }
+
+  @protected
   List<NativeRagChunk> dco_decode_list_native_rag_chunk(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_native_rag_chunk).toList();
@@ -537,6 +588,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
+  }
+
+  @protected
+  Uint64List dco_decode_list_prim_usize_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint64List;
+  }
+
+  @protected
+  NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePdfComposeRequest(
+      sources: dco_decode_list_native_pdf_source(arr[0]),
+      outputPath: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativePdfComposeResponse dco_decode_native_pdf_compose_response(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativePdfComposeResponse(
+      outputPath: dco_decode_String(arr[0]),
+      pageCount: dco_decode_usize(arr[1]),
+      message: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativePdfSource dco_decode_native_pdf_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePdfSource(
+      path: dco_decode_String(arr[0]),
+      pages: dco_decode_list_prim_usize_strict(arr[1]),
+    );
   }
 
   @protected
@@ -763,6 +857,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePdfComposeRequest sse_decode_box_autoadd_native_pdf_compose_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_pdf_compose_request(deserializer));
+  }
+
+  @protected
   NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(
     SseDeserializer deserializer,
   ) {
@@ -792,6 +894,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePdfSource> sse_decode_list_native_pdf_source(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePdfSource>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_pdf_source(deserializer));
     }
     return ans_;
   }
@@ -843,6 +959,49 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint64List(len_);
+  }
+
+  @protected
+  NativePdfComposeRequest sse_decode_native_pdf_compose_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sources = sse_decode_list_native_pdf_source(deserializer);
+    var var_outputPath = sse_decode_String(deserializer);
+    return NativePdfComposeRequest(
+      sources: var_sources,
+      outputPath: var_outputPath,
+    );
+  }
+
+  @protected
+  NativePdfComposeResponse sse_decode_native_pdf_compose_response(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_outputPath = sse_decode_String(deserializer);
+    var var_pageCount = sse_decode_usize(deserializer);
+    var var_message = sse_decode_opt_String(deserializer);
+    return NativePdfComposeResponse(
+      outputPath: var_outputPath,
+      pageCount: var_pageCount,
+      message: var_message,
+    );
+  }
+
+  @protected
+  NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_pages = sse_decode_list_prim_usize_strict(deserializer);
+    return NativePdfSource(path: var_path, pages: var_pages);
   }
 
   @protected
@@ -1093,6 +1252,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_native_pdf_compose_request(
+    NativePdfComposeRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_pdf_compose_request(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_native_rag_index_request(
     NativeRagIndexRequest self,
     SseSerializer serializer,
@@ -1122,6 +1290,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_pdf_source(
+    List<NativePdfSource> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_pdf_source(item, serializer);
     }
   }
 
@@ -1169,6 +1349,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_prim_usize_strict(
+    Uint64List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint64List(self);
+  }
+
+  @protected
+  void sse_encode_native_pdf_compose_request(
+    NativePdfComposeRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_native_pdf_source(self.sources, serializer);
+    sse_encode_String(self.outputPath, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_compose_response(
+    NativePdfComposeResponse self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.outputPath, serializer);
+    sse_encode_usize(self.pageCount, serializer);
+    sse_encode_opt_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_source(
+    NativePdfSource self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_list_prim_usize_strict(self.pages, serializer);
   }
 
   @protected

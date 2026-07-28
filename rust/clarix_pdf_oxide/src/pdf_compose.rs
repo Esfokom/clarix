@@ -82,9 +82,22 @@ fn compose(request: &NativePdfComposeRequest) -> Result<usize, String> {
             source.pages.clone()
         };
 
+        let mut seen_pages = BTreeSet::new();
         for page_number in requested_pages {
+            let pdf_page_number = u32::try_from(page_number).map_err(|_| {
+                format!(
+                    "Page {page_number} in source PDF '{}' cannot be represented as a PDF page number.",
+                    source.path
+                )
+            })?;
+            if !seen_pages.insert(page_number) {
+                return Err(format!(
+                    "Page {page_number} in source PDF '{}' is selected more than once. Remove the duplicate page.",
+                    source.path
+                ));
+            }
             let page_id = available_pages
-                .get(&(page_number as u32))
+                .get(&pdf_page_number)
                 .copied()
                 .ok_or_else(|| {
                     format!(
@@ -221,7 +234,7 @@ mod tests {
     use std::path::{Path, PathBuf};
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    use lopdf::{dictionary, Document, Object};
+    use lopdf::{dictionary, Document, Object, Stream};
 
     use super::compose_pdfs;
     use crate::api::{NativePdfComposeRequest, NativePdfSource};
@@ -337,30 +350,172 @@ mod tests {
         assert!(!PathBuf::from(format!("{}.partial", path_string(&output_path))).exists());
     }
 
+    #[test]
+    fn compose_rejects_page_numbers_that_cannot_be_pdf_page_ids() {
+        let fixtures = FixtureDirectory::new();
+        let source_path = fixtures.path("source.pdf");
+        let output_path = fixtures.path("merged.pdf");
+        write_fixture_pdf(&source_path, &[510]);
+        let overflowing_page = (u32::MAX as usize)
+            .checked_add(2)
+            .expect("test requires a 64-bit usize");
+
+        let response = compose_pdfs(NativePdfComposeRequest {
+            sources: vec![NativePdfSource {
+                path: path_string(&source_path),
+                pages: vec![overflowing_page],
+            }],
+            output_path: path_string(&output_path),
+        });
+
+        assert!(response.message.as_deref().is_some_and(|message| {
+            message.contains(&format!("Page {overflowing_page}"))
+                && message.contains("cannot be represented")
+        }));
+        assert_eq!(response.page_count, 0);
+        assert!(!output_path.exists());
+    }
+
+    #[test]
+    fn compose_rejects_duplicate_requested_pages() {
+        let fixtures = FixtureDirectory::new();
+        let source_path = fixtures.path("source.pdf");
+        let output_path = fixtures.path("merged.pdf");
+        write_fixture_pdf(&source_path, &[610]);
+
+        let response = compose_pdfs(NativePdfComposeRequest {
+            sources: vec![NativePdfSource {
+                path: path_string(&source_path),
+                pages: vec![1, 1],
+            }],
+            output_path: path_string(&output_path),
+        });
+
+        assert!(response.message.as_deref().is_some_and(|message| {
+            message.contains("Page 1") && message.contains("selected more than once")
+        }));
+        assert_eq!(response.page_count, 0);
+        assert!(!output_path.exists());
+    }
+
+    #[test]
+    fn compose_preserves_inherited_attributes_content_and_resources() {
+        let fixtures = FixtureDirectory::new();
+        let source_path = fixtures.path("source.pdf");
+        let output_path = fixtures.path("merged.pdf");
+        write_fixture_pdf(&source_path, &[710]);
+
+        let response = compose_pdfs(NativePdfComposeRequest {
+            sources: vec![NativePdfSource {
+                path: path_string(&source_path),
+                pages: vec![1],
+            }],
+            output_path: path_string(&output_path),
+        });
+
+        assert_eq!(response.message, None);
+        let document = Document::load(&output_path).expect("open composed PDF");
+        let page_id = *document.get_pages().get(&1).expect("read composed page id");
+        let page = document
+            .get_dictionary(page_id)
+            .expect("read composed page dictionary");
+        assert_eq!(
+            page.get(b"Rotate")
+                .and_then(Object::as_i64)
+                .expect("read inherited rotation"),
+            90
+        );
+        assert_eq!(
+            page.get(b"MediaBox")
+                .and_then(Object::as_array)
+                .expect("read inherited MediaBox")[2]
+                .as_i64()
+                .expect("read inherited page width"),
+            710
+        );
+        let resources_id = page
+            .get(b"Resources")
+            .and_then(Object::as_reference)
+            .expect("read inherited resources reference");
+        let resources = document
+            .get_dictionary(resources_id)
+            .expect("read inherited resources");
+        let fonts = resources
+            .get(b"Font")
+            .and_then(Object::as_dict)
+            .expect("read font resources");
+        let font_id = fonts
+            .get(b"F1")
+            .and_then(Object::as_reference)
+            .expect("read F1 reference");
+        let font = document
+            .get_dictionary(font_id)
+            .expect("read preserved font object");
+        assert_eq!(
+            font.get(b"BaseFont")
+                .and_then(Object::as_name)
+                .expect("read preserved base font"),
+            b"Helvetica"
+        );
+        let content = document
+            .get_page_content(page_id)
+            .expect("read preserved page content");
+        assert!(content
+            .windows(b"page-content-710".len())
+            .any(|window| window == b"page-content-710"));
+    }
+
     fn write_fixture_pdf(path: &Path, page_widths: &[i64]) {
         let mut document = Document::with_version("1.5");
         let pages_id = document.new_object_id();
-        let page_ids = page_widths
+        let font_id = document.add_object(dictionary! {
+            "Type" => "Font",
+            "Subtype" => "Type1",
+            "BaseFont" => "Helvetica",
+        });
+        let resources_id = document.add_object(dictionary! {
+            "Font" => dictionary! {
+                "F1" => font_id,
+            },
+        });
+        let page_branches = page_widths
             .iter()
             .map(|width| {
-                document.add_object(dictionary! {
+                let branch_id = document.new_object_id();
+                let content_id = document.add_object(Stream::new(
+                    dictionary! {},
+                    format!("BT /F1 12 Tf 10 10 Td (page-content-{width}) Tj ET").into_bytes(),
+                ));
+                let page_id = document.add_object(dictionary! {
                     "Type" => "Page",
-                    "Parent" => pages_id,
-                    "MediaBox" => vec![0.into(), 0.into(), (*width).into(), 500.into()],
-                    "Resources" => dictionary! {},
-                })
+                    "Parent" => branch_id,
+                    "Contents" => content_id,
+                });
+                document.objects.insert(
+                    branch_id,
+                    Object::Dictionary(dictionary! {
+                        "Type" => "Pages",
+                        "Parent" => pages_id,
+                        "Kids" => vec![Object::Reference(page_id)],
+                        "Count" => 1,
+                        "MediaBox" => vec![0.into(), 0.into(), (*width).into(), 500.into()],
+                        "Resources" => resources_id,
+                        "Rotate" => 90,
+                    }),
+                );
+                branch_id
             })
             .collect::<Vec<_>>();
         document.objects.insert(
             pages_id,
             Object::Dictionary(dictionary! {
                 "Type" => "Pages",
-                "Kids" => page_ids
+                "Kids" => page_branches
                     .iter()
                     .copied()
                     .map(Object::Reference)
                     .collect::<Vec<_>>(),
-                "Count" => page_ids.len() as i64,
+                "Count" => page_branches.len() as i64,
             }),
         );
         let catalog_id = document.add_object(dictionary! {
