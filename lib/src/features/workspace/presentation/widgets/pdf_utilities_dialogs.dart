@@ -29,7 +29,10 @@ Future<void> showExtractPagesDialog(BuildContext context) =>
     showShadDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => const ExtractPagesDialog(),
+      builder: (_) => const Material(
+        type: MaterialType.transparency,
+        child: ExtractPagesDialog(),
+      ),
     );
 
 class CombinePdfDialog extends ConsumerStatefulWidget {
@@ -528,7 +531,13 @@ class _ExtractPagesDialogState extends ConsumerState<ExtractPagesDialog> {
       }
     } catch (error) {
       if (mounted && _source == source) {
-        setState(() => _operationError = _messageFor(error));
+        setState(() {
+          _source = null;
+          _pageCount = null;
+          _loadingSource = false;
+          _operationError =
+              'Could not load ${path.basename(source)}: ${_messageFor(error)}';
+        });
       }
     } finally {
       if (mounted && _source == source) {

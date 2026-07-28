@@ -43,6 +43,52 @@ void main() {
     expect(find.text('Add PDFs'), findsOneWidget);
     expect(find.text('Combine PDF files'), findsOneWidget);
   });
+
+  testWidgets('all utility cards are fully visible and hit-testable', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1100, 760);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_app(QuickstartSurface(state: _workspaceState())));
+
+    final Rect gridBounds = tester.getRect(find.byType(GridView));
+    for (final String label in <String>[
+      'Combine PDFs',
+      'Convert to PDF',
+      'Extract pages',
+      'Export PDF',
+    ]) {
+      final Finder labelFinder = find.text(label);
+      final Finder cardFinder = find.ancestor(
+        of: labelFinder,
+        matching: find.byType(Ink),
+      );
+      final Rect cardBounds = tester.getRect(cardFinder);
+
+      expect(
+        labelFinder.hitTestable(),
+        findsOneWidget,
+        reason: '$label must accept pointer hit testing',
+      );
+      expect(
+        gridBounds.contains(cardBounds.topLeft),
+        isTrue,
+        reason: '$label must begin inside the visible grid',
+      );
+      expect(
+        gridBounds.contains(cardBounds.bottomRight - const Offset(1, 1)),
+        isTrue,
+        reason: '$label must end inside the visible grid',
+      );
+    }
+
+    await tester.tap(find.text('Extract pages'));
+    await tester.pumpAndSettle();
+    expect(find.text('Select PDF'), findsOneWidget);
+  });
 }
 
 Widget _app(Widget child) => ProviderScope(

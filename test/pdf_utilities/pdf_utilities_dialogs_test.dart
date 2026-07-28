@@ -180,6 +180,39 @@ void main() {
     );
     expect(openedResults.single.outputPath, 'C:/docs/extracted.pdf');
   });
+
+  testWidgets('extract rejects a source whose page count cannot be loaded', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _app(
+        ExtractPagesDialog(
+          service: service,
+          pickSource: () async => 'C:/docs/encrypted.pdf',
+          pickDestination: () async => 'C:/docs/extracted.pdf',
+          loadPageCount: (_) async =>
+              throw const FormatException('The PDF is encrypted.'),
+          onCompleted: openedResults.add,
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Select PDF'));
+    await tester.pump();
+
+    expect(find.text('null pages'), findsNothing);
+    expect(
+      find.text('Could not load encrypted.pdf: The PDF is encrypted.'),
+      findsOneWidget,
+    );
+    expect(find.text('Select PDF'), findsOneWidget);
+    expect(
+      tester
+          .widget<ShadButton>(find.widgetWithText(ShadButton, 'Extract'))
+          .onPressed,
+      isNull,
+    );
+  });
 }
 
 List<String> _selectedFileLabels(WidgetTester tester) => tester

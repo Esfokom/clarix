@@ -65,7 +65,7 @@ class QuickstartSurface extends ConsumerWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 4.1,
+              mainAxisExtent: 99,
               children: <Widget>[
                 _UtilityCard(
                   icon: LucideIcons.files,
