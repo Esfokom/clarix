@@ -11,6 +11,7 @@ import '../../../utilities/application/pdf_utility_service.dart';
 import '../../../utilities/domain/pdf_page_selection.dart';
 import '../../../utilities/domain/utility_job.dart';
 import '../../../utilities/infrastructure/document_conversion_service.dart';
+import '../../../utilities/infrastructure/pdf_export_service.dart';
 import '../../application/workspace_providers.dart';
 import 'workspace_common.dart';
 
@@ -23,6 +24,8 @@ typedef PickConversionSources = Future<List<String>> Function();
 typedef PickConversionOutputDirectory = Future<String?> Function();
 typedef ConversionCompleted =
     FutureOr<void> Function(List<UtilityResult> results);
+typedef PickExportDestination =
+    Future<String?> Function(UtilityFormat format, String sourcePath);
 
 Future<void> showCombinePdfDialog(BuildContext context) => showShadDialog<void>(
   context: context,
@@ -49,6 +52,305 @@ Future<void> showConvertToPdfDialog(BuildContext context) =>
         child: ConvertToPdfDialog(),
       ),
     );
+
+Future<void> showExportPdfDialog(BuildContext context) => showShadDialog<void>(
+  context: context,
+  barrierDismissible: false,
+  builder: (_) =>
+      const Material(type: MaterialType.transparency, child: ExportPdfDialog()),
+);
+
+class ExportPdfDialog extends ConsumerStatefulWidget {
+  const ExportPdfDialog({
+    this.service,
+    this.pickSource,
+    this.pickDestination,
+    this.onCompleted,
+    super.key,
+  });
+
+  final PdfExportService? service;
+  final PickPdfSource? pickSource;
+  final PickExportDestination? pickDestination;
+  final UtilityCompleted? onCompleted;
+
+  @override
+  ConsumerState<ExportPdfDialog> createState() => _ExportPdfDialogState();
+}
+
+class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
+  String? _source;
+  UtilityFormat _format = UtilityFormat.markdown;
+  bool _busy = false;
+  String? _error;
+
+  PdfExportService get _service => widget.service ?? PdfExportService();
+
+  @override
+  Widget build(BuildContext context) {
+    return ShadDialog(
+      constraints: const BoxConstraints(maxWidth: 680, maxHeight: 570),
+      title: const Text('Export PDF'),
+      description: const Text(
+        'Export a local PDF as Markdown or an image-first Office document.',
+      ),
+      actions: <Widget>[
+        ShadButton.outline(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ShadButton(
+          onPressed: _source != null && !_busy ? _export : null,
+          child: Text(_busy ? 'Exporting…' : 'Export'),
+        ),
+      ],
+      child: SizedBox(
+        width: 620,
+        height: 360,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                ShadButton.outline(
+                  leading: const Icon(LucideIcons.fileSearch, size: 15),
+                  onPressed: _busy ? null : _selectSource,
+                  child: Text(_source == null ? 'Select PDF' : 'Change PDF'),
+                ),
+                const SizedBox(width: 12),
+                if (_source != null)
+                  Expanded(
+                    child: Text(
+                      path.basename(_source!),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: WorkspaceColors.textStrong,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            const Text(
+              'Output format',
+              style: TextStyle(
+                color: WorkspaceColors.textStrong,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: _ExportFormatOption(
+                    key: const Key('export-format-markdown'),
+                    label: 'Markdown',
+                    detail: 'Page-by-page extracted text',
+                    selected: _format == UtilityFormat.markdown,
+                    onTap: _busy
+                        ? null
+                        : () => _selectFormat(UtilityFormat.markdown),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ExportFormatOption(
+                    key: const Key('export-format-word'),
+                    label: 'Word (visual)',
+                    detail: 'Page image with text below',
+                    selected: _format == UtilityFormat.word,
+                    onTap: _busy
+                        ? null
+                        : () => _selectFormat(UtilityFormat.word),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _ExportFormatOption(
+                    key: const Key('export-format-powerpoint'),
+                    label: 'PowerPoint (visual)',
+                    detail: 'One page image per slide',
+                    selected: _format == UtilityFormat.powerpoint,
+                    onTap: _busy
+                        ? null
+                        : () => _selectFormat(UtilityFormat.powerpoint),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: WorkspaceColors.panelRaised,
+                borderRadius: BorderRadius.circular(9),
+                border: Border.all(color: WorkspaceColors.accentBorder),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Icon(
+                    LucideIcons.info,
+                    size: 15,
+                    color: WorkspaceColors.textMuted,
+                  ),
+                  SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'Word and PowerPoint are visual exports. They preserve each PDF page as an image and add extracted text for search and accessibility, but do not recreate editable page layouts.',
+                      style: TextStyle(
+                        color: WorkspaceColors.textMuted,
+                        fontSize: 11.5,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_error != null) ...<Widget>[
+              const SizedBox(height: 12),
+              Text(
+                _error!,
+                style: const TextStyle(
+                  color: WorkspaceColors.warning,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _selectFormat(UtilityFormat format) {
+    setState(() {
+      _format = format;
+      _error = null;
+    });
+  }
+
+  Future<void> _selectSource() async {
+    final String? source = await (widget.pickSource ?? _pickExportPdf)();
+    if (!mounted || source == null) {
+      return;
+    }
+    setState(() {
+      _source = source;
+      _error = null;
+    });
+  }
+
+  Future<void> _export() async {
+    final String? source = _source;
+    if (source == null) {
+      return;
+    }
+    final String? destination =
+        await (widget.pickDestination ?? _pickExportDestination)(
+          _format,
+          source,
+        );
+    if (!mounted || destination == null) {
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final UtilityResult result = await _service.export(
+        sourcePath: source,
+        format: _format,
+        outputPath: destination,
+      );
+      final UtilityCompleted? callback = widget.onCompleted;
+      if (callback != null) {
+        await callback(result);
+      }
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _error = _messageFor(error));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+      }
+    }
+  }
+}
+
+class _ExportFormatOption extends StatelessWidget {
+  const _ExportFormatOption({
+    required this.label,
+    required this.detail,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final String detail;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onTap,
+        child: Ink(
+          height: 76,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: selected
+                ? WorkspaceColors.accentSoft
+                : WorkspaceColors.panel,
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(
+              color: selected ? WorkspaceColors.accent : WorkspaceColors.border,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                label,
+                style: const TextStyle(
+                  color: WorkspaceColors.textStrong,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                detail,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: WorkspaceColors.textMuted,
+                  fontSize: 10,
+                  height: 1.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class ConvertToPdfDialog extends ConsumerStatefulWidget {
   const ConvertToPdfDialog({
@@ -869,6 +1171,17 @@ Future<String?> _pickSinglePdf() async {
   return result?.files.single.path;
 }
 
+Future<String?> _pickExportPdf() async {
+  final FilePickerResult? result = await FilePicker.pickFiles(
+    dialogTitle: 'Select a PDF to export',
+    type: FileType.custom,
+    allowedExtensions: const <String>['pdf'],
+    allowMultiple: false,
+    lockParentWindow: true,
+  );
+  return result?.files.single.path;
+}
+
 Future<String?> _pickCombinedPdfDestination() => FilePicker.saveFile(
   dialogTitle: 'Save combined PDF',
   fileName: 'combined.pdf',
@@ -884,6 +1197,25 @@ Future<String?> _pickExtractedPdfDestination() => FilePicker.saveFile(
   allowedExtensions: const <String>['pdf'],
   lockParentWindow: true,
 );
+
+Future<String?> _pickExportDestination(
+  UtilityFormat format,
+  String sourcePath,
+) {
+  final String extension = switch (format) {
+    UtilityFormat.markdown => 'md',
+    UtilityFormat.word => 'docx',
+    UtilityFormat.powerpoint => 'pptx',
+    _ => throw ArgumentError.value(format),
+  };
+  return FilePicker.saveFile(
+    dialogTitle: 'Save exported document',
+    fileName: '${path.basenameWithoutExtension(sourcePath)}.$extension',
+    type: FileType.custom,
+    allowedExtensions: <String>[extension],
+    lockParentWindow: true,
+  );
+}
 
 Future<List<String>> _pickConversionSources() async {
   final FilePickerResult? result = await FilePicker.pickFiles(

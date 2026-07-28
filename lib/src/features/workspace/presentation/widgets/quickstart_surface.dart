@@ -85,10 +85,11 @@ class QuickstartSurface extends ConsumerWidget {
                   detail: 'Choose page ranges and save a new PDF.',
                   onTap: () => showExtractPagesDialog(context),
                 ),
-                const _UtilityCard(
+                _UtilityCard(
                   icon: LucideIcons.share2,
                   title: 'Export PDF',
                   detail: 'Export content to Markdown, Word, or PowerPoint.',
+                  onTap: () => showExportPdfDialog(context),
                 ),
               ],
             ),

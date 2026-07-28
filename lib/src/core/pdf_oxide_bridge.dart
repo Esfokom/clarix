@@ -433,6 +433,14 @@ class HybridPdfExtractionService {
     }
   }
 
+  Future<List<String>> extractDocumentText(String path) async {
+    try {
+      return await _primary.extractDocumentText(path);
+    } on UnimplementedError {
+      return _fallback.extractDocumentText(path);
+    }
+  }
+
   Future<List<PdfSearchMatch>> searchDocument(
     String path,
     Pattern query,
