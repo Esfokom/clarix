@@ -65,13 +65,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                           .setLeftPaneWidth(
                             widget.state.session.leftPaneWidth + delta,
                           ),
-                      onToggle: () => ref
-                          .read(workspaceNotifierProvider.notifier)
-                          .toggleLeftPane(),
-                      collapsed: widget.state.session.leftPaneCollapsed,
-                      icon: widget.state.session.leftPaneCollapsed
-                          ? LucideIcons.panelLeftOpen
-                          : LucideIcons.panelLeftClose,
                     ),
                   Expanded(
                     child: DecoratedBox(
@@ -101,13 +94,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                           .setRightPaneWidth(
                             widget.state.session.rightPaneWidth - delta,
                           ),
-                      onToggle: () => ref
-                          .read(workspaceNotifierProvider.notifier)
-                          .toggleRightPane(),
-                      collapsed: widget.state.session.rightPaneCollapsed,
-                      icon: widget.state.session.rightPaneCollapsed
-                          ? LucideIcons.panelRightOpen
-                          : LucideIcons.panelRightClose,
                     ),
                   if (showInspector &&
                       activeTab != null &&
@@ -225,20 +211,11 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
 }
 
 class _PaneHandle extends StatelessWidget {
-  const _PaneHandle({
-    super.key,
-    required this.onDrag,
-    required this.onToggle,
-    required this.collapsed,
-    required this.icon,
-  });
+  const _PaneHandle({super.key, required this.onDrag});
   final ValueChanged<double> onDrag;
-  final VoidCallback onToggle;
-  final bool collapsed;
-  final IconData icon;
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 32,
+    width: 6,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onHorizontalDragUpdate: (DragUpdateDetails details) =>
@@ -246,12 +223,13 @@ class _PaneHandle extends StatelessWidget {
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeColumn,
         child: Center(
-          child: ShadIconButton.ghost(
-            width: 24,
-            height: 32,
-            padding: EdgeInsets.zero,
-            icon: Icon(icon, size: 13),
-            onPressed: onToggle,
+          child: Container(
+            width: 2,
+            height: 36,
+            decoration: BoxDecoration(
+              color: WorkspaceColors.border,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
         ),
       ),
