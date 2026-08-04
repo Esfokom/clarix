@@ -50,7 +50,6 @@ class _WindowBootstrapState extends State<_WindowBootstrap> {
         size: Size(1500, 940),
         minimumSize: Size(1100, 760),
         center: true,
-        titleBarStyle: TitleBarStyle.normal,
       ),
       () async {
         await windowManager.show();

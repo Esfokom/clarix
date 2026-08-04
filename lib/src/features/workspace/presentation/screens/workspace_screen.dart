@@ -7,6 +7,7 @@ import '../../domain/workspace_feature_state.dart';
 import '../widgets/workspace_body.dart';
 import '../widgets/workspace_common.dart';
 import '../widgets/app_settings_dialog.dart';
+import '../widgets/desktop_window_chrome.dart';
 
 class WorkspaceScreen extends ConsumerStatefulWidget {
   const WorkspaceScreen({super.key});
@@ -61,45 +62,50 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       workspaceNotifierProvider,
     );
 
-    return Scaffold(
-      backgroundColor: WorkspaceColors.canvas,
-      body: asyncState.when(
-        data: (WorkspaceFeatureState state) => WorkspaceBody(
-          state: state,
-          onOpenSettings: () => showAppSettingsDialog(context),
-        ),
-        error: (Object error, StackTrace stackTrace) => Center(
-          child: SurfaceBlock(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text(
-                  'Clarix could not initialize.',
-                  style: TextStyle(
-                    color: WorkspaceColors.textStrong,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+    return DesktopWindowChrome(
+      onImport: () =>
+          ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
+      onOpenSettings: () => showAppSettingsDialog(context),
+      child: Scaffold(
+        backgroundColor: WorkspaceColors.canvas,
+        body: asyncState.when(
+          data: (WorkspaceFeatureState state) => WorkspaceBody(
+            state: state,
+            onOpenSettings: () => showAppSettingsDialog(context),
+          ),
+          error: (Object error, StackTrace stackTrace) => Center(
+            child: SurfaceBlock(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Clarix could not initialize.',
+                    style: TextStyle(
+                      color: WorkspaceColors.textStrong,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '$error',
-                  style: const TextStyle(
-                    color: WorkspaceColors.textMuted,
-                    fontSize: 12,
+                  const SizedBox(height: 8),
+                  Text(
+                    '$error',
+                    style: const TextStyle(
+                      color: WorkspaceColors.textMuted,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        loading: () => const Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+          loading: () => const Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
           ),
         ),
       ),
