@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:flutter_markdown_plus_latex/flutter_markdown_plus_latex.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:markdown/markdown.dart' as markdown;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
@@ -284,12 +287,28 @@ class _MessageBubble extends StatelessWidget {
                 : WorkspaceColors.border,
           ),
         ),
-        child: Text(
-          message.text.isEmpty ? '...' : message.text,
-          style: const TextStyle(
-            color: WorkspaceColors.textStrong,
-            fontSize: 11.5,
-            height: 1.45,
+        child: MarkdownBody(
+          data: message.text.isEmpty ? '...' : message.text,
+          extensionSet: markdown.ExtensionSet(
+            <markdown.BlockSyntax>[LatexBlockSyntax()],
+            <markdown.InlineSyntax>[LatexInlineSyntax()],
+          ),
+          builders: <String, MarkdownElementBuilder>{
+            'latex': LatexElementBuilder(
+              textStyle: const TextStyle(
+                color: WorkspaceColors.textStrong,
+                fontSize: 11.5,
+                height: 1.45,
+              ),
+            ),
+          },
+          styleSheet: MarkdownStyleSheet(
+            p: const TextStyle(
+              color: WorkspaceColors.textStrong,
+              fontSize: 11.5,
+              height: 1.45,
+            ),
+            code: const TextStyle(color: WorkspaceColors.textStrong),
           ),
         ),
       ),
