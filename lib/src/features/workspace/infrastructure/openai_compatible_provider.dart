@@ -135,7 +135,7 @@ class IoOpenAiTransport implements OpenAiTransport {
     final HttpClientRequest active = await _client.postUrl(request.uri);
     _activeRequest = active;
     request.headers.forEach(active.headers.set);
-    active.write(request.body);
+    active.add(utf8.encode(request.body));
     final HttpClientResponse response = await active.close();
     return OpenAiTransportResponse(
       statusCode: response.statusCode,

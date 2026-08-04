@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:clarix/src/features/workspace/domain/ai_provider.dart';
 import 'package:clarix/src/features/workspace/infrastructure/openai_compatible_provider.dart';
@@ -58,8 +59,37 @@ void main() {
 
     final Map<String, dynamic> body =
         jsonDecode(transport.request!.body) as Map<String, dynamic>;
-    expect(body['messages'], <dynamic>[<String, String>{'role': 'user', 'content': 'Reply with OK.'}]);
+    expect(body['messages'], <dynamic>[
+      <String, String>{'role': 'user', 'content': 'Reply with OK.'},
+    ]);
     expect(body.containsKey('tools'), isFalse);
+  });
+
+  test('sends non-Latin document context as UTF-8 request bytes', () async {
+    final HttpServer server = await HttpServer.bind(
+      InternetAddress.loopbackIPv4,
+      0,
+    );
+    addTearDown(server.close);
+    final Future<String> received = server.first.then((
+      HttpRequest request,
+    ) async {
+      final String body = await utf8.decoder.bind(request).join();
+      request.response.statusCode = 200;
+      await request.response.close();
+      return body;
+    });
+    final IoOpenAiTransport transport = IoOpenAiTransport();
+
+    await transport.post(
+      OpenAiTransportRequest(
+        uri: Uri.parse('http://${server.address.host}:${server.port}/chat'),
+        headers: const <String, String>{'content-type': 'application/json'},
+        body: jsonEncode(<String, String>{'context': 'Fayol — التنظيم'}),
+      ),
+    );
+
+    expect(await received, contains('التنظيم'));
   });
 
   test('streams text then tool call fragments before completion', () async {
