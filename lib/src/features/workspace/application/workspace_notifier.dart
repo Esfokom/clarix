@@ -265,6 +265,29 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
+  Future<void> navigateToCitation(CitationSnippet citation) async {
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState? tab = current.session.tabs
+        .where(
+          (DocumentTabState item) => item.documentId == citation.documentId,
+        )
+        .cast<DocumentTabState?>()
+        .firstOrNull;
+    if (tab == null) return;
+    final List<DocumentTabState> tabs = current.session.tabs
+        .map(
+          (DocumentTabState item) => item.id == tab.id
+              ? item.copyWith(currentPage: citation.pageNumber)
+              : item,
+        )
+        .toList(growable: false);
+    final WorkspaceSession session = current.session.copyWith(
+      tabs: tabs,
+      activeTabId: tab.id,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
   Future<void> toggleComposerExpanded() async {
     final WorkspaceFeatureState current = _requireState();
     state = AsyncData(

@@ -3,6 +3,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_markdown_plus_latex/flutter_markdown_plus_latex.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markdown/markdown.dart' as markdown;
+import 'package:pdfrx/pdfrx.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
@@ -183,7 +184,10 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     itemBuilder: (BuildContext context, int index) {
                       final ComposerMessage message =
                           ai.messages[ai.messages.length - 1 - index];
-                      return _MessageBubble(message: message);
+                      return _MessageBubble(
+                        message: message,
+                        tabs: widget.state.session.tabs,
+                      );
                     },
                   ),
           ),
@@ -262,13 +266,14 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message});
+class _MessageBubble extends ConsumerWidget {
+  const _MessageBubble({required this.message, required this.tabs});
 
   final ComposerMessage message;
+  final List<DocumentTabState> tabs;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final bool isUser = message.isUser;
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
@@ -287,31 +292,124 @@ class _MessageBubble extends StatelessWidget {
                 : WorkspaceColors.border,
           ),
         ),
-        child: MarkdownBody(
-          data: message.text.isEmpty ? '...' : message.text,
-          extensionSet: markdown.ExtensionSet(
-            <markdown.BlockSyntax>[LatexBlockSyntax()],
-            <markdown.InlineSyntax>[LatexInlineSyntax()],
-          ),
-          builders: <String, MarkdownElementBuilder>{
-            'latex': LatexElementBuilder(
-              textStyle: const TextStyle(
-                color: WorkspaceColors.textStrong,
-                fontSize: 11.5,
-                height: 1.45,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            MarkdownBody(
+              data: message.text.isEmpty ? '...' : message.text,
+              extensionSet: markdown.ExtensionSet(
+                <markdown.BlockSyntax>[LatexBlockSyntax()],
+                <markdown.InlineSyntax>[LatexInlineSyntax()],
+              ),
+              builders: <String, MarkdownElementBuilder>{
+                'latex': LatexElementBuilder(
+                  textStyle: const TextStyle(
+                    color: WorkspaceColors.textStrong,
+                    fontSize: 11.5,
+                    height: 1.45,
+                  ),
+                ),
+              },
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(
+                  color: WorkspaceColors.textStrong,
+                  fontSize: 11.5,
+                  height: 1.45,
+                ),
+                code: const TextStyle(color: WorkspaceColors.textStrong),
               ),
             ),
-          },
-          styleSheet: MarkdownStyleSheet(
-            p: const TextStyle(
-              color: WorkspaceColors.textStrong,
-              fontSize: 11.5,
-              height: 1.45,
-            ),
-            code: const TextStyle(color: WorkspaceColors.textStrong),
-          ),
+            if (!isUser && message.citations.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: message.citations
+                    .map(
+                      (CitationSnippet citation) => _CitationChip(
+                        citation: citation,
+                        tab: tabs
+                            .where(
+                              (DocumentTabState tab) =>
+                                  tab.documentId == citation.documentId,
+                            )
+                            .cast<DocumentTabState?>()
+                            .firstOrNull,
+                      ),
+                    )
+                    .toList(growable: false),
+              ),
+            ],
+          ],
         ),
       ),
     );
   }
+}
+
+class _CitationChip extends ConsumerStatefulWidget {
+  const _CitationChip({required this.citation, required this.tab});
+  final CitationSnippet citation;
+  final DocumentTabState? tab;
+  @override
+  ConsumerState<_CitationChip> createState() => _CitationChipState();
+}
+
+class _CitationChipState extends ConsumerState<_CitationChip> {
+  bool _hovered = false;
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onEnter: (_) => setState(() => _hovered = true),
+    onExit: (_) => setState(() => _hovered = false),
+    child: Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        ActionChip(
+          key: Key('citation-page-${widget.citation.pageNumber}'),
+          label: Text('Page ${widget.citation.pageNumber}'),
+          onPressed: () => ref
+              .read(workspaceNotifierProvider.notifier)
+              .navigateToCitation(widget.citation),
+        ),
+        if (_hovered)
+          Positioned(
+            key: Key('citation-preview-page-${widget.citation.pageNumber}'),
+            left: 0,
+            bottom: 34,
+            width: 220,
+            height: 270,
+            child: Material(
+              color: WorkspaceColors.panelRaised,
+              elevation: 12,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: widget.tab == null || widget.tab!.isMissingFile
+                    ? Text(
+                        widget.citation.snippet,
+                        maxLines: 8,
+                        overflow: TextOverflow.ellipsis,
+                      )
+                    : PdfDocumentViewBuilder(
+                        documentRef: ref.watch(
+                          pdfDocumentRefProvider(widget.tab!.filePath),
+                        ),
+                        builder: (BuildContext _, PdfDocument? document) =>
+                            document == null
+                            ? const Center(
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : PdfPageView(
+                                document: document,
+                                pageNumber: widget.citation.pageNumber,
+                              ),
+                      ),
+              ),
+            ),
+          ),
+      ],
+    ),
+  );
 }
