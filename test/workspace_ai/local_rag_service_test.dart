@@ -34,6 +34,26 @@ void main() {
     ]);
   });
 
+  test('removes duplicate native chunks before returning context', () async {
+    final LocalRagService service = LocalRagService(
+      readChunks: (_) async => chunks,
+      nativeRetriever: _FakeRetriever(
+        status: LocalRagIndexStatus.ready,
+        result: <PdfChunkRecord>[chunks[0], chunks[0], chunks[1]],
+      ),
+    );
+
+    final List<PdfChunkRecord> result = await service.retrieve(
+      documentId,
+      'alpha',
+    );
+
+    expect(result.map((PdfChunkRecord chunk) => chunk.id), <String>[
+      'first',
+      'second',
+    ]);
+  });
+
   test(
     'uses case-insensitive lexical ranking with chunk-order tie breaks',
     () async {

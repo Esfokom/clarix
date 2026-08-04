@@ -47,7 +47,7 @@ class LocalRagService {
         native = null;
       }
       if (native != null) {
-        return native.take(limit).toList(growable: false);
+        return _deduplicate(native).take(limit).toList(growable: false);
       }
     }
 
@@ -56,6 +56,15 @@ class LocalRagService {
       normalizedQuery,
       limit,
     );
+  }
+
+  Iterable<PdfChunkRecord> _deduplicate(Iterable<PdfChunkRecord> chunks) sync* {
+    final Set<String> seen = <String>{};
+    for (final PdfChunkRecord chunk in chunks) {
+      if (seen.add(chunk.id)) {
+        yield chunk;
+      }
+    }
   }
 
   List<PdfChunkRecord> _lexicalRetrieve(
