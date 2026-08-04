@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 
 enum SidebarPane { thumbnails, outline }
 
+const double minWorkspacePaneWidth = 200;
+const double maxWorkspacePaneWidth = 480;
+
 enum DocumentIndexStatus {
   idle,
   queued,
@@ -47,6 +50,10 @@ class WorkspaceSession {
     required this.lastOpenedAt,
     required this.recentFiles,
     required this.sidebarPane,
+    required this.leftPaneWidth,
+    required this.rightPaneWidth,
+    required this.leftPaneCollapsed,
+    required this.rightPaneCollapsed,
   });
 
   factory WorkspaceSession.initial() => WorkspaceSession(
@@ -56,6 +63,10 @@ class WorkspaceSession {
     lastOpenedAt: DateTime.now().toUtc(),
     recentFiles: const <String>[],
     sidebarPane: SidebarPane.thumbnails,
+    leftPaneWidth: 280,
+    rightPaneWidth: 360,
+    leftPaneCollapsed: false,
+    rightPaneCollapsed: false,
   );
 
   factory WorkspaceSession.fromJson(Map<String, dynamic> json) {
@@ -77,6 +88,14 @@ class WorkspaceSession {
       sidebarPane: SidebarPane.values.byName(
         json['sidebarPane'] as String? ?? SidebarPane.thumbnails.name,
       ),
+      leftPaneWidth: _clampPaneWidth(
+        (json['leftPaneWidth'] as num?)?.toDouble() ?? 280,
+      ),
+      rightPaneWidth: _clampPaneWidth(
+        (json['rightPaneWidth'] as num?)?.toDouble() ?? 360,
+      ),
+      leftPaneCollapsed: json['leftPaneCollapsed'] as bool? ?? false,
+      rightPaneCollapsed: json['rightPaneCollapsed'] as bool? ?? false,
     );
   }
 
@@ -86,6 +105,10 @@ class WorkspaceSession {
   final DateTime lastOpenedAt;
   final List<String> recentFiles;
   final SidebarPane sidebarPane;
+  final double leftPaneWidth;
+  final double rightPaneWidth;
+  final bool leftPaneCollapsed;
+  final bool rightPaneCollapsed;
 
   WorkspaceSession copyWith({
     bool? restorePreviousSession,
@@ -95,6 +118,10 @@ class WorkspaceSession {
     DateTime? lastOpenedAt,
     List<String>? recentFiles,
     SidebarPane? sidebarPane,
+    double? leftPaneWidth,
+    double? rightPaneWidth,
+    bool? leftPaneCollapsed,
+    bool? rightPaneCollapsed,
   }) {
     return WorkspaceSession(
       restorePreviousSession:
@@ -104,6 +131,10 @@ class WorkspaceSession {
       lastOpenedAt: lastOpenedAt ?? this.lastOpenedAt,
       recentFiles: recentFiles ?? this.recentFiles,
       sidebarPane: sidebarPane ?? this.sidebarPane,
+      leftPaneWidth: _clampPaneWidth(leftPaneWidth ?? this.leftPaneWidth),
+      rightPaneWidth: _clampPaneWidth(rightPaneWidth ?? this.rightPaneWidth),
+      leftPaneCollapsed: leftPaneCollapsed ?? this.leftPaneCollapsed,
+      rightPaneCollapsed: rightPaneCollapsed ?? this.rightPaneCollapsed,
     );
   }
 
@@ -114,8 +145,15 @@ class WorkspaceSession {
     'lastOpenedAt': lastOpenedAt.toIso8601String(),
     'recentFiles': recentFiles,
     'sidebarPane': sidebarPane.name,
+    'leftPaneWidth': leftPaneWidth,
+    'rightPaneWidth': rightPaneWidth,
+    'leftPaneCollapsed': leftPaneCollapsed,
+    'rightPaneCollapsed': rightPaneCollapsed,
   };
 }
+
+double _clampPaneWidth(double value) =>
+    value.clamp(minWorkspacePaneWidth, maxWorkspacePaneWidth);
 
 class DocumentTabState {
   const DocumentTabState({

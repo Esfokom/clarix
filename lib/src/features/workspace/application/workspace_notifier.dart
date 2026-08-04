@@ -233,6 +233,38 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
+  Future<void> setLeftPaneWidth(double width) async {
+    final WorkspaceFeatureState current = _requireState();
+    final WorkspaceSession session = current.session.copyWith(
+      leftPaneWidth: width,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
+  Future<void> setRightPaneWidth(double width) async {
+    final WorkspaceFeatureState current = _requireState();
+    final WorkspaceSession session = current.session.copyWith(
+      rightPaneWidth: width,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
+  Future<void> toggleLeftPane() async {
+    final WorkspaceFeatureState current = _requireState();
+    final WorkspaceSession session = current.session.copyWith(
+      leftPaneCollapsed: !current.session.leftPaneCollapsed,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
+  Future<void> toggleRightPane() async {
+    final WorkspaceFeatureState current = _requireState();
+    final WorkspaceSession session = current.session.copyWith(
+      rightPaneCollapsed: !current.session.rightPaneCollapsed,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
   Future<void> toggleComposerExpanded() async {
     final WorkspaceFeatureState current = _requireState();
     state = AsyncData(

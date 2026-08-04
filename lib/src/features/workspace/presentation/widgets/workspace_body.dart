@@ -48,11 +48,30 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             SafeArea(
               child: Row(
                 children: <Widget>[
+                  if (showNavigation && !widget.state.session.leftPaneCollapsed)
+                    SizedBox(
+                      width: widget.state.session.leftPaneWidth,
+                      child: WorkspaceSidebar(
+                        state: widget.state,
+                        activeTab: activeTab,
+                        onOpenSettings: widget.onOpenSettings,
+                      ),
+                    ),
                   if (showNavigation)
-                    WorkspaceSidebar(
-                      state: widget.state,
-                      activeTab: activeTab,
-                      onOpenSettings: widget.onOpenSettings,
+                    _PaneHandle(
+                      key: const Key('left-pane-resizer'),
+                      onDrag: (double delta) => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .setLeftPaneWidth(
+                            widget.state.session.leftPaneWidth + delta,
+                          ),
+                      onToggle: () => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .toggleLeftPane(),
+                      collapsed: widget.state.session.leftPaneCollapsed,
+                      icon: widget.state.session.leftPaneCollapsed
+                          ? LucideIcons.panelLeftOpen
+                          : LucideIcons.panelLeftClose,
                     ),
                   Expanded(
                     child: DecoratedBox(
@@ -75,8 +94,26 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                     ),
                   ),
                   if (showInspector && activeTab != null)
+                    _PaneHandle(
+                      key: const Key('right-pane-resizer'),
+                      onDrag: (double delta) => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .setRightPaneWidth(
+                            widget.state.session.rightPaneWidth - delta,
+                          ),
+                      onToggle: () => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .toggleRightPane(),
+                      collapsed: widget.state.session.rightPaneCollapsed,
+                      icon: widget.state.session.rightPaneCollapsed
+                          ? LucideIcons.panelRightOpen
+                          : LucideIcons.panelRightClose,
+                    ),
+                  if (showInspector &&
+                      activeTab != null &&
+                      !widget.state.session.rightPaneCollapsed)
                     SizedBox(
-                      width: showAiInline ? 356 : 294,
+                      width: widget.state.session.rightPaneWidth,
                       child: showAiInline
                           ? AiSidePane(
                               state: widget.state,
@@ -185,4 +222,39 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
     }
     return null;
   }
+}
+
+class _PaneHandle extends StatelessWidget {
+  const _PaneHandle({
+    super.key,
+    required this.onDrag,
+    required this.onToggle,
+    required this.collapsed,
+    required this.icon,
+  });
+  final ValueChanged<double> onDrag;
+  final VoidCallback onToggle;
+  final bool collapsed;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 8,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragUpdate: (DragUpdateDetails details) =>
+          onDrag(details.delta.dx),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.resizeColumn,
+        child: Center(
+          child: ShadIconButton.ghost(
+            width: 24,
+            height: 32,
+            padding: EdgeInsets.zero,
+            icon: Icon(icon, size: 13),
+            onPressed: onToggle,
+          ),
+        ),
+      ),
+    ),
+  );
 }

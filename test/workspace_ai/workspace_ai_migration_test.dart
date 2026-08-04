@@ -2,6 +2,17 @@ import 'package:clarix/src/core/models.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('workspace panes restore persisted widths within their limits', () {
+    final WorkspaceSession restored = WorkspaceSession.fromJson(
+      <String, dynamic>{'leftPaneWidth': 100, 'rightPaneWidth': 900},
+    );
+
+    expect(restored.leftPaneWidth, 200);
+    expect(restored.rightPaneWidth, 480);
+    expect(restored.leftPaneCollapsed, isFalse);
+    expect(restored.rightPaneCollapsed, isFalse);
+  });
+
   test(
     'legacy local-model state restores without selecting a remote provider',
     () {
