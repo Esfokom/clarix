@@ -47,8 +47,72 @@ void main() {
     expect(find.textContaining('**Bold**'), findsNothing);
     expect(find.byKey(const Key('user-message-bubble')), findsOneWidget);
     expect(find.byKey(const Key('assistant-message-content')), findsOneWidget);
-    expect(find.byKey(const Key('citation-page-2')), findsOneWidget);
+    expect(find.byKey(const Key('citation-page-2')), findsNothing);
   });
+
+  testWidgets(
+    'renders assistant page references inline and starts ranges at the first page',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: ShadApp(
+            home: Scaffold(
+              body: AiSidePane(
+                state: _state(<ComposerMessage>[
+                  _message(
+                    'assistant',
+                    'Case study (page 2). Organizational structure (pages 7–8).',
+                  ),
+                ]),
+                activeTab: DocumentTabState.create(
+                  id: 'tab',
+                  documentId: 'document',
+                  filePath: 'document.pdf',
+                  title: 'document.pdf',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('inline-page-reference-2')), findsOneWidget);
+      expect(find.byKey(const Key('inline-page-reference-7')), findsOneWidget);
+      expect(find.byKey(const Key('citation-page-2')), findsNothing);
+      expect(find.byKey(const Key('citation-page-7')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'does not add citation UI when assistant prose has no page reference',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: ShadApp(
+            home: Scaffold(
+              body: AiSidePane(
+                state: _state(<ComposerMessage>[
+                  _message(
+                    'assistant',
+                    'This is a document overview without page references.',
+                  ),
+                ]),
+                activeTab: DocumentTabState.create(
+                  id: 'tab',
+                  documentId: 'document',
+                  filePath: 'document.pdf',
+                  title: 'document.pdf',
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('inline-page-reference-2')), findsNothing);
+      expect(find.byKey(const Key('citation-page-2')), findsNothing);
+    },
+  );
 
   testWidgets('uses a neutral composer loader while a response is pending', (
     tester,
