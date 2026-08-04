@@ -19,6 +19,10 @@ Future<NativeRagIndexResponse> localRagIndex({
   required NativeRagIndexRequest request,
 }) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
 
+Future<NativeRagIndexResponse> localRagValidate({
+  required NativeRagIndexRequest request,
+}) => RustLib.instance.api.crateApiLocalRagValidate(request: request);
+
 Future<NativeRagQueryResponse> localRagQuery({
   required NativeRagQueryRequest request,
 }) => RustLib.instance.api.crateApiLocalRagQuery(request: request);
@@ -167,11 +171,16 @@ class NativeRagIndexRequest {
 class NativeRagIndexResponse {
   final String status;
   final String? message;
+  final String? outcome;
 
-  const NativeRagIndexResponse({required this.status, this.message});
+  const NativeRagIndexResponse({
+    required this.status,
+    this.message,
+    this.outcome,
+  });
 
   @override
-  int get hashCode => status.hashCode ^ message.hashCode;
+  int get hashCode => status.hashCode ^ message.hashCode ^ outcome.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -179,7 +188,8 @@ class NativeRagIndexResponse {
       other is NativeRagIndexResponse &&
           runtimeType == other.runtimeType &&
           status == other.status &&
-          message == other.message;
+          message == other.message &&
+          outcome == other.outcome;
 }
 
 class NativeRagQueryRequest {

@@ -64,6 +64,7 @@ pub struct NativeRagIndexRequest {
 pub struct NativeRagIndexResponse {
     pub status: String,
     pub message: Option<String>,
+    pub outcome: Option<String>,
 }
 
 #[cfg(feature = "rag")]
@@ -138,19 +139,57 @@ pub fn local_rag_index(request: NativeRagIndexRequest) -> NativeRagIndexResponse
         };
         outcome
             .map(|outcome| match outcome {
-                crate::rag::RagIndexOutcome::Built => "ready".to_string(),
-                crate::rag::RagIndexOutcome::Loaded => "ready".to_string(),
+                crate::rag::RagIndexOutcome::Built => "built".to_string(),
+                crate::rag::RagIndexOutcome::Loaded => "loaded".to_string(),
             })
             .map_err(|error| error.to_string())
     })();
     match result {
-        Ok(status) => NativeRagIndexResponse {
-            status,
+        Ok(outcome) => NativeRagIndexResponse {
+            status: "ready".to_string(),
             message: None,
+            outcome: Some(outcome),
         },
         Err(message) => NativeRagIndexResponse {
             status: "failed".to_string(),
             message: Some(message),
+            outcome: None,
+        },
+    }
+}
+
+#[cfg(feature = "rag")]
+pub fn local_rag_validate(request: NativeRagIndexRequest) -> NativeRagIndexResponse {
+    let paths = crate::rag::RagIndexPaths::for_document(
+        &request.storage_directory,
+        &request.document_fingerprint,
+    );
+    let chunks = request
+        .chunks
+        .into_iter()
+        .map(|chunk| crate::rag::RagChunk::new(chunk.id, chunk.text))
+        .collect::<Vec<_>>();
+    match crate::rag::validate_existing_index(
+        &request.document_fingerprint,
+        &paths,
+        crate::rag::MODEL_ID,
+        crate::rag::MODEL_DIMENSIONS,
+        &chunks,
+    ) {
+        Ok(()) => NativeRagIndexResponse {
+            status: "ready".to_string(),
+            message: None,
+            outcome: Some("loaded".to_string()),
+        },
+        Err(crate::rag::RagError::RebuildRequired { .. }) => NativeRagIndexResponse {
+            status: "idle".to_string(),
+            message: None,
+            outcome: None,
+        },
+        Err(error) => NativeRagIndexResponse {
+            status: "failed".to_string(),
+            message: Some(error.to_string()),
+            outcome: None,
         },
     }
 }

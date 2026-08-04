@@ -8,8 +8,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use usearch::{new_index, Index, IndexOptions, MetricKind, ScalarKind};
 
 const MANIFEST_VERSION: u32 = 1;
-const MODEL_ID: &str = "sentence-transformers/all-MiniLM-L6-v2";
-const MODEL_DIMENSIONS: usize = 384;
+pub const MODEL_ID: &str = "sentence-transformers/all-MiniLM-L6-v2";
+pub const MODEL_DIMENSIONS: usize = 384;
 const EMBEDDING_BATCH_SIZE: usize = 64;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -611,4 +611,47 @@ mod tests {
 
         assert!(matches!(error, super::RagError::RebuildRequired { .. }));
     }
+
+    #[test]
+    fn validation_reuses_a_matching_persisted_index_without_embeddings() {
+        let root = temporary_root();
+        let paths = RagIndexPaths::for_document(&root, "fingerprint-e");
+        let embeddings = DeterministicEmbeddings::new([
+            ("passage: a", vec![1.0, 0.0]),
+            ("passage: b", vec![0.0, 1.0]),
+        ]);
+        let engine = VectorRagEngine::new(&embeddings);
+        let chunks = vec![RagChunk::new("a", "a"), RagChunk::new("b", "b")];
+
+        engine
+            .index_or_load("fingerprint-e", &paths, &chunks)
+            .expect("index should build");
+
+        super::validate_existing_index(
+            "fingerprint-e",
+            &paths,
+            embeddings.model_id(),
+            embeddings.dimensions(),
+            &chunks,
+        )
+        .expect("matching persisted index should validate");
+    }
+}
+
+pub fn validate_existing_index(
+    document_fingerprint: &str,
+    paths: &RagIndexPaths,
+    model_id: &str,
+    dimensions: usize,
+    chunks: &[RagChunk],
+) -> Result<(), RagError> {
+    let manifest = read_manifest(&paths.manifest_path)?;
+    validate_manifest(
+        &manifest,
+        document_fingerprint,
+        model_id,
+        dimensions,
+        chunks,
+    )?;
+    validate_index(&paths.index_path, dimensions, manifest.chunk_ids.len())
 }

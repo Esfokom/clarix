@@ -65,7 +65,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 730399807;
+  int get rustContentHash => -1224479224;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -114,6 +114,10 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiLocalRagStatus({
     required String storageDirectory,
     required String documentFingerprint,
+  });
+
+  Future<NativeRagIndexResponse> crateApiLocalRagValidate({
+    required NativeRagIndexRequest request,
   });
 
   RustArcIncrementStrongCountFnType
@@ -452,6 +456,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     argNames: ["storageDirectory", "documentFingerprint"],
   );
 
+  @override
+  Future<NativeRagIndexResponse> crateApiLocalRagValidate({
+    required NativeRagIndexRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_rag_index_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_rag_index_response,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateApiLocalRagValidateConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiLocalRagValidateConstMeta => const TaskConstMeta(
+    debugName: "local_rag_validate",
+    argNames: ["request"],
+  );
+
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_NativePdfSession => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
@@ -663,11 +699,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeRagIndexResponse dco_decode_native_rag_index_response(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return NativeRagIndexResponse(
       status: dco_decode_String(arr[0]),
       message: dco_decode_opt_String(arr[1]),
+      outcome: dco_decode_opt_String(arr[2]),
     );
   }
 
@@ -1036,7 +1073,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_status = sse_decode_String(deserializer);
     var var_message = sse_decode_opt_String(deserializer);
-    return NativeRagIndexResponse(status: var_status, message: var_message);
+    var var_outcome = sse_decode_opt_String(deserializer);
+    return NativeRagIndexResponse(
+      status: var_status,
+      message: var_message,
+      outcome: var_outcome,
+    );
   }
 
   @protected
@@ -1422,6 +1464,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.status, serializer);
     sse_encode_opt_String(self.message, serializer);
+    sse_encode_opt_String(self.outcome, serializer);
   }
 
   @protected
