@@ -7,7 +7,12 @@ import 'package:path_provider/path_provider.dart';
 import '../../../core/models.dart';
 
 class DocumentChunkStore {
-  Future<Directory> _chunksDirectory() async {
+  DocumentChunkStore({Future<Directory> Function()? directoryProvider})
+    : _directoryProvider = directoryProvider ?? _defaultChunksDirectory;
+
+  final Future<Directory> Function() _directoryProvider;
+
+  static Future<Directory> _defaultChunksDirectory() async {
     Directory root;
     try {
       root = await getApplicationSupportDirectory();
@@ -19,6 +24,14 @@ class DocumentChunkStore {
     final Directory dir = Directory(p.join(root.path, 'clarix', 'chunks'));
     await dir.create(recursive: true);
     return dir;
+  }
+
+  Future<Directory> _chunksDirectory() => _directoryProvider();
+
+  Future<bool> hasChunks(String documentId) async {
+    final Directory dir = await _chunksDirectory();
+    return (await File(p.join(dir.path, '$documentId.jsonl')).exists()) ||
+        await File(p.join(dir.path, '$documentId.json')).exists();
   }
 
   Future<int> replaceWithBatches(

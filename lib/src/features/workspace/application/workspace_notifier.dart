@@ -826,15 +826,21 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _markTabIndexStatus(tab.id, DocumentIndexStatus.indexing);
     try {
       clarixLog.i('Indexing PDF document: ${tab.filePath}');
-      final int chunkCount = await _chunkStore.replaceWithBatches(
-        tab.documentId,
-        _pdfExtraction.buildChunkBatches(
-          path: tab.filePath,
-          documentId: tab.documentId,
-          title: tab.title,
-          batchSize: 32,
-        ),
-      );
+      final bool hasCachedChunks = await _chunkStore.hasChunks(tab.documentId);
+      final int chunkCount;
+      if (hasCachedChunks) {
+        chunkCount = (await _chunkStore.readChunks(tab.documentId)).length;
+      } else {
+        chunkCount = await _chunkStore.replaceWithBatches(
+          tab.documentId,
+          _pdfExtraction.buildChunkBatches(
+            path: tab.filePath,
+            documentId: tab.documentId,
+            title: tab.title,
+            batchSize: 32,
+          ),
+        );
+      }
       if (chunkCount > 0) {
         // Persistence is deliberately complete before loading/downloading the
         // embedding model. This background task never affects the normal PDF

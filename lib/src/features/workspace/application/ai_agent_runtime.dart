@@ -41,8 +41,13 @@ class AiAgentRuntime {
     final bool canSearchDocument = citations.isNotEmpty;
     final List<AiChatMessage> messages = <AiChatMessage>[
       const AiChatMessage.system(
-        'You are Clarix, a PDF reading assistant. Cite supplied passages by page number. '
-        'Use tools only for local document context.',
+        'You are Clarix, a PDF reading assistant. Structure every answer with '
+        'a "From the document" section first. Make claims in that section only '
+        'when supported by supplied passages, and cite each claim by page number. '
+        'If the passages do not support an answer, say there is insufficient '
+        'document evidence. You may add a separate "General knowledge (not from '
+        'this document)" section for helpful outside information, but never '
+        'present it as document content. Use tools only for local document context.',
       ),
       if (citations.isNotEmpty) AiChatMessage.system(_contextFor(citations)),
       AiChatMessage.user(request.prompt),

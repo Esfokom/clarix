@@ -147,6 +147,38 @@ void main() {
     expect(reply.citations.single.pageNumber, 8);
   });
 
+  test(
+    'requires document evidence and labels supplementary knowledge',
+    () async {
+      final _FakeProvider provider = _FakeProvider(<List<AiProviderEvent>>[
+        <AiProviderEvent>[const AiCompletionFinished()],
+      ]);
+      final AiAgentRuntime runtime = AiAgentRuntime(
+        provider: provider,
+        localRag: LocalRagService(readChunks: (_) async => chunks),
+      );
+
+      await runtime.run(
+        AiAgentRequest(
+          profile: profile,
+          apiKey: 'sk-test',
+          prompt: 'What does the document say?',
+          documentIds: const <String>['document-1'],
+        ),
+      );
+
+      final String instruction = provider.requests.single.messages
+          .firstWhere((AiChatMessage message) => message.role == 'system')
+          .content;
+      expect(instruction, contains('From the document'));
+      expect(
+        instruction,
+        contains('General knowledge (not from this document)'),
+      );
+      expect(instruction, contains('insufficient document evidence'));
+    },
+  );
+
   test('limits shared passages to six and 1500 characters each', () async {
     final List<PdfChunkRecord> manyChunks = List<PdfChunkRecord>.generate(
       7,
