@@ -13,6 +13,19 @@ void main() {
     expect(restored.rightPaneCollapsed, isFalse);
   });
 
+  test('right tool window restores and defaults to closed', () {
+    expect(
+      WorkspaceSession.fromJson(<String, dynamic>{}).rightToolWindow,
+      RightToolWindow.none,
+    );
+    expect(
+      WorkspaceSession.fromJson(<String, dynamic>{
+        'rightToolWindow': 'ai',
+      }).rightToolWindow,
+      RightToolWindow.ai,
+    );
+  });
+
   test(
     'legacy local-model state restores without selecting a remote provider',
     () {

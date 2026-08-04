@@ -37,7 +37,13 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
         final bool showNavigation = constraints.maxWidth >= 900;
         final bool showInspector = constraints.maxWidth >= 1200;
         final bool showAiInline =
-            showInspector && activeTab != null && widget.state.composerExpanded;
+            showInspector &&
+            activeTab != null &&
+            widget.state.session.rightToolWindow == RightToolWindow.ai;
+        final bool showDocumentInline =
+            showInspector &&
+            activeTab != null &&
+            widget.state.session.rightToolWindow == RightToolWindow.document;
         final bool showAiOverlay =
             !showInspector &&
             activeTab != null &&
@@ -86,7 +92,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             ),
                     ),
                   ),
-                  if (showInspector && activeTab != null)
+                  if (showAiInline || showDocumentInline)
                     _PaneHandle(
                       key: const Key('right-pane-resizer'),
                       onDrag: (double delta) => ref
@@ -95,8 +101,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             widget.state.session.rightPaneWidth - delta,
                           ),
                     ),
-                  if (showInspector &&
-                      activeTab != null &&
+                  if ((showAiInline || showDocumentInline) &&
                       !widget.state.session.rightPaneCollapsed)
                     SizedBox(
                       width: widget.state.session.rightPaneWidth,
@@ -110,6 +115,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                               activeTab: activeTab,
                             ),
                     ),
+                  if (showInspector && activeTab != null)
+                    _RightToolRail(state: widget.state),
                 ],
               ),
             ),
@@ -233,6 +240,61 @@ class _PaneHandle extends StatelessWidget {
           ),
         ),
       ),
+    ),
+  );
+}
+
+class _RightToolRail extends ConsumerWidget {
+  const _RightToolRail({required this.state});
+  final WorkspaceFeatureState state;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => SizedBox(
+    width: 40,
+    child: DecoratedBox(
+      decoration: const BoxDecoration(
+        color: WorkspaceColors.panel,
+        border: Border(left: BorderSide(color: WorkspaceColors.border)),
+      ),
+      child: Column(
+        children: <Widget>[
+          _tool(
+            context,
+            ref,
+            RightToolWindow.document,
+            'Document inspector',
+            LucideIcons.panelRight,
+          ),
+          _tool(
+            context,
+            ref,
+            RightToolWindow.ai,
+            'Clarix AI',
+            LucideIcons.sparkles,
+          ),
+        ],
+      ),
+    ),
+  );
+  Widget _tool(
+    BuildContext context,
+    WidgetRef ref,
+    RightToolWindow tool,
+    String label,
+    IconData icon,
+  ) => Tooltip(
+    message: label,
+    child: ShadIconButton.ghost(
+      key: Key('right-tool-${tool.name}'),
+      width: 40,
+      height: 40,
+      padding: EdgeInsets.zero,
+      backgroundColor: state.session.rightToolWindow == tool
+          ? WorkspaceColors.accentSoft
+          : null,
+      icon: Icon(icon, size: 16),
+      onPressed: () => ref
+          .read(workspaceNotifierProvider.notifier)
+          .selectRightToolWindow(tool),
     ),
   );
 }

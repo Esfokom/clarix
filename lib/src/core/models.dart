@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 enum SidebarPane { thumbnails, outline }
 
+enum RightToolWindow { none, document, ai }
+
 const double minWorkspacePaneWidth = 200;
 const double maxWorkspacePaneWidth = 480;
 
@@ -54,6 +56,7 @@ class WorkspaceSession {
     required this.rightPaneWidth,
     required this.leftPaneCollapsed,
     required this.rightPaneCollapsed,
+    required this.rightToolWindow,
   });
 
   factory WorkspaceSession.initial() => WorkspaceSession(
@@ -67,6 +70,7 @@ class WorkspaceSession {
     rightPaneWidth: 360,
     leftPaneCollapsed: false,
     rightPaneCollapsed: false,
+    rightToolWindow: RightToolWindow.none,
   );
 
   factory WorkspaceSession.fromJson(Map<String, dynamic> json) {
@@ -96,6 +100,9 @@ class WorkspaceSession {
       ),
       leftPaneCollapsed: json['leftPaneCollapsed'] as bool? ?? false,
       rightPaneCollapsed: json['rightPaneCollapsed'] as bool? ?? false,
+      rightToolWindow: RightToolWindow.values.byName(
+        json['rightToolWindow'] as String? ?? RightToolWindow.none.name,
+      ),
     );
   }
 
@@ -109,6 +116,7 @@ class WorkspaceSession {
   final double rightPaneWidth;
   final bool leftPaneCollapsed;
   final bool rightPaneCollapsed;
+  final RightToolWindow rightToolWindow;
 
   WorkspaceSession copyWith({
     bool? restorePreviousSession,
@@ -122,6 +130,7 @@ class WorkspaceSession {
     double? rightPaneWidth,
     bool? leftPaneCollapsed,
     bool? rightPaneCollapsed,
+    RightToolWindow? rightToolWindow,
   }) {
     return WorkspaceSession(
       restorePreviousSession:
@@ -135,6 +144,7 @@ class WorkspaceSession {
       rightPaneWidth: _clampPaneWidth(rightPaneWidth ?? this.rightPaneWidth),
       leftPaneCollapsed: leftPaneCollapsed ?? this.leftPaneCollapsed,
       rightPaneCollapsed: rightPaneCollapsed ?? this.rightPaneCollapsed,
+      rightToolWindow: rightToolWindow ?? this.rightToolWindow,
     );
   }
 
@@ -149,6 +159,7 @@ class WorkspaceSession {
     'rightPaneWidth': rightPaneWidth,
     'leftPaneCollapsed': leftPaneCollapsed,
     'rightPaneCollapsed': rightPaneCollapsed,
+    'rightToolWindow': rightToolWindow.name,
   };
 }
 

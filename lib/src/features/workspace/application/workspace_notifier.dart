@@ -265,6 +265,17 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
+  Future<void> selectRightToolWindow(RightToolWindow tool) async {
+    final WorkspaceFeatureState current = _requireState();
+    final RightToolWindow next = current.session.rightToolWindow == tool
+        ? RightToolWindow.none
+        : tool;
+    final WorkspaceSession session = current.session.copyWith(
+      rightToolWindow: next,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
   Future<void> navigateToCitation(CitationSnippet citation) async {
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState? tab = current.session.tabs
