@@ -238,7 +238,7 @@ class _PaneHandle extends StatelessWidget {
   final IconData icon;
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 8,
+    width: 32,
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onHorizontalDragUpdate: (DragUpdateDetails details) =>
