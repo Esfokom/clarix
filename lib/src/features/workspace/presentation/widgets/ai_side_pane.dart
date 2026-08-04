@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_markdown_plus_latex/flutter_markdown_plus_latex.dart';
@@ -75,53 +77,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-            child: Column(
-              children: <Widget>[
-                Row(
-                  children: <Widget>[
-                    if (_isBusyPhase(ai.activityPhase)) ...<Widget>[
-                      const SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 8),
-                    ] else ...<Widget>[
-                      Icon(
-                        _phaseIcon(ai.activityPhase),
-                        size: 12,
-                        color: WorkspaceColors.textMuted,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Expanded(
-                      child: ShadBadge.secondary(
-                        child: Text(
-                          ai.statusMessage,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 10.5),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (widget.state.providerProfiles.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              child: Text(
-                _providerDisclosure(ai),
-                style: const TextStyle(
-                  color: WorkspaceColors.textMuted,
-                  fontSize: 10.5,
-                ),
-              ),
-            ),
-          Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: <Widget>[
@@ -191,6 +146,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     },
                   ),
           ),
+          if (ai.chatBusy) const _ComposerLoadingIndicator(),
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -212,7 +168,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   width: 32,
                   height: 32,
                   padding: EdgeInsets.zero,
-                  enabled: ai.providerReady && !ai.chatBusy,
+                  enabled: ai.providerReady,
                   icon: ai.chatBusy
                       ? const Icon(LucideIcons.square, size: 14)
                       : const Icon(LucideIcons.arrowUp, size: 14),
@@ -238,32 +194,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     ref.read(workspaceNotifierProvider.notifier).sendPrompt(prompt);
     _controller.clear();
   }
-
-  bool _isBusyPhase(AiRuntimePhase phase) {
-    return phase == AiRuntimePhase.restoringInference ||
-        phase == AiRuntimePhase.restoringEmbedding ||
-        phase == AiRuntimePhase.loadingInference ||
-        phase == AiRuntimePhase.preparingGrounding ||
-        phase == AiRuntimePhase.indexing ||
-        phase == AiRuntimePhase.retrieving ||
-        phase == AiRuntimePhase.generating;
-  }
-
-  IconData _phaseIcon(AiRuntimePhase phase) {
-    return switch (phase) {
-      AiRuntimePhase.failed => LucideIcons.triangleAlert,
-      AiRuntimePhase.idle => LucideIcons.cpu,
-      _ => LucideIcons.cpu,
-    };
-  }
-
-  String _providerDisclosure(AiWorkspaceState ai) {
-    final profile = widget.state.providerProfiles
-        .where((item) => item.id == ai.selectedProviderId)
-        .firstOrNull;
-    if (profile == null) return 'Remote provider not selected';
-    return '${profile.label} · Remote${profile.shareRetrievedPassages ? ' — Retrieved PDF passages may be shared' : ' — PDF passages stay local'}';
-  }
 }
 
 class _MessageBubble extends ConsumerWidget {
@@ -275,74 +205,175 @@ class _MessageBubble extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bool isUser = message.isUser;
+    final Widget content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        MarkdownBody(
+          data: message.text.isEmpty ? '...' : message.text,
+          extensionSet: markdown.ExtensionSet(
+            <markdown.BlockSyntax>[LatexBlockSyntax()],
+            <markdown.InlineSyntax>[LatexInlineSyntax()],
+          ),
+          builders: <String, MarkdownElementBuilder>{
+            'latex': LatexElementBuilder(
+              textStyle: const TextStyle(
+                color: WorkspaceColors.textStrong,
+                fontSize: 11.5,
+                height: 1.45,
+              ),
+            ),
+          },
+          styleSheet: MarkdownStyleSheet(
+            p: const TextStyle(
+              color: WorkspaceColors.textStrong,
+              fontSize: 11.5,
+              height: 1.45,
+            ),
+            code: const TextStyle(color: WorkspaceColors.textStrong),
+          ),
+        ),
+        if (!isUser && message.citations.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: message.citations
+                .map(
+                  (CitationSnippet citation) => _CitationChip(
+                    citation: citation,
+                    tab: tabs
+                        .where(
+                          (DocumentTabState tab) =>
+                              tab.documentId == citation.documentId,
+                        )
+                        .cast<DocumentTabState?>()
+                        .firstOrNull,
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ],
+    );
+
+    if (!isUser) {
+      return Padding(
+        key: const Key('assistant-message-content'),
+        padding: const EdgeInsets.fromLTRB(4, 10, 4, 12),
+        child: SizedBox(width: double.infinity, child: content),
+      );
+    }
+
     return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: Alignment.centerRight,
       child: Container(
+        key: const Key('user-message-bubble'),
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
         constraints: const BoxConstraints(maxWidth: 300),
         decoration: BoxDecoration(
-          color: isUser
-              ? WorkspaceColors.accentSoft
-              : WorkspaceColors.panelRaised,
+          color: WorkspaceColors.accentSoft,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isUser
-                ? WorkspaceColors.accentBorder
-                : WorkspaceColors.border,
-          ),
+          border: Border.all(color: WorkspaceColors.accentBorder),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            MarkdownBody(
-              data: message.text.isEmpty ? '...' : message.text,
-              extensionSet: markdown.ExtensionSet(
-                <markdown.BlockSyntax>[LatexBlockSyntax()],
-                <markdown.InlineSyntax>[LatexInlineSyntax()],
-              ),
-              builders: <String, MarkdownElementBuilder>{
-                'latex': LatexElementBuilder(
-                  textStyle: const TextStyle(
-                    color: WorkspaceColors.textStrong,
-                    fontSize: 11.5,
-                    height: 1.45,
-                  ),
-                ),
-              },
-              styleSheet: MarkdownStyleSheet(
-                p: const TextStyle(
-                  color: WorkspaceColors.textStrong,
-                  fontSize: 11.5,
-                  height: 1.45,
-                ),
-                code: const TextStyle(color: WorkspaceColors.textStrong),
+        child: content,
+      ),
+    );
+  }
+}
+
+class _ComposerLoadingIndicator extends StatefulWidget {
+  const _ComposerLoadingIndicator();
+
+  @override
+  State<_ComposerLoadingIndicator> createState() =>
+      _ComposerLoadingIndicatorState();
+}
+
+class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
+    with SingleTickerProviderStateMixin {
+  static const List<String> _words = <String>[
+    'Reading',
+    'Tracing',
+    'Grounding',
+    'Pondering',
+    'Synthesizing',
+    'Citing',
+  ];
+
+  late final AnimationController _animationController;
+  late final Timer _wordTimer;
+  int _wordIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _wordTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        setState(() => _wordIndex = (_wordIndex + 1) % _words.length);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _wordTimer.cancel();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      key: const Key('composer-loader'),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          ScaleTransition(
+            scale: Tween<double>(begin: 0.72, end: 1.1).animate(
+              CurvedAnimation(
+                parent: _animationController,
+                curve: Curves.easeInOut,
               ),
             ),
-            if (!isUser && message.citations.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: message.citations
-                    .map(
-                      (CitationSnippet citation) => _CitationChip(
-                        citation: citation,
-                        tab: tabs
-                            .where(
-                              (DocumentTabState tab) =>
-                                  tab.documentId == citation.documentId,
-                            )
-                            .cast<DocumentTabState?>()
-                            .firstOrNull,
-                      ),
-                    )
-                    .toList(growable: false),
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                color: WorkspaceColors.accent,
+                shape: BoxShape.circle,
               ),
-            ],
-          ],
-        ),
+              child: SizedBox(width: 7, height: 7),
+            ),
+          ),
+          const SizedBox(width: 8),
+          AnimatedBuilder(
+            animation: _animationController,
+            builder: (BuildContext context, Widget? child) => ShaderMask(
+              blendMode: BlendMode.srcIn,
+              shaderCallback: (Rect bounds) => LinearGradient(
+                colors: const <Color>[
+                  WorkspaceColors.textMuted,
+                  WorkspaceColors.textStrong,
+                  WorkspaceColors.textMuted,
+                ],
+                stops: <double>[0, _animationController.value, 1],
+              ).createShader(bounds),
+              child: child,
+            ),
+            child: Text(
+              _words[_wordIndex],
+              style: const TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

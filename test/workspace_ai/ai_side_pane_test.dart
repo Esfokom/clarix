@@ -17,7 +17,18 @@ void main() {
             body: AiSidePane(
               state: _state(<ComposerMessage>[
                 _message('user', r'# Question\n- **Bold** with $x^2$'),
-                _message('assistant', r'## Answer\n$$\frac{a}{b}$$'),
+                _message(
+                  'assistant',
+                  r'## Answer\n$$\frac{a}{b}$$',
+                  citations: const <CitationSnippet>[
+                    CitationSnippet(
+                      documentId: 'document',
+                      label: 'Document',
+                      pageNumber: 2,
+                      snippet: 'Supporting passage',
+                    ),
+                  ],
+                ),
               ]),
               activeTab: DocumentTabState.create(
                 id: 'tab',
@@ -34,26 +45,72 @@ void main() {
     expect(find.byType(MarkdownBody), findsNWidgets(2));
     expect(find.byType(Math), findsNWidgets(2));
     expect(find.textContaining('**Bold**'), findsNothing);
+    expect(find.byKey(const Key('user-message-bubble')), findsOneWidget);
+    expect(find.byKey(const Key('assistant-message-content')), findsOneWidget);
+    expect(find.byKey(const Key('citation-page-2')), findsOneWidget);
+  });
+
+  testWidgets('uses a neutral composer loader while a response is pending', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: ShadApp(
+          home: Scaffold(
+            body: AiSidePane(
+              state: _state(
+                const <ComposerMessage>[],
+                chatBusy: true,
+                statusMessage: 'Contacting DeepSeek.',
+              ),
+              activeTab: DocumentTabState.create(
+                id: 'tab',
+                documentId: 'document',
+                filePath: 'document.pdf',
+                title: 'document.pdf',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('composer-loader')), findsOneWidget);
+    expect(find.text('Reading'), findsOneWidget);
+    expect(find.text('Contacting DeepSeek.'), findsNothing);
+
+    await tester.pump(const Duration(seconds: 5));
+
+    expect(find.text('Tracing'), findsOneWidget);
   });
 }
 
-WorkspaceFeatureState _state(List<ComposerMessage> messages) =>
-    WorkspaceFeatureState(
-      session: WorkspaceSession.initial(),
-      aiState: AiWorkspaceState.initial().copyWith(
-        providerReady: true,
-        messages: messages,
-      ),
-      outlines: const <String, List<OutlineNodeState>>{},
-      documentMetadata: const <String, DocumentMetadata>{},
-      composerExpanded: false,
-      bannerMessage: null,
-    );
+WorkspaceFeatureState _state(
+  List<ComposerMessage> messages, {
+  bool chatBusy = false,
+  String? statusMessage,
+}) => WorkspaceFeatureState(
+  session: WorkspaceSession.initial(),
+  aiState: AiWorkspaceState.initial().copyWith(
+    providerReady: true,
+    chatBusy: chatBusy,
+    statusMessage: statusMessage,
+    messages: messages,
+  ),
+  outlines: const <String, List<OutlineNodeState>>{},
+  documentMetadata: const <String, DocumentMetadata>{},
+  composerExpanded: false,
+  bannerMessage: null,
+);
 
-ComposerMessage _message(String role, String text) => ComposerMessage(
+ComposerMessage _message(
+  String role,
+  String text, {
+  List<CitationSnippet> citations = const <CitationSnippet>[],
+}) => ComposerMessage(
   id: role,
   role: role,
   text: text,
   createdAt: DateTime.utc(2026),
-  citations: const <CitationSnippet>[],
+  citations: citations,
 );
