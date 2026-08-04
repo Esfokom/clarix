@@ -426,38 +426,41 @@ class _OutlineNodeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.only(left: depth * 10.0),
-        childrenPadding: EdgeInsets.zero,
-        collapsedIconColor: WorkspaceColors.textMuted,
-        iconColor: WorkspaceColors.textMuted,
-        title: Text(
-          node.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: WorkspaceColors.textStrong,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
+    return Material(
+      color: WorkspaceColors.panel,
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: EdgeInsets.only(left: depth * 10.0),
+          childrenPadding: EdgeInsets.zero,
+          collapsedIconColor: WorkspaceColors.textMuted,
+          iconColor: WorkspaceColors.textMuted,
+          title: Text(
+            node.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: WorkspaceColors.textStrong,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-        subtitle: node.pageNumber == null
-            ? null
-            : Text(
-                'Page ${node.pageNumber}',
-                style: const TextStyle(
-                  color: WorkspaceColors.textFaint,
-                  fontSize: 10,
+          subtitle: node.pageNumber == null
+              ? null
+              : Text(
+                  'Page ${node.pageNumber}',
+                  style: const TextStyle(
+                    color: WorkspaceColors.textFaint,
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-        children: node.children
-            .map(
-              (OutlineNodeState child) =>
-                  _OutlineNodeTile(node: child, depth: depth + 1),
-            )
-            .toList(growable: false),
+          children: node.children
+              .map(
+                (OutlineNodeState child) =>
+                    _OutlineNodeTile(node: child, depth: depth + 1),
+              )
+              .toList(growable: false),
+        ),
       ),
     );
   }
