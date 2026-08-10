@@ -66,6 +66,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       onImport: () =>
           ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
       onOpenSettings: () => showAppSettingsDialog(context),
+      onSave: asyncState.value?.session.activeTabId == null
+          ? null
+          : () => ref
+                .read(workspaceNotifierProvider.notifier)
+                .saveActivePdfEdits(),
       onSearch: (String query) {
         final String? tabId = asyncState.value?.session.activeTabId;
         if (tabId != null) {

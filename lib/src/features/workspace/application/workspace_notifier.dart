@@ -174,6 +174,29 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   Future<void> reopenRecent(String path) => openPdfFiles(<String>[path]);
 
+  Future<void> saveActivePdfEdits() async {
+    final WorkspaceFeatureState current = _requireState();
+    final String? activeId = current.session.activeTabId;
+    if (activeId == null) return;
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == activeId,
+    );
+    final DocumentMetadata? metadata = current.documentMetadata[tab.documentId];
+    if (metadata == null) return;
+    try {
+      await _pdfExtraction.savePdfAnnotations(
+        path: tab.filePath,
+        bookmarks: metadata.bookmarks,
+        annotations: metadata.annotations,
+      );
+      state = AsyncData(current.copyWith(clearBannerMessage: true));
+    } catch (error) {
+      state = AsyncData(
+        current.copyWith(bannerMessage: 'Could not save PDF edits: $error'),
+      );
+    }
+  }
+
   Future<void> openUtilityResult(UtilityResult result) {
     return ref
         .read(pdfUtilityServiceProvider)

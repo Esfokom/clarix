@@ -28,6 +28,12 @@ abstract class PdfOxideBridge {
     int batchSize = 32,
   });
 
+  Future<void> savePdfAnnotations({
+    required String path,
+    required List<DocumentBookmark> bookmarks,
+    required List<DocumentAnnotation> annotations,
+  });
+
   Future<List<PdfChunkRecord>> buildChunks(
     String path, {
     required String documentId,
@@ -160,6 +166,57 @@ class FrbPdfOxideBridge implements PdfOxideBridge {
         )
         .toList(growable: false);
   }
+
+  @override
+  Future<void> savePdfAnnotations({
+    required String path,
+    required List<DocumentBookmark> bookmarks,
+    required List<DocumentAnnotation> annotations,
+  }) async {
+    if (!await ClarixRustRuntime.ensureInitialized()) {
+      throw UnimplementedError(
+        'The bundled Clarix Rust runtime is unavailable.',
+      );
+    }
+    await ffi.savePdfAnnotations(
+      request: ffi.NativePdfSaveRequest(
+        path: path,
+        bookmarks: bookmarks
+            .map(
+              (item) => ffi.NativePdfBookmark(
+                id: item.id,
+                title: item.label,
+                pageNumber: BigInt.from(item.pageNumber),
+              ),
+            )
+            .toList(growable: false),
+        highlights: annotations
+            .where(
+              (item) =>
+                  item.kind == AnnotationKind.highlight &&
+                  item.pageRects.isNotEmpty,
+            )
+            .map((item) {
+              final Rect rect = item.pageRects.first;
+              final int color = item.colorValue;
+              return ffi.NativePdfHighlight(
+                id: item.id,
+                pageNumber: BigInt.from(item.pageNumber),
+                left: rect.left,
+                top: rect.top,
+                right: rect.right,
+                bottom: rect.bottom,
+                red: ((color >> 16) & 0xff) / 255,
+                green: ((color >> 8) & 0xff) / 255,
+                blue: (color & 0xff) / 255,
+                opacity: ((color >> 24) & 0xff) / 255,
+                text: item.selectedText,
+              );
+            })
+            .toList(growable: false),
+      ),
+    );
+  }
 }
 
 class PdfrxFallbackBridge extends PdfOxideBridge {
@@ -183,6 +240,15 @@ class PdfrxFallbackBridge extends PdfOxideBridge {
     }
     return metadata;
   }
+
+  @override
+  Future<void> savePdfAnnotations({
+    required String path,
+    required List<DocumentBookmark> bookmarks,
+    required List<DocumentAnnotation> annotations,
+  }) => throw UnsupportedError(
+    'Saving PDF annotations requires the native Clarix runtime.',
+  );
 
   @override
   Future<String?> extractPageText(String path, int pageNumber) async {
@@ -451,6 +517,16 @@ class HybridPdfExtractionService {
       return _fallback.searchDocument(path, query);
     }
   }
+
+  Future<void> savePdfAnnotations({
+    required String path,
+    required List<DocumentBookmark> bookmarks,
+    required List<DocumentAnnotation> annotations,
+  }) => _primary.savePdfAnnotations(
+    path: path,
+    bookmarks: bookmarks,
+    annotations: annotations,
+  );
 
   Future<bool> fileExists(String path) => File(path).exists();
 }

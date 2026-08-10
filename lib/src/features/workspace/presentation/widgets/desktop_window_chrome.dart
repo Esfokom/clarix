@@ -13,6 +13,7 @@ class DesktopWindowChrome extends ConsumerWidget {
     required this.onImport,
     required this.onOpenSettings,
     required this.onSearch,
+    this.onSave,
     this.useNativeWindowControls = true,
     super.key,
   });
@@ -21,6 +22,7 @@ class DesktopWindowChrome extends ConsumerWidget {
   final VoidCallback onImport;
   final VoidCallback onOpenSettings;
   final ValueChanged<String> onSearch;
+  final VoidCallback? onSave;
   final bool useNativeWindowControls;
 
   static const double _titleBarHeight = 56;
@@ -41,6 +43,24 @@ class DesktopWindowChrome extends ConsumerWidget {
             child: Row(
               children: <Widget>[
                 const SizedBox(width: 24),
+                IconButton(
+                  key: const Key('chrome-save'),
+                  tooltip: 'Save PDF (Ctrl+S)',
+                  onPressed: onSave,
+                  icon: Icon(Icons.save_outlined, color: colors.textMuted),
+                ),
+                IconButton(
+                  key: const Key('chrome-undo'),
+                  tooltip: 'Undo (Ctrl+Z)',
+                  onPressed: null,
+                  icon: Icon(Icons.undo, color: colors.textMuted),
+                ),
+                IconButton(
+                  key: const Key('chrome-redo'),
+                  tooltip: 'Redo (Ctrl+Shift+Z)',
+                  onPressed: null,
+                  icon: Icon(Icons.redo, color: colors.textMuted),
+                ),
                 Expanded(
                   child: _SearchShell(
                     onImport: onImport,
