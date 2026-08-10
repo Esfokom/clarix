@@ -828,6 +828,38 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
   }
 
+  Future<void> renameBookmark({
+    required String tabId,
+    required String bookmarkId,
+    required String label,
+  }) async {
+    final String trimmed = label.trim();
+    if (trimmed.isEmpty) return;
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (DocumentTabState item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) return;
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(
+        bookmarks: document.bookmarks
+            .map(
+              (item) => item.id == bookmarkId
+                  ? DocumentBookmark(
+                      id: item.id,
+                      pageNumber: item.pageNumber,
+                      label: trimmed,
+                      createdAt: item.createdAt,
+                    )
+                  : item,
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+
   Future<void> addNote({
     required String tabId,
     required int pageNumber,

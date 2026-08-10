@@ -114,6 +114,8 @@ class WorkspaceSidebar extends ConsumerWidget {
                           : ThumbnailPane(tab: activeTab!, colors: colors),
                     ),
                     const SizedBox(height: 14),
+                    _BookmarksPane(tab: activeTab!, colors: colors),
+                    const SizedBox(height: 14),
                   ],
                   const SectionLabel(label: 'Open tabs'),
                   if (state.session.tabs.isEmpty)
@@ -173,6 +175,105 @@ class WorkspaceSidebar extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _BookmarksPane extends ConsumerWidget {
+  const _BookmarksPane({required this.tab, required this.colors});
+  final DocumentTabState tab;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final DocumentMetadata? metadata = ref
+        .watch(workspaceNotifierProvider)
+        .value
+        ?.documentMetadata[tab.documentId];
+    final List<DocumentBookmark> bookmarks =
+        metadata?.bookmarks ?? const <DocumentBookmark>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            const Expanded(child: SectionLabel(label: 'Bookmarks')),
+            IconButton(
+              tooltip: 'Add bookmark',
+              icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
+              onPressed: () => ref
+                  .read(workspaceNotifierProvider.notifier)
+                  .toggleBookmark(tab.id, tab.currentPage),
+            ),
+          ],
+        ),
+        if (bookmarks.isEmpty)
+          Text(
+            'No bookmarks yet.',
+            style: TextStyle(color: colors.textFaint, fontSize: 10.5),
+          )
+        else
+          ...bookmarks.map(
+            (item) => ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.textStrong, fontSize: 11),
+              ),
+              subtitle: Text(
+                'Page ${item.pageNumber}',
+                style: TextStyle(color: colors.textFaint, fontSize: 10),
+              ),
+              onTap: () => ref
+                  .read(workspaceNotifierProvider.notifier)
+                  .updateViewerState(
+                    tabId: tab.id,
+                    currentPage: item.pageNumber,
+                  ),
+              trailing: IconButton(
+                tooltip: 'Rename bookmark',
+                icon: const Icon(LucideIcons.pencil, size: 13),
+                onPressed: () async {
+                  final controller = TextEditingController(text: item.label);
+                  final result = await showDialog<String>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Rename bookmark'),
+                      content: TextField(
+                        controller: controller,
+                        autofocus: true,
+                      ),
+                      actions: <Widget>[
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () =>
+                              Navigator.pop(context, controller.text),
+                          child: const Text('Rename'),
+                        ),
+                      ],
+                    ),
+                  );
+                  controller.dispose();
+                  if (result != null) {
+                    await ref
+                        .read(workspaceNotifierProvider.notifier)
+                        .renameBookmark(
+                          tabId: tab.id,
+                          bookmarkId: item.id,
+                          label: result,
+                        );
+                  }
+                },
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
