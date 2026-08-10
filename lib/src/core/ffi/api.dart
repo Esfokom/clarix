@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `rag_backend`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PdfIndexEvent`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<NativePdfComposeResponse> composePdfs({
   required NativePdfComposeRequest request,
@@ -18,6 +18,9 @@ Future<NativePdfComposeResponse> composePdfs({
 Future<NativeRagIndexResponse> localRagIndex({
   required NativeRagIndexRequest request,
 }) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
+
+Future<void> savePdfAnnotations({required NativePdfSaveRequest request}) =>
+    RustLib.instance.api.crateApiSavePdfAnnotations(request: request);
 
 Future<NativeRagIndexResponse> localRagValidate({
   required NativeRagIndexRequest request,
@@ -50,6 +53,30 @@ abstract class NativePdfSession implements RustOpaqueInterface {
   Future<String> pageText({required BigInt pageNumber});
 
   Future<List<PdfSearchMatch>> search({required String query});
+}
+
+class NativePdfBookmark {
+  final String id;
+  final String title;
+  final BigInt pageNumber;
+
+  const NativePdfBookmark({
+    required this.id,
+    required this.title,
+    required this.pageNumber,
+  });
+
+  @override
+  int get hashCode => id.hashCode ^ title.hashCode ^ pageNumber.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfBookmark &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          title == other.title &&
+          pageNumber == other.pageNumber;
 }
 
 class NativePdfComposeRequest {
@@ -96,6 +123,89 @@ class NativePdfComposeResponse {
           outputPath == other.outputPath &&
           pageCount == other.pageCount &&
           message == other.message;
+}
+
+class NativePdfHighlight {
+  final String id;
+  final BigInt pageNumber;
+  final double left;
+  final double top;
+  final double right;
+  final double bottom;
+  final double red;
+  final double green;
+  final double blue;
+  final double opacity;
+  final String text;
+
+  const NativePdfHighlight({
+    required this.id,
+    required this.pageNumber,
+    required this.left,
+    required this.top,
+    required this.right,
+    required this.bottom,
+    required this.red,
+    required this.green,
+    required this.blue,
+    required this.opacity,
+    required this.text,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      pageNumber.hashCode ^
+      left.hashCode ^
+      top.hashCode ^
+      right.hashCode ^
+      bottom.hashCode ^
+      red.hashCode ^
+      green.hashCode ^
+      blue.hashCode ^
+      opacity.hashCode ^
+      text.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfHighlight &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          pageNumber == other.pageNumber &&
+          left == other.left &&
+          top == other.top &&
+          right == other.right &&
+          bottom == other.bottom &&
+          red == other.red &&
+          green == other.green &&
+          blue == other.blue &&
+          opacity == other.opacity &&
+          text == other.text;
+}
+
+class NativePdfSaveRequest {
+  final String path;
+  final List<NativePdfBookmark> bookmarks;
+  final List<NativePdfHighlight> highlights;
+
+  const NativePdfSaveRequest({
+    required this.path,
+    required this.bookmarks,
+    required this.highlights,
+  });
+
+  @override
+  int get hashCode => path.hashCode ^ bookmarks.hashCode ^ highlights.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfSaveRequest &&
+          runtimeType == other.runtimeType &&
+          path == other.path &&
+          bookmarks == other.bookmarks &&
+          highlights == other.highlights;
 }
 
 class NativePdfSource {

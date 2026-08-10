@@ -158,6 +158,39 @@ pub fn local_rag_index(request: NativeRagIndexRequest) -> NativeRagIndexResponse
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct NativePdfBookmark {
+    pub id: String,
+    pub title: String,
+    pub page_number: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePdfHighlight {
+    pub id: String,
+    pub page_number: usize,
+    pub left: f32,
+    pub top: f32,
+    pub right: f32,
+    pub bottom: f32,
+    pub red: f32,
+    pub green: f32,
+    pub blue: f32,
+    pub opacity: f32,
+    pub text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePdfSaveRequest {
+    pub path: String,
+    pub bookmarks: Vec<NativePdfBookmark>,
+    pub highlights: Vec<NativePdfHighlight>,
+}
+
+pub fn save_pdf_annotations(request: NativePdfSaveRequest) -> Result<(), String> {
+    crate::pdf_annotations::save(request)
+}
+
 #[cfg(feature = "rag")]
 pub fn local_rag_validate(request: NativeRagIndexRequest) -> NativeRagIndexResponse {
     let paths = crate::rag::RagIndexPaths::for_document(

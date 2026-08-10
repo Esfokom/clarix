@@ -65,7 +65,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1224479224;
+  int get rustContentHash => -2137464188;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -118,6 +118,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<NativeRagIndexResponse> crateApiLocalRagValidate({
     required NativeRagIndexRequest request,
+  });
+
+  Future<void> crateApiSavePdfAnnotations({
+    required NativePdfSaveRequest request,
   });
 
   RustArcIncrementStrongCountFnType
@@ -488,6 +492,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     argNames: ["request"],
   );
 
+  @override
+  Future<void> crateApiSavePdfAnnotations({
+    required NativePdfSaveRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_pdf_save_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiSavePdfAnnotationsConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiSavePdfAnnotationsConstMeta => const TaskConstMeta(
+    debugName: "save_pdf_annotations",
+    argNames: ["request"],
+  );
+
   RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_NativePdfSession => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
@@ -565,6 +601,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePdfSaveRequest dco_decode_box_autoadd_native_pdf_save_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_pdf_save_request(raw);
+  }
+
+  @protected
   NativeRagIndexRequest dco_decode_box_autoadd_native_rag_index_request(
     dynamic raw,
   ) {
@@ -590,6 +634,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_pdf_bookmark).toList();
+  }
+
+  @protected
+  List<NativePdfHighlight> dco_decode_list_native_pdf_highlight(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_pdf_highlight).toList();
   }
 
   @protected
@@ -633,6 +689,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePdfBookmark dco_decode_native_pdf_bookmark(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativePdfBookmark(
+      id: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      pageNumber: dco_decode_usize(arr[2]),
+    );
+  }
+
+  @protected
   NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -654,6 +723,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       outputPath: dco_decode_String(arr[0]),
       pageCount: dco_decode_usize(arr[1]),
       message: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativePdfHighlight dco_decode_native_pdf_highlight(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    return NativePdfHighlight(
+      id: dco_decode_String(arr[0]),
+      pageNumber: dco_decode_usize(arr[1]),
+      left: dco_decode_f_32(arr[2]),
+      top: dco_decode_f_32(arr[3]),
+      right: dco_decode_f_32(arr[4]),
+      bottom: dco_decode_f_32(arr[5]),
+      red: dco_decode_f_32(arr[6]),
+      green: dco_decode_f_32(arr[7]),
+      blue: dco_decode_f_32(arr[8]),
+      opacity: dco_decode_f_32(arr[9]),
+      text: dco_decode_String(arr[10]),
+    );
+  }
+
+  @protected
+  NativePdfSaveRequest dco_decode_native_pdf_save_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativePdfSaveRequest(
+      path: dco_decode_String(arr[0]),
+      bookmarks: dco_decode_list_native_pdf_bookmark(arr[1]),
+      highlights: dco_decode_list_native_pdf_highlight(arr[2]),
     );
   }
 
@@ -902,6 +1005,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePdfSaveRequest sse_decode_box_autoadd_native_pdf_save_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_pdf_save_request(deserializer));
+  }
+
+  @protected
   NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(
     SseDeserializer deserializer,
   ) {
@@ -931,6 +1042,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePdfBookmark> sse_decode_list_native_pdf_bookmark(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePdfBookmark>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_pdf_bookmark(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePdfHighlight> sse_decode_list_native_pdf_highlight(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePdfHighlight>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_pdf_highlight(deserializer));
     }
     return ans_;
   }
@@ -1006,6 +1145,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePdfBookmark sse_decode_native_pdf_bookmark(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_usize(deserializer);
+    return NativePdfBookmark(
+      id: var_id,
+      title: var_title,
+      pageNumber: var_pageNumber,
+    );
+  }
+
+  @protected
   NativePdfComposeRequest sse_decode_native_pdf_compose_request(
     SseDeserializer deserializer,
   ) {
@@ -1030,6 +1184,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       outputPath: var_outputPath,
       pageCount: var_pageCount,
       message: var_message,
+    );
+  }
+
+  @protected
+  NativePdfHighlight sse_decode_native_pdf_highlight(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_usize(deserializer);
+    var var_left = sse_decode_f_32(deserializer);
+    var var_top = sse_decode_f_32(deserializer);
+    var var_right = sse_decode_f_32(deserializer);
+    var var_bottom = sse_decode_f_32(deserializer);
+    var var_red = sse_decode_f_32(deserializer);
+    var var_green = sse_decode_f_32(deserializer);
+    var var_blue = sse_decode_f_32(deserializer);
+    var var_opacity = sse_decode_f_32(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    return NativePdfHighlight(
+      id: var_id,
+      pageNumber: var_pageNumber,
+      left: var_left,
+      top: var_top,
+      right: var_right,
+      bottom: var_bottom,
+      red: var_red,
+      green: var_green,
+      blue: var_blue,
+      opacity: var_opacity,
+      text: var_text,
+    );
+  }
+
+  @protected
+  NativePdfSaveRequest sse_decode_native_pdf_save_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
+    var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
+    return NativePdfSaveRequest(
+      path: var_path,
+      bookmarks: var_bookmarks,
+      highlights: var_highlights,
     );
   }
 
@@ -1303,6 +1503,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_native_pdf_save_request(
+    NativePdfSaveRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_pdf_save_request(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_native_rag_index_request(
     NativeRagIndexRequest self,
     SseSerializer serializer,
@@ -1332,6 +1541,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_pdf_bookmark(
+    List<NativePdfBookmark> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_pdf_bookmark(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_pdf_highlight(
+    List<NativePdfHighlight> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_pdf_highlight(item, serializer);
     }
   }
 
@@ -1404,6 +1637,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_pdf_bookmark(
+    NativePdfBookmark self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_usize(self.pageNumber, serializer);
+  }
+
+  @protected
   void sse_encode_native_pdf_compose_request(
     NativePdfComposeRequest self,
     SseSerializer serializer,
@@ -1422,6 +1666,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.outputPath, serializer);
     sse_encode_usize(self.pageCount, serializer);
     sse_encode_opt_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_highlight(
+    NativePdfHighlight self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_usize(self.pageNumber, serializer);
+    sse_encode_f_32(self.left, serializer);
+    sse_encode_f_32(self.top, serializer);
+    sse_encode_f_32(self.right, serializer);
+    sse_encode_f_32(self.bottom, serializer);
+    sse_encode_f_32(self.red, serializer);
+    sse_encode_f_32(self.green, serializer);
+    sse_encode_f_32(self.blue, serializer);
+    sse_encode_f_32(self.opacity, serializer);
+    sse_encode_String(self.text, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_save_request(
+    NativePdfSaveRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
+    sse_encode_list_native_pdf_highlight(self.highlights, serializer);
   }
 
   @protected

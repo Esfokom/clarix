@@ -67,6 +67,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativePdfSaveRequest dco_decode_box_autoadd_native_pdf_save_request(
+    dynamic raw,
+  );
+
+  @protected
   NativeRagIndexRequest dco_decode_box_autoadd_native_rag_index_request(
     dynamic raw,
   );
@@ -81,6 +86,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw);
+
+  @protected
+  List<NativePdfHighlight> dco_decode_list_native_pdf_highlight(dynamic raw);
 
   @protected
   List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw);
@@ -103,10 +114,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint64List dco_decode_list_prim_usize_strict(dynamic raw);
 
   @protected
+  NativePdfBookmark dco_decode_native_pdf_bookmark(dynamic raw);
+
+  @protected
   NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw);
 
   @protected
   NativePdfComposeResponse dco_decode_native_pdf_compose_response(dynamic raw);
+
+  @protected
+  NativePdfHighlight dco_decode_native_pdf_highlight(dynamic raw);
+
+  @protected
+  NativePdfSaveRequest dco_decode_native_pdf_save_request(dynamic raw);
 
   @protected
   NativePdfSource dco_decode_native_pdf_source(dynamic raw);
@@ -196,6 +216,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativePdfSaveRequest sse_decode_box_autoadd_native_pdf_save_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(
     SseDeserializer deserializer,
   );
@@ -210,6 +235,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<NativePdfBookmark> sse_decode_list_native_pdf_bookmark(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<NativePdfHighlight> sse_decode_list_native_pdf_highlight(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<NativePdfSource> sse_decode_list_native_pdf_source(
@@ -238,12 +273,27 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer);
 
   @protected
+  NativePdfBookmark sse_decode_native_pdf_bookmark(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativePdfComposeRequest sse_decode_native_pdf_compose_request(
     SseDeserializer deserializer,
   );
 
   @protected
   NativePdfComposeResponse sse_decode_native_pdf_compose_response(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePdfHighlight sse_decode_native_pdf_highlight(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePdfSaveRequest sse_decode_native_pdf_save_request(
     SseDeserializer deserializer,
   );
 
@@ -359,6 +409,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_pdf_save_request(
+    NativePdfSaveRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_rag_index_request(
     NativeRagIndexRequest self,
     SseSerializer serializer,
@@ -375,6 +431,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_native_pdf_bookmark(
+    List<NativePdfBookmark> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_pdf_highlight(
+    List<NativePdfHighlight> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_native_pdf_source(
@@ -413,6 +481,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_pdf_bookmark(
+    NativePdfBookmark self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_pdf_compose_request(
     NativePdfComposeRequest self,
     SseSerializer serializer,
@@ -421,6 +495,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_pdf_compose_response(
     NativePdfComposeResponse self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_pdf_highlight(
+    NativePdfHighlight self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_pdf_save_request(
+    NativePdfSaveRequest self,
     SseSerializer serializer,
   );
 
