@@ -193,7 +193,13 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         bookmarks: metadata.bookmarks,
         annotations: metadata.annotations,
       );
-      state = AsyncData(current.copyWith(clearBannerMessage: true));
+      state = AsyncData(
+        current.copyWith(
+          clearBannerMessage: true,
+          dirtyDocumentIds: Set<String>.from(current.dirtyDocumentIds)
+            ..remove(tab.id),
+        ),
+      );
     } catch (error) {
       state = AsyncData(
         current.copyWith(bannerMessage: 'Could not save PDF edits: $error'),
@@ -210,6 +216,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final String? id = state.value?.session.activeTabId;
     return id != null && (_redoMetadata[id]?.isNotEmpty ?? false);
   }
+
+  bool get hasUnsavedPdfEdits =>
+      state.value?.dirtyDocumentIds.isNotEmpty ?? false;
+  bool hasUnsavedEditsFor(String tabId) =>
+      state.value?.dirtyDocumentIds.contains(tabId) ?? false;
 
   Future<void> undoPdfEdit() => _movePdfHistory(undo: true);
   Future<void> redoPdfEdit() => _movePdfHistory(undo: false);
@@ -1040,7 +1051,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final Map<String, DocumentMetadata> metadata =
         Map<String, DocumentMetadata>.from(current.documentMetadata)
           ..[document.identity.fingerprint] = document;
-    state = AsyncData(current.copyWith(documentMetadata: metadata));
+    final String? activeTabId = current.session.tabs
+        .where((tab) => tab.documentId == document.identity.fingerprint)
+        .map((tab) => tab.id)
+        .firstOrNull;
+    state = AsyncData(
+      current.copyWith(
+        documentMetadata: metadata,
+        dirtyDocumentIds: activeTabId == null
+            ? current.dirtyDocumentIds
+            : (Set<String>.from(current.dirtyDocumentIds)..add(activeTabId!)),
+      ),
+    );
   }
 
   Future<Map<String, DocumentMetadata>> _loadDocumentMetadata(

@@ -42,7 +42,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       return;
     }
 
-    if (!state.session.restorePreviousSession &&
+    final notifier = ref.read(workspaceNotifierProvider.notifier);
+    if (notifier.hasUnsavedPdfEdits) {
+      final bool shouldClose = await _showUnsavedPdfDialog();
+      if (!shouldClose || !mounted) return;
+    } else if (!state.session.restorePreviousSession &&
         state.session.tabs.isNotEmpty) {
       final bool shouldClose = await _showDiscardDialog();
       if (!shouldClose || !mounted) {
@@ -172,6 +176,34 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
           ],
         );
       },
+    );
+    return result ?? false;
+  }
+
+  Future<bool> _showUnsavedPdfDialog() async {
+    final bool? result = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: WorkspaceColors.panel,
+        title: const Text(
+          'Discard unsaved PDF edits?',
+          style: TextStyle(color: WorkspaceColors.textStrong),
+        ),
+        content: const Text(
+          'Bookmarks and highlights have not been saved into their PDF files. Closing now will lose those changes.',
+          style: TextStyle(color: WorkspaceColors.textMuted),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Discard changes'),
+          ),
+        ],
+      ),
     );
     return result ?? false;
   }

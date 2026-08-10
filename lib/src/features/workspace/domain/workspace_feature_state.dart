@@ -22,6 +22,7 @@ class WorkspaceFeatureState {
     required this.composerExpanded,
     required this.bannerMessage,
     this.providerProfiles = const <AiProviderProfile>[],
+    this.dirtyDocumentIds = const <String>{},
   });
 
   final WorkspaceSession session;
@@ -31,6 +32,7 @@ class WorkspaceFeatureState {
   final bool composerExpanded;
   final String? bannerMessage;
   final List<AiProviderProfile> providerProfiles;
+  final Set<String> dirtyDocumentIds;
 
   WorkspaceFeatureState copyWith({
     WorkspaceSession? session,
@@ -41,6 +43,7 @@ class WorkspaceFeatureState {
     String? bannerMessage,
     bool clearBannerMessage = false,
     List<AiProviderProfile>? providerProfiles,
+    Set<String>? dirtyDocumentIds,
   }) {
     return WorkspaceFeatureState(
       session: session ?? this.session,
@@ -52,6 +55,7 @@ class WorkspaceFeatureState {
           ? null
           : bannerMessage ?? this.bannerMessage,
       providerProfiles: providerProfiles ?? this.providerProfiles,
+      dirtyDocumentIds: dirtyDocumentIds ?? this.dirtyDocumentIds,
     );
   }
 }
