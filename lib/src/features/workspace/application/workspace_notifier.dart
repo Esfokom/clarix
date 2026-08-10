@@ -12,11 +12,14 @@ import '../../../core/session_store.dart';
 import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
 import '../domain/ai_provider.dart';
+import '../domain/conversation.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/provider_profile_store.dart';
+import '../infrastructure/openai_compatible_provider.dart';
 import 'ai_runtime_service.dart';
+import 'conversation_context.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
@@ -206,6 +209,101 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       activeTabId: tabId,
     );
     await _commit(current.copyWith(session: session), persistAi: false);
+    final DocumentTabState? tab = session.tabs
+        .where((DocumentTabState item) => item.id == tabId)
+        .firstOrNull;
+    if (tab != null) {
+      await loadLatestConversation(tab.documentId);
+    }
+  }
+
+  Future<void> loadLatestConversation(String documentId) async {
+    final store = await ref.read(conversationStoreProvider.future);
+    final threads = await store.listThreads(documentId);
+    final WorkspaceFeatureState current = _requireState();
+    if (threads.isEmpty) {
+      await _commit(
+        current.copyWith(
+          aiState: current.aiState.copyWith(
+            messages: const <ComposerMessage>[],
+            lastRetrievalSnippets: const <CitationSnippet>[],
+          ),
+        ),
+      );
+      return;
+    }
+    await selectConversation(threads.first.id);
+  }
+
+  Future<void> selectConversation(String threadId) async {
+    final store = await ref.read(conversationStoreProvider.future);
+    final messages = await store.readMessages(threadId);
+    final WorkspaceFeatureState current = _requireState();
+    await _commit(
+      current.copyWith(
+        aiState: current.aiState.copyWith(
+          messages: messages
+              .map(
+                (ConversationMessage message) => ComposerMessage(
+                  id: message.id,
+                  role: message.role,
+                  text: message.content,
+                  createdAt: message.createdAt,
+                  citations: message.citations,
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ),
+    );
+  }
+
+  Future<void> deleteConversation(String threadId) async {
+    final store = await ref.read(conversationStoreProvider.future);
+    await store.deleteThread(threadId);
+    final DocumentTabState? tab = activeTabState;
+    if (tab != null) {
+      await loadLatestConversation(tab.documentId);
+    }
+  }
+
+  Future<void> startNewConversation() async {
+    final WorkspaceFeatureState current = _requireState();
+    if (current.aiState.chatBusy) {
+      return;
+    }
+    await _commit(
+      current.copyWith(
+        aiState: current.aiState.copyWith(
+          messages: const <ComposerMessage>[],
+          lastRetrievalSnippets: const <CitationSnippet>[],
+          statusMessage: 'New conversation ready.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> clearAllConversations() async {
+    final store = await ref.read(conversationStoreProvider.future);
+    await store.clearAll();
+    final WorkspaceFeatureState current = _requireState();
+    await _commit(
+      current.copyWith(
+        aiState: current.aiState.copyWith(
+          messages: const <ComposerMessage>[],
+          lastRetrievalSnippets: const <CitationSnippet>[],
+          statusMessage: 'All saved conversations were cleared.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> clearDocumentCache() async {
+    await _chunkStore.clearCache();
+    await (await _metadataStore).clearCache();
+    await ref.read(localRagStoreProvider).clearCache();
+    final WorkspaceFeatureState current = _requireState();
+    await _commit(current.copyWith(bannerMessage: 'Document cache cleared.'));
   }
 
   Future<void> toggleRestorePreviousSession(bool enabled) async {
@@ -457,11 +555,13 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
     try {
       final StringBuffer answerBuffer = StringBuffer();
+      final List<AiChatMessage> history = await _historyFor(activeTab, current);
       final _AiReplyData reply = await _generateReply(
         prompt: prompt.trim(),
         profileId: current.aiState.selectedProviderId!,
-        useCurrentDocumentScope: current.aiState.useCurrentDocumentScope,
+        useCurrentDocumentScope: true,
         currentDocumentId: activeTab?.documentId,
+        history: history,
         onStatus: _setAiActivity,
         onToken: (String token) {
           answerBuffer.write(token);
@@ -501,6 +601,35 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
           ),
         ),
       );
+      if (activeTab != null) {
+        final store = await ref.read(conversationStoreProvider.future);
+        final threads = await store.listThreads(activeTab.documentId);
+        final thread = threads.isEmpty
+            ? await store.createThread(
+                documentId: activeTab.documentId,
+                title: prompt.trim().split('\n').first,
+              )
+            : threads.first;
+        await store.appendExchange(
+          threadId: thread.id,
+          user: ConversationMessage(
+            id: userMessage.id,
+            role: userMessage.role,
+            content: userMessage.text,
+            createdAt: userMessage.createdAt,
+            tokenEstimate: _estimateTokens(userMessage.text),
+            citations: userMessage.citations,
+          ),
+          assistant: ConversationMessage(
+            id: assistantMessage.id,
+            role: assistantMessage.role,
+            content: reply.text,
+            createdAt: assistantMessage.createdAt,
+            tokenEstimate: _estimateTokens(reply.text),
+            citations: reply.citations,
+          ),
+        );
+      }
     } catch (error, stackTrace) {
       clarixLog.w(
         'Prompt generation failed.',
@@ -717,6 +846,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     required int pageNumber,
     required Rect pageRect,
     required String selectedText,
+    int colorValue = 0x66FFD54F,
   }) async {
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState tab = current.session.tabs.firstWhere(
@@ -735,7 +865,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
             pageRects: <Rect>[pageRect],
             selectedText: selectedText,
             note: null,
-            colorValue: 0x66FFD54F,
+            colorValue: colorValue,
             createdAt: DateTime.now().toUtc(),
           ),
         );
@@ -966,6 +1096,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     required String profileId,
     required bool useCurrentDocumentScope,
     required String? currentDocumentId,
+    List<AiChatMessage> history = const <AiChatMessage>[],
     required void Function(AiRuntimePhase phase, String message) onStatus,
     required void Function(String token) onToken,
   }) async {
@@ -974,6 +1105,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       profileId: profileId,
       useCurrentDocumentScope: useCurrentDocumentScope,
       currentDocumentId: currentDocumentId,
+      history: history,
       onToken: onToken,
       onStatus: onStatus,
     );
@@ -1019,6 +1151,54 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     if (persistAi) {
       await _sessionStore.writeAiWorkspaceState(newState.aiState);
     }
+  }
+
+  int _estimateTokens(String text) => (text.trim().length / 4).ceil();
+
+  Future<List<AiChatMessage>> _historyFor(
+    DocumentTabState? tab,
+    WorkspaceFeatureState current,
+  ) async {
+    if (tab == null) return const <AiChatMessage>[];
+    final store = await ref.read(conversationStoreProvider.future);
+    final threads = await store.listThreads(tab.documentId);
+    if (threads.isEmpty) return const <AiChatMessage>[];
+    final thread = threads.first;
+    final messages = await store.readMessages(thread.id);
+    final profile = current.providerProfiles.firstWhere(
+      (item) => item.id == current.aiState.selectedProviderId,
+    );
+    final plan = ConversationContextPlanner().plan(
+      messages: messages,
+      contextWindowTokens: profile.contextWindowTokens,
+    );
+    if (plan.messagesToCompact.isNotEmpty) {
+      final summary = await _ai.summarizeConversation(
+        profileId: profile.id,
+        transcript: plan.messagesToCompact
+            .map((item) => '${item.role}: ${item.content}')
+            .join('\n'),
+      );
+      await store.saveSummary(
+        threadId: thread.id,
+        summary: summary,
+        throughSequence: plan.messagesToCompact.last.sequence!,
+      );
+      return <AiChatMessage>[
+        AiChatMessage.system('Conversation summary: $summary'),
+      ];
+    }
+    return <AiChatMessage>[
+      if (thread.summary != null)
+        AiChatMessage.system('Conversation summary: ${thread.summary}'),
+      ...messages
+          .where((item) => !item.isCompacted)
+          .map(
+            (item) => item.role == 'user'
+                ? AiChatMessage.user(item.content)
+                : AiChatMessage.assistant(item.content),
+          ),
+    ];
   }
 
   WorkspaceFeatureState _requireState() {

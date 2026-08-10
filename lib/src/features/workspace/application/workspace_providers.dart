@@ -10,6 +10,7 @@ import '../../../core/session_store.dart';
 import '../../utilities/application/pdf_utility_service.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../infrastructure/conversation_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
@@ -88,6 +89,14 @@ final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>((
     );
   }
   return DocumentMetadataStore(root: root);
+});
+
+final conversationStoreProvider = FutureProvider<ConversationStore>((
+  Ref ref,
+) async {
+  final ConversationStore store = ConversationStore();
+  await store.initialize();
+  return store;
 });
 
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {

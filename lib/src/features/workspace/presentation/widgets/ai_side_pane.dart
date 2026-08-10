@@ -8,6 +8,8 @@ import 'package:markdown/markdown.dart' as markdown;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'inline_page_reference.dart';
@@ -40,30 +42,91 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+    );
     final AiWorkspaceState ai = widget.state.aiState;
+    final int contextLimit =
+        widget.state.providerProfiles
+            .where((profile) => profile.id == ai.selectedProviderId)
+            .firstOrNull
+            ?.contextWindowTokens ??
+        256000;
+    final int estimatedTokens = ai.messages.fold<int>(
+      0,
+      (int total, ComposerMessage message) =>
+          total + (message.text.trim().length / 4).ceil(),
+    );
+    final int contextPercent = ((estimatedTokens / contextLimit) * 100)
+        .clamp(0, 100)
+        .round();
 
     return DecoratedBox(
-      decoration: const BoxDecoration(color: WorkspaceColors.panel),
+      decoration: BoxDecoration(color: colors.panel),
       child: Column(
         children: <Widget>[
           Container(
             height: 52,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: WorkspaceColors.border)),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: colors.border)),
             ),
             child: Row(
               children: <Widget>[
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Clarix AI',
                     style: TextStyle(
-                      color: WorkspaceColors.textStrong,
+                      color: colors.textStrong,
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
+                Tooltip(
+                  message: 'Conversation history',
+                  child: ShadIconButton.ghost(
+                    key: const Key('ai-conversation-history'),
+                    width: 28,
+                    height: 28,
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(LucideIcons.history, size: 14),
+                    onPressed: ai.chatBusy || widget.activeTab == null
+                        ? null
+                        : _showHistory,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  message:
+                      'Estimated conversation context: $estimatedTokens of $contextLimit tokens',
+                  child: Text(
+                    '$contextPercent%',
+                    key: const Key('ai-context-usage'),
+                    style: TextStyle(
+                      color: colors.textFaint,
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'New conversation',
+                  child: ShadIconButton.ghost(
+                    key: const Key('ai-new-conversation'),
+                    width: 28,
+                    height: 28,
+                    padding: EdgeInsets.zero,
+                    icon: const Icon(LucideIcons.squarePen, size: 14),
+                    onPressed: ai.chatBusy
+                        ? null
+                        : () => ref
+                              .read(workspaceNotifierProvider.notifier)
+                              .startNewConversation(),
+                  ),
+                ),
+                const SizedBox(width: 4),
                 ShadIconButton.ghost(
                   width: 28,
                   height: 28,
@@ -76,61 +139,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    widget.activeTab == null
-                        ? 'No active PDF'
-                        : widget.activeTab!.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: WorkspaceColors.textMuted,
-                      fontSize: 10.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  'Current PDF',
-                  style: TextStyle(
-                    color: WorkspaceColors.textFaint,
-                    fontSize: 10.5,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                ShadSwitch(
-                  value: ai.useCurrentDocumentScope,
-                  onChanged: (bool _) => ref
-                      .read(workspaceNotifierProvider.notifier)
-                      .toggleScopeMode(),
-                  width: 34,
-                  height: 20,
-                ),
-              ],
-            ),
-          ),
-          const Divider(height: 1, color: WorkspaceColors.border),
           Expanded(
             child: ai.messages.isEmpty
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        ai.providerReady
-                            ? 'Ask about the active PDF, summarize a section, or query all open documents.'
-                            : 'Choose a remote AI provider in settings to enable chat.',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: WorkspaceColors.textMuted,
-                          fontSize: 11.5,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
+                ? _EmptyConversation(
+                    providerReady: ai.providerReady,
+                    colors: colors,
                   )
                 : ListView.builder(
                     reverse: true,
@@ -142,44 +155,20 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                       return _MessageBubble(
                         message: message,
                         activeTab: widget.activeTab,
+                        colors: colors,
                       );
                     },
                   ),
           ),
-          if (ai.chatBusy) const _ComposerLoadingIndicator(),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: ShadInput(
-                    controller: _controller,
-                    enabled: ai.providerReady && !ai.chatBusy,
-                    placeholder: Text(
-                      ai.providerReady
-                          ? 'Ask Clarix AI'
-                          : 'Add a provider first',
-                    ),
-                    onSubmitted: (_) => _send(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ShadIconButton(
-                  width: 32,
-                  height: 32,
-                  padding: EdgeInsets.zero,
-                  enabled: ai.providerReady,
-                  icon: ai.chatBusy
-                      ? const Icon(LucideIcons.square, size: 14)
-                      : const Icon(LucideIcons.arrowUp, size: 14),
-                  onPressed: ai.chatBusy
-                      ? () => ref
-                            .read(workspaceNotifierProvider.notifier)
-                            .stopGeneration()
-                      : _send,
-                ),
-              ],
-            ),
+          if (ai.chatBusy) _ComposerLoadingIndicator(colors: colors),
+          _DocumentComposer(
+            controller: _controller,
+            enabled: ai.providerReady && !ai.chatBusy,
+            isBusy: ai.chatBusy,
+            onSend: _send,
+            colors: colors,
+            onStop: () =>
+                ref.read(workspaceNotifierProvider.notifier).stopGeneration(),
           ),
         ],
       ),
@@ -194,13 +183,249 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     ref.read(workspaceNotifierProvider.notifier).sendPrompt(prompt);
     _controller.clear();
   }
+
+  Future<void> _showHistory() async {
+    final DocumentTabState? tab = widget.activeTab;
+    if (tab == null) return;
+    final BuildContext menuContext = context;
+    final store = await ref.read(conversationStoreProvider.future);
+    final threads = await store.listThreads(tab.documentId);
+    if (!menuContext.mounted) return;
+    final RenderBox button = menuContext.findRenderObject()! as RenderBox;
+    final String? selected = await showMenu<String>(
+      context: menuContext,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(button.size.width - 200, 48, 1, 1),
+        Offset.zero & button.size,
+      ),
+      items: threads
+          .expand(
+            (thread) => <PopupMenuEntry<String>>[
+              PopupMenuItem<String>(
+                value: thread.id,
+                child: Text(thread.title, overflow: TextOverflow.ellipsis),
+              ),
+              PopupMenuItem<String>(
+                value: 'delete:${thread.id}',
+                child: const Text('Delete conversation'),
+              ),
+            ],
+          )
+          .toList(growable: false),
+    );
+    if (selected != null && selected.startsWith('delete:')) {
+      if (!menuContext.mounted) return;
+      final bool? confirmed = await showDialog<bool>(
+        context: menuContext,
+        builder: (BuildContext context) => AlertDialog(
+          title: const Text('Delete conversation?'),
+          content: const Text(
+            'This removes this saved conversation permanently.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Delete'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed == true) {
+        await ref
+            .read(workspaceNotifierProvider.notifier)
+            .deleteConversation(selected.substring(7));
+      }
+    } else if (selected != null) {
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .selectConversation(selected);
+    }
+  }
+}
+
+class _EmptyConversation extends StatelessWidget {
+  const _EmptyConversation({required this.providerReady, required this.colors});
+
+  final bool providerReady;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: colors.panelRaised,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: colors.border),
+              ),
+              child: Icon(LucideIcons.fileText, color: colors.accent, size: 25),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              'Ask about the document',
+              key: Key('ai-empty-title'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.textStrong,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
+                letterSpacing: -0.2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              providerReady
+                  ? 'Clarix will ground answers in the PDF and cite the relevant pages.'
+                  : 'Choose a remote AI provider in settings to begin.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: colors.textMuted,
+                fontSize: 12,
+                height: 1.45,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DocumentComposer extends StatelessWidget {
+  const _DocumentComposer({
+    required this.controller,
+    required this.enabled,
+    required this.isBusy,
+    required this.onSend,
+    required this.onStop,
+    required this.colors,
+  });
+
+  final TextEditingController controller;
+  final bool enabled;
+  final bool isBusy;
+  final VoidCallback onSend;
+  final VoidCallback onStop;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      child: Material(
+        color: Colors.transparent,
+        child: Container(
+          key: const Key('document-composer'),
+          padding: const EdgeInsets.fromLTRB(14, 10, 10, 9),
+          decoration: BoxDecoration(
+            color: colors.panelRaised,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: colors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              TextField(
+                key: const Key('document-composer-input'),
+                controller: controller,
+                enabled: enabled,
+                minLines: 3,
+                maxLines: 6,
+                textInputAction: TextInputAction.newline,
+                style: TextStyle(
+                  color: colors.textStrong,
+                  fontSize: 12.5,
+                  height: 1.4,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: enabled
+                      ? 'Ask anything about this document…'
+                      : 'Add a provider first',
+                  hintStyle: TextStyle(color: colors.textFaint, fontSize: 12.5),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: <Widget>[
+                  Icon(LucideIcons.fileText, color: colors.textFaint, size: 13),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      'Document context',
+                      style: TextStyle(
+                        color: colors.textFaint,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  ValueListenableBuilder<TextEditingValue>(
+                    valueListenable: controller,
+                    builder: (BuildContext context, TextEditingValue value, _) {
+                      final bool canSend =
+                          enabled && value.text.trim().isNotEmpty;
+                      return Tooltip(
+                        message: isBusy ? 'Stop generating' : 'Send question',
+                        child: IconButton(
+                          key: const Key('document-composer-send'),
+                          onPressed: isBusy
+                              ? onStop
+                              : (canSend ? onSend : null),
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(32, 32),
+                            maximumSize: const Size(32, 32),
+                            padding: EdgeInsets.zero,
+                            backgroundColor: isBusy
+                                ? colors.textMuted
+                                : colors.accent,
+                            disabledBackgroundColor: colors.border,
+                            foregroundColor: colors.canvas,
+                            disabledForegroundColor: colors.textFaint,
+                          ),
+                          icon: Icon(
+                            isBusy ? LucideIcons.square : LucideIcons.arrowUp,
+                            size: isBusy ? 13 : 16,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.message, required this.activeTab});
+  const _MessageBubble({
+    required this.message,
+    required this.activeTab,
+    required this.colors,
+  });
 
   final ComposerMessage message;
   final DocumentTabState? activeTab;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -212,8 +437,12 @@ class _MessageBubble extends StatelessWidget {
         MarkdownBody(
           data: message.text.isEmpty ? '...' : message.text,
           extensionSet: markdown.ExtensionSet(
-            <markdown.BlockSyntax>[LatexBlockSyntax()],
+            <markdown.BlockSyntax>[
+              ...markdown.ExtensionSet.gitHubFlavored.blockSyntaxes,
+              LatexBlockSyntax(),
+            ],
             <markdown.InlineSyntax>[
+              ...markdown.ExtensionSet.gitHubFlavored.inlineSyntaxes,
               LatexInlineSyntax(),
               if (!isUser) InlinePageReferenceSyntax(),
             ],
@@ -222,7 +451,7 @@ class _MessageBubble extends StatelessWidget {
             'latex': LatexElementBuilder(
               textStyle: const TextStyle(
                 color: WorkspaceColors.textStrong,
-                fontSize: 11.5,
+                fontSize: 13.5,
                 height: 1.45,
               ),
             ),
@@ -234,8 +463,23 @@ class _MessageBubble extends StatelessWidget {
           styleSheet: MarkdownStyleSheet(
             p: const TextStyle(
               color: WorkspaceColors.textStrong,
-              fontSize: 11.5,
+              fontSize: 13.5,
               height: 1.45,
+            ),
+            tableHead: const TextStyle(
+              color: WorkspaceColors.textStrong,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w600,
+              height: 1.4,
+            ),
+            tableBody: const TextStyle(
+              color: WorkspaceColors.textStrong,
+              fontSize: 13.5,
+              height: 1.4,
+            ),
+            tableCellsPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
             ),
             code: const TextStyle(color: WorkspaceColors.textStrong),
           ),
@@ -251,26 +495,32 @@ class _MessageBubble extends StatelessWidget {
       );
     }
 
-    return Align(
-      alignment: Alignment.centerRight,
-      child: Container(
-        key: const Key('user-message-bubble'),
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
-        constraints: const BoxConstraints(maxWidth: 300),
-        decoration: BoxDecoration(
-          color: WorkspaceColors.accentSoft,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: WorkspaceColors.accentBorder),
-        ),
-        child: content,
-      ),
+    return Consumer(
+      builder: (BuildContext context, WidgetRef ref, Widget? _) {
+        return Align(
+          alignment: Alignment.centerRight,
+          child: Container(
+            key: const Key('user-message-bubble'),
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(10),
+            constraints: const BoxConstraints(maxWidth: 300),
+            decoration: BoxDecoration(
+              color: colors.accentSoft,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: colors.accentBorder),
+            ),
+            child: content,
+          ),
+        );
+      },
     );
   }
 }
 
 class _ComposerLoadingIndicator extends StatefulWidget {
-  const _ComposerLoadingIndicator();
+  const _ComposerLoadingIndicator({required this.colors});
+
+  final WorkspaceSurfaceTokens colors;
 
   @override
   State<_ComposerLoadingIndicator> createState() =>
@@ -328,9 +578,9 @@ class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
                 curve: Curves.easeInOut,
               ),
             ),
-            child: const DecoratedBox(
+            child: DecoratedBox(
               decoration: BoxDecoration(
-                color: WorkspaceColors.accent,
+                color: widget.colors.accent,
                 shape: BoxShape.circle,
               ),
               child: SizedBox(width: 7, height: 7),

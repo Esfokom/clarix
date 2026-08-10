@@ -1,19 +1,25 @@
 import 'package:clarix/src/features/workspace/presentation/widgets/desktop_window_chrome.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('shows chrome controls and delegates import actions', (
     tester,
   ) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     var imports = 0;
     await tester.pumpWidget(
-      MaterialApp(
-        home: DesktopWindowChrome(
-          onImport: () => imports++,
-          onOpenSettings: () {},
-          useNativeWindowControls: false,
-          child: const SizedBox(key: Key('chrome-body')),
+      ProviderScope(
+        child: MaterialApp(
+          home: DesktopWindowChrome(
+            onImport: () => imports++,
+            onOpenSettings: () {},
+            onSearch: (_) {},
+            useNativeWindowControls: false,
+            child: const SizedBox(key: Key('chrome-body')),
+          ),
         ),
       ),
     );
@@ -33,9 +39,15 @@ void main() {
     await tester.tap(find.byKey(const Key('chrome-import')));
     await tester.tap(find.byKey(const Key('chrome-scan-import')));
     expect(imports, 2);
-    expect(
-      tester.getTopLeft(find.byKey(const Key('chrome-body'))).dy,
-      greaterThanOrEqualTo(48),
+
+    final chrome = tester.getRect(
+      find.byKey(const Key('desktop-window-chrome')),
     );
+    final search = tester.getRect(find.byKey(const Key('chrome-search-field')));
+    expect(chrome.height, 56);
+    expect(search.left, 24);
+    expect(search.top, 10);
+    expect(search.width, greaterThan(1000));
+    expect(tester.getTopLeft(find.byKey(const Key('chrome-body'))).dy, 56);
   });
 }

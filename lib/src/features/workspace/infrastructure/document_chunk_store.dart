@@ -119,6 +119,11 @@ class DocumentChunkStore {
         .toList(growable: false);
   }
 
+  Future<void> clearCache() async {
+    final Directory directory = await _chunksDirectory();
+    if (await directory.exists()) await directory.delete(recursive: true);
+  }
+
   Map<String, dynamic> _encode(PdfChunkRecord chunk) => <String, dynamic>{
     'id': chunk.id,
     'documentId': chunk.documentId,

@@ -9,6 +9,37 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 void main() {
+  testWidgets('uses a document-only empty state and expanded composer', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: ShadApp(
+          home: Scaffold(
+            body: AiSidePane(
+              state: _state(const <ComposerMessage>[]),
+              activeTab: DocumentTabState.create(
+                id: 'tab',
+                documentId: 'document',
+                filePath: 'document.pdf',
+                title: 'document.pdf',
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('ai-empty-title')), findsOneWidget);
+    expect(find.text('Current PDF'), findsNothing);
+    expect(find.byKey(const Key('document-composer')), findsOneWidget);
+    final TextField input = tester.widget<TextField>(
+      find.byKey(const Key('document-composer-input')),
+    );
+    expect(input.minLines, 3);
+    expect(input.maxLines, 6);
+  });
+
   testWidgets('renders Markdown and math in both chat roles', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

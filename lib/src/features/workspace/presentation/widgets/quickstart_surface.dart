@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../application/workspace_providers.dart';
@@ -14,123 +15,113 @@ class QuickstartSurface extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return ColoredBox(
+      color: const Color(0xFF2F2F2F),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1240),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(40, 40, 40, 28),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
                   children: <Widget>[
-                    Text(
-                      'Welcome to Clarix',
-                      style: TextStyle(
-                        color: WorkspaceColors.textStrong,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w600,
-                        height: 1.12,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            'Welcome to Clarix',
+                            style: TextStyle(
+                              color: Color(0xFFE3E0DC),
+                              fontSize: 28,
+                              fontWeight: FontWeight.w600,
+                              height: 1.12,
+                            ),
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Open a PDF or choose a utility to get started.',
+                            style: GoogleFonts.roboto(
+                              color: const Color(0xFFA6A6A6),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    SizedBox(height: 6),
-                    Text(
-                      'Open a PDF or use a local document utility.',
-                      style: TextStyle(
-                        color: WorkspaceColors.textMuted,
-                        fontSize: 12.5,
-                      ),
+                    ShadButton(
+                      height: 34,
+                      leading: const Icon(LucideIcons.filePlus2, size: 15),
+                      onPressed: () => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .pickAndOpenPdfs(),
+                      child: const Text('Open PDF'),
                     ),
                   ],
                 ),
-              ),
-              ShadButton(
-                height: 34,
-                leading: const Icon(LucideIcons.filePlus2, size: 15),
-                onPressed: () => ref
-                    .read(workspaceNotifierProvider.notifier)
-                    .pickAndOpenPdfs(),
-                child: const Text('Open PDF'),
-              ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          const _QuickstartSectionLabel(label: 'Utilities'),
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 208,
-            child: GridView.count(
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: 10,
-              crossAxisSpacing: 10,
-              mainAxisExtent: 99,
-              children: <Widget>[
-                _UtilityCard(
-                  icon: LucideIcons.files,
-                  title: 'Combine PDFs',
-                  detail: 'Order multiple PDFs and save them as one file.',
-                  onTap: () => showCombinePdfDialog(context),
+                const SizedBox(height: 18),
+                const _QuickstartSectionLabel(label: 'Utilities'),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 240,
+                  child: GridView.count(
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 14,
+                    crossAxisSpacing: 14,
+                    childAspectRatio: 1,
+                    children: <Widget>[
+                      _UtilityCard(
+                        icon: LucideIcons.files,
+                        title: 'Combine PDFs',
+                        detail:
+                            'Order multiple PDFs and save them as one file.',
+                        onTap: () => showCombinePdfDialog(context),
+                      ),
+                      _UtilityCard(
+                        icon: LucideIcons.fileOutput,
+                        title: 'Convert to PDF',
+                        detail: 'Create PDFs from documents, text, and images.',
+                        onTap: () => showConvertToPdfDialog(context),
+                      ),
+                      _UtilityCard(
+                        icon: LucideIcons.fileStack,
+                        title: 'Extract pages',
+                        detail: 'Choose page ranges and save a new PDF.',
+                        onTap: () => showExtractPagesDialog(context),
+                      ),
+                      _UtilityCard(
+                        icon: LucideIcons.share2,
+                        title: 'Export PDF',
+                        detail:
+                            'Export content to Markdown, Word, or PowerPoint.',
+                        onTap: () => showExportPdfDialog(context),
+                      ),
+                    ],
+                  ),
                 ),
-                _UtilityCard(
-                  icon: LucideIcons.fileOutput,
-                  title: 'Convert to PDF',
-                  detail: 'Create PDFs from documents, text, and images.',
-                  onTap: () => showConvertToPdfDialog(context),
-                ),
-                _UtilityCard(
-                  icon: LucideIcons.fileStack,
-                  title: 'Extract pages',
-                  detail: 'Choose page ranges and save a new PDF.',
-                  onTap: () => showExtractPagesDialog(context),
-                ),
-                _UtilityCard(
-                  icon: LucideIcons.share2,
-                  title: 'Export PDF',
-                  detail: 'Export content to Markdown, Word, or PowerPoint.',
-                  onTap: () => showExportPdfDialog(context),
+                const SizedBox(height: 28),
+                const _QuickstartSectionLabel(label: 'Recent documents'),
+                const SizedBox(height: 12),
+                Expanded(
+                  child: state.session.recentFiles.isEmpty
+                      ? const Center(child: Text('No recent PDFs yet.'))
+                      : ListView.separated(
+                          itemCount: state.session.recentFiles.length,
+                          separatorBuilder: (_, int index) =>
+                              const SizedBox(height: 6),
+                          itemBuilder: (BuildContext context, int index) =>
+                              _QuickstartRecentTile(
+                                path: state.session.recentFiles[index],
+                              ),
+                        ),
                 ),
               ],
             ),
           ),
-          const Spacer(),
-          SizedBox(
-            height: 190,
-            child: SurfaceBlock(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const _QuickstartSectionLabel(label: 'Recent documents'),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: state.session.recentFiles.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'No recent PDFs yet.',
-                              style: TextStyle(
-                                color: WorkspaceColors.textMuted,
-                                fontSize: 12,
-                              ),
-                            ),
-                          )
-                        : ListView.separated(
-                            itemCount: state.session.recentFiles.length,
-                            separatorBuilder: (_, int index) =>
-                                const SizedBox(height: 6),
-                            itemBuilder: (BuildContext context, int index) {
-                              return _QuickstartRecentTile(
-                                path: state.session.recentFiles[index],
-                              );
-                            },
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -181,13 +172,14 @@ class _UtilityCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Ink(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: WorkspaceColors.panel,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: WorkspaceColors.border),
+              color: const Color(0xFF343434),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFF454545)),
             ),
-            child: Row(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Container(
                   width: 42,
@@ -206,52 +198,32 @@ class _UtilityCard extends StatelessWidget {
                         : WorkspaceColors.textFaint,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: enabled
-                              ? WorkspaceColors.textStrong
-                              : WorkspaceColors.textMuted,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
+                const SizedBox(height: 14),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      style: GoogleFonts.roboto(
+                        color: const Color(0xFFE3E0DC),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        detail,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: WorkspaceColors.textMuted,
-                          fontSize: 10.5,
-                          height: 1.25,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (enabled)
-                  const Icon(
-                    LucideIcons.arrowUpRight,
-                    size: 15,
-                    color: WorkspaceColors.textFaint,
-                  )
-                else
-                  const Text(
-                    'Soon',
-                    style: TextStyle(
-                      color: WorkspaceColors.textFaint,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      detail,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: WorkspaceColors.textMuted,
+                        fontSize: 10.5,
+                        height: 1.25,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),

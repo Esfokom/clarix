@@ -7,6 +7,7 @@ class AiProviderProfile {
     required this.baseUrl,
     required this.modelId,
     required this.shareRetrievedPassages,
+    required this.contextWindowTokens,
     required Map<String, String> headers,
   }) : headers = UnmodifiableMapView<String, String>(headers);
 
@@ -16,6 +17,7 @@ class AiProviderProfile {
     required String baseUrl,
     required String modelId,
     required bool shareRetrievedPassages,
+    int contextWindowTokens = 256000,
     Map<String, String> headers = const <String, String>{},
   }) {
     final String normalizedId = id.trim();
@@ -26,6 +28,11 @@ class AiProviderProfile {
         normalizedLabel.isEmpty ||
         normalizedModel.isEmpty) {
       throw ArgumentError('Provider ID, label, and model are required.');
+    }
+    if (contextWindowTokens <= 0) {
+      throw ArgumentError(
+        'Context window must be a positive number of tokens.',
+      );
     }
     for (final MapEntry<String, String> header in headers.entries) {
       if (header.key.trim().isEmpty || header.value.trim().isEmpty) {
@@ -43,6 +50,7 @@ class AiProviderProfile {
       baseUrl: normalizedUrl,
       modelId: normalizedModel,
       shareRetrievedPassages: shareRetrievedPassages,
+      contextWindowTokens: contextWindowTokens,
       headers: headers,
     );
   }
@@ -61,6 +69,7 @@ class AiProviderProfile {
       baseUrl: json['baseUrl'] as String,
       modelId: json['modelId'] as String,
       shareRetrievedPassages: json['shareRetrievedPassages'] as bool? ?? false,
+      contextWindowTokens: json['contextWindowTokens'] as int? ?? 256000,
       headers: headers,
     );
   }
@@ -70,6 +79,7 @@ class AiProviderProfile {
   final String baseUrl;
   final String modelId;
   final bool shareRetrievedPassages;
+  final int contextWindowTokens;
   final Map<String, String> headers;
 
   Uri get normalizedBaseUri => Uri.parse(baseUrl);
@@ -81,6 +91,7 @@ class AiProviderProfile {
     'baseUrl': baseUrl,
     'modelId': modelId,
     'shareRetrievedPassages': shareRetrievedPassages,
+    'contextWindowTokens': contextWindowTokens,
     'headers': headers,
   };
 
@@ -108,6 +119,7 @@ class AiProviderProfile {
       other.baseUrl == baseUrl &&
       other.modelId == modelId &&
       other.shareRetrievedPassages == shareRetrievedPassages &&
+      other.contextWindowTokens == contextWindowTokens &&
       _mapsEqual(other.headers, headers);
 
   @override
@@ -117,6 +129,7 @@ class AiProviderProfile {
     baseUrl,
     modelId,
     shareRetrievedPassages,
+    contextWindowTokens,
     Object.hashAll(headers.entries),
   );
 

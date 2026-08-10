@@ -98,6 +98,10 @@ class DocumentMetadataStore {
     }
   }
 
+  Future<void> clearCache() async {
+    if (await _root.exists()) await _root.delete(recursive: true);
+  }
+
   File _fileFor(String fingerprint) =>
       File(p.join(_root.path, '$fingerprint.json'));
 

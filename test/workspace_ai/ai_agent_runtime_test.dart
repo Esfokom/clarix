@@ -170,12 +170,12 @@ void main() {
       final String instruction = provider.requests.single.messages
           .firstWhere((AiChatMessage message) => message.role == 'system')
           .content;
-      expect(instruction, contains('From the document'));
+      expect(instruction, contains('Do not use "From the document"'));
       expect(
         instruction,
-        contains('General knowledge (not from this document)'),
+        contains('*(General context, not stated in the document: …)*'),
       );
-      expect(instruction, contains('insufficient document evidence'));
+      expect(instruction, contains('does not establish a point'));
     },
   );
 

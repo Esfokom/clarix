@@ -58,6 +58,7 @@ dependencies:
   image: ^4.8.0
   flutter_markdown_plus_latex: ^1.0.5
   bitsdojo_window: ^0.1.6
+  sqflite_common_ffi: ^2.4.2
 
 dev_dependencies:
   flutter_test:

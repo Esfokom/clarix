@@ -18,6 +18,9 @@ class AiChatMessage {
   const AiChatMessage.system(String content)
     : this(role: 'system', content: content);
 
+  const AiChatMessage.assistant(String content)
+    : this(role: 'assistant', content: content);
+
   const AiChatMessage.tool({
     required String toolCallId,
     required String content,

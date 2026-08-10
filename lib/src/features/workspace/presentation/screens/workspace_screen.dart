@@ -66,6 +66,14 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       onImport: () =>
           ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
       onOpenSettings: () => showAppSettingsDialog(context),
+      onSearch: (String query) {
+        final String? tabId = asyncState.value?.session.activeTabId;
+        if (tabId != null) {
+          ref
+              .read(workspaceNotifierProvider.notifier)
+              .setSearchQuery(tabId, query.trim());
+        }
+      },
       child: Scaffold(
         backgroundColor: WorkspaceColors.canvas,
         body: asyncState.when(

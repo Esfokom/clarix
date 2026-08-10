@@ -4,6 +4,8 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
@@ -22,10 +24,13 @@ class WorkspaceSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+    );
     return SizedBox(
       width: 224,
       child: DecoratedBox(
-        decoration: const BoxDecoration(color: WorkspaceColors.panel),
+        decoration: BoxDecoration(color: colors.panel),
         child: Column(
           children: <Widget>[
             Padding(
@@ -35,25 +40,25 @@ class WorkspaceSidebar extends ConsumerWidget {
                   Container(
                     width: 30,
                     height: 30,
-                    decoration: const BoxDecoration(
-                      color: WorkspaceColors.accentSoft,
+                    decoration: BoxDecoration(
+                      color: colors.accentSoft,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       LucideIcons.bookOpenText,
-                      color: WorkspaceColors.textStrong,
+                      color: colors.accent,
                       size: 15,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
                           'Clarix',
                           style: TextStyle(
-                            color: WorkspaceColors.textStrong,
+                            color: colors.textStrong,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -62,7 +67,7 @@ class WorkspaceSidebar extends ConsumerWidget {
                         Text(
                           'PDF workspace',
                           style: TextStyle(
-                            color: WorkspaceColors.textFaint,
+                            color: colors.textFaint,
                             fontSize: 11,
                           ),
                         ),
@@ -82,13 +87,16 @@ class WorkspaceSidebar extends ConsumerWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: WorkspaceColors.border),
+            Divider(height: 1, color: colors.border),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(14),
                 children: <Widget>[
                   if (activeTab != null) ...<Widget>[
-                    _SidebarPaneToggle(selected: state.session.sidebarPane),
+                    _SidebarPaneToggle(
+                      selected: state.session.sidebarPane,
+                      colors: colors,
+                    ),
                     const SizedBox(height: 12),
                     SectionLabel(
                       label: state.session.sidebarPane == SidebarPane.outline
@@ -103,7 +111,7 @@ class WorkspaceSidebar extends ConsumerWidget {
                                   state.outlines[activeTab!.id] ??
                                   const <OutlineNodeState>[],
                             )
-                          : ThumbnailPane(tab: activeTab!),
+                          : ThumbnailPane(tab: activeTab!, colors: colors),
                     ),
                     const SizedBox(height: 14),
                   ],
@@ -117,12 +125,13 @@ class WorkspaceSidebar extends ConsumerWidget {
                         child: _SidebarTabTile(
                           tab: tab,
                           selected: tab.id == state.session.activeTabId,
+                          colors: colors,
                         ),
                       ),
                 ],
               ),
             ),
-            const Divider(height: 1, color: WorkspaceColors.border),
+            Divider(height: 1, color: colors.border),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
               child: Row(
@@ -131,10 +140,10 @@ class WorkspaceSidebar extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        const Text(
+                        Text(
                           'Restore session',
                           style: TextStyle(
-                            color: WorkspaceColors.textStrong,
+                            color: colors.textStrong,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -144,8 +153,8 @@ class WorkspaceSidebar extends ConsumerWidget {
                           state.session.restorePreviousSession
                               ? 'Reopen previous tabs'
                               : 'Start fresh',
-                          style: const TextStyle(
-                            color: WorkspaceColors.textFaint,
+                          style: TextStyle(
+                            color: colors.textFaint,
                             fontSize: 10.5,
                           ),
                         ),
@@ -169,9 +178,10 @@ class WorkspaceSidebar extends ConsumerWidget {
 }
 
 class _SidebarPaneToggle extends ConsumerWidget {
-  const _SidebarPaneToggle({required this.selected});
+  const _SidebarPaneToggle({required this.selected, required this.colors});
 
   final SidebarPane selected;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -179,9 +189,9 @@ class _SidebarPaneToggle extends ConsumerWidget {
       height: 30,
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
-        color: WorkspaceColors.panelRaised,
+        color: colors.panelRaised,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: WorkspaceColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: SidebarPane.values
@@ -203,19 +213,19 @@ class _SidebarPaneToggle extends ConsumerWidget {
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? WorkspaceColors.accentSoft
+                          ? colors.accentSoft
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: <Widget>[
-                        Icon(icon, size: 12, color: WorkspaceColors.textStrong),
+                        Icon(icon, size: 12, color: colors.textStrong),
                         const SizedBox(width: 6),
                         Text(
                           label,
-                          style: const TextStyle(
-                            color: WorkspaceColors.textStrong,
+                          style: TextStyle(
+                            color: colors.textStrong,
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                           ),
@@ -233,10 +243,15 @@ class _SidebarPaneToggle extends ConsumerWidget {
 }
 
 class _SidebarTabTile extends ConsumerWidget {
-  const _SidebarTabTile({required this.tab, required this.selected});
+  const _SidebarTabTile({
+    required this.tab,
+    required this.selected,
+    required this.colors,
+  });
 
   final DocumentTabState tab;
   final bool selected;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -246,12 +261,10 @@ class _SidebarTabTile extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(10, 8, 8, 8),
         decoration: BoxDecoration(
-          color: selected ? WorkspaceColors.panelRaised : WorkspaceColors.panel,
+          color: selected ? colors.panelRaised : colors.panel,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected
-                ? WorkspaceColors.accentBorder
-                : WorkspaceColors.border,
+            color: selected ? colors.accentBorder : colors.border,
           ),
         ),
         child: Row(
@@ -261,9 +274,7 @@ class _SidebarTabTile extends ConsumerWidget {
                   ? LucideIcons.triangleAlert
                   : LucideIcons.fileText,
               size: 14,
-              color: tab.isMissingFile
-                  ? WorkspaceColors.warning
-                  : WorkspaceColors.textMuted,
+              color: tab.isMissingFile ? colors.warning : colors.textMuted,
             ),
             const SizedBox(width: 8),
             Expanded(
@@ -274,8 +285,8 @@ class _SidebarTabTile extends ConsumerWidget {
                     tab.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: WorkspaceColors.textStrong,
+                    style: TextStyle(
+                      color: colors.textStrong,
                       fontSize: 11.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -285,10 +296,7 @@ class _SidebarTabTile extends ConsumerWidget {
                     tab.isMissingFile
                         ? 'Missing file'
                         : 'Page ${tab.currentPage}${tab.pageCountHint == null ? '' : ' / ${tab.pageCountHint}'}',
-                    style: const TextStyle(
-                      color: WorkspaceColors.textFaint,
-                      fontSize: 10.5,
-                    ),
+                    style: TextStyle(color: colors.textFaint, fontSize: 10.5),
                   ),
                 ],
               ),
@@ -309,9 +317,10 @@ class _SidebarTabTile extends ConsumerWidget {
 }
 
 class ThumbnailPane extends ConsumerWidget {
-  const ThumbnailPane({required this.tab, super.key});
+  const ThumbnailPane({required this.tab, required this.colors, super.key});
 
   final DocumentTabState tab;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -355,12 +364,12 @@ class ThumbnailPane extends ConsumerWidget {
                     Expanded(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: WorkspaceColors.viewerBackground,
+                          color: colors.viewerBackground,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
                             color: selected
-                                ? WorkspaceColors.accentBorder
-                                : WorkspaceColors.border,
+                                ? colors.accentBorder
+                                : colors.border,
                           ),
                         ),
                         child: ClipRRect(
@@ -375,10 +384,7 @@ class ThumbnailPane extends ConsumerWidget {
                     const SizedBox(height: 5),
                     Text(
                       '$pageNumber',
-                      style: const TextStyle(
-                        color: WorkspaceColors.textMuted,
-                        fontSize: 10.5,
-                      ),
+                      style: TextStyle(color: colors.textMuted, fontSize: 10.5),
                     ),
                   ],
                 ),

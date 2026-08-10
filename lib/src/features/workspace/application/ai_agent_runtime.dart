@@ -11,12 +11,14 @@ class AiAgentRequest {
     required this.apiKey,
     required this.prompt,
     required this.documentIds,
+    this.history = const <AiChatMessage>[],
   });
 
   final AiProviderProfile profile;
   final String apiKey;
   final String prompt;
   final List<String> documentIds;
+  final List<AiChatMessage> history;
 }
 
 class AiAgentReply {
@@ -41,15 +43,15 @@ class AiAgentRuntime {
     final bool canSearchDocument = citations.isNotEmpty;
     final List<AiChatMessage> messages = <AiChatMessage>[
       const AiChatMessage.system(
-        'You are Clarix, a PDF reading assistant. Structure every answer with '
-        'a "From the document" section first. Make claims in that section only '
-        'when supported by supplied passages, and cite each claim by page number. '
-        'If the passages do not support an answer, say there is insufficient '
-        'document evidence. You may add a separate "General knowledge (not from '
-        'this document)" section for helpful outside information, but never '
-        'present it as document content. Use tools only for local document context.',
+        'You are Clarix, a PDF reading assistant. Answer directly from supplied '
+        'document evidence and cite supported claims by page number. Do not use '
+        '"From the document" or "General knowledge" headings. If the document '
+        'does not establish a point, say so. Include outside information only '
+        'when necessary and only as *(General context, not stated in the '
+        'document: …)*. Use tools only for local document context.',
       ),
       if (citations.isNotEmpty) AiChatMessage.system(_contextFor(citations)),
+      ...request.history,
       AiChatMessage.user(request.prompt),
     ];
     final StringBuffer answer = StringBuffer();

@@ -33,6 +33,7 @@ class AiRuntimeService {
     required String profileId,
     required bool useCurrentDocumentScope,
     String? currentDocumentId,
+    List<AiChatMessage> history = const <AiChatMessage>[],
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
   }) async {
@@ -55,6 +56,7 @@ class AiRuntimeService {
             documentIds: useCurrentDocumentScope && currentDocumentId != null
                 ? <String>[currentDocumentId]
                 : const <String>[],
+            history: history,
           ),
         );
     onToken(reply.text);
@@ -62,6 +64,38 @@ class AiRuntimeService {
   }
 
   Future<void> stopGeneration() async => _provider.cancel();
+
+  Future<String> summarizeConversation({
+    required String profileId,
+    required String transcript,
+  }) async {
+    final profiles = await providerProfiles.readProfiles();
+    final profile = profiles.where((item) => item.id == profileId).firstOrNull;
+    if (profile == null) {
+      throw StateError('Select a remote AI provider to chat.');
+    }
+    final key = await providerProfiles.readApiKey(profile.id);
+    if (key == null || key.isEmpty) {
+      throw StateError('Add an API key for ${profile.label}.');
+    }
+    final events = await _provider
+        .streamChat(
+          OpenAiChatRequest(
+            profile: profile,
+            apiKey: key,
+            messages: <AiChatMessage>[
+              const AiChatMessage.system(
+                'Summarize the conversation for future follow-ups. Preserve user intent, unresolved questions, document-supported conclusions with page citations, and important names, dates, quantities, and constraints.',
+              ),
+              AiChatMessage.user(transcript),
+            ],
+            tools: const <Map<String, dynamic>>[],
+          ),
+        )
+        .toList();
+    return events.whereType<AiTextDelta>().map((item) => item.text).join();
+  }
+
   Future<void> dispose() async {}
 }
 

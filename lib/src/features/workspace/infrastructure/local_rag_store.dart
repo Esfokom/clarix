@@ -123,6 +123,11 @@ class LocalRagStore {
     return jsonDecode(await target.readAsString()) as Map<String, dynamic>;
   }
 
+  Future<void> clearCache() async {
+    final Directory directory = await _directoryProvider();
+    if (await directory.exists()) await directory.delete(recursive: true);
+  }
+
   Future<File> _manifestFile(String documentId) async {
     final Directory directory = await _directoryProvider();
     await directory.create(recursive: true);

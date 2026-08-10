@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:io';
+
+// ignore_for_file: unused_element, unused_element_parameter, unused_local_variable
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +11,8 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:smooth_corner/smooth_corner.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'pdf_viewer_interaction_math.dart';
@@ -25,9 +30,12 @@ class DocumentWorkspace extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+    );
     return Column(
       children: <Widget>[
-        _TabStrip(state: state, activeTab: activeTab),
+        _TabStrip(state: state, activeTab: activeTab, colors: colors),
         Expanded(
           child: _PdfViewerPane(
             tab: activeTab,
@@ -35,6 +43,7 @@ class DocumentWorkspace extends ConsumerWidget {
             annotations:
                 state.documentMetadata[activeTab.documentId]?.annotations ??
                 const <DocumentAnnotation>[],
+            colors: colors,
           ),
         ),
       ],
@@ -43,41 +52,21 @@ class DocumentWorkspace extends ConsumerWidget {
 }
 
 class _TabStrip extends ConsumerStatefulWidget {
-  const _TabStrip({required this.state, required this.activeTab});
+  const _TabStrip({
+    required this.state,
+    required this.activeTab,
+    required this.colors,
+  });
 
   final WorkspaceFeatureState state;
   final DocumentTabState activeTab;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   ConsumerState<_TabStrip> createState() => _TabStripState();
 }
 
 class _TabStripState extends ConsumerState<_TabStrip> {
-  late final TextEditingController _searchController;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController(
-      text: widget.activeTab.searchQuery,
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant _TabStrip oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.activeTab.id != widget.activeTab.id ||
-        oldWidget.activeTab.searchQuery != widget.activeTab.searchQuery) {
-      _searchController.text = widget.activeTab.searchQuery;
-    }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
     final DocumentMetadata? metadata =
@@ -95,25 +84,12 @@ class _TabStripState extends ConsumerState<_TabStrip> {
         return Container(
           height: 58,
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: const BoxDecoration(
-            color: WorkspaceColors.canvasRaised,
-            border: Border(bottom: BorderSide(color: WorkspaceColors.border)),
+          decoration: BoxDecoration(
+            color: widget.colors.canvasRaised,
+            border: Border(bottom: BorderSide(color: widget.colors.border)),
           ),
           child: Row(
             children: <Widget>[
-              Tooltip(
-                message: 'Open PDF (Ctrl+O)',
-                child: ShadIconButton.ghost(
-                  width: 32,
-                  height: 32,
-                  padding: EdgeInsets.zero,
-                  icon: const Icon(LucideIcons.folderOpen, size: 16),
-                  onPressed: () => ref
-                      .read(workspaceNotifierProvider.notifier)
-                      .pickAndOpenPdfs(),
-                ),
-              ),
-              const SizedBox(width: 6),
               Expanded(
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
@@ -133,12 +109,12 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                         margin: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                           color: selected
-                              ? WorkspaceColors.panelRaised
+                              ? widget.colors.panelRaised
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(9),
                           border: Border.all(
                             color: selected
-                                ? WorkspaceColors.accentBorder
+                                ? widget.colors.accentBorder
                                 : Colors.transparent,
                           ),
                         ),
@@ -151,8 +127,8 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                                   : LucideIcons.fileText,
                               size: 13,
                               color: tab.isMissingFile
-                                  ? WorkspaceColors.warning
-                                  : WorkspaceColors.textMuted,
+                                  ? widget.colors.warning
+                                  : widget.colors.textMuted,
                             ),
                             const SizedBox(width: 7),
                             ConstrainedBox(
@@ -163,8 +139,8 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                                 tab.title,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: WorkspaceColors.textStrong,
+                                style: TextStyle(
+                                  color: widget.colors.textStrong,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -176,12 +152,12 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                               onTap: () => ref
                                   .read(workspaceNotifierProvider.notifier)
                                   .closeTab(tab.id),
-                              child: const Padding(
-                                padding: EdgeInsets.all(2),
+                              child: Padding(
+                                padding: const EdgeInsets.all(2),
                                 child: Icon(
                                   LucideIcons.x,
                                   size: 12,
-                                  color: WorkspaceColors.textFaint,
+                                  color: widget.colors.textFaint,
                                 ),
                               ),
                             ),
@@ -192,113 +168,12 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                   },
                 ),
               ),
-              const SizedBox(width: 8),
-              if (!compact)
-                SizedBox(
-                  width: 190,
-                  child: ShadInput(
-                    controller: _searchController,
-                    placeholder: const Text('Search document'),
-                    leading: const Icon(LucideIcons.search, size: 14),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    onSubmitted: _submitSearch,
-                  ),
-                )
-              else
-                _ToolbarButton(
-                  tooltip: 'Search document (Ctrl+F)',
-                  icon: LucideIcons.search,
-                  onPressed: _showSearchDialog,
-                ),
-              const SizedBox(width: 4),
-              _ToolbarButton(
-                tooltip: bookmarked
-                    ? 'Remove page bookmark'
-                    : 'Bookmark current page',
-                icon: bookmarked
-                    ? LucideIcons.bookmarkCheck
-                    : LucideIcons.bookmark,
-                active: bookmarked,
-                onPressed: () => ref
-                    .read(workspaceNotifierProvider.notifier)
-                    .toggleBookmark(
-                      widget.activeTab.id,
-                      widget.activeTab.currentPage,
-                    ),
-              ),
-              _ToolbarButton(
-                tooltip: 'Add note to current page',
-                icon: LucideIcons.stickyNote,
-                onPressed: _showNoteDialog,
-              ),
-              _ToolbarButton(
-                tooltip: widget.state.composerExpanded
-                    ? 'Close AI assistant'
-                    : 'Open local AI assistant',
-                icon: LucideIcons.sparkles,
-                active: widget.state.composerExpanded,
-                onPressed: () => ref
-                    .read(workspaceNotifierProvider.notifier)
-                    .toggleComposerExpanded(),
-              ),
-              if (!compact) ...<Widget>[
-                const SizedBox(width: 4),
-                ShadBadge.secondary(
-                  child: Text(
-                    widget.activeTab.indexStatus.name,
-                    style: const TextStyle(fontSize: 10),
-                  ),
-                ),
-              ],
+              _IndexStatusIndicator(status: widget.activeTab.indexStatus),
             ],
           ),
         );
       },
     );
-  }
-
-  void _submitSearch(String value) {
-    ref
-        .read(workspaceNotifierProvider.notifier)
-        .setSearchQuery(widget.activeTab.id, value.trim());
-  }
-
-  Future<void> _showSearchDialog() async {
-    final String? query = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        final TextEditingController controller = TextEditingController(
-          text: _searchController.text,
-        );
-        return AlertDialog(
-          backgroundColor: WorkspaceColors.panel,
-          title: const Text(
-            'Search document',
-            style: TextStyle(color: WorkspaceColors.textStrong),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: const TextStyle(color: WorkspaceColors.textStrong),
-            onSubmitted: (String value) => Navigator.of(context).pop(value),
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(controller.text),
-              child: const Text('Search'),
-            ),
-          ],
-        );
-      },
-    );
-    if (query != null) {
-      _searchController.text = query;
-      _submitSearch(query);
-    }
   }
 
   Future<void> _showNoteDialog() async {
@@ -343,6 +218,68 @@ class _TabStripState extends ConsumerState<_TabStrip> {
   }
 }
 
+class _IndexStatusIndicator extends StatefulWidget {
+  const _IndexStatusIndicator({required this.status});
+  final DocumentIndexStatus status;
+  @override
+  State<_IndexStatusIndicator> createState() => _IndexStatusIndicatorState();
+}
+
+class _IndexStatusIndicatorState extends State<_IndexStatusIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  )..repeat(reverse: true);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bool active =
+        widget.status == DocumentIndexStatus.queued ||
+        widget.status == DocumentIndexStatus.indexing;
+    final Color color = widget.status == DocumentIndexStatus.indexed
+        ? const Color(0xFF5BA56A)
+        : active
+        ? const Color(0xFFC5C5C5)
+        : WorkspaceColors.textFaint;
+    final String message = switch (widget.status) {
+      DocumentIndexStatus.indexed =>
+        'Indexed — ready for document-aware AI answers.',
+      DocumentIndexStatus.indexing =>
+        'Indexing this PDF for document-aware AI answers.',
+      DocumentIndexStatus.queued => 'PDF indexing is queued.',
+      DocumentIndexStatus.failed =>
+        'Indexing failed. AI may use limited document context.',
+      DocumentIndexStatus.unavailable =>
+        'Indexing is unavailable for this document.',
+      DocumentIndexStatus.idle => 'PDF has not been indexed yet.',
+    };
+    return Tooltip(
+      message: message,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: active
+            ? FadeTransition(
+                opacity: Tween<double>(begin: .35, end: 1).animate(_controller),
+                child: _dot(color),
+              )
+            : _dot(color),
+      ),
+    );
+  }
+
+  Widget _dot(Color color) => Container(
+    width: 9,
+    height: 9,
+    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  );
+}
+
 class _ToolbarButton extends StatelessWidget {
   const _ToolbarButton({
     required this.tooltip,
@@ -377,11 +314,13 @@ class _PdfViewerPane extends ConsumerStatefulWidget {
     required this.tab,
     required this.documentRef,
     required this.annotations,
+    required this.colors,
   });
 
   final DocumentTabState tab;
   final PdfDocumentRefFile documentRef;
   final List<DocumentAnnotation> annotations;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   ConsumerState<_PdfViewerPane> createState() => _PdfViewerPaneState();
@@ -399,6 +338,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   late ValueNotifier<_ReaderViewportMetrics> _metrics;
   PdfTextSearcher? _searcher;
   VoidCallback? _searchListener;
+  String? _pendingSearchQuery;
   Timer? _viewerStateDebounce;
   Offset? _lastPointerGlobalPosition;
 
@@ -431,6 +371,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       _metrics.dispose();
       _viewerStateDebounce?.cancel();
       _lastPointerGlobalPosition = null;
+      _pendingSearchQuery = null;
       _createController();
       return;
     }
@@ -448,6 +389,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
     if (oldWidget.tab.searchQuery != widget.tab.searchQuery &&
         _searcher != null) {
+      _pendingSearchQuery = widget.tab.searchQuery.trim().isEmpty
+          ? null
+          : widget.tab.searchQuery;
       _searcher!.startTextSearch(
         widget.tab.searchQuery,
         searchImmediately: widget.tab.searchQuery.trim().isNotEmpty,
@@ -488,6 +432,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   @override
   Widget build(BuildContext context) {
+    final String? readerBackgroundPath = ref
+        .watch(clarixThemeProvider)
+        .value
+        ?.readerBackgroundPath;
     if (widget.tab.isMissingFile) {
       return Center(
         child: SurfaceBlock(
@@ -523,15 +471,23 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     }
 
     return DecoratedBox(
-      decoration: const BoxDecoration(color: WorkspaceColors.canvas),
+      decoration: BoxDecoration(color: widget.colors.canvas),
       child: Theme(
         data: Theme.of(context).copyWith(
-          textSelectionTheme: const TextSelectionThemeData(
-            selectionColor: WorkspaceColors.selection,
+          textSelectionTheme: TextSelectionThemeData(
+            selectionColor: widget.colors.selection,
           ),
         ),
         child: Stack(
           children: <Widget>[
+            if (readerBackgroundPath case final String path)
+              Positioned.fill(
+                child: Image.file(
+                  File(path),
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox(),
+                ),
+              ),
             Positioned.fill(
               child: Listener(
                 onPointerHover: _rememberPointerPosition,
@@ -551,7 +507,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                           controller: _controller,
                           initialPageNumber: widget.tab.currentPage,
                           params: PdfViewerParams(
-                            backgroundColor: WorkspaceColors.viewerBackground,
+                            backgroundColor: readerBackgroundPath == null
+                                ? widget.colors.viewerBackground
+                                : Colors.transparent,
                             margin: 14,
                             pageDropShadow: const BoxShadow(
                               color: Color(0x1A000000),
@@ -585,6 +543,26 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                 ),
               ),
             ),
+            if (_shouldShowSearchOverlay)
+              Positioned(
+                top: 14,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: _DocumentSearchOverlay(
+                    query: widget.tab.searchQuery,
+                    isSearching: _isSearchInProgress,
+                    matchCount: _searcher?.matches.length ?? 0,
+                    currentIndex: _searcher?.currentIndex,
+                    onPrevious: _canGoToPreviousMatch
+                        ? () => unawaited(_goToPreviousSearchMatch())
+                        : null,
+                    onNext: _canGoToNextMatch
+                        ? () => unawaited(_goToNextSearchMatch())
+                        : null,
+                  ),
+                ),
+              ),
             Positioned(
               left: 0,
               right: 0,
@@ -661,11 +639,16 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   ) async {
     final PdfTextSearcher searcher = PdfTextSearcher(controller);
     if (widget.tab.searchQuery.trim().isNotEmpty) {
+      _pendingSearchQuery = widget.tab.searchQuery;
       searcher.startTextSearch(widget.tab.searchQuery, searchImmediately: true);
     }
     _searchListener = () {
       if (mounted) {
-        setState(() {});
+        setState(() {
+          if (!searcher.isSearching) {
+            _pendingSearchQuery = null;
+          }
+        });
       }
     };
     searcher.addListener(_searchListener!);
@@ -691,6 +674,41 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       );
     } else {
       searcher.dispose();
+    }
+  }
+
+  bool get _shouldShowSearchOverlay =>
+      widget.tab.searchQuery.trim().isNotEmpty && _searcher != null;
+
+  bool get _isSearchInProgress =>
+      _searcher?.isSearching == true ||
+      _pendingSearchQuery == widget.tab.searchQuery;
+
+  bool get _canGoToPreviousMatch {
+    final PdfTextSearcher? searcher = _searcher;
+    return searcher != null &&
+        searcher.matches.isNotEmpty &&
+        (searcher.currentIndex ?? 0) > 0;
+  }
+
+  bool get _canGoToNextMatch {
+    final PdfTextSearcher? searcher = _searcher;
+    return searcher != null &&
+        searcher.matches.isNotEmpty &&
+        (searcher.currentIndex ?? -1) + 1 < searcher.matches.length;
+  }
+
+  Future<void> _goToPreviousSearchMatch() async {
+    await _searcher?.goToPrevMatch();
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _goToNextSearchMatch() async {
+    await _searcher?.goToNextMatch();
+    if (mounted) {
+      setState(() {});
     }
   }
 
@@ -750,6 +768,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   }
 
   Future<void> _highlightSelection() async {
+    final profile = ref.read(clarixThemeProvider).value;
+    final int colorValue =
+        (((profile?.highlightOpacity ?? 0.4) * 255).round() << 24) |
+        (profile?.highlightColor ?? 0xFFFFD54F);
     final List<PdfPageTextRange> ranges = await _controller
         .textSelectionDelegate
         .getSelectedTextRanges();
@@ -767,6 +789,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
               bounds.top,
             ),
             selectedText: range.text,
+            colorValue: colorValue,
           );
     }
     await _controller.textSelectionDelegate.clearTextSelection();
@@ -896,6 +919,122 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       title: node.title,
       pageNumber: node.dest?.pageNumber,
       children: node.children.map(_mapOutline).toList(growable: false),
+    );
+  }
+}
+
+class _DocumentSearchOverlay extends StatelessWidget {
+  const _DocumentSearchOverlay({
+    required this.query,
+    required this.isSearching,
+    required this.matchCount,
+    required this.currentIndex,
+    required this.onPrevious,
+    required this.onNext,
+  });
+
+  final String query;
+  final bool isSearching;
+  final int matchCount;
+  final int? currentIndex;
+  final VoidCallback? onPrevious;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool noMatches = !isSearching && matchCount == 0;
+    final String status = noMatches
+        ? 'No matches found'
+        : isSearching
+        ? '${matchCount == 0 ? 'Searching' : '$matchCount match${matchCount == 1 ? '' : 'es'} found'}…'
+        : '${(currentIndex ?? 0) + 1} of $matchCount';
+
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        key: const Key('document-search-overlay'),
+        constraints: const BoxConstraints(maxWidth: 360),
+        padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
+        decoration: BoxDecoration(
+          color: WorkspaceColors.panelRaised,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: noMatches ? WorkspaceColors.warning : WorkspaceColors.border,
+          ),
+          boxShadow: const <BoxShadow>[
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 12,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (isSearching)
+              const SizedBox(
+                width: 13,
+                height: 13,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  color: WorkspaceColors.textMuted,
+                ),
+              )
+            else
+              Icon(
+                noMatches ? LucideIcons.circleAlert : LucideIcons.search,
+                color: noMatches
+                    ? WorkspaceColors.warning
+                    : WorkspaceColors.textMuted,
+                size: 14,
+              ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                status,
+                key: Key(
+                  noMatches ? 'search-no-matches' : 'search-match-count',
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: noMatches
+                      ? WorkspaceColors.textStrong
+                      : WorkspaceColors.textMuted,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (!noMatches) ...<Widget>[
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Previous match',
+                child: IconButton(
+                  key: const Key('search-previous-match'),
+                  onPressed: onPrevious,
+                  icon: const Icon(LucideIcons.chevronUp, size: 16),
+                  color: WorkspaceColors.textStrong,
+                  disabledColor: WorkspaceColors.textFaint,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+              Tooltip(
+                message: 'Next match',
+                child: IconButton(
+                  key: const Key('search-next-match'),
+                  onPressed: onNext,
+                  icon: const Icon(LucideIcons.chevronDown, size: 16),
+                  color: WorkspaceColors.textStrong,
+                  disabledColor: WorkspaceColors.textFaint,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

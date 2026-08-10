@@ -5,6 +5,8 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'features/workspace/presentation/screens/workspace_screen.dart';
+import 'core/theme_controller.dart';
+import 'core/theme_profile.dart';
 
 class ClarixApp extends StatelessWidget {
   const ClarixApp({super.key});
@@ -12,22 +14,32 @@ class ClarixApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ProviderScope(
-      child: ShadApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Clarix',
-        themeMode: ThemeMode.dark,
-        theme: _buildTheme(),
-        darkTheme: _buildTheme(),
-        home: const _WindowBootstrap(child: WorkspaceScreen()),
+      child: Consumer(
+        builder: (context, ref, _) {
+          final profile =
+              ref.watch(clarixThemeProvider).value ?? ClarixThemeProfile();
+          return ShadApp(
+            debugShowCheckedModeBanner: false,
+            title: 'Clarix',
+            themeMode: profile.mode,
+            theme: _buildTheme(profile),
+            darkTheme: _buildTheme(profile),
+            home: const _WindowBootstrap(child: WorkspaceScreen()),
+          );
+        },
       ),
     );
   }
 
-  ShadThemeData _buildTheme() {
+  ShadThemeData _buildTheme(ClarixThemeProfile profile) {
     return ShadThemeData(
       brightness: Brightness.dark,
       colorScheme: const ShadZincColorScheme.dark(),
-      textTheme: ShadTextTheme.fromGoogleFont(GoogleFonts.instrumentSans),
+      textTheme: ShadTextTheme.fromGoogleFont(switch (profile.font) {
+        ClarixFont.sans => GoogleFonts.roboto,
+        ClarixFont.serif => GoogleFonts.sourceSerif4,
+        ClarixFont.mono => GoogleFonts.jetBrainsMono,
+      }),
     );
   }
 }

@@ -30,6 +30,7 @@ class InlinePageReferenceBuilder extends MarkdownElementBuilder {
   InlinePageReferenceBuilder({required this.activeTab});
 
   final DocumentTabState? activeTab;
+  final Map<int, int> _occurrences = <int, int>{};
 
   @override
   Widget visitElementAfterWithContext(
@@ -43,8 +44,14 @@ class InlinePageReferenceBuilder extends MarkdownElementBuilder {
       return Text(element.textContent, style: preferredStyle ?? parentStyle);
     }
 
+    final int occurrence = (_occurrences[pageNumber] ?? 0) + 1;
+    _occurrences[pageNumber] = occurrence;
     return _InlinePageReference(
-      key: Key('inline-page-reference-$pageNumber'),
+      key: Key(
+        occurrence == 1
+            ? 'inline-page-reference-$pageNumber'
+            : 'inline-page-reference-$pageNumber-$occurrence',
+      ),
       tab: activeTab,
       pageNumber: pageNumber,
       label: element.textContent,
@@ -73,7 +80,17 @@ class _InlinePageReference extends ConsumerStatefulWidget {
 }
 
 class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
-  bool _hovered = false;
+  static const double _previewWidth = 184;
+  static const double _previewHeight = 226;
+  static const double _previewGap = 8;
+  final LayerLink _previewLink = LayerLink();
+  OverlayEntry? _preview;
+
+  @override
+  void dispose() {
+    _removePreview();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -93,54 +110,78 @@ class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          GestureDetector(
-            onTap: () => ref
-                .read(workspaceNotifierProvider.notifier)
-                .navigateToCitation(
-                  CitationSnippet(
-                    documentId: tab.documentId,
-                    label: tab.title,
-                    pageNumber: widget.pageNumber,
-                    snippet: widget.label,
-                  ),
-                ),
-            child: label,
-          ),
-          if (_hovered)
-            Positioned(
-              left: 0,
-              bottom: 24,
-              width: 220,
-              height: 270,
-              child: Material(
-                color: WorkspaceColors.panelRaised,
-                elevation: 12,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: PdfDocumentViewBuilder(
-                    documentRef: ref.watch(
-                      pdfDocumentRefProvider(tab.filePath),
-                    ),
-                    builder: (BuildContext _, PdfDocument? document) =>
-                        document == null
-                        ? const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : PdfPageView(
-                            document: document,
-                            pageNumber: widget.pageNumber,
-                          ),
-                  ),
+      onEnter: (_) => _showPreview(),
+      onExit: (_) => _removePreview(),
+      child: CompositedTransformTarget(
+        link: _previewLink,
+        child: GestureDetector(
+          onTap: () => ref
+              .read(workspaceNotifierProvider.notifier)
+              .navigateToCitation(
+                CitationSnippet(
+                  documentId: tab.documentId,
+                  label: tab.title,
+                  pageNumber: widget.pageNumber,
+                  snippet: widget.label,
                 ),
               ),
-            ),
-        ],
+          child: label,
+        ),
       ),
     );
+  }
+
+  void _showPreview() {
+    if (_preview != null) return;
+    final tab = widget.tab!;
+    final RenderBox target = context.findRenderObject()! as RenderBox;
+    final Rect targetRect = target.localToGlobal(Offset.zero) & target.size;
+    final Size viewport = MediaQuery.sizeOf(context);
+    final double left = targetRect.left
+        .clamp(_previewGap, viewport.width - _previewWidth - _previewGap)
+        .toDouble();
+    final bool showBelow =
+        viewport.height - targetRect.bottom >= _previewHeight + _previewGap ||
+        targetRect.top < _previewHeight + _previewGap;
+    final double top = showBelow
+        ? targetRect.bottom + _previewGap
+        : targetRect.top - _previewHeight - _previewGap;
+    _preview = OverlayEntry(
+      builder: (BuildContext context) => Positioned(
+        left: left,
+        top: top
+            .clamp(_previewGap, viewport.height - _previewHeight - _previewGap)
+            .toDouble(),
+        child: Material(
+          color: WorkspaceColors.panelRaised,
+          elevation: 18,
+          child: SizedBox(
+            width: _previewWidth,
+            height: _previewHeight,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: PdfDocumentViewBuilder(
+                documentRef: ref.read(pdfDocumentRefProvider(tab.filePath)),
+                builder: (BuildContext _, PdfDocument? document) =>
+                    document == null
+                    ? const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : PdfPageView(
+                        document: document,
+                        pageNumber: widget.pageNumber,
+                      ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    Overlay.of(context, rootOverlay: true).insert(_preview!);
+  }
+
+  void _removePreview() {
+    _preview?.remove();
+    _preview = null;
   }
 }
