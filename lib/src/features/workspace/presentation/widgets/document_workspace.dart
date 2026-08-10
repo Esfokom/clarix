@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfrx/pdfrx.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
@@ -526,6 +527,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             textSelectionParams: const PdfTextSelectionParams(
                               enabled: true,
                             ),
+                            buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
                                 input.interactionDelegateProvider,
                             onInteractionEnd: (_) => _persistViewerState(),
@@ -767,11 +769,71 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     _lastPointerGlobalPosition = event.position;
   }
 
-  Future<void> _highlightSelection() async {
+  Widget? _buildSelectionContextMenu(
+    BuildContext context,
+    PdfViewerContextMenuBuilderParams params,
+  ) {
+    if (params.contextMenuFor != PdfViewerPart.selectedText) return null;
+    return Material(
+      color: widget.colors.panelRaised,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TextButton.icon(
+              onPressed: () async {
+                final text = await params.textSelectionDelegate
+                    .getSelectedText();
+                await Clipboard.setData(ClipboardData(text: text));
+                params.dismissContextMenu();
+              },
+              icon: const Icon(LucideIcons.copy, size: 14),
+              label: const Text('Copy'),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                await ref
+                    .read(workspaceNotifierProvider.notifier)
+                    .toggleBookmark(widget.tab.id, _page);
+                params.dismissContextMenu();
+              },
+              icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
+              label: const Text('Bookmark'),
+            ),
+            for (final int color in const <int>[
+              0x66FFD54F,
+              0x6686EFAC,
+              0x668EC5FF,
+            ])
+              IconButton(
+                tooltip: 'Highlight',
+                onPressed: () async {
+                  await _highlightSelection(colorValue: color);
+                  params.dismissContextMenu();
+                },
+                icon: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Color(color),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _highlightSelection({int? colorValue}) async {
     final profile = ref.read(clarixThemeProvider).value;
-    final int colorValue =
+    final int resolvedColor =
+        colorValue ??
         (((profile?.highlightOpacity ?? 0.4) * 255).round() << 24) |
-        (profile?.highlightColor ?? 0xFFFFD54F);
+            (profile?.highlightColor ?? 0xFFFFD54F);
     final List<PdfPageTextRange> ranges = await _controller
         .textSelectionDelegate
         .getSelectedTextRanges();
@@ -789,7 +851,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
               bounds.top,
             ),
             selectedText: range.text,
-            colorValue: colorValue,
+            colorValue: resolvedColor,
           );
     }
     await _controller.textSelectionDelegate.clearTextSelection();
