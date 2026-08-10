@@ -1031,6 +1031,31 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
   }
 
+  Future<void> updateHighlightColor({
+    required String tabId,
+    required String annotationId,
+    required int colorValue,
+  }) async {
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) return;
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(
+        annotations: document.annotations
+            .map(
+              (item) => item.id == annotationId
+                  ? item.copyWith(colorValue: colorValue)
+                  : item,
+            )
+            .toList(growable: false),
+      ),
+    );
+  }
+
   Future<void> _saveDocumentMetadata(
     WorkspaceFeatureState current,
     DocumentMetadata document,

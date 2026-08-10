@@ -116,6 +116,8 @@ class WorkspaceSidebar extends ConsumerWidget {
                     const SizedBox(height: 14),
                     _BookmarksPane(tab: activeTab!, colors: colors),
                     const SizedBox(height: 14),
+                    _HighlightsPane(tab: activeTab!, colors: colors),
+                    const SizedBox(height: 14),
                   ],
                   const SectionLabel(label: 'Open tabs'),
                   if (state.session.tabs.isEmpty)
@@ -275,6 +277,99 @@ class _BookmarksPane extends ConsumerWidget {
           ),
       ],
     );
+  }
+}
+
+class _HighlightsPane extends ConsumerWidget {
+  const _HighlightsPane({required this.tab, required this.colors});
+  final DocumentTabState tab;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final items =
+        (ref
+                    .watch(workspaceNotifierProvider)
+                    .value
+                    ?.documentMetadata[tab.documentId]
+                    ?.annotations ??
+                const <DocumentAnnotation>[])
+            .where((item) => item.kind == AnnotationKind.highlight)
+            .toList(growable: false);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SectionLabel(label: 'Highlights'),
+        if (items.isEmpty)
+          Text(
+            'No highlights yet.',
+            style: TextStyle(color: colors.textFaint, fontSize: 10.5),
+          )
+        else
+          ...items.map(
+            (item) => ListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Color(item.colorValue),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              title: Text(
+                item.selectedText.isEmpty
+                    ? 'Highlight on page ${item.pageNumber}'
+                    : item.selectedText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.textStrong, fontSize: 11),
+              ),
+              onTap: () => _edit(context, ref, item),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref,
+    DocumentAnnotation item,
+  ) async {
+    final String? action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit highlight'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'delete'),
+            child: const Text('Delete'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'yellow'),
+            child: const Text('Yellow'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'blue'),
+            child: const Text('Blue'),
+          ),
+        ],
+      ),
+    );
+    if (action == 'delete')
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .removeAnnotation(tab.id, item.id);
+    if (action == 'yellow' || action == 'blue')
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .updateHighlightColor(
+            tabId: tab.id,
+            annotationId: item.id,
+            colorValue: action == 'yellow' ? 0x66FFD54F : 0x668EC5FF,
+          );
   }
 }
 

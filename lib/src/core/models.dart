@@ -812,7 +812,11 @@ class DocumentAnnotation {
   final DateTime createdAt;
   final DateTime modifiedAt;
 
-  DocumentAnnotation copyWith({String? note, bool clearNote = false}) {
+  DocumentAnnotation copyWith({
+    String? note,
+    int? colorValue,
+    bool clearNote = false,
+  }) {
     return DocumentAnnotation(
       id: id,
       kind: kind,
@@ -820,7 +824,7 @@ class DocumentAnnotation {
       pageRects: pageRects,
       selectedText: selectedText,
       note: clearNote ? null : note ?? this.note,
-      colorValue: colorValue,
+      colorValue: colorValue ?? this.colorValue,
       createdAt: createdAt,
       modifiedAt: DateTime.now().toUtc(),
     );
