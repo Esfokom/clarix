@@ -358,11 +358,12 @@ class _HighlightsPane extends ConsumerWidget {
         ],
       ),
     );
-    if (action == 'delete')
+    if (action == 'delete') {
       await ref
           .read(workspaceNotifierProvider.notifier)
           .removeAnnotation(tab.id, item.id);
-    if (action == 'yellow' || action == 'blue')
+    }
+    if (action == 'yellow' || action == 'blue') {
       await ref
           .read(workspaceNotifierProvider.notifier)
           .updateHighlightColor(
@@ -370,6 +371,7 @@ class _HighlightsPane extends ConsumerWidget {
             annotationId: item.id,
             colorValue: action == 'yellow' ? 0x66FFD54F : 0x668EC5FF,
           );
+    }
   }
 }
 

@@ -1085,7 +1085,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         documentMetadata: metadata,
         dirtyDocumentIds: activeTabId == null
             ? current.dirtyDocumentIds
-            : (Set<String>.from(current.dirtyDocumentIds)..add(activeTabId!)),
+            : (Set<String>.from(current.dirtyDocumentIds)..add(activeTabId)),
       ),
     );
   }
