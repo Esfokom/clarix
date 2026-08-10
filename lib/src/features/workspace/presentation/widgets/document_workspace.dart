@@ -384,6 +384,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   String? _pendingSearchQuery;
   Timer? _viewerStateDebounce;
   Offset? _lastPointerGlobalPosition;
+  bool _colorInspectorOpen = false;
+  int _customHighlightColor = 0x66FFD54F;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -604,6 +606,67 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                     onNext: _canGoToNextMatch
                         ? () => unawaited(_goToNextSearchMatch())
                         : null,
+                  ),
+                ),
+              ),
+            if (_colorInspectorOpen)
+              Positioned(
+                top: 18,
+                right: 18,
+                child: Material(
+                  color: widget.colors.panelRaised,
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 230,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Row(
+                            children: <Widget>[
+                              const Expanded(
+                                child: Text('Custom highlight colour'),
+                              ),
+                              IconButton(
+                                onPressed: () =>
+                                    setState(() => _colorInspectorOpen = false),
+                                icon: const Icon(LucideIcons.x, size: 15),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            height: 24,
+                            decoration: BoxDecoration(
+                              color: Color(_customHighlightColor),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                          ),
+                          for (final int shift in const <int>[16, 8, 0])
+                            Slider(
+                              value: ((_customHighlightColor >> shift) & 0xff)
+                                  .toDouble(),
+                              min: 0,
+                              max: 255,
+                              onChanged: (value) => setState(
+                                () => _customHighlightColor =
+                                    (_customHighlightColor & ~(0xff << shift)) |
+                                    (value.round() << shift),
+                              ),
+                            ),
+                          FilledButton(
+                            onPressed: () async {
+                              await _highlightSelection(
+                                colorValue: _customHighlightColor,
+                              );
+                              if (mounted)
+                                setState(() => _colorInspectorOpen = false);
+                            },
+                            child: const Text('Apply to selection'),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -864,6 +927,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                   ),
                 ),
               ),
+            TextButton(
+              onPressed: () {
+                setState(() => _colorInspectorOpen = true);
+                params.dismissContextMenu();
+              },
+              child: const Text('More colours'),
+            ),
           ],
         ),
       ),
