@@ -150,9 +150,7 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                             const SizedBox(width: 6),
                             InkWell(
                               borderRadius: BorderRadius.circular(8),
-                              onTap: () => ref
-                                  .read(workspaceNotifierProvider.notifier)
-                                  .closeTab(tab.id),
+                              onTap: () => _confirmCloseTab(tab),
                               child: Padding(
                                 padding: const EdgeInsets.all(2),
                                 child: Icon(
@@ -175,6 +173,50 @@ class _TabStripState extends ConsumerState<_TabStrip> {
         );
       },
     );
+  }
+
+  Future<void> _confirmCloseTab(DocumentTabState tab) async {
+    final notifier = ref.read(workspaceNotifierProvider.notifier);
+    if (!notifier.hasUnsavedEditsFor(tab.id)) {
+      await notifier.closeTab(tab.id);
+      return;
+    }
+    final String? choice = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        backgroundColor: WorkspaceColors.panel,
+        title: const Text(
+          'Save PDF edits?',
+          style: TextStyle(color: WorkspaceColors.textStrong),
+        ),
+        content: Text(
+          '“${tab.title}” has unsaved bookmarks or highlights.',
+          style: const TextStyle(color: WorkspaceColors.textMuted),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'cancel'),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'discard'),
+            child: const Text('Discard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'save'),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (choice == 'save') {
+      await notifier.setActiveTab(tab.id);
+      await notifier.saveActivePdfEdits();
+      if (notifier.hasUnsavedEditsFor(tab.id)) return;
+    }
+    if (choice == 'save' || choice == 'discard') {
+      await notifier.closeTab(tab.id);
+    }
   }
 
   Future<void> _showNoteDialog() async {
