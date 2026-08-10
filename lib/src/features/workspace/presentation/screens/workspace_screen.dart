@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -62,62 +63,82 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       workspaceNotifierProvider,
     );
 
-    return DesktopWindowChrome(
-      onImport: () =>
-          ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
-      onOpenSettings: () => showAppSettingsDialog(context),
-      onSave: asyncState.value?.session.activeTabId == null
-          ? null
-          : () => ref
-                .read(workspaceNotifierProvider.notifier)
-                .saveActivePdfEdits(),
-      onSearch: (String query) {
-        final String? tabId = asyncState.value?.session.activeTabId;
-        if (tabId != null) {
-          ref
-              .read(workspaceNotifierProvider.notifier)
-              .setSearchQuery(tabId, query.trim());
-        }
+    return CallbackShortcuts(
+      bindings: <ShortcutActivator, VoidCallback>{
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () =>
+            ref.read(workspaceNotifierProvider.notifier).saveActivePdfEdits(),
+        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () =>
+            ref.read(workspaceNotifierProvider.notifier).undoPdfEdit(),
+        const SingleActivator(
+          LogicalKeyboardKey.keyZ,
+          control: true,
+          shift: true,
+        ): () =>
+            ref.read(workspaceNotifierProvider.notifier).redoPdfEdit(),
       },
-      child: Scaffold(
-        backgroundColor: WorkspaceColors.canvas,
-        body: asyncState.when(
-          data: (WorkspaceFeatureState state) => WorkspaceBody(
-            state: state,
-            onOpenSettings: () => showAppSettingsDialog(context),
-          ),
-          error: (Object error, StackTrace stackTrace) => Center(
-            child: SurfaceBlock(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'Clarix could not initialize.',
-                    style: TextStyle(
-                      color: WorkspaceColors.textStrong,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+      child: DesktopWindowChrome(
+        onImport: () =>
+            ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
+        onOpenSettings: () => showAppSettingsDialog(context),
+        onSave: asyncState.value?.session.activeTabId == null
+            ? null
+            : () => ref
+                  .read(workspaceNotifierProvider.notifier)
+                  .saveActivePdfEdits(),
+        onUndo: ref.read(workspaceNotifierProvider.notifier).canUndoActive
+            ? () => ref.read(workspaceNotifierProvider.notifier).undoPdfEdit()
+            : null,
+        onRedo: ref.read(workspaceNotifierProvider.notifier).canRedoActive
+            ? () => ref.read(workspaceNotifierProvider.notifier).redoPdfEdit()
+            : null,
+        onSearch: (String query) {
+          final String? tabId = asyncState.value?.session.activeTabId;
+          if (tabId != null) {
+            ref
+                .read(workspaceNotifierProvider.notifier)
+                .setSearchQuery(tabId, query.trim());
+          }
+        },
+        child: Scaffold(
+          backgroundColor: WorkspaceColors.canvas,
+          body: asyncState.when(
+            data: (WorkspaceFeatureState state) => WorkspaceBody(
+              state: state,
+              onOpenSettings: () => showAppSettingsDialog(context),
+            ),
+            error: (Object error, StackTrace stackTrace) => Center(
+              child: SurfaceBlock(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Text(
+                      'Clarix could not initialize.',
+                      style: TextStyle(
+                        color: WorkspaceColors.textStrong,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$error',
-                    style: const TextStyle(
-                      color: WorkspaceColors.textMuted,
-                      fontSize: 12,
+                    const SizedBox(height: 8),
+                    Text(
+                      '$error',
+                      style: const TextStyle(
+                        color: WorkspaceColors.textMuted,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          loading: () => const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            loading: () => const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
           ),
         ),

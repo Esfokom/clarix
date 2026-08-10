@@ -23,6 +23,10 @@ import 'conversation_context.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
+  final Map<String, List<DocumentMetadata>> _undoMetadata =
+      <String, List<DocumentMetadata>>{};
+  final Map<String, List<DocumentMetadata>> _redoMetadata =
+      <String, List<DocumentMetadata>>{};
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
@@ -195,6 +199,43 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         current.copyWith(bannerMessage: 'Could not save PDF edits: $error'),
       );
     }
+  }
+
+  bool get canUndoActive {
+    final String? id = state.value?.session.activeTabId;
+    return id != null && (_undoMetadata[id]?.isNotEmpty ?? false);
+  }
+
+  bool get canRedoActive {
+    final String? id = state.value?.session.activeTabId;
+    return id != null && (_redoMetadata[id]?.isNotEmpty ?? false);
+  }
+
+  Future<void> undoPdfEdit() => _movePdfHistory(undo: true);
+  Future<void> redoPdfEdit() => _movePdfHistory(undo: false);
+
+  Future<void> _movePdfHistory({required bool undo}) async {
+    final WorkspaceFeatureState current = _requireState();
+    final String? tabId = current.session.activeTabId;
+    if (tabId == null) return;
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (item) => item.id == tabId,
+    );
+    final List<DocumentMetadata> from = undo
+        ? (_undoMetadata[tabId] ?? <DocumentMetadata>[])
+        : (_redoMetadata[tabId] ?? <DocumentMetadata>[]);
+    if (from.isEmpty) return;
+    final DocumentMetadata previous = from.removeLast();
+    final DocumentMetadata existing = current.documentMetadata[tab.documentId]!;
+    final List<DocumentMetadata> target = undo
+        ? _redoMetadata.putIfAbsent(tabId, () => <DocumentMetadata>[])
+        : _undoMetadata.putIfAbsent(tabId, () => <DocumentMetadata>[]);
+    target.add(existing);
+    await (await _metadataStore).write(previous);
+    final Map<String, DocumentMetadata> metadata =
+        Map<String, DocumentMetadata>.from(current.documentMetadata)
+          ..[tab.documentId] = previous;
+    state = AsyncData(current.copyWith(documentMetadata: metadata));
   }
 
   Future<void> openUtilityResult(UtilityResult result) {
@@ -983,6 +1024,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     WorkspaceFeatureState current,
     DocumentMetadata document,
   ) async {
+    final DocumentMetadata? previous =
+        current.documentMetadata[document.identity.fingerprint];
+    final String? tabId = current.session.tabs
+        .where((tab) => tab.documentId == document.identity.fingerprint)
+        .map((tab) => tab.id)
+        .firstOrNull;
+    if (previous != null && tabId != null) {
+      _undoMetadata
+          .putIfAbsent(tabId, () => <DocumentMetadata>[])
+          .add(previous);
+      _redoMetadata.remove(tabId);
+    }
     await (await _metadataStore).write(document);
     final Map<String, DocumentMetadata> metadata =
         Map<String, DocumentMetadata>.from(current.documentMetadata)

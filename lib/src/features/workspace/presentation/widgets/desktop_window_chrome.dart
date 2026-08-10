@@ -14,6 +14,8 @@ class DesktopWindowChrome extends ConsumerWidget {
     required this.onOpenSettings,
     required this.onSearch,
     this.onSave,
+    this.onUndo,
+    this.onRedo,
     this.useNativeWindowControls = true,
     super.key,
   });
@@ -23,6 +25,8 @@ class DesktopWindowChrome extends ConsumerWidget {
   final VoidCallback onOpenSettings;
   final ValueChanged<String> onSearch;
   final VoidCallback? onSave;
+  final VoidCallback? onUndo;
+  final VoidCallback? onRedo;
   final bool useNativeWindowControls;
 
   static const double _titleBarHeight = 56;
@@ -52,13 +56,13 @@ class DesktopWindowChrome extends ConsumerWidget {
                 IconButton(
                   key: const Key('chrome-undo'),
                   tooltip: 'Undo (Ctrl+Z)',
-                  onPressed: null,
+                  onPressed: onUndo,
                   icon: Icon(Icons.undo, color: colors.textMuted),
                 ),
                 IconButton(
                   key: const Key('chrome-redo'),
                   tooltip: 'Redo (Ctrl+Shift+Z)',
-                  onPressed: null,
+                  onPressed: onRedo,
                   icon: Icon(Icons.redo, color: colors.textMuted),
                 ),
                 Expanded(
