@@ -54,12 +54,14 @@ final class ReplacePdfTextIntent extends PdfEditIntent {
     required this.range,
     required this.replacement,
     this.caseMatching = true,
+    this.coalescingKey,
   });
 
   final PdfTextBlockLocator locator;
   final PdfTextRange range;
   final String replacement;
   final bool caseMatching;
+  final String? coalescingKey;
 
   @override
   List<PdfTextBlockLocator> get affectedLocators =>
@@ -75,11 +77,18 @@ final class ReplacePdfTextIntent extends PdfEditIntent {
       other.locator == locator &&
       other.range == range &&
       other.replacement == replacement &&
-      other.caseMatching == caseMatching;
+      other.caseMatching == caseMatching &&
+      other.coalescingKey == coalescingKey;
 
   @override
-  int get hashCode =>
-      Object.hash(super.hashCode, locator, range, replacement, caseMatching);
+  int get hashCode => Object.hash(
+    super.hashCode,
+    locator,
+    range,
+    replacement,
+    caseMatching,
+    coalescingKey,
+  );
 }
 
 final class FormatPdfTextIntent extends PdfEditIntent {

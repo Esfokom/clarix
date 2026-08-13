@@ -59,6 +59,7 @@ final class ReplacePdfTextCommand extends PdfEditCommand {
     required this.range,
     this.beforeBlock,
     this.afterBlock,
+    this.coalescingKey,
   }) : super(summary: 'Replace PDF text');
 
   final PdfTextBlockLocator locator;
@@ -67,6 +68,7 @@ final class ReplacePdfTextCommand extends PdfEditCommand {
   final PdfTextRange range;
   final PdfTextBlock? beforeBlock;
   final PdfTextBlock? afterBlock;
+  final String? coalescingKey;
 
   @override
   List<PdfTextBlockLocator> get affectedLocators =>
@@ -89,6 +91,7 @@ final class ReplacePdfTextCommand extends PdfEditCommand {
       range: range,
       beforeBlock: original,
       afterBlock: original.replaceText(range, before, after),
+      coalescingKey: coalescingKey,
     );
   }
 
@@ -124,7 +127,8 @@ final class ReplacePdfTextCommand extends PdfEditCommand {
       other.after == after &&
       other.range == range &&
       other.beforeBlock == beforeBlock &&
-      other.afterBlock == afterBlock;
+      other.afterBlock == afterBlock &&
+      other.coalescingKey == coalescingKey;
 
   @override
   int get hashCode => Object.hash(
@@ -135,6 +139,7 @@ final class ReplacePdfTextCommand extends PdfEditCommand {
     range,
     beforeBlock,
     afterBlock,
+    coalescingKey,
   );
 }
 

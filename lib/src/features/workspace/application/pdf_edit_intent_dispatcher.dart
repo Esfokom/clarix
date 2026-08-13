@@ -3,6 +3,7 @@
 import '../domain/pdf_edit_command.dart';
 import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
+import '../domain/pdf_text_case.dart';
 import '../domain/pdf_text_types.dart';
 
 typedef PdfSessionReader = PdfEditingSession Function(String documentId);
@@ -93,8 +94,23 @@ final class PdfEditIntentDispatcher {
   ) {
     final id = _commandId();
     return switch (intent) {
-      ReplacePdfTextIntent(:final locator, :final range, :final replacement) =>
-        _replaceCommand(session, id, provenance, locator, range, replacement),
+      ReplacePdfTextIntent(
+        :final locator,
+        :final range,
+        :final replacement,
+        :final caseMatching,
+        :final coalescingKey,
+      ) =>
+        _replaceCommand(
+          session,
+          id,
+          provenance,
+          locator,
+          range,
+          replacement,
+          caseMatching,
+          coalescingKey,
+        ),
       FormatPdfTextIntent(:final locator, :final range, :final patch) =>
         _formatCommand(session, id, provenance, locator, range, patch),
       MovePdfTextBlockIntent(:final locator, :final bounds) =>
@@ -192,6 +208,8 @@ final class PdfEditIntentDispatcher {
     PdfTextBlockLocator locator,
     PdfTextRange range,
     String replacement,
+    bool caseMatching,
+    String? coalescingKey,
   ) {
     final block = _block(session, locator);
     block.validateOperation(PdfTextCapability.replace);
@@ -203,13 +221,28 @@ final class PdfEditIntentDispatcher {
         textLength: block.text.length,
       );
     }
+    final source = block.text.substring(range.start, range.end);
+    var casingSource = source;
+    if (casingSource.isEmpty && coalescingKey != null && session.cursor > 0) {
+      final previous = session.commands[session.cursor - 1];
+      if (previous is ReplacePdfTextCommand &&
+          previous.locator == locator &&
+          previous.coalescingKey == coalescingKey) {
+        casingSource = previous.before;
+      }
+    }
+    final effectiveReplacement =
+        caseMatching && session.caseMatching && casingSource.isNotEmpty
+        ? matchReplacementCase(casingSource, replacement)
+        : replacement;
     return ReplacePdfTextCommand(
       id: id,
       provenance: provenance,
       locator: locator,
-      before: block.text.substring(range.start, range.end),
-      after: replacement,
+      before: source,
+      after: effectiveReplacement,
       range: range,
+      coalescingKey: coalescingKey,
     );
   }
 

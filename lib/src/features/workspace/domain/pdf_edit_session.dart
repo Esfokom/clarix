@@ -1,6 +1,43 @@
 import 'pdf_edit_command.dart';
 import 'pdf_text_types.dart';
 
+final class PdfTextDelta {
+  const PdfTextDelta({
+    required this.replacedRange,
+    required this.replacedText,
+    required this.insertedText,
+  });
+
+  factory PdfTextDelta.between(String before, String after) {
+    var prefix = 0;
+    final shortest = before.length < after.length
+        ? before.length
+        : after.length;
+    while (prefix < shortest &&
+        before.codeUnitAt(prefix) == after.codeUnitAt(prefix)) {
+      prefix++;
+    }
+    var beforeSuffix = before.length;
+    var afterSuffix = after.length;
+    while (beforeSuffix > prefix &&
+        afterSuffix > prefix &&
+        before.codeUnitAt(beforeSuffix - 1) ==
+            after.codeUnitAt(afterSuffix - 1)) {
+      beforeSuffix--;
+      afterSuffix--;
+    }
+    return PdfTextDelta(
+      replacedRange: PdfTextRange(prefix, beforeSuffix),
+      replacedText: before.substring(prefix, beforeSuffix),
+      insertedText: after.substring(prefix, afterSuffix),
+    );
+  }
+
+  final PdfTextRange replacedRange;
+  final String replacedText;
+  final String insertedText;
+}
+
 final class PdfEditingSession {
   const PdfEditingSession._({
     required this.documentId,
@@ -78,6 +115,20 @@ final class PdfEditingSession {
       bookmarks: bookmarks,
       highlights: highlights,
     );
+    final PdfEditCommand? coalesced =
+        cursor > 0 && cursor == commands.length && savedCursor < cursor
+        ? _coalesce(commands[cursor - 1], materialized)
+        : null;
+    if (coalesced != null) {
+      final List<PdfEditCommand> kept =
+          commands.take(cursor - 1).toList(growable: true)..add(coalesced);
+      return _copy(
+        commands: kept,
+        blocks: materialized.apply(blocks),
+        bookmarks: materialized.applyBookmarks(bookmarks),
+        highlights: materialized.applyHighlights(highlights),
+      );
+    }
     final List<PdfEditCommand> kept =
         commands.take(cursor).toList(growable: true)..add(materialized);
     final int checkpoint = savedCursor > cursor ? -1 : savedCursor;
@@ -139,5 +190,29 @@ final class PdfEditingSession {
     savedCursor: savedCursor ?? this.savedCursor,
     selection: replaceSelection ? selection : this.selection,
     caseMatching: caseMatching ?? this.caseMatching,
+  );
+}
+
+PdfEditCommand? _coalesce(PdfEditCommand previous, PdfEditCommand next) {
+  if (previous is! ReplacePdfTextCommand ||
+      next is! ReplacePdfTextCommand ||
+      previous.coalescingKey == null ||
+      previous.coalescingKey != next.coalescingKey ||
+      previous.locator != next.locator ||
+      previous.provenance != next.provenance ||
+      next.range.start != previous.range.start + previous.after.length ||
+      !next.range.isEmpty) {
+    return null;
+  }
+  return ReplacePdfTextCommand(
+    id: previous.id,
+    provenance: previous.provenance,
+    locator: previous.locator,
+    before: previous.before,
+    after: '${previous.after}${next.after}',
+    range: previous.range,
+    beforeBlock: previous.beforeBlock,
+    afterBlock: next.afterBlock,
+    coalescingKey: previous.coalescingKey,
   );
 }

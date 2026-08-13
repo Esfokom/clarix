@@ -627,6 +627,18 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                       widget.tab.id,
                                       locator,
                                     ),
+                                    documentId: editSession?.documentId,
+                                    documentRevision: editSession?.revision,
+                                    caseMatching:
+                                        editSession?.caseMatching ?? true,
+                                    onIntent: (intent) => unawaited(
+                                      editing.dispatch(
+                                        intent,
+                                        provenance: PdfCommandProvenance.manual,
+                                      ),
+                                    ),
+                                    onClearSelection: () =>
+                                        editing.clearSelection(widget.tab.id),
                                   ),
                                 ],
                           ),

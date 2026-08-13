@@ -88,6 +88,47 @@ void main() {
       expect(() => controller.sessionsByTabId.clear(), throwsUnsupportedError);
     },
   );
+
+  test('matches selected casing and coalesces one typing group', () async {
+    var nextId = 0;
+    final controller = PdfEditingController(
+      commandId: () => 'command-${++nextId}',
+    )..registerSession('tab', _session(text: 'TOTAL'));
+
+    for (final edit in <(PdfTextRange, String)>[
+      (const PdfTextRange(0, 5), 'net'),
+      (const PdfTextRange(3, 3), ' '),
+      (const PdfTextRange(4, 4), 'income'),
+    ]) {
+      await controller.dispatch(
+        ReplacePdfTextIntent(
+          documentId: 'doc',
+          documentRevision: 'rev-2',
+          locator: _locator,
+          range: edit.$1,
+          replacement: edit.$2,
+          coalescingKey: 'typing-1',
+        ),
+        provenance: PdfCommandProvenance.manual,
+      );
+    }
+
+    expect(controller.sessionFor('tab').blocks.single.text, 'NET INCOME');
+    expect(controller.sessionFor('tab').commands, hasLength(1));
+
+    await controller.dispatch(
+      ReplacePdfTextIntent(
+        documentId: 'doc',
+        documentRevision: 'rev-2',
+        locator: _locator,
+        range: const PdfTextRange(10, 10),
+        replacement: '!',
+        coalescingKey: 'typing-2',
+      ),
+      provenance: PdfCommandProvenance.manual,
+    );
+    expect(controller.sessionFor('tab').commands, hasLength(2));
+  });
 }
 
 final _locator = PdfTextBlockLocator(
@@ -99,7 +140,7 @@ final _locator = PdfTextBlockLocator(
   sourceRevision: 'rev-2',
 );
 
-PdfEditingSession _session({bool editable = true}) {
+PdfEditingSession _session({bool editable = true, String text = 'Old'}) {
   const style = PdfTextStyle(
     fontFamily: 'Helvetica',
     fontSize: 12,
@@ -115,10 +156,10 @@ PdfEditingSession _session({bool editable = true}) {
   );
   final block = PdfTextBlock(
     locator: _locator,
-    text: 'Old',
-    originalText: 'Old',
-    runs: const <PdfTextRun>[
-      PdfTextRun(range: PdfTextRange(0, 3), style: style),
+    text: text,
+    originalText: text,
+    runs: <PdfTextRun>[
+      PdfTextRun(range: PdfTextRange(0, text.length), style: style),
     ],
     bounds: const PdfBox(0, 0, 100, 20),
     transform: const PdfTransform(1, 0, 0, 1, 0, 0),

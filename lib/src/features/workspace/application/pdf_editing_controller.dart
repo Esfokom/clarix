@@ -141,6 +141,10 @@ final class PdfEditingController extends ChangeNotifier {
     );
   }
 
+  void clearSelection(String tabId) {
+    replaceSession(tabId, sessionFor(tabId).withSelection(null));
+  }
+
   Future<void> _inspectPages(
     String tabId,
     PdfDocument document,
