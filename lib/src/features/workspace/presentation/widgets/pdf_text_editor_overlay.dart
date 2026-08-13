@@ -32,7 +32,7 @@ final class PdfTextEditorOverlay extends StatefulWidget {
   final String? documentId;
   final String? documentRevision;
   final bool caseMatching;
-  final ValueChanged<ReplacePdfTextIntent>? onIntent;
+  final ValueChanged<PdfEditIntent>? onIntent;
   final VoidCallback? onClearSelection;
 
   @override
@@ -46,6 +46,7 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
   PdfTextBlockLocator? _editingLocator;
   String? _lastText;
   String? _typingGroup;
+  PdfBox? _previewBounds;
 
   @override
   void dispose() {
@@ -141,57 +142,198 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
     }
     return Positioned.fromRect(
       rect: widget.rectForBlock(block),
-      child: Focus(
-        onKeyEvent: (_, event) {
-          if (event is KeyDownEvent &&
-              event.logicalKey == LogicalKeyboardKey.escape) {
-            _typingGroup = null;
-            widget.onClearSelection?.call();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: TextField(
-          key: const Key('pdf-inline-text-editor'),
-          controller: _textController,
-          focusNode: _focusNode,
-          expands: true,
-          maxLines: null,
-          minLines: null,
-          textAlignVertical: TextAlignVertical.top,
-          style: TextStyle(
-            fontFamily: block.runs.first.style.fontFamily,
-            fontSize: block.runs.first.style.fontSize,
-            color: Color(block.runs.first.style.fillColorValue),
-            height: 1,
-          ),
-          decoration: const InputDecoration(
-            contentPadding: EdgeInsets.zero,
-            border: OutlineInputBorder(),
-            isDense: true,
-          ),
-          onTapOutside: (_) {
-            _typingGroup = null;
-            _focusNode?.unfocus();
-          },
-          onChanged: (next) {
-            final before = _lastText ?? block.text;
-            final delta = PdfTextDelta.between(before, next);
-            _lastText = next;
-            widget.onIntent!(
-              ReplacePdfTextIntent(
-                documentId: widget.documentId!,
-                documentRevision: widget.documentRevision!,
-                locator: block.locator,
-                range: delta.replacedRange,
-                replacement: delta.insertedText,
-                caseMatching: widget.caseMatching,
-                coalescingKey: _typingGroup ??= _newTypingGroup(),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned.fill(
+            child: Focus(
+              onKeyEvent: (_, event) {
+                if (event is KeyDownEvent &&
+                    event.logicalKey == LogicalKeyboardKey.escape) {
+                  _typingGroup = null;
+                  widget.onClearSelection?.call();
+                  return KeyEventResult.handled;
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TextField(
+                key: const Key('pdf-inline-text-editor'),
+                controller: _textController,
+                focusNode: _focusNode,
+                expands: true,
+                maxLines: null,
+                minLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                style: TextStyle(
+                  fontFamily: block.runs.first.style.fontFamily,
+                  fontSize: block.runs.first.style.fontSize,
+                  color: Color(block.runs.first.style.fillColorValue),
+                  height: 1,
+                ),
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.zero,
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onTapOutside: (_) {
+                  _typingGroup = null;
+                  _focusNode?.unfocus();
+                },
+                onChanged: (next) {
+                  final before = _lastText ?? block.text;
+                  final delta = PdfTextDelta.between(before, next);
+                  _lastText = next;
+                  widget.onIntent!(
+                    ReplacePdfTextIntent(
+                      documentId: widget.documentId!,
+                      documentRevision: widget.documentRevision!,
+                      locator: block.locator,
+                      range: delta.replacedRange,
+                      replacement: delta.insertedText,
+                      caseMatching: widget.caseMatching,
+                      coalescingKey: _typingGroup ??= _newTypingGroup(),
+                    ),
+                  );
+                },
               ),
-            );
-          },
+            ),
+          ),
+          _moveHandle(block),
+          _resizeHandle(block, 'north-west', -1, 1),
+          _resizeHandle(block, 'north', 0, 1),
+          _resizeHandle(block, 'north-east', 1, 1),
+          _resizeHandle(block, 'east', 1, 0),
+          _resizeHandle(block, 'south-east', 1, -1),
+          _resizeHandle(block, 'south', 0, -1),
+          _resizeHandle(block, 'south-west', -1, -1),
+          _resizeHandle(block, 'west', -1, 0),
+        ],
+      ),
+    );
+  }
+
+  Widget _moveHandle(PdfTextBlock block) => Positioned(
+    top: 2,
+    left: 24,
+    right: 24,
+    height: 8,
+    child: GestureDetector(
+      key: const Key('pdf-move-handle'),
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (_) => _startGeometry(block),
+      onPanUpdate: (details) => _updateMove(block, details.delta),
+      onPanEnd: (_) => _finishGeometry(block, resize: false),
+      child: const MouseRegion(cursor: SystemMouseCursors.move),
+    ),
+  );
+
+  Widget _resizeHandle(
+    PdfTextBlock block,
+    String name,
+    int horizontal,
+    int vertical,
+  ) {
+    const size = 10.0;
+    return Positioned(
+      left: horizontal <= 0 ? 0 : null,
+      right: horizontal >= 0 ? 0 : null,
+      top: vertical >= 0 ? 0 : null,
+      bottom: vertical <= 0 ? 0 : null,
+      width: horizontal == 0 ? null : size,
+      height: vertical == 0 ? null : size,
+      child: Align(
+        alignment: Alignment(horizontal.toDouble(), -vertical.toDouble()),
+        child: GestureDetector(
+          key: Key('pdf-resize-$name'),
+          behavior: HitTestBehavior.opaque,
+          onPanStart: (_) => _startGeometry(block),
+          onPanUpdate: (details) =>
+              _updateResize(block, details.delta, horizontal, vertical),
+          onPanEnd: (_) => _finishGeometry(block, resize: true),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xff2563eb)),
+            ),
+          ),
         ),
       ),
+    );
+  }
+
+  void _startGeometry(PdfTextBlock block) {
+    _typingGroup = null;
+    _previewBounds = block.bounds;
+  }
+
+  void _updateMove(PdfTextBlock block, Offset viewerDelta) {
+    final scale = _viewerScale(block);
+    final current = _previewBounds ?? block.bounds;
+    final dx = viewerDelta.dx / scale.dx;
+    final dy = -viewerDelta.dy / scale.dy;
+    setState(
+      () => _previewBounds = PdfBox(
+        current.left + dx,
+        current.bottom + dy,
+        current.right + dx,
+        current.top + dy,
+      ),
+    );
+  }
+
+  void _updateResize(
+    PdfTextBlock block,
+    Offset viewerDelta,
+    int horizontal,
+    int vertical,
+  ) {
+    final scale = _viewerScale(block);
+    final current = _previewBounds ?? block.bounds;
+    final dx = viewerDelta.dx / scale.dx;
+    final dy = -viewerDelta.dy / scale.dy;
+    var left = current.left;
+    var right = current.right;
+    var bottom = current.bottom;
+    var top = current.top;
+    if (horizontal < 0) {
+      left = (left + dx).clamp(double.negativeInfinity, right - 4);
+    }
+    if (horizontal > 0) right = (right + dx).clamp(left + 4, double.infinity);
+    if (vertical < 0) {
+      bottom = (bottom + dy).clamp(double.negativeInfinity, top - 4);
+    }
+    if (vertical > 0) top = (top + dy).clamp(bottom + 4, double.infinity);
+    setState(() => _previewBounds = PdfBox(left, bottom, right, top));
+  }
+
+  Offset _viewerScale(PdfTextBlock block) {
+    final rect = widget.rectForBlock(block);
+    return Offset(
+      rect.width / block.bounds.width,
+      rect.height / block.bounds.height,
+    );
+  }
+
+  void _finishGeometry(PdfTextBlock block, {required bool resize}) {
+    final bounds = _previewBounds;
+    _previewBounds = null;
+    if (bounds == null || bounds == block.bounds) return;
+    widget.onIntent!(
+      resize
+          ? ResizePdfTextBlockIntent(
+              documentId: widget.documentId!,
+              documentRevision: widget.documentRevision!,
+              locator: block.locator,
+              bounds: bounds,
+            )
+          : MovePdfTextBlockIntent(
+              documentId: widget.documentId!,
+              documentRevision: widget.documentRevision!,
+              locator: block.locator,
+              bounds: bounds,
+            ),
     );
   }
 

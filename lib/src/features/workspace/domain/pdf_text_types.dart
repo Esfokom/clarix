@@ -419,7 +419,21 @@ final class PdfTextBlock {
 
   PdfTextBlock withBoundsFor(PdfTextCapability capability, PdfBox bounds) {
     _requireCapability(capability);
-    return copyWith(bounds: bounds);
+    if (capability != PdfTextCapability.move) return copyWith(bounds: bounds);
+    final dx = bounds.left - this.bounds.left;
+    final dy = bounds.bottom - this.bounds.bottom;
+    return copyWith(
+      bounds: bounds,
+      baseline: baseline + dy,
+      transform: PdfTransform(
+        transform.a,
+        transform.b,
+        transform.c,
+        transform.d,
+        transform.translateX + dx,
+        transform.translateY + dy,
+      ),
+    );
   }
 
   void validateOperation(PdfTextCapability capability) =>

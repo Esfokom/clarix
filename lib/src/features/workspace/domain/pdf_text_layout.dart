@@ -21,7 +21,10 @@ final class PdfMonospaceTextMetrics implements PdfTextMetrics {
   @override
   double measure(String text, PdfTextStyle style) {
     if (text.isEmpty) return 0;
-    final double glyphWidth = advance * style.horizontalScaling / 100;
+    final scale = style.horizontalScaling <= 10
+        ? style.horizontalScaling
+        : style.horizontalScaling / 100;
+    final double glyphWidth = advance * scale;
     return text.runes.length * glyphWidth +
         math.max(0, text.runes.length - 1) * style.characterSpacing;
   }

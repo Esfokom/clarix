@@ -11,6 +11,7 @@ import 'package:pdfium_flutter/pdfium_flutter.dart';
 import '../domain/pdf_text_types.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_edit_command.dart';
+import '../domain/pdf_text_layout.dart';
 import 'pdf_text_block_grouper.dart';
 import 'pdf_text_engine.dart';
 import 'installed_font_catalog.dart';
@@ -45,11 +46,26 @@ final class PdfiumTextEngine implements PdfTextEngine {
         )
         .map((command) => command.locator)
         .toSet();
+    final geometryLocators = draft.commands
+        .take(draft.cursor)
+        .where(
+          (command) =>
+              command is MovePdfTextBlockCommand ||
+              command is ResizePdfTextBlockCommand,
+        )
+        .expand((command) => command.affectedLocators)
+        .toSet();
+    final resizeLocators = draft.commands
+        .take(draft.cursor)
+        .whereType<ResizePdfTextBlockCommand>()
+        .map((command) => command.locator)
+        .toSet();
     final changed = draft.blocks
         .where(
           (block) =>
               block.text != block.originalText ||
-              formattedLocators.contains(block.locator),
+              formattedLocators.contains(block.locator) ||
+              geometryLocators.contains(block.locator),
         )
         .toList(growable: false);
     if (changed.any((block) => !block.isEditable)) {
@@ -101,12 +117,16 @@ final class PdfiumTextEngine implements PdfTextEngine {
         }
         try {
           for (final block in entry.value) {
-            if (formattedLocators.contains(block.locator)) {
+            if (formattedLocators.contains(block.locator) ||
+                geometryLocators.contains(block.locator)) {
               _replaceFormattedBlock(
                 nativeDocument,
                 page,
                 block,
                 matchedFaces[block.locator],
+                reflow:
+                    formattedLocators.contains(block.locator) ||
+                    resizeLocators.contains(block.locator),
               );
             } else {
               for (var index = 0; index < block.objectPaths.length; index++) {
@@ -137,8 +157,9 @@ final class PdfiumTextEngine implements PdfTextEngine {
     FPDF_DOCUMENT document,
     FPDF_PAGE page,
     PdfTextBlock block,
-    Map<int, InstalledFontFace>? matchedFaces,
-  ) {
+    Map<int, InstalledFontFace>? matchedFaces, {
+    required bool reflow,
+  }) {
     final originals = block.objectPaths
         .map((path) => _objectAtPath(page, path))
         .toList(growable: false);
@@ -157,8 +178,9 @@ final class PdfiumTextEngine implements PdfTextEngine {
     }
     final created = <FPDF_PAGEOBJECT>[];
     final loadedFonts = <FPDF_FONT>[];
-    for (final run in block.runs) {
-      if (run.range.isEmpty) continue;
+    final segments = _segmentsFor(block, reflow: reflow);
+    for (final segment in segments) {
+      final run = segment.run;
       final face = matchedFaces?[run.range.start];
       final font = face == null
           ? sourceFont
@@ -174,9 +196,14 @@ final class PdfiumTextEngine implements PdfTextEngine {
           'Could not create a formatted PDF text object.',
         );
       }
-      final text = block.text.substring(run.range.start, run.range.end);
-      _setObjectText(object, text);
-      _setObjectStyleAndPosition(object, block, run);
+      _setObjectText(object, segment.text);
+      _setObjectStyleAndPosition(
+        object,
+        block,
+        run,
+        originX: segment.originX,
+        baseline: segment.baseline,
+      );
       created.add(object);
       if (run.style.underline) {
         created.add(_createUnderline(block, run));
@@ -196,6 +223,58 @@ final class PdfiumTextEngine implements PdfTextEngine {
     for (final font in loadedFonts) {
       pdfiumBindings.FPDFFont_Close(font);
     }
+  }
+
+  List<_NativeTextSegment> _segmentsFor(
+    PdfTextBlock block, {
+    required bool reflow,
+  }) {
+    if (block.runs.length == 1 && reflow) {
+      final run = block.runs.single;
+      final style = run.style;
+      final layout = const PdfTextLayoutEngine().layout(
+        text: block.text,
+        bounds: block.bounds,
+        style: style,
+        metrics: PdfMonospaceTextMetrics(
+          advance: style.fontSize * 0.5,
+          lineHeight: style.fontSize * 0.8,
+        ),
+      );
+      return layout.lines
+          .map(
+            (line) => _NativeTextSegment(
+              text: line.text,
+              run: run,
+              originX: line.originX,
+              baseline: line.baseline,
+            ),
+          )
+          .toList(growable: false);
+    }
+    if (block.runs.length == 1) {
+      return <_NativeTextSegment>[
+        _NativeTextSegment(
+          text: block.text,
+          run: block.runs.single,
+          originX: block.bounds.left,
+          baseline: block.baseline,
+        ),
+      ];
+    }
+    return block.runs
+        .where((run) => !run.range.isEmpty)
+        .map(
+          (run) => _NativeTextSegment(
+            text: block.text.substring(run.range.start, run.range.end),
+            run: run,
+            originX:
+                block.bounds.left +
+                block.bounds.width * run.range.start / block.text.length,
+            baseline: block.baseline,
+          ),
+        )
+        .toList(growable: false);
   }
 
   FPDF_PAGEOBJECT _createUnderline(PdfTextBlock block, PdfTextRun run) {
@@ -261,8 +340,10 @@ final class PdfiumTextEngine implements PdfTextEngine {
   void _setObjectStyleAndPosition(
     FPDF_PAGEOBJECT object,
     PdfTextBlock block,
-    PdfTextRun run,
-  ) {
+    PdfTextRun run, {
+    double? originX,
+    double? baseline,
+  }) {
     final color = run.style.fillColorValue;
     final alpha = (color >> 24) & 0xff;
     final red = (color >> 16) & 0xff;
@@ -288,9 +369,11 @@ final class PdfiumTextEngine implements PdfTextEngine {
         ..b = block.transform.b
         ..c = block.transform.c
         ..d = block.transform.d
-        ..e = block.transform.translateX + block.bounds.width * progress
+        ..e =
+            originX ??
+            block.transform.translateX + block.bounds.width * progress
         ..f =
-            block.transform.translateY +
+            (baseline ?? block.transform.translateY) +
             run.style.baselineShift * run.style.fontSize;
       if (pdfiumBindings.FPDFPageObj_SetMatrix(object, matrix) == 0) {
         throw PdfValidationFailure('Could not position formatted PDF text.');
@@ -650,6 +733,20 @@ String _separatorBetween(
   }
   final tolerance = (previous.style.fontSize + current.style.fontSize) * 0.25;
   return (previous.baseline - current.baseline).abs() <= tolerance ? ' ' : '\n';
+}
+
+final class _NativeTextSegment {
+  const _NativeTextSegment({
+    required this.text,
+    required this.run,
+    required this.originX,
+    required this.baseline,
+  });
+
+  final String text;
+  final PdfTextRun run;
+  final double originX;
+  final double baseline;
 }
 
 final class _DiscoveredObject {

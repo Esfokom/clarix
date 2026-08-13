@@ -193,9 +193,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     if (metadata == null) return;
     try {
       final PdfEditingSession? editing = _pdfEditing.sessionsByTabId[tab.id];
-      final bool hasTextChanges =
-          editing?.blocks.any((block) => block.text != block.originalText) ??
-          false;
+      final bool hasTextChanges = editing?.isDirty ?? false;
       if (hasTextChanges) {
         await _pdfEditing.save(tab.id, tab.filePath);
       } else {

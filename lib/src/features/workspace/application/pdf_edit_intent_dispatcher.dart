@@ -4,6 +4,7 @@ import '../domain/pdf_edit_command.dart';
 import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_text_case.dart';
+import '../domain/pdf_text_layout.dart';
 import '../domain/pdf_text_types.dart';
 
 typedef PdfSessionReader = PdfEditingSession Function(String documentId);
@@ -50,7 +51,7 @@ final class PdfEditIntentDispatcher {
         final commandId = session.canUndo
             ? session.commands[session.cursor - 1].id
             : null;
-        final next = session.undo();
+        final next = _reflow(session.undo());
         _writeSession(next);
         return _result(
           next,
@@ -62,7 +63,7 @@ final class PdfEditIntentDispatcher {
         final commandId = session.canRedo
             ? session.commands[session.cursor].id
             : null;
-        final next = session.redo();
+        final next = _reflow(session.redo());
         _writeSession(next);
         return _result(
           next,
@@ -71,6 +72,11 @@ final class PdfEditIntentDispatcher {
         );
       }
       if (intent is SavePdfEditsIntent) {
+        if (session.overflowingLocators.isNotEmpty) {
+          return PdfEditResult.failure(
+            PdfTextOverflowFailure(locator: session.overflowingLocators.first),
+          );
+        }
         return _result(
           session,
           const <String>[],
@@ -79,13 +85,34 @@ final class PdfEditIntentDispatcher {
       }
 
       final command = _createCommand(session, intent, provenance);
-      final next = session.applyCommand(command);
+      final next = _reflow(session.applyCommand(command));
       _writeSession(next);
       return _result(next, <String>[command.id], command.affectedLocators);
     } on PdfEditFailure catch (failure) {
       return PdfEditResult.failure(failure);
     }
   }
+
+  PdfEditingSession _reflow(PdfEditingSession session) => session.withBlocks(
+    session.blocks
+        .map((block) {
+          if (block.text.isEmpty || block.runs.isEmpty) {
+            return block.copyWith(overflow: false);
+          }
+          final style = block.styleAt(0);
+          final result = const PdfTextLayoutEngine().layout(
+            text: block.text,
+            bounds: block.bounds,
+            style: style,
+            metrics: PdfMonospaceTextMetrics(
+              advance: style.fontSize * 0.5,
+              lineHeight: style.fontSize * 0.8,
+            ),
+          );
+          return block.copyWith(overflow: result.overflow);
+        })
+        .toList(growable: false),
+  );
 
   PdfEditCommand _createCommand(
     PdfEditingSession session,

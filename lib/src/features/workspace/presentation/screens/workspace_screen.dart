@@ -66,6 +66,12 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     final AsyncValue<WorkspaceFeatureState> asyncState = ref.watch(
       workspaceNotifierProvider,
     );
+    final editing = ref.watch(pdfEditingControllerProvider);
+    final activeTabId = asyncState.value?.session.activeTabId;
+    final canSave =
+        activeTabId == null ||
+        (editing.sessionsByTabId[activeTabId]?.overflowingLocators.isEmpty ??
+            true);
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -84,7 +90,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
         onImport: () =>
             ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
         onOpenSettings: () => showAppSettingsDialog(context),
-        onSave: asyncState.value?.session.activeTabId == null
+        onSave: asyncState.value?.session.activeTabId == null || !canSave
             ? null
             : () => ref
                   .read(workspaceNotifierProvider.notifier)

@@ -226,6 +226,91 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
               if (value != null) _apply(PdfTextStylePatch(alignment: value));
             },
           ),
+          ExpansionTile(
+            key: const Key('pdf-text-geometry'),
+            tilePadding: EdgeInsets.zero,
+            title: const Text('Geometry'),
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _geometryInput(
+                      key: const Key('pdf-geometry-x'),
+                      label: 'X',
+                      value: widget.block.bounds.left,
+                      onValue: (value) {
+                        final dx = value - widget.block.bounds.left;
+                        _move(
+                          PdfBox(
+                            value,
+                            widget.block.bounds.bottom,
+                            widget.block.bounds.right + dx,
+                            widget.block.bounds.top,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _geometryInput(
+                      key: const Key('pdf-geometry-y'),
+                      label: 'Y',
+                      value: widget.block.bounds.bottom,
+                      onValue: (value) {
+                        final dy = value - widget.block.bounds.bottom;
+                        _move(
+                          PdfBox(
+                            widget.block.bounds.left,
+                            value,
+                            widget.block.bounds.right,
+                            widget.block.bounds.top + dy,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _geometryInput(
+                      key: const Key('pdf-geometry-width'),
+                      label: 'Width',
+                      value: widget.block.bounds.width,
+                      onValue: (value) => _resize(
+                        PdfBox(
+                          widget.block.bounds.left,
+                          widget.block.bounds.bottom,
+                          widget.block.bounds.left +
+                              value.clamp(4, double.infinity),
+                          widget.block.bounds.top,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _geometryInput(
+                      key: const Key('pdf-geometry-height'),
+                      label: 'Height',
+                      value: widget.block.bounds.height,
+                      onValue: (value) => _resize(
+                        PdfBox(
+                          widget.block.bounds.left,
+                          widget.block.bounds.bottom,
+                          widget.block.bounds.right,
+                          widget.block.bounds.bottom +
+                              value.clamp(4, double.infinity),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           SwitchListTile(
             key: const Key('pdf-case-matching'),
             contentPadding: EdgeInsets.zero,
@@ -244,6 +329,40 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
       ),
     );
   }
+
+  Widget _geometryInput({
+    required Key key,
+    required String label,
+    required double value,
+    required ValueChanged<double> onValue,
+  }) => TextFormField(
+    key: key,
+    initialValue: value.toStringAsFixed(1),
+    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+    decoration: InputDecoration(labelText: label),
+    onFieldSubmitted: (text) {
+      final parsed = double.tryParse(text);
+      if (parsed != null) onValue(parsed);
+    },
+  );
+
+  void _move(PdfBox bounds) => widget.onIntent(
+    MovePdfTextBlockIntent(
+      documentId: widget.documentId,
+      documentRevision: widget.documentRevision,
+      locator: widget.block.locator,
+      bounds: bounds,
+    ),
+  );
+
+  void _resize(PdfBox bounds) => widget.onIntent(
+    ResizePdfTextBlockIntent(
+      documentId: widget.documentId,
+      documentRevision: widget.documentRevision,
+      locator: widget.block.locator,
+      bounds: bounds,
+    ),
+  );
 }
 
 final class _Toggle extends StatelessWidget {
