@@ -20,6 +20,8 @@ import '../infrastructure/pdf_text_engine.dart';
 import '../infrastructure/pdf_edit_save_service.dart';
 import '../infrastructure/installed_font_catalog.dart';
 import 'ai_runtime_service.dart';
+import 'action_permission_service.dart';
+import 'ai_tool_registry.dart';
 import 'pdf_editing_controller.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
@@ -107,11 +109,36 @@ final conversationStoreProvider = FutureProvider<ConversationStore>((
   return store;
 });
 
+final actionPermissionServiceProvider = Provider<ActionPermissionService>(
+  (Ref ref) => ActionPermissionService(
+    store: SharedPreferencesActionPermissionStore(
+      ref.watch(sharedPreferencesProvider),
+    ),
+    defaultPolicy: ActionPermissionPolicy.askAlways,
+  ),
+);
+
+final aiToolRegistryProvider = Provider<AiToolRegistry>((Ref ref) {
+  return AiToolRegistry(
+    editing: ref.watch(pdfEditingControllerProvider),
+    permissions: ref.watch(actionPermissionServiceProvider),
+    pathForDocument: (documentId) {
+      final workspace = ref.read(workspaceNotifierProvider).value;
+      if (workspace == null) return null;
+      for (final tab in workspace.session.tabs) {
+        if (tab.documentId == documentId) return tab.filePath;
+      }
+      return null;
+    },
+  );
+});
+
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
     providerProfiles: ref.watch(providerProfileStoreProvider),
     chunkStore: ref.watch(chunkStoreProvider),
     localRag: ref.watch(localRagServiceProvider),
+    toolRegistry: ref.watch(aiToolRegistryProvider),
   );
   ref.onDispose(service.dispose);
   return service;

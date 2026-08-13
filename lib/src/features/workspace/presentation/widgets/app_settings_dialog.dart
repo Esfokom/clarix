@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../application/workspace_providers.dart';
+import '../../application/action_permission_service.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../../../core/reader_background_store.dart';
@@ -85,6 +86,84 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                     description:
                                         'Configure compatible remote AI providers for Clarix.',
                                   ),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'Autonomous PDF edits',
+                                    style: TextStyle(
+                                      color: WorkspaceColors.textStrong,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text(
+                                    'Control when an AI agent must ask before editing genuine PDF text.',
+                                    style: TextStyle(
+                                      color: WorkspaceColors.textMuted,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  FutureBuilder<ActionPermissionPolicy>(
+                                    future: ref
+                                        .read(actionPermissionServiceProvider)
+                                        .policyFor('default'),
+                                    builder: (context, snapshot) =>
+                                        DropdownButtonFormField<
+                                          ActionPermissionPolicy
+                                        >(
+                                          key: const Key(
+                                            'pdf-agent-permission-policy',
+                                          ),
+                                          initialValue:
+                                              snapshot.data ??
+                                              ActionPermissionPolicy.askAlways,
+                                          decoration: const InputDecoration(
+                                            labelText: 'Agent edit permission',
+                                          ),
+                                          items:
+                                              const <
+                                                DropdownMenuItem<
+                                                  ActionPermissionPolicy
+                                                >
+                                              >[
+                                                DropdownMenuItem(
+                                                  value: ActionPermissionPolicy
+                                                      .allow,
+                                                  child: Text(
+                                                    'Full access — allow edits',
+                                                  ),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: ActionPermissionPolicy
+                                                      .askWhenRisky,
+                                                  child: Text(
+                                                    'Allow routine, ask for critical',
+                                                  ),
+                                                ),
+                                                DropdownMenuItem(
+                                                  value: ActionPermissionPolicy
+                                                      .askAlways,
+                                                  child: Text(
+                                                    'Ask for every edit',
+                                                  ),
+                                                ),
+                                              ],
+                                          onChanged: (policy) {
+                                            if (policy == null) return;
+                                            ref
+                                                .read(
+                                                  actionPermissionServiceProvider,
+                                                )
+                                                .grant(
+                                                  policy: policy,
+                                                  scope:
+                                                      PermissionScope.workspace,
+                                                  workspaceId: 'default',
+                                                );
+                                          },
+                                        ),
+                                  ),
+                                  const Divider(height: 32),
                                   const SizedBox(height: 16),
                                   if (state.providerProfiles.isEmpty)
                                     const Padding(

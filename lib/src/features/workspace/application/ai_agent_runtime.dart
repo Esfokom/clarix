@@ -4,6 +4,7 @@ import '../../../core/models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/openai_compatible_provider.dart';
+import 'ai_tool_registry.dart';
 
 class AiAgentRequest {
   const AiAgentRequest({
@@ -28,10 +29,15 @@ class AiAgentReply {
 }
 
 class AiAgentRuntime {
-  AiAgentRuntime({required this.provider, required this.localRag});
+  AiAgentRuntime({
+    required this.provider,
+    required this.localRag,
+    this.toolRegistry,
+  });
 
   final OpenAiCompatibleProvider provider;
   final LocalRagService localRag;
+  final AiToolRegistry? toolRegistry;
 
   Future<AiAgentReply> run(AiAgentRequest request) async {
     final List<PdfChunkRecord> passages = request.profile.shareRetrievedPassages
@@ -62,9 +68,10 @@ class AiAgentRuntime {
               profile: request.profile,
               apiKey: request.apiKey,
               messages: messages,
-              tools: canSearchDocument
-                  ? _tools
-                  : const <Map<String, dynamic>>[],
+              tools: <Map<String, dynamic>>[
+                if (canSearchDocument) ..._tools,
+                if (request.documentIds.isNotEmpty) ...?toolRegistry?.schemas,
+              ],
             ),
           )
           .toList();
@@ -93,6 +100,12 @@ class AiAgentRuntime {
   void cancel() => provider.cancel();
 
   Future<String> _executeTool(AiToolCall call, List<String> allowedIds) async {
+    final registry = toolRegistry;
+    if (registry != null && AiToolRegistry.names.contains(call.name)) {
+      return jsonEncode(
+        await registry.execute(call, allowedDocumentIds: allowedIds.toSet()),
+      );
+    }
     if (call.name != 'search_document') {
       return jsonEncode(<String, dynamic>{
         'error': 'Unknown or disallowed tool.',
