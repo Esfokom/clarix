@@ -59,6 +59,11 @@ final class PdfEditingSession {
   PdfEditingSession withBlocks(List<PdfTextBlock> blocks) =>
       _copy(blocks: blocks);
 
+  PdfEditingSession withMetadata({
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) => _copy(bookmarks: bookmarks, highlights: highlights);
+
   PdfEditingSession withMode(PdfEditingMode mode) => _copy(mode: mode);
 
   PdfEditingSession withSelection(PdfTextSelection? selection) =>

@@ -212,6 +212,86 @@ final class SavePdfEditsIntent extends PdfEditIntent {
   });
 }
 
+final class ChangePdfBookmarkIntent extends PdfEditIntent {
+  const ChangePdfBookmarkIntent({
+    required super.documentId,
+    required super.documentRevision,
+    required this.before,
+    required this.after,
+  });
+
+  final PdfBookmarkSnapshot? before;
+  final PdfBookmarkSnapshot? after;
+
+  @override
+  int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangePdfBookmarkIntent &&
+      super == other &&
+      other.before == before &&
+      other.after == after;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, before, after);
+}
+
+final class ChangePdfHighlightIntent extends PdfEditIntent {
+  const ChangePdfHighlightIntent({
+    required super.documentId,
+    required super.documentRevision,
+    required this.before,
+    required this.after,
+  });
+
+  final PdfHighlightSnapshot? before;
+  final PdfHighlightSnapshot? after;
+
+  @override
+  int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangePdfHighlightIntent &&
+      super == other &&
+      other.before == before &&
+      other.after == after;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, before, after);
+}
+
+final class ChangePdfMetadataIntent extends PdfEditIntent {
+  ChangePdfMetadataIntent({
+    required super.documentId,
+    required super.documentRevision,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) : bookmarks = List<PdfBookmarkSnapshot>.unmodifiable(bookmarks),
+       highlights = List<PdfHighlightSnapshot>.unmodifiable(highlights);
+
+  final List<PdfBookmarkSnapshot> bookmarks;
+  final List<PdfHighlightSnapshot> highlights;
+
+  @override
+  int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangePdfMetadataIntent &&
+      super == other &&
+      _sameList(other.bookmarks, bookmarks) &&
+      _sameList(other.highlights, highlights);
+
+  @override
+  int get hashCode => Object.hash(
+    super.hashCode,
+    Object.hashAll(bookmarks),
+    Object.hashAll(highlights),
+  );
+}
+
 final class PdfEditResult {
   PdfEditResult._({
     required this.revision,
