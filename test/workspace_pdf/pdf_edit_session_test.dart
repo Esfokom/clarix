@@ -144,6 +144,209 @@ void main() {
     expect(session.undo().highlights, isEmpty);
     expect(session.undo().undo().bookmarks, isEmpty);
   });
+
+  test(
+    'commands reject blocks that are read-only or lack the operation capability',
+    () {
+      final PdfTextBlock readOnly = editableBlock(
+        text: 'Locked',
+        readOnlyReason: PdfReadOnlyReason.type3Font,
+      );
+      final PdfTextBlock noMove = editableBlock(
+        text: 'Fixed',
+        capabilities: const <PdfTextCapability>[PdfTextCapability.replace],
+      );
+
+      expect(
+        () => PdfEditingSession.empty('doc', sourceRevision: 'sha256:a')
+            .withBlocks(<PdfTextBlock>[readOnly])
+            .applyCommand(
+              ReplacePdfTextCommand(
+                id: 'locked',
+                provenance: PdfCommandProvenance.manual,
+                locator: readOnly.locator,
+                before: 'Locked',
+                after: 'Changed',
+                range: const PdfTextRange(0, 6),
+              ),
+            ),
+        throwsA(isA<PdfReadOnlyTextBlockFailure>()),
+      );
+      expect(
+        () => PdfEditingSession.empty('doc', sourceRevision: 'sha256:a')
+            .withBlocks(<PdfTextBlock>[noMove])
+            .applyCommand(
+              MovePdfTextBlockCommand(
+                id: 'fixed',
+                provenance: PdfCommandProvenance.manual,
+                locator: noMove.locator,
+                before: noMove.bounds,
+                after: const PdfBox(10, 0, 110, 20),
+              ),
+            ),
+        throwsA(isA<PdfUnsupportedTextOperationFailure>()),
+      );
+    },
+  );
+
+  test('text and format commands restore every heterogeneous text run', () {
+    final PdfTextStyle boldStyle = testStyle.copyWith(fontWeight: 700);
+    final PdfTextBlock block = editableBlock(
+      text: 'ABCD',
+      runs: <PdfTextRun>[
+        const PdfTextRun(range: PdfTextRange(0, 2), style: testStyle),
+        PdfTextRun(range: const PdfTextRange(2, 4), style: boldStyle),
+      ],
+    );
+    final PdfEditingSession replaced =
+        PdfEditingSession.empty('doc', sourceRevision: 'sha256:a')
+            .withBlocks(<PdfTextBlock>[block])
+            .applyCommand(
+              ReplacePdfTextCommand(
+                id: 'replace',
+                provenance: PdfCommandProvenance.manual,
+                locator: block.locator,
+                before: 'BC',
+                after: 'X',
+                range: const PdfTextRange(1, 3),
+              ),
+            );
+    final PdfEditingSession formatted =
+        PdfEditingSession.empty('doc', sourceRevision: 'sha256:a')
+            .withBlocks(<PdfTextBlock>[block])
+            .applyCommand(
+              FormatPdfTextCommand(
+                id: 'format',
+                provenance: PdfCommandProvenance.manual,
+                locator: block.locator,
+                range: const PdfTextRange(1, 3),
+                before: testStyle,
+                after: testStyle.copyWith(fontSize: 16),
+              ),
+            );
+
+    expect(replaced.undo().blocks.single, block);
+    expect(
+      replaced.undo().redo().blocks.single.runs,
+      replaced.blocks.single.runs,
+    );
+    expect(formatted.undo().blocks.single, block);
+    expect(
+      formatted.undo().redo().blocks.single.runs,
+      formatted.blocks.single.runs,
+    );
+  });
+
+  test(
+    'undo restores deleted bookmark and highlight at their original indexes',
+    () {
+      final PdfBookmarkSnapshot firstBookmark = bookmark('first');
+      final PdfBookmarkSnapshot removedBookmark = bookmark('removed');
+      final PdfBookmarkSnapshot lastBookmark = bookmark('last');
+      final PdfHighlightSnapshot firstHighlight = highlight('first');
+      final PdfHighlightSnapshot removedHighlight = highlight('removed');
+      final PdfHighlightSnapshot lastHighlight = highlight('last');
+      final PdfEditingSession session =
+          PdfEditingSession.empty('doc', sourceRevision: 'sha256:a')
+              .applyCommand(
+                ChangePdfBookmarkCommand(
+                  id: 'add-first-bookmark',
+                  provenance: PdfCommandProvenance.manual,
+                  before: null,
+                  after: firstBookmark,
+                ),
+              )
+              .applyCommand(
+                ChangePdfBookmarkCommand(
+                  id: 'add-removed-bookmark',
+                  provenance: PdfCommandProvenance.manual,
+                  before: null,
+                  after: removedBookmark,
+                ),
+              )
+              .applyCommand(
+                ChangePdfBookmarkCommand(
+                  id: 'add-last-bookmark',
+                  provenance: PdfCommandProvenance.manual,
+                  before: null,
+                  after: lastBookmark,
+                ),
+              )
+              .applyCommand(
+                ChangePdfHighlightCommand(
+                  id: 'add-first-highlight',
+                  provenance: PdfCommandProvenance.manual,
+                  before: null,
+                  after: firstHighlight,
+                ),
+              )
+              .applyCommand(
+                ChangePdfHighlightCommand(
+                  id: 'add-removed-highlight',
+                  provenance: PdfCommandProvenance.manual,
+                  before: null,
+                  after: removedHighlight,
+                ),
+              )
+              .applyCommand(
+                ChangePdfHighlightCommand(
+                  id: 'add-last-highlight',
+                  provenance: PdfCommandProvenance.manual,
+                  before: null,
+                  after: lastHighlight,
+                ),
+              )
+              .applyCommand(
+                ChangePdfBookmarkCommand(
+                  id: 'delete-bookmark',
+                  provenance: PdfCommandProvenance.manual,
+                  before: removedBookmark,
+                  after: null,
+                ),
+              )
+              .applyCommand(
+                ChangePdfHighlightCommand(
+                  id: 'delete-highlight',
+                  provenance: PdfCommandProvenance.manual,
+                  before: removedHighlight,
+                  after: null,
+                ),
+              );
+
+      final PdfEditingSession restored = session.undo().undo();
+
+      expect(restored.bookmarks, <PdfBookmarkSnapshot>[
+        firstBookmark,
+        removedBookmark,
+        lastBookmark,
+      ]);
+      expect(restored.highlights, <PdfHighlightSnapshot>[
+        firstHighlight,
+        removedHighlight,
+        lastHighlight,
+      ]);
+    },
+  );
+
+  test('replacement rejects a UTF-16 range that splits a surrogate pair', () {
+    final PdfTextBlock block = editableBlock(text: 'A😀B');
+
+    expect(
+      () => PdfEditingSession.empty('doc', sourceRevision: 'sha256:a')
+          .withBlocks(<PdfTextBlock>[block])
+          .applyCommand(
+            ReplacePdfTextCommand(
+              id: 'split-surrogate',
+              provenance: PdfCommandProvenance.manual,
+              locator: block.locator,
+              before: '\ud83d',
+              after: 'X',
+              range: const PdfTextRange(1, 2),
+            ),
+          ),
+      throwsA(isA<PdfInvalidTextRangeFailure>()),
+    );
+  });
 }
 
 PdfEditingSession sessionWithOneBlock() => PdfEditingSession.empty(
@@ -203,17 +406,47 @@ const PdfTextStyle testStyle = PdfTextStyle(
   horizontalScaling: 1,
 );
 
-PdfTextBlock editableBlock({required String text}) => PdfTextBlock(
+PdfTextBlock editableBlock({
+  required String text,
+  List<PdfTextRun>? runs,
+  List<PdfTextCapability> capabilities = const <PdfTextCapability>[
+    PdfTextCapability.replace,
+    PdfTextCapability.format,
+    PdfTextCapability.move,
+    PdfTextCapability.resize,
+  ],
+  PdfReadOnlyReason? readOnlyReason,
+}) => PdfTextBlock(
   locator: testLocator,
   text: text,
   originalText: text,
-  runs: <PdfTextRun>[
-    PdfTextRun(range: PdfTextRange(0, text.length), style: testStyle),
-  ],
+  runs:
+      runs ??
+      <PdfTextRun>[
+        PdfTextRun(range: PdfTextRange(0, text.length), style: testStyle),
+      ],
   bounds: const PdfBox(0, 0, 100, 20),
   transform: const PdfTransform(1, 0, 0, 1, 0, 0),
   baseline: 0,
   writingDirection: PdfWritingDirection.leftToRight,
-  capabilities: const <PdfTextCapability>[PdfTextCapability.replace],
-  readOnlyReason: null,
+  capabilities: capabilities,
+  readOnlyReason: readOnlyReason,
+);
+
+PdfBookmarkSnapshot bookmark(String id) => PdfBookmarkSnapshot(
+  id: id,
+  label: id,
+  pageNumber: 1,
+  createdAt: DateTime.utc(2026),
+);
+
+PdfHighlightSnapshot highlight(String id) => PdfHighlightSnapshot(
+  id: id,
+  pageNumber: 1,
+  bounds: const <PdfBox>[PdfBox(0, 0, 10, 10)],
+  selectedText: id,
+  note: null,
+  colorValue: 0x66FFD54F,
+  createdAt: DateTime.utc(2026),
+  modifiedAt: DateTime.utc(2026),
 );

@@ -1,4 +1,5 @@
 import 'package:clarix/src/features/workspace/domain/pdf_edit_intent.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_edit_command.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -79,6 +80,56 @@ void main() {
     expect(rejected.isSuccess, isFalse);
     expect(rejected.failure, isA<PdfRevisionConflictFailure>());
   });
+
+  test(
+    'intents commands and results compare structurally and expose immutable views',
+    () {
+      final ReplacePdfTextIntent first = ReplacePdfTextIntent(
+        documentId: 'doc',
+        documentRevision: 'sha256:a',
+        locator: testLocator,
+        range: const PdfTextRange(0, 1),
+        replacement: 'B',
+      );
+      final ReplacePdfTextIntent equivalent = ReplacePdfTextIntent(
+        documentId: 'doc',
+        documentRevision: 'sha256:a',
+        locator: testLocator,
+        range: const PdfTextRange(0, 1),
+        replacement: 'B',
+      );
+      final ReplacePdfTextCommand command = ReplacePdfTextCommand(
+        id: 'c1',
+        provenance: PdfCommandProvenance.manual,
+        locator: testLocator,
+        before: 'A',
+        after: 'B',
+        range: const PdfTextRange(0, 1),
+      );
+      final PdfEditResult result = PdfEditResult.applied(
+        revision: 'sha256:b',
+        commandIds: <String>['c1'],
+        affectedLocators: <PdfTextBlockLocator>[testLocator],
+      );
+      final PdfEditResult equivalentResult = PdfEditResult.applied(
+        revision: 'sha256:b',
+        commandIds: <String>['c1'],
+        affectedLocators: <PdfTextBlockLocator>[testLocator],
+      );
+
+      expect(first, equivalent);
+      expect(result, equivalentResult);
+      expect(
+        () => first.affectedLocators.add(testLocator),
+        throwsUnsupportedError,
+      );
+      expect(() => first.affectedPages.add(2), throwsUnsupportedError);
+      expect(
+        () => command.affectedLocators.add(testLocator),
+        throwsUnsupportedError,
+      );
+    },
+  );
 }
 
 final PdfTextBlockLocator testLocator = PdfTextBlockLocator(

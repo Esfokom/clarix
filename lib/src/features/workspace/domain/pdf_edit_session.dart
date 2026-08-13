@@ -68,16 +68,21 @@ final class PdfEditingSession {
       _copy(caseMatching: caseMatching);
 
   PdfEditingSession applyCommand(PdfEditCommand command) {
+    final PdfEditCommand materialized = command.materialize(
+      blocks: blocks,
+      bookmarks: bookmarks,
+      highlights: highlights,
+    );
     final List<PdfEditCommand> kept =
-        commands.take(cursor).toList(growable: true)..add(command);
+        commands.take(cursor).toList(growable: true)..add(materialized);
     final int checkpoint = savedCursor > cursor ? -1 : savedCursor;
     return _copy(
       commands: kept,
       cursor: kept.length,
       savedCursor: checkpoint,
-      blocks: command.apply(blocks),
-      bookmarks: command.applyBookmarks(bookmarks),
-      highlights: command.applyHighlights(highlights),
+      blocks: materialized.apply(blocks),
+      bookmarks: materialized.applyBookmarks(bookmarks),
+      highlights: materialized.applyHighlights(highlights),
     );
   }
 

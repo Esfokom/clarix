@@ -14,6 +14,13 @@ sealed class PdfEditCommand {
   List<PdfTextBlockLocator> get affectedLocators =>
       const <PdfTextBlockLocator>[];
 
+  /// Captures every inverse value the command needs before it enters history.
+  PdfEditCommand materialize({
+    required List<PdfTextBlock> blocks,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) => this;
+
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks);
   List<PdfTextBlock> revert(List<PdfTextBlock> blocks);
 
@@ -29,6 +36,17 @@ sealed class PdfEditCommand {
   List<PdfHighlightSnapshot> revertHighlights(
     List<PdfHighlightSnapshot> highlights,
   ) => List<PdfHighlightSnapshot>.unmodifiable(highlights);
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfEditCommand &&
+      runtimeType == other.runtimeType &&
+      id == other.id &&
+      provenance == other.provenance &&
+      summary == other.summary;
+
+  @override
+  int get hashCode => Object.hash(runtimeType, id, provenance, summary);
 }
 
 final class ReplacePdfTextCommand extends PdfEditCommand {
@@ -39,34 +57,84 @@ final class ReplacePdfTextCommand extends PdfEditCommand {
     required this.before,
     required this.after,
     required this.range,
+    this.beforeBlock,
+    this.afterBlock,
   }) : super(summary: 'Replace PDF text');
 
   final PdfTextBlockLocator locator;
   final String before;
   final String after;
   final PdfTextRange range;
+  final PdfTextBlock? beforeBlock;
+  final PdfTextBlock? afterBlock;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
-  List<PdfTextBlock> apply(List<PdfTextBlock> blocks) => _replaceBlock(
-    blocks,
-    locator,
-    (PdfTextBlock block) => block.replaceText(range, before, after),
-  );
+  ReplacePdfTextCommand materialize({
+    required List<PdfTextBlock> blocks,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) {
+    if (beforeBlock != null && afterBlock != null) return this;
+    final PdfTextBlock original = _findBlock(blocks, locator);
+    return ReplacePdfTextCommand(
+      id: id,
+      provenance: provenance,
+      locator: locator,
+      before: before,
+      after: after,
+      range: range,
+      beforeBlock: original,
+      afterBlock: original.replaceText(range, before, after),
+    );
+  }
 
   @override
-  List<PdfTextBlock> revert(List<PdfTextBlock> blocks) => _replaceBlock(
-    blocks,
+  List<PdfTextBlock> apply(List<PdfTextBlock> blocks) {
+    final ReplacePdfTextCommand prepared = materialize(
+      blocks: blocks,
+      bookmarks: const <PdfBookmarkSnapshot>[],
+      highlights: const <PdfHighlightSnapshot>[],
+    );
+    return _replaceBlock(blocks, locator, (PdfTextBlock block) {
+      block.validateOperation(PdfTextCapability.replace);
+      return prepared.afterBlock!;
+    });
+  }
+
+  @override
+  List<PdfTextBlock> revert(List<PdfTextBlock> blocks) {
+    if (beforeBlock == null) {
+      throw StateError(
+        'A text command must be materialized before it is reverted.',
+      );
+    }
+    return _replaceBlock(blocks, locator, (_) => beforeBlock!);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReplacePdfTextCommand &&
+      super == other &&
+      other.locator == locator &&
+      other.before == before &&
+      other.after == after &&
+      other.range == range &&
+      other.beforeBlock == beforeBlock &&
+      other.afterBlock == afterBlock;
+
+  @override
+  int get hashCode => Object.hash(
+    super.hashCode,
     locator,
-    (PdfTextBlock block) => block.replaceText(
-      PdfTextRange(range.start, range.start + after.length),
-      after,
-      before,
-    ),
+    before,
+    after,
+    range,
+    beforeBlock,
+    afterBlock,
   );
 }
 
@@ -78,30 +146,84 @@ final class FormatPdfTextCommand extends PdfEditCommand {
     required this.range,
     required this.before,
     required this.after,
+    this.beforeBlock,
+    this.afterBlock,
   }) : super(summary: 'Format PDF text');
 
   final PdfTextBlockLocator locator;
   final PdfTextRange range;
   final PdfTextStyle before;
   final PdfTextStyle after;
+  final PdfTextBlock? beforeBlock;
+  final PdfTextBlock? afterBlock;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
-  List<PdfTextBlock> apply(List<PdfTextBlock> blocks) => _replaceBlock(
-    blocks,
-    locator,
-    (PdfTextBlock block) => block.formatRange(range, after),
-  );
+  FormatPdfTextCommand materialize({
+    required List<PdfTextBlock> blocks,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) {
+    if (beforeBlock != null && afterBlock != null) return this;
+    final PdfTextBlock original = _findBlock(blocks, locator);
+    return FormatPdfTextCommand(
+      id: id,
+      provenance: provenance,
+      locator: locator,
+      range: range,
+      before: before,
+      after: after,
+      beforeBlock: original,
+      afterBlock: original.formatRange(range, after),
+    );
+  }
 
   @override
-  List<PdfTextBlock> revert(List<PdfTextBlock> blocks) => _replaceBlock(
-    blocks,
+  List<PdfTextBlock> apply(List<PdfTextBlock> blocks) {
+    final FormatPdfTextCommand prepared = materialize(
+      blocks: blocks,
+      bookmarks: const <PdfBookmarkSnapshot>[],
+      highlights: const <PdfHighlightSnapshot>[],
+    );
+    return _replaceBlock(blocks, locator, (PdfTextBlock block) {
+      block.validateOperation(PdfTextCapability.format);
+      return prepared.afterBlock!;
+    });
+  }
+
+  @override
+  List<PdfTextBlock> revert(List<PdfTextBlock> blocks) {
+    if (beforeBlock == null) {
+      throw StateError(
+        'A format command must be materialized before it is reverted.',
+      );
+    }
+    return _replaceBlock(blocks, locator, (_) => beforeBlock!);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is FormatPdfTextCommand &&
+      super == other &&
+      other.locator == locator &&
+      other.range == range &&
+      other.before == before &&
+      other.after == after &&
+      other.beforeBlock == beforeBlock &&
+      other.afterBlock == afterBlock;
+
+  @override
+  int get hashCode => Object.hash(
+    super.hashCode,
     locator,
-    (PdfTextBlock block) => block.formatRange(range, before),
+    range,
+    before,
+    after,
+    beforeBlock,
+    afterBlock,
   );
 }
 
@@ -119,17 +241,27 @@ final class MovePdfTextBlockCommand extends PdfEditCommand {
   final PdfBox after;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks) =>
-      _replaceBounds(blocks, locator, after);
+      _replaceBounds(blocks, locator, after, PdfTextCapability.move);
 
   @override
   List<PdfTextBlock> revert(List<PdfTextBlock> blocks) =>
-      _replaceBounds(blocks, locator, before);
+      _replaceBounds(blocks, locator, before, PdfTextCapability.move);
+
+  @override
+  bool operator ==(Object other) =>
+      other is MovePdfTextBlockCommand &&
+      super == other &&
+      other.locator == locator &&
+      other.before == before &&
+      other.after == after;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, locator, before, after);
 }
 
 final class ResizePdfTextBlockCommand extends PdfEditCommand {
@@ -146,17 +278,27 @@ final class ResizePdfTextBlockCommand extends PdfEditCommand {
   final PdfBox after;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks) =>
-      _replaceBounds(blocks, locator, after);
+      _replaceBounds(blocks, locator, after, PdfTextCapability.resize);
 
   @override
   List<PdfTextBlock> revert(List<PdfTextBlock> blocks) =>
-      _replaceBounds(blocks, locator, before);
+      _replaceBounds(blocks, locator, before, PdfTextCapability.resize);
+
+  @override
+  bool operator ==(Object other) =>
+      other is ResizePdfTextBlockCommand &&
+      super == other &&
+      other.locator == locator &&
+      other.before == before &&
+      other.after == after;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, locator, before, after);
 }
 
 final class ChangePdfBookmarkCommand extends PdfEditCommand {
@@ -165,10 +307,32 @@ final class ChangePdfBookmarkCommand extends PdfEditCommand {
     required super.provenance,
     required this.before,
     required this.after,
+    this.beforeIndex,
   }) : super(summary: 'Change PDF bookmark');
 
   final PdfBookmarkSnapshot? before;
   final PdfBookmarkSnapshot? after;
+  final int? beforeIndex;
+
+  @override
+  ChangePdfBookmarkCommand materialize({
+    required List<PdfTextBlock> blocks,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) {
+    if (before == null || after != null || beforeIndex != null) return this;
+    final int index = bookmarks.indexWhere(
+      (PdfBookmarkSnapshot item) => item.id == before!.id,
+    );
+    if (index == -1) throw StateError('The bookmark to delete is absent.');
+    return ChangePdfBookmarkCommand(
+      id: id,
+      provenance: provenance,
+      before: before,
+      after: after,
+      beforeIndex: index,
+    );
+  }
 
   @override
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks) =>
@@ -186,7 +350,23 @@ final class ChangePdfBookmarkCommand extends PdfEditCommand {
   @override
   List<PdfBookmarkSnapshot> revertBookmarks(
     List<PdfBookmarkSnapshot> bookmarks,
-  ) => _replaceSnapshot(bookmarks, after?.id ?? before!.id, before);
+  ) => _replaceSnapshot(
+    bookmarks,
+    after?.id ?? before!.id,
+    before,
+    insertIndex: beforeIndex,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangePdfBookmarkCommand &&
+      super == other &&
+      other.before == before &&
+      other.after == after &&
+      other.beforeIndex == beforeIndex;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, before, after, beforeIndex);
 }
 
 final class ChangePdfHighlightCommand extends PdfEditCommand {
@@ -195,10 +375,32 @@ final class ChangePdfHighlightCommand extends PdfEditCommand {
     required super.provenance,
     required this.before,
     required this.after,
+    this.beforeIndex,
   }) : super(summary: 'Change PDF highlight');
 
   final PdfHighlightSnapshot? before;
   final PdfHighlightSnapshot? after;
+  final int? beforeIndex;
+
+  @override
+  ChangePdfHighlightCommand materialize({
+    required List<PdfTextBlock> blocks,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) {
+    if (before == null || after != null || beforeIndex != null) return this;
+    final int index = highlights.indexWhere(
+      (PdfHighlightSnapshot item) => item.id == before!.id,
+    );
+    if (index == -1) throw StateError('The highlight to delete is absent.');
+    return ChangePdfHighlightCommand(
+      id: id,
+      provenance: provenance,
+      before: before,
+      after: after,
+      beforeIndex: index,
+    );
+  }
 
   @override
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks) =>
@@ -216,7 +418,23 @@ final class ChangePdfHighlightCommand extends PdfEditCommand {
   @override
   List<PdfHighlightSnapshot> revertHighlights(
     List<PdfHighlightSnapshot> highlights,
-  ) => _replaceSnapshot(highlights, after?.id ?? before!.id, before);
+  ) => _replaceSnapshot(
+    highlights,
+    after?.id ?? before!.id,
+    before,
+    insertIndex: beforeIndex,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ChangePdfHighlightCommand &&
+      super == other &&
+      other.before == before &&
+      other.after == after &&
+      other.beforeIndex == beforeIndex;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, before, after, beforeIndex);
 }
 
 final class CompoundPdfEditCommand extends PdfEditCommand {
@@ -234,6 +452,35 @@ final class CompoundPdfEditCommand extends PdfEditCommand {
       List<PdfTextBlockLocator>.unmodifiable(
         children.expand((PdfEditCommand command) => command.affectedLocators),
       );
+
+  @override
+  CompoundPdfEditCommand materialize({
+    required List<PdfTextBlock> blocks,
+    required List<PdfBookmarkSnapshot> bookmarks,
+    required List<PdfHighlightSnapshot> highlights,
+  }) {
+    List<PdfTextBlock> nextBlocks = blocks;
+    List<PdfBookmarkSnapshot> nextBookmarks = bookmarks;
+    List<PdfHighlightSnapshot> nextHighlights = highlights;
+    final List<PdfEditCommand> prepared = <PdfEditCommand>[];
+    for (final PdfEditCommand child in children) {
+      final PdfEditCommand materialized = child.materialize(
+        blocks: nextBlocks,
+        bookmarks: nextBookmarks,
+        highlights: nextHighlights,
+      );
+      prepared.add(materialized);
+      nextBlocks = materialized.apply(nextBlocks);
+      nextBookmarks = materialized.applyBookmarks(nextBookmarks);
+      nextHighlights = materialized.applyHighlights(nextHighlights);
+    }
+    return CompoundPdfEditCommand(
+      id: id,
+      provenance: provenance,
+      summary: summary,
+      children: prepared,
+    );
+  }
 
   @override
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks) => children.fold(
@@ -284,17 +531,38 @@ final class CompoundPdfEditCommand extends PdfEditCommand {
     (List<PdfHighlightSnapshot> value, PdfEditCommand command) =>
         command.revertHighlights(value),
   );
+
+  @override
+  bool operator ==(Object other) =>
+      other is CompoundPdfEditCommand &&
+      super == other &&
+      _sameList(other.children, children);
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, Object.hashAll(children));
 }
 
 List<PdfTextBlock> _replaceBounds(
   List<PdfTextBlock> blocks,
   PdfTextBlockLocator locator,
   PdfBox bounds,
+  PdfTextCapability capability,
 ) => _replaceBlock(
   blocks,
   locator,
-  (PdfTextBlock block) => block.copyWith(bounds: bounds),
+  (PdfTextBlock block) => block.withBoundsFor(capability, bounds),
 );
+
+PdfTextBlock _findBlock(
+  List<PdfTextBlock> blocks,
+  PdfTextBlockLocator locator,
+) {
+  final int index = blocks.indexWhere(
+    (PdfTextBlock block) => block.locator == locator,
+  );
+  if (index == -1) throw PdfStaleLocatorFailure(locator);
+  return blocks[index];
+}
 
 List<PdfTextBlock> _replaceBlock(
   List<PdfTextBlock> blocks,
@@ -310,7 +578,12 @@ List<PdfTextBlock> _replaceBlock(
   return List<PdfTextBlock>.unmodifiable(next);
 }
 
-List<T> _replaceSnapshot<T>(List<T> values, String id, T? replacement) {
+List<T> _replaceSnapshot<T>(
+  List<T> values,
+  String id,
+  T? replacement, {
+  int? insertIndex,
+}) {
   final List<T> next = List<T>.from(values);
   final int index = next.indexWhere(
     (T value) => switch (value) {
@@ -322,9 +595,17 @@ List<T> _replaceSnapshot<T>(List<T> values, String id, T? replacement) {
   if (replacement == null) {
     if (index != -1) next.removeAt(index);
   } else if (index == -1) {
-    next.add(replacement);
+    next.insert(insertIndex?.clamp(0, next.length) ?? next.length, replacement);
   } else {
     next[index] = replacement;
   }
   return List<T>.unmodifiable(next);
+}
+
+bool _sameList<T>(List<T> left, List<T> right) {
+  if (left.length != right.length) return false;
+  for (int index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) return false;
+  }
+  return true;
 }

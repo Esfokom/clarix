@@ -14,9 +14,19 @@ sealed class PdfEditIntent {
   int get editCount => 0;
   bool get requiresFontSubstitution => false;
   double get deletionRatio => 0;
-  Set<int> get affectedPages => affectedLocators
-      .map((PdfTextBlockLocator locator) => locator.pageNumber)
-      .toSet();
+  Set<int> get affectedPages => Set<int>.unmodifiable(
+    affectedLocators.map((PdfTextBlockLocator locator) => locator.pageNumber),
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfEditIntent &&
+      runtimeType == other.runtimeType &&
+      documentId == other.documentId &&
+      documentRevision == other.documentRevision;
+
+  @override
+  int get hashCode => Object.hash(runtimeType, documentId, documentRevision);
 }
 
 final class SetPdfEditingModeIntent extends PdfEditIntent {
@@ -27,6 +37,13 @@ final class SetPdfEditingModeIntent extends PdfEditIntent {
   });
 
   final PdfEditingMode mode;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SetPdfEditingModeIntent && super == other && other.mode == mode;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, mode);
 }
 
 final class ReplacePdfTextIntent extends PdfEditIntent {
@@ -45,12 +62,24 @@ final class ReplacePdfTextIntent extends PdfEditIntent {
   final bool caseMatching;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
   int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReplacePdfTextIntent &&
+      super == other &&
+      other.locator == locator &&
+      other.range == range &&
+      other.replacement == replacement &&
+      other.caseMatching == caseMatching;
+
+  @override
+  int get hashCode =>
+      Object.hash(super.hashCode, locator, range, replacement, caseMatching);
 }
 
 final class FormatPdfTextIntent extends PdfEditIntent {
@@ -67,12 +96,22 @@ final class FormatPdfTextIntent extends PdfEditIntent {
   final PdfTextStylePatch patch;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
   int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FormatPdfTextIntent &&
+      super == other &&
+      other.locator == locator &&
+      other.range == range &&
+      other.patch == patch;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, locator, range, patch);
 }
 
 final class MovePdfTextBlockIntent extends PdfEditIntent {
@@ -87,12 +126,21 @@ final class MovePdfTextBlockIntent extends PdfEditIntent {
   final PdfBox bounds;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
   int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is MovePdfTextBlockIntent &&
+      super == other &&
+      other.locator == locator &&
+      other.bounds == bounds;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, locator, bounds);
 }
 
 final class ResizePdfTextBlockIntent extends PdfEditIntent {
@@ -107,12 +155,21 @@ final class ResizePdfTextBlockIntent extends PdfEditIntent {
   final PdfBox bounds;
 
   @override
-  List<PdfTextBlockLocator> get affectedLocators => <PdfTextBlockLocator>[
-    locator,
-  ];
+  List<PdfTextBlockLocator> get affectedLocators =>
+      List<PdfTextBlockLocator>.unmodifiable(<PdfTextBlockLocator>[locator]);
 
   @override
   int get editCount => 1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ResizePdfTextBlockIntent &&
+      super == other &&
+      other.locator == locator &&
+      other.bounds == bounds;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, locator, bounds);
 }
 
 final class SetPdfCaseMatchingIntent extends PdfEditIntent {
@@ -123,6 +180,15 @@ final class SetPdfCaseMatchingIntent extends PdfEditIntent {
   });
 
   final bool enabled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SetPdfCaseMatchingIntent &&
+      super == other &&
+      other.enabled == enabled;
+
+  @override
+  int get hashCode => Object.hash(super.hashCode, enabled);
 }
 
 final class UndoPdfEditIntent extends PdfEditIntent {
@@ -193,4 +259,32 @@ final class PdfEditResult {
   final bool isDirty;
 
   bool get isSuccess => failure == null;
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfEditResult &&
+      other.revision == revision &&
+      _sameList(other.commandIds, commandIds) &&
+      _sameList(other.affectedLocators, affectedLocators) &&
+      other.failure == failure &&
+      _sameList(other.warnings, warnings) &&
+      other.isDirty == isDirty;
+
+  @override
+  int get hashCode => Object.hash(
+    revision,
+    Object.hashAll(commandIds),
+    Object.hashAll(affectedLocators),
+    failure,
+    Object.hashAll(warnings),
+    isDirty,
+  );
+}
+
+bool _sameList<T>(List<T> left, List<T> right) {
+  if (left.length != right.length) return false;
+  for (int index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) return false;
+  }
+  return true;
 }

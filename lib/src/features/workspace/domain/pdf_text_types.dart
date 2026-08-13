@@ -292,6 +292,36 @@ final class PdfTextStylePatch {
     lineSpacing: lineSpacing,
     horizontalScaling: horizontalScaling,
   );
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfTextStylePatch &&
+      other.fontFamily == fontFamily &&
+      other.fontSize == fontSize &&
+      other.fillColorValue == fillColorValue &&
+      other.fontWeight == fontWeight &&
+      other.italic == italic &&
+      other.underline == underline &&
+      other.baselineShift == baselineShift &&
+      other.alignment == alignment &&
+      other.characterSpacing == characterSpacing &&
+      other.lineSpacing == lineSpacing &&
+      other.horizontalScaling == horizontalScaling;
+
+  @override
+  int get hashCode => Object.hash(
+    fontFamily,
+    fontSize,
+    fillColorValue,
+    fontWeight,
+    italic,
+    underline,
+    baselineShift,
+    alignment,
+    characterSpacing,
+    lineSpacing,
+    horizontalScaling,
+  );
 }
 
 final class PdfTextRun {
@@ -360,6 +390,7 @@ final class PdfTextBlock {
     String expected,
     String replacement,
   ) {
+    _requireCapability(PdfTextCapability.replace);
     _requireRange(range);
     if (text.substring(range.start, range.end) != expected) {
       throw PdfTextMismatchFailure(locator: locator, expected: expected);
@@ -374,9 +405,18 @@ final class PdfTextBlock {
   }
 
   PdfTextBlock formatRange(PdfTextRange range, PdfTextStyle style) {
+    _requireCapability(PdfTextCapability.format);
     _requireRange(range);
     return copyWith(runs: _mapRunSegments(range, (PdfTextStyle _) => style));
   }
+
+  PdfTextBlock withBoundsFor(PdfTextCapability capability, PdfBox bounds) {
+    _requireCapability(capability);
+    return copyWith(bounds: bounds);
+  }
+
+  void validateOperation(PdfTextCapability capability) =>
+      _requireCapability(capability);
 
   PdfTextBlock copyWith({
     String? text,
@@ -487,6 +527,32 @@ final class PdfTextBlock {
     if (range.start < 0 || range.end < range.start || range.end > text.length) {
       throw PdfInvalidTextRangeFailure(range: range, textLength: text.length);
     }
+    if (_splitsSurrogatePair(range.start) || _splitsSurrogatePair(range.end)) {
+      throw PdfInvalidTextRangeFailure(range: range, textLength: text.length);
+    }
+  }
+
+  void _requireCapability(PdfTextCapability capability) {
+    final PdfReadOnlyReason? reason = readOnlyReason;
+    if (reason != null) {
+      throw PdfReadOnlyTextBlockFailure(locator: locator, reason: reason);
+    }
+    if (!capabilities.contains(capability)) {
+      throw PdfUnsupportedTextOperationFailure(
+        locator: locator,
+        capability: capability,
+      );
+    }
+  }
+
+  bool _splitsSurrogatePair(int offset) {
+    if (offset == 0 || offset == text.length) return false;
+    final int previous = text.codeUnitAt(offset - 1);
+    final int next = text.codeUnitAt(offset);
+    return previous >= 0xD800 &&
+        previous <= 0xDBFF &&
+        next >= 0xDC00 &&
+        next <= 0xDFFF;
   }
 
   @override
@@ -618,6 +684,56 @@ sealed class PdfEditFailure implements Exception {
 
   @override
   String toString() => '$code: $message';
+
+  List<Object?> get _equalityFields => <Object?>[code, message];
+
+  @override
+  bool operator ==(Object other) =>
+      other is PdfEditFailure &&
+      runtimeType == other.runtimeType &&
+      _sameList(other._equalityFields, _equalityFields);
+
+  @override
+  int get hashCode =>
+      Object.hashAll(<Object?>[runtimeType, ..._equalityFields]);
+}
+
+final class PdfReadOnlyTextBlockFailure extends PdfEditFailure {
+  PdfReadOnlyTextBlockFailure({required this.locator, required this.reason})
+    : super(
+        'read_only_text_block',
+        'This text block is read-only: ${reason.name}.',
+      );
+
+  final PdfTextBlockLocator locator;
+  final PdfReadOnlyReason reason;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    locator,
+    reason,
+  ];
+}
+
+final class PdfUnsupportedTextOperationFailure extends PdfEditFailure {
+  PdfUnsupportedTextOperationFailure({
+    required this.locator,
+    required this.capability,
+  }) : super(
+         'unsupported_text_operation',
+         'This text block does not support ${capability.name}.',
+       );
+
+  final PdfTextBlockLocator locator;
+  final PdfTextCapability capability;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    locator,
+    capability,
+  ];
 }
 
 final class PdfRevisionConflictFailure extends PdfEditFailure {
@@ -631,6 +747,13 @@ final class PdfRevisionConflictFailure extends PdfEditFailure {
 
   final String expected;
   final String actual;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    expected,
+    actual,
+  ];
 }
 
 final class PdfStaleLocatorFailure extends PdfEditFailure {
@@ -641,6 +764,12 @@ final class PdfStaleLocatorFailure extends PdfEditFailure {
       );
 
   final PdfTextBlockLocator locator;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    locator,
+  ];
 }
 
 final class PdfAmbiguousLocatorFailure extends PdfEditFailure {
@@ -652,6 +781,13 @@ final class PdfAmbiguousLocatorFailure extends PdfEditFailure {
 
   final PdfTextBlockLocator locator;
   final int candidateCount;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    locator,
+    candidateCount,
+  ];
 }
 
 final class PdfInvalidTextRangeFailure extends PdfEditFailure {
@@ -665,6 +801,13 @@ final class PdfInvalidTextRangeFailure extends PdfEditFailure {
 
   final PdfTextRange range;
   final int textLength;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    range,
+    textLength,
+  ];
 }
 
 final class PdfTextMismatchFailure extends PdfEditFailure {
@@ -676,6 +819,13 @@ final class PdfTextMismatchFailure extends PdfEditFailure {
 
   final PdfTextBlockLocator locator;
   final String expected;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    locator,
+    expected,
+  ];
 }
 
 final class PdfTextOverflowFailure extends PdfEditFailure {
@@ -683,6 +833,12 @@ final class PdfTextOverflowFailure extends PdfEditFailure {
     : super('text_overflow', 'Text does not fit its box.');
 
   final PdfTextBlockLocator locator;
+
+  @override
+  List<Object?> get _equalityFields => <Object?>[
+    ...super._equalityFields,
+    locator,
+  ];
 }
 
 final class PdfNativeEditingUnavailableFailure extends PdfEditFailure {
