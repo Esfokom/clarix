@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
@@ -9,13 +10,17 @@ import 'package:pdfium_flutter/pdfium_flutter.dart';
 
 import '../domain/pdf_text_types.dart';
 import '../domain/pdf_edit_session.dart';
+import '../domain/pdf_edit_command.dart';
 import 'pdf_text_block_grouper.dart';
 import 'pdf_text_engine.dart';
+import 'installed_font_catalog.dart';
 
 PdfTextEngine createPdfTextEngine() => const PdfiumTextEngine();
 
 final class PdfiumTextEngine implements PdfTextEngine {
-  const PdfiumTextEngine();
+  const PdfiumTextEngine({this.fontCatalog});
+
+  final InstalledFontCatalog? fontCatalog;
 
   static final Expando<String> _knownRevisions = Expando<String>();
 
@@ -24,8 +29,28 @@ final class PdfiumTextEngine implements PdfTextEngine {
     required PdfDocument document,
     required PdfEditingSession draft,
   }) async {
+    final formattedLocators = draft.commands
+        .take(draft.cursor)
+        .whereType<FormatPdfTextCommand>()
+        .map((command) => command.locator)
+        .toSet();
+    final fontChangedLocators = draft.commands
+        .take(draft.cursor)
+        .whereType<FormatPdfTextCommand>()
+        .where(
+          (command) =>
+              command.before.fontFamily != command.after.fontFamily ||
+              command.before.fontWeight != command.after.fontWeight ||
+              command.before.italic != command.after.italic,
+        )
+        .map((command) => command.locator)
+        .toSet();
     final changed = draft.blocks
-        .where((block) => block.text != block.originalText)
+        .where(
+          (block) =>
+              block.text != block.originalText ||
+              formattedLocators.contains(block.locator),
+        )
         .toList(growable: false);
     if (changed.any((block) => !block.isEditable)) {
       final block = changed.firstWhere((block) => !block.isEditable);
@@ -33,6 +58,32 @@ final class PdfiumTextEngine implements PdfTextEngine {
         locator: block.locator,
         reason: block.readOnlyReason ?? PdfReadOnlyReason.complexRendering,
       );
+    }
+    final matchedFaces = <PdfTextBlockLocator, Map<int, InstalledFontFace>>{};
+    if (fontChangedLocators.isNotEmpty) {
+      final catalog = fontCatalog ?? await InstalledFontCatalog.scan();
+      for (final block in changed.where(
+        (block) => fontChangedLocators.contains(block.locator),
+      )) {
+        final byRun = <int, InstalledFontFace>{};
+        for (final run in block.runs) {
+          try {
+            byRun[run.range.start] = catalog
+                .match(
+                  FontMatchRequest(
+                    family: run.style.fontFamily,
+                    weight: run.style.fontWeight,
+                    italic: run.style.italic,
+                    text: block.text.substring(run.range.start, run.range.end),
+                  ),
+                )
+                .font;
+          } on FontMatchUnavailable catch (error) {
+            throw PdfFontUnavailableFailure(error.message);
+          }
+        }
+        matchedFaces[block.locator] = byRun;
+      }
     }
     await document.useNativeDocumentHandle((address) {
       final nativeDocument = FPDF_DOCUMENT.fromAddress(address);
@@ -50,14 +101,23 @@ final class PdfiumTextEngine implements PdfTextEngine {
         }
         try {
           for (final block in entry.value) {
-            for (var index = 0; index < block.objectPaths.length; index++) {
-              final object = _objectAtPath(page, block.objectPaths[index]);
-              if (object.address == 0 ||
-                  pdfiumBindings.FPDFPageObj_GetType(object) !=
-                      FPDF_PAGEOBJ_TEXT) {
-                throw PdfStaleLocatorFailure(block.locator);
+            if (formattedLocators.contains(block.locator)) {
+              _replaceFormattedBlock(
+                nativeDocument,
+                page,
+                block,
+                matchedFaces[block.locator],
+              );
+            } else {
+              for (var index = 0; index < block.objectPaths.length; index++) {
+                final object = _objectAtPath(page, block.objectPaths[index]);
+                if (object.address == 0 ||
+                    pdfiumBindings.FPDFPageObj_GetType(object) !=
+                        FPDF_PAGEOBJ_TEXT) {
+                  throw PdfStaleLocatorFailure(block.locator);
+                }
+                _setObjectText(object, index == 0 ? block.text : '');
               }
-              _setObjectText(object, index == 0 ? block.text : '');
             }
           }
           if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
@@ -71,6 +131,173 @@ final class PdfiumTextEngine implements PdfTextEngine {
       }
     });
     return document.encodePdf(incremental: false);
+  }
+
+  void _replaceFormattedBlock(
+    FPDF_DOCUMENT document,
+    FPDF_PAGE page,
+    PdfTextBlock block,
+    Map<int, InstalledFontFace>? matchedFaces,
+  ) {
+    final originals = block.objectPaths
+        .map((path) => _objectAtPath(page, path))
+        .toList(growable: false);
+    if (originals.any(
+      (object) =>
+          object.address == 0 ||
+          pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_TEXT,
+    )) {
+      throw PdfStaleLocatorFailure(block.locator);
+    }
+    final sourceFont = pdfiumBindings.FPDFTextObj_GetFont(originals.first);
+    if (sourceFont.address == 0) {
+      throw const PdfFontUnavailableFailure(
+        'The source font cannot be reused for this edit.',
+      );
+    }
+    final created = <FPDF_PAGEOBJECT>[];
+    final loadedFonts = <FPDF_FONT>[];
+    for (final run in block.runs) {
+      if (run.range.isEmpty) continue;
+      final face = matchedFaces?[run.range.start];
+      final font = face == null
+          ? sourceFont
+          : _loadInstalledFont(document, face);
+      if (face != null) loadedFonts.add(font);
+      final object = pdfiumBindings.FPDFPageObj_CreateTextObj(
+        document,
+        font,
+        run.style.fontSize,
+      );
+      if (object.address == 0) {
+        throw const PdfFontUnavailableFailure(
+          'Could not create a formatted PDF text object.',
+        );
+      }
+      final text = block.text.substring(run.range.start, run.range.end);
+      _setObjectText(object, text);
+      _setObjectStyleAndPosition(object, block, run);
+      created.add(object);
+      if (run.style.underline) {
+        created.add(_createUnderline(block, run));
+      }
+    }
+    for (final object in originals.reversed) {
+      if (pdfiumBindings.FPDFPage_RemoveObject(page, object) == 0) {
+        throw PdfValidationFailure('Could not replace a PDF text object.');
+      }
+      pdfiumBindings.FPDFPageObj_Destroy(object);
+    }
+    for (final object in created) {
+      if (pdfiumBindings.FPDFPage_InsertObject(page, object) == 0) {
+        throw PdfValidationFailure('Could not insert formatted PDF text.');
+      }
+    }
+    for (final font in loadedFonts) {
+      pdfiumBindings.FPDFFont_Close(font);
+    }
+  }
+
+  FPDF_PAGEOBJECT _createUnderline(PdfTextBlock block, PdfTextRun run) {
+    final length = block.text.isEmpty ? 1 : block.text.length;
+    final start =
+        block.bounds.left + block.bounds.width * run.range.start / length;
+    final end = block.bounds.left + block.bounds.width * run.range.end / length;
+    final y = block.baseline - run.style.fontSize * 0.12;
+    final path = pdfiumBindings.FPDFPageObj_CreateNewPath(start, y);
+    if (path.address == 0 ||
+        pdfiumBindings.FPDFPath_LineTo(path, end, y) == 0) {
+      throw PdfValidationFailure('Could not create PDF text underline.');
+    }
+    final color = run.style.fillColorValue;
+    if (pdfiumBindings.FPDFPageObj_SetStrokeColor(
+              path,
+              (color >> 16) & 0xff,
+              (color >> 8) & 0xff,
+              color & 0xff,
+              (color >> 24) & 0xff,
+            ) ==
+            0 ||
+        pdfiumBindings.FPDFPageObj_SetStrokeWidth(
+              path,
+              (run.style.fontSize / 14).clamp(0.5, 1.5),
+            ) ==
+            0 ||
+        pdfiumBindings.FPDFPath_SetDrawMode(path, 0, 1) == 0) {
+      pdfiumBindings.FPDFPageObj_Destroy(path);
+      throw PdfValidationFailure('Could not style PDF text underline.');
+    }
+    return path;
+  }
+
+  FPDF_FONT _loadInstalledFont(FPDF_DOCUMENT document, InstalledFontFace face) {
+    if (!face.mayEmbed) {
+      throw PdfFontUnavailableFailure(
+        '${face.family} does not permit PDF embedding.',
+      );
+    }
+    final bytes = File(face.path).readAsBytesSync();
+    final buffer = calloc<Uint8>(bytes.length);
+    try {
+      buffer.asTypedList(bytes.length).setAll(0, bytes);
+      final font = pdfiumBindings.FPDFText_LoadFont(
+        document,
+        buffer,
+        bytes.length,
+        FPDF_FONT_TRUETYPE,
+        1,
+      );
+      if (font.address == 0) {
+        throw PdfFontUnavailableFailure(
+          'Could not embed ${face.family} in the PDF.',
+        );
+      }
+      return font;
+    } finally {
+      calloc.free(buffer);
+    }
+  }
+
+  void _setObjectStyleAndPosition(
+    FPDF_PAGEOBJECT object,
+    PdfTextBlock block,
+    PdfTextRun run,
+  ) {
+    final color = run.style.fillColorValue;
+    final alpha = (color >> 24) & 0xff;
+    final red = (color >> 16) & 0xff;
+    final green = (color >> 8) & 0xff;
+    final blue = color & 0xff;
+    if (pdfiumBindings.FPDFPageObj_SetFillColor(
+          object,
+          red,
+          green,
+          blue,
+          alpha,
+        ) ==
+        0) {
+      throw PdfValidationFailure('Could not set PDF text color.');
+    }
+    final matrix = calloc<FS_MATRIX>();
+    try {
+      final progress = block.text.isEmpty
+          ? 0.0
+          : run.range.start / block.text.length;
+      matrix.ref
+        ..a = block.transform.a * run.style.horizontalScaling
+        ..b = block.transform.b
+        ..c = block.transform.c
+        ..d = block.transform.d
+        ..e = block.transform.translateX + block.bounds.width * progress
+        ..f =
+            block.transform.translateY +
+            run.style.baselineShift * run.style.fontSize;
+      if (pdfiumBindings.FPDFPageObj_SetMatrix(object, matrix) == 0) {
+        throw PdfValidationFailure('Could not position formatted PDF text.');
+      }
+    } finally {
+      calloc.free(matrix);
+    }
   }
 
   @override

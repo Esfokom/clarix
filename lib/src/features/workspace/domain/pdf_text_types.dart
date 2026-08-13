@@ -859,6 +859,11 @@ final class PdfNativeEditingUnavailableFailure extends PdfEditFailure {
       );
 }
 
+final class PdfFontUnavailableFailure extends PdfEditFailure {
+  const PdfFontUnavailableFailure(String message)
+    : super('font_unavailable', message);
+}
+
 final class PdfExternalRevisionFailure extends PdfEditFailure {
   const PdfExternalRevisionFailure({
     required this.expected,

@@ -5,9 +5,13 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/models.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
+import '../../domain/pdf_edit_intent.dart';
+import '../../domain/pdf_text_types.dart';
+import '../../infrastructure/installed_font_catalog.dart';
 import 'ai_side_pane.dart';
 import 'document_workspace.dart';
 import 'quickstart_surface.dart';
+import 'pdf_text_format_panel.dart';
 import 'reader_inspector.dart';
 import 'workspace_common.dart';
 
@@ -40,6 +44,10 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             showInspector &&
             activeTab != null &&
             widget.state.session.rightToolWindow == RightToolWindow.document;
+        final bool showTextFormatInline =
+            showInspector &&
+            activeTab != null &&
+            widget.state.session.rightToolWindow == RightToolWindow.textFormat;
         final bool showAiOverlay =
             !showInspector &&
             activeTab != null &&
@@ -68,7 +76,9 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             ),
                     ),
                   ),
-                  if (showAiInline || showDocumentInline)
+                  if (showAiInline ||
+                      showDocumentInline ||
+                      showTextFormatInline)
                     _PaneHandle(
                       key: const Key('right-pane-resizer'),
                       onDrag: (double delta) => ref
@@ -77,7 +87,9 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             widget.state.session.rightPaneWidth - delta,
                           ),
                     ),
-                  if ((showAiInline || showDocumentInline) &&
+                  if ((showAiInline ||
+                          showDocumentInline ||
+                          showTextFormatInline) &&
                       !widget.state.session.rightPaneCollapsed)
                     SizedBox(
                       width: widget.state.session.rightPaneWidth,
@@ -86,6 +98,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                               state: widget.state,
                               activeTab: activeTab,
                             )
+                          : showTextFormatInline
+                          ? _TextFormatPane(activeTab: activeTab)
                           : ReaderInspector(
                               state: widget.state,
                               activeTab: activeTab,
@@ -156,6 +170,82 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
   }
 }
 
+class _TextFormatPane extends ConsumerWidget {
+  const _TextFormatPane({required this.activeTab});
+
+  final DocumentTabState activeTab;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final editing = ref.watch(pdfEditingControllerProvider);
+    final session = editing.sessionsByTabId[activeTab.id];
+    final selection = session?.selection;
+    PdfTextBlock? block;
+    if (selection != null && session != null) {
+      for (final candidate in session.blocks) {
+        if (candidate.locator == selection.locator) {
+          block = candidate;
+          break;
+        }
+      }
+    }
+    if (session == null || selection == null || block == null) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Text('Select editable PDF text to format it.'),
+        ),
+      );
+    }
+    final catalog = ref.watch(installedFontCatalogProvider);
+    final families =
+        catalog.value?.families ??
+        <String>{...block.runs.map((run) => run.style.fontFamily)}.toList();
+    String? substitutionMessage;
+    final installed = catalog.value;
+    if (installed != null && block.text.isNotEmpty) {
+      final style = block.styleAt(
+        selection.range.start.clamp(0, block.text.length),
+      );
+      try {
+        final match = installed.match(
+          FontMatchRequest(
+            family: style.fontFamily,
+            weight: style.fontWeight,
+            italic: style.italic,
+            text: block.text,
+          ),
+        );
+        if (match.requiresSubstitution) {
+          substitutionMessage =
+              '${style.fontFamily} is not installed. Save will embed the closest compatible face: ${match.font.family} ${match.font.face}.';
+        }
+      } on FontMatchUnavailable catch (error) {
+        substitutionMessage = error.message;
+      }
+    }
+    return PdfTextFormatPanel(
+      documentId: session.documentId,
+      documentRevision: session.revision,
+      block: block,
+      selection: selection,
+      availableFamilies: families,
+      caseMatching: session.caseMatching,
+      substitutionMessage: substitutionMessage,
+      onCaseMatchingChanged: (enabled) => editing.dispatch(
+        SetPdfCaseMatchingIntent(
+          documentId: session.documentId,
+          documentRevision: session.revision,
+          enabled: enabled,
+        ),
+        provenance: PdfCommandProvenance.manual,
+      ),
+      onIntent: (intent) =>
+          editing.dispatch(intent, provenance: PdfCommandProvenance.manual),
+    );
+  }
+}
+
 class _PaneHandle extends StatelessWidget {
   const _PaneHandle({super.key, required this.onDrag});
   final ValueChanged<double> onDrag;
@@ -202,6 +292,13 @@ class _RightToolRail extends ConsumerWidget {
             RightToolWindow.document,
             'Document inspector',
             LucideIcons.panelRight,
+          ),
+          _tool(
+            context,
+            ref,
+            RightToolWindow.textFormat,
+            'Text format',
+            LucideIcons.type,
           ),
           _tool(
             context,

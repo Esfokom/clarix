@@ -18,6 +18,7 @@ import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
 import '../infrastructure/pdf_text_engine.dart';
 import '../infrastructure/pdf_edit_save_service.dart';
+import '../infrastructure/installed_font_catalog.dart';
 import 'ai_runtime_service.dart';
 import 'pdf_editing_controller.dart';
 import 'workspace_notifier.dart';
@@ -123,6 +124,10 @@ final workspaceNotifierProvider =
 
 final pdfTextEngineProvider = Provider<PdfTextEngine>(
   (Ref ref) => createPdfTextEngine(),
+);
+
+final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(
+  (Ref ref) => InstalledFontCatalog.scan(),
 );
 
 final pdfEditSaveServiceProvider = Provider<PdfEditSaveService>((Ref ref) {

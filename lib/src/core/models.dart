@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 enum SidebarPane { thumbnails, outline }
 
-enum RightToolWindow { none, document, ai }
+enum RightToolWindow { none, document, textFormat, ai }
 
 const double minWorkspacePaneWidth = 200;
 const double maxWorkspacePaneWidth = 480;

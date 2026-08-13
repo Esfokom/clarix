@@ -623,10 +623,22 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                           page: page,
                                           scaledPageSize: pageRect.size,
                                         ),
-                                    onSelect: (locator) => editing.selectBlock(
-                                      widget.tab.id,
-                                      locator,
-                                    ),
+                                    onSelect: (locator) {
+                                      editing.selectBlock(
+                                        widget.tab.id,
+                                        locator,
+                                      );
+                                      unawaited(
+                                        ref
+                                            .read(
+                                              workspaceNotifierProvider
+                                                  .notifier,
+                                            )
+                                            .selectRightToolWindow(
+                                              RightToolWindow.textFormat,
+                                            ),
+                                      );
+                                    },
                                     documentId: editSession?.documentId,
                                     documentRevision: editSession?.revision,
                                     caseMatching:

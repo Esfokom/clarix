@@ -72,4 +72,48 @@ void main() {
     expect(text?.fullText, contains('Changed'));
     expect(text?.fullText, isNot(contains('Original')));
   });
+
+  test('saved size and fill color remain on a genuine text object', () async {
+    final file = await PdfTextFixture.singleBlock('Styled');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final revision = await sha256File(file);
+    final source = await PdfDocument.openFile(file.path);
+    const engine = PdfiumTextEngine();
+    final blocks = await engine.inspectPages(
+      document: source,
+      sourceRevision: revision,
+      pageNumbers: const <int>[1],
+    );
+    await source.dispose();
+    final block = blocks.single;
+    final before = block.styleAt(0);
+    final draft = PdfEditingSession.empty('doc', sourceRevision: revision)
+        .withBlocks(blocks)
+        .applyCommand(
+          FormatPdfTextCommand(
+            id: 'format-1',
+            provenance: PdfCommandProvenance.manual,
+            locator: block.locator,
+            range: PdfTextRange(0, block.text.length),
+            before: before,
+            after: before.copyWith(fontSize: 18, fillColorValue: 0xff336699),
+          ),
+        );
+    final working = await PdfDocument.openFile(file.path);
+    final bytes = await engine.applyDraft(document: working, draft: draft);
+    await working.dispose();
+    await file.writeAsBytes(bytes, flush: true);
+
+    final reopened = await PdfDocument.openFile(file.path);
+    final edited = await engine.inspectPages(
+      document: reopened,
+      sourceRevision: await sha256File(file),
+      pageNumbers: const <int>[1],
+    );
+    await reopened.dispose();
+
+    expect(edited.single.text, contains('Styled'));
+    expect(edited.single.styleAt(0).fontSize, closeTo(18, 0.1));
+    expect(edited.single.styleAt(0).fillColorValue, 0xff336699);
+  });
 }
