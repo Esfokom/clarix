@@ -14,8 +14,12 @@ import 'package:smooth_corner/smooth_corner.dart';
 import '../../../../core/models.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
+import '../../application/pdf_editing_controller.dart';
 import '../../application/workspace_providers.dart';
+import '../../domain/pdf_edit_session.dart';
+import '../../domain/pdf_text_types.dart';
 import '../../domain/workspace_feature_state.dart';
+import 'pdf_text_editor_overlay.dart';
 import 'pdf_viewer_interaction_math.dart';
 import 'workspace_common.dart';
 
@@ -411,6 +415,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   void didUpdateWidget(covariant _PdfViewerPane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tab.id != widget.tab.id) {
+      final editing = ref.read(pdfEditingControllerProvider);
+      if (editing.sessionsByTabId[oldWidget.tab.id]?.mode ==
+          PdfEditingMode.text) {
+        unawaited(editing.leaveTextMode(oldWidget.tab.id));
+      }
       _disposeSearcher();
       _controller.removeListener(_syncViewerMetrics);
       _metrics.dispose();
@@ -477,6 +486,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   @override
   Widget build(BuildContext context) {
+    final PdfEditingController editing = ref.watch(
+      pdfEditingControllerProvider,
+    );
+    final PdfEditingSession? editSession =
+        editing.sessionsByTabId[widget.tab.id];
     final String? readerBackgroundPath = ref
         .watch(clarixThemeProvider)
         .value
@@ -583,6 +597,38 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                 _searcher!.pageTextMatchPaintCallback,
                             ],
                             viewerOverlayBuilder: _buildViewerOverlay,
+                            pageOverlaysBuilder: (context, pageRect, page) =>
+                                <Widget>[
+                                  PdfTextEditorOverlay(
+                                    mode:
+                                        editSession?.mode ??
+                                        PdfEditingMode.reading,
+                                    blocks:
+                                        editSession?.blocks
+                                            .where(
+                                              (block) =>
+                                                  block.locator.pageNumber ==
+                                                  page.pageNumber,
+                                            )
+                                            .toList(growable: false) ??
+                                        const <PdfTextBlock>[],
+                                    selection: editSession?.selection,
+                                    rectForBlock: (block) =>
+                                        PdfRect(
+                                          block.bounds.left,
+                                          block.bounds.top,
+                                          block.bounds.right,
+                                          block.bounds.bottom,
+                                        ).toRect(
+                                          page: page,
+                                          scaledPageSize: pageRect.size,
+                                        ),
+                                    onSelect: (locator) => editing.selectBlock(
+                                      widget.tab.id,
+                                      locator,
+                                    ),
+                                  ),
+                                ],
                           ),
                         );
                       },
@@ -659,8 +705,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                               await _highlightSelection(
                                 colorValue: _customHighlightColor,
                               );
-                              if (mounted)
+                              if (mounted) {
                                 setState(() => _colorInspectorOpen = false);
+                              }
                             },
                             child: const Text('Apply to selection'),
                           ),
@@ -717,6 +764,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             onHighlightSelection: _controller.isReady
                                 ? _highlightSelection
                                 : null,
+                            textEditing:
+                                editSession?.mode == PdfEditingMode.text,
+                            onToggleTextEditing: _controller.isReady
+                                ? _toggleTextEditing
+                                : null,
                           );
                         },
                   ),
@@ -744,6 +796,16 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     PdfDocument document,
     PdfViewerController controller,
   ) async {
+    final editing = ref.read(pdfEditingControllerProvider);
+    if (!editing.sessionsByTabId.containsKey(widget.tab.id)) {
+      editing.registerSession(
+        widget.tab.id,
+        PdfEditingSession.empty(
+          widget.tab.documentId,
+          sourceRevision: widget.tab.documentId,
+        ),
+      );
+    }
     final PdfTextSearcher searcher = PdfTextSearcher(controller);
     if (widget.tab.searchQuery.trim().isNotEmpty) {
       _pendingSearchQuery = widget.tab.searchQuery;
@@ -782,6 +844,17 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     } else {
       searcher.dispose();
     }
+  }
+
+  Future<void> _toggleTextEditing() async {
+    final editing = ref.read(pdfEditingControllerProvider);
+    final session = editing.sessionFor(widget.tab.id);
+    if (session.mode == PdfEditingMode.text) {
+      await editing.leaveTextMode(widget.tab.id);
+    } else {
+      await editing.enterTextMode(widget.tab.id, _controller.document, _page);
+    }
+    if (mounted) _controller.invalidate();
   }
 
   bool get _shouldShowSearchOverlay =>
@@ -1403,6 +1476,8 @@ class _ViewerHud extends StatelessWidget {
     required this.onZoomIn,
     required this.onSelectZoomPreset,
     required this.onHighlightSelection,
+    required this.textEditing,
+    required this.onToggleTextEditing,
   });
 
   final int page;
@@ -1414,6 +1489,8 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onZoomIn;
   final ValueChanged<_ZoomPreset>? onSelectZoomPreset;
   final VoidCallback? onHighlightSelection;
+  final bool textEditing;
+  final VoidCallback? onToggleTextEditing;
 
   @override
   Widget build(BuildContext context) {
@@ -1494,6 +1571,16 @@ class _ViewerHud extends StatelessWidget {
                 onPressed: onHighlightSelection,
               ),
             ),
+            const SizedBox(width: 6),
+            Tooltip(
+              message: textEditing ? 'Leave text editing' : 'Edit PDF text',
+              child: _HudIcon(
+                key: const Key('pdf-text-edit-toggle'),
+                icon: LucideIcons.textCursorInput,
+                onPressed: onToggleTextEditing,
+                active: textEditing,
+              ),
+            ),
           ],
         ),
       ),
@@ -1517,10 +1604,16 @@ enum _ZoomPreset {
 }
 
 class _HudIcon extends StatelessWidget {
-  const _HudIcon({required this.icon, required this.onPressed});
+  const _HudIcon({
+    required this.icon,
+    required this.onPressed,
+    this.active = false,
+    super.key,
+  });
 
   final IconData icon;
   final VoidCallback? onPressed;
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -1528,6 +1621,7 @@ class _HudIcon extends StatelessWidget {
       width: 24,
       height: 24,
       padding: EdgeInsets.zero,
+      backgroundColor: active ? WorkspaceColors.accentSoft : null,
       icon: Icon(icon, size: 12),
       onPressed: onPressed,
     );

@@ -123,5 +123,6 @@ final pdfTextEngineProvider = Provider<PdfTextEngine>(
 
 final pdfEditingControllerProvider =
     ChangeNotifierProvider<PdfEditingController>(
-      (Ref ref) => PdfEditingController(),
+      (Ref ref) =>
+          PdfEditingController(engine: ref.watch(pdfTextEngineProvider)),
     );
