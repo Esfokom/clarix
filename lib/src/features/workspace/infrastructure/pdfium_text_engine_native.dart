@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 import 'package:ffi/ffi.dart';
@@ -7,6 +8,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:pdfium_flutter/pdfium_flutter.dart';
 
 import '../domain/pdf_text_types.dart';
+import '../domain/pdf_edit_session.dart';
 import 'pdf_text_block_grouper.dart';
 import 'pdf_text_engine.dart';
 
@@ -16,6 +18,60 @@ final class PdfiumTextEngine implements PdfTextEngine {
   const PdfiumTextEngine();
 
   static final Expando<String> _knownRevisions = Expando<String>();
+
+  @override
+  Future<Uint8List> applyDraft({
+    required PdfDocument document,
+    required PdfEditingSession draft,
+  }) async {
+    final changed = draft.blocks
+        .where((block) => block.text != block.originalText)
+        .toList(growable: false);
+    if (changed.any((block) => !block.isEditable)) {
+      final block = changed.firstWhere((block) => !block.isEditable);
+      throw PdfReadOnlyTextBlockFailure(
+        locator: block.locator,
+        reason: block.readOnlyReason ?? PdfReadOnlyReason.complexRendering,
+      );
+    }
+    await document.useNativeDocumentHandle((address) {
+      final nativeDocument = FPDF_DOCUMENT.fromAddress(address);
+      final byPage = <int, List<PdfTextBlock>>{};
+      for (final block in changed) {
+        byPage.putIfAbsent(block.locator.pageNumber, () => []).add(block);
+      }
+      for (final entry in byPage.entries) {
+        final page = pdfiumBindings.FPDF_LoadPage(
+          nativeDocument,
+          entry.key - 1,
+        );
+        if (page.address == 0) {
+          throw PdfValidationFailure('Could not load PDF page ${entry.key}.');
+        }
+        try {
+          for (final block in entry.value) {
+            for (var index = 0; index < block.objectPaths.length; index++) {
+              final object = _objectAtPath(page, block.objectPaths[index]);
+              if (object.address == 0 ||
+                  pdfiumBindings.FPDFPageObj_GetType(object) !=
+                      FPDF_PAGEOBJ_TEXT) {
+                throw PdfStaleLocatorFailure(block.locator);
+              }
+              _setObjectText(object, index == 0 ? block.text : '');
+            }
+          }
+          if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
+            throw PdfValidationFailure(
+              'Could not regenerate PDF page ${entry.key}.',
+            );
+          }
+        } finally {
+          pdfiumBindings.FPDF_ClosePage(page);
+        }
+      }
+    });
+    return document.encodePdf(incremental: false);
+  }
 
   @override
   Future<List<PdfTextBlock>> inspectPages({
@@ -339,6 +395,7 @@ final class PdfiumTextEngine implements PdfTextEngine {
           ? const <PdfTextCapability>[]
           : PdfTextCapability.values,
       readOnlyReason: readOnlyReason,
+      objectPaths: group.objectPaths,
     );
   }
 }
@@ -376,6 +433,36 @@ final class _DiscoveredObject {
 
   final PdfTextObjectSnapshot snapshot;
   final PdfReadOnlyReason? readOnlyReason;
+}
+
+FPDF_PAGEOBJECT _objectAtPath(FPDF_PAGE page, List<int> path) {
+  if (path.isEmpty) return nullptr.cast<fpdf_pageobject_t__>();
+  var object = pdfiumBindings.FPDFPage_GetObject(page, path.first);
+  for (var index = 1; index < path.length; index++) {
+    if (object.address == 0 ||
+        pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_FORM) {
+      return nullptr.cast<fpdf_pageobject_t__>();
+    }
+    object = pdfiumBindings.FPDFFormObj_GetObject(object, path[index]);
+  }
+  return object;
+}
+
+void _setObjectText(FPDF_PAGEOBJECT object, String text) {
+  final buffer = calloc<Uint16>(text.length + 1);
+  try {
+    final values = buffer.asTypedList(text.length + 1);
+    values.setRange(0, text.length, text.codeUnits);
+    values[text.length] = 0;
+    if (pdfiumBindings.FPDFText_SetText(object, buffer.cast<FPDF_WCHAR>()) ==
+        0) {
+      throw const PdfValidationFailure(
+        'PDFium could not encode replacement text with the current font.',
+      );
+    }
+  } finally {
+    calloc.free(buffer);
+  }
 }
 
 PdfReadOnlyReason? _renderModeReadOnlyReason(FPDF_TEXT_RENDERMODE mode) =>

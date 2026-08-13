@@ -192,11 +192,20 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final DocumentMetadata? metadata = current.documentMetadata[tab.documentId];
     if (metadata == null) return;
     try {
-      await _pdfExtraction.savePdfAnnotations(
-        path: tab.filePath,
-        bookmarks: metadata.bookmarks,
-        annotations: metadata.annotations,
-      );
+      final PdfEditingSession? editing = _pdfEditing.sessionsByTabId[tab.id];
+      final bool hasTextChanges =
+          editing?.blocks.any((block) => block.text != block.originalText) ??
+          false;
+      if (hasTextChanges) {
+        await _pdfEditing.save(tab.id, tab.filePath);
+      } else {
+        await _pdfExtraction.savePdfAnnotations(
+          path: tab.filePath,
+          bookmarks: metadata.bookmarks,
+          annotations: metadata.annotations,
+        );
+      }
+      ref.invalidate(pdfDocumentRefProvider(tab.filePath));
       state = AsyncData(
         current.copyWith(
           clearBannerMessage: true,

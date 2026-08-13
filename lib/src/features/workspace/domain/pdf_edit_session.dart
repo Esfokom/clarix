@@ -109,6 +109,9 @@ final class PdfEditingSession {
   PdfEditingSession withCaseMatching(bool caseMatching) =>
       _copy(caseMatching: caseMatching);
 
+  PdfEditingSession withSourceRevision(String sourceRevision) =>
+      _copy(sourceRevision: sourceRevision);
+
   PdfEditingSession applyCommand(PdfEditCommand command) {
     final PdfEditCommand materialized = command.materialize(
       blocks: blocks,

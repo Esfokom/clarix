@@ -350,8 +350,14 @@ final class PdfTextBlock {
     required this.writingDirection,
     required List<PdfTextCapability> capabilities,
     required this.readOnlyReason,
+    List<List<int>>? objectPaths,
     this.overflow = false,
   }) : runs = List<PdfTextRun>.unmodifiable(runs),
+       objectPaths = List<List<int>>.unmodifiable(
+         (objectPaths ?? <List<int>>[locator.objectPath]).map(
+           List<int>.unmodifiable,
+         ),
+       ),
        capabilities = Set<PdfTextCapability>.unmodifiable(capabilities);
 
   final PdfTextBlockLocator locator;
@@ -363,6 +369,7 @@ final class PdfTextBlock {
   final double baseline;
   final PdfWritingDirection writingDirection;
   final Set<PdfTextCapability> capabilities;
+  final List<List<int>> objectPaths;
   final PdfReadOnlyReason? readOnlyReason;
   final bool overflow;
 
@@ -436,6 +443,7 @@ final class PdfTextBlock {
     writingDirection: writingDirection,
     capabilities: capabilities.toList(growable: false),
     readOnlyReason: readOnlyReason,
+    objectPaths: objectPaths,
     overflow: overflow ?? this.overflow,
   );
 
@@ -567,6 +575,7 @@ final class PdfTextBlock {
       other.baseline == baseline &&
       other.writingDirection == writingDirection &&
       _sameSet(other.capabilities, capabilities) &&
+      _sameNestedList(other.objectPaths, objectPaths) &&
       other.readOnlyReason == readOnlyReason &&
       other.overflow == overflow;
 
@@ -581,6 +590,7 @@ final class PdfTextBlock {
     baseline,
     writingDirection,
     Object.hashAllUnordered(capabilities),
+    Object.hashAll(objectPaths.map(Object.hashAll)),
     readOnlyReason,
     overflow,
   );
@@ -849,6 +859,26 @@ final class PdfNativeEditingUnavailableFailure extends PdfEditFailure {
       );
 }
 
+final class PdfExternalRevisionFailure extends PdfEditFailure {
+  const PdfExternalRevisionFailure({
+    required this.expected,
+    required this.actual,
+  }) : super('external_revision', 'The PDF changed outside Clarix.');
+
+  final String expected;
+  final String actual;
+}
+
+final class PdfValidationFailure extends PdfEditFailure {
+  const PdfValidationFailure(String message)
+    : super('pdf_validation_failed', message);
+}
+
+final class PdfAtomicReplacementFailure extends PdfEditFailure {
+  const PdfAtomicReplacementFailure(String message)
+    : super('pdf_replacement_failed', message);
+}
+
 List<PdfTextRun> _mergeAdjacentRuns(List<PdfTextRun> runs) {
   final List<PdfTextRun> merged = <PdfTextRun>[];
   for (final PdfTextRun run in runs) {
@@ -882,3 +912,11 @@ bool _sameList<T>(List<T> left, List<T> right) {
 
 bool _sameSet<T>(Set<T> left, Set<T> right) =>
     left.length == right.length && left.containsAll(right);
+
+bool _sameNestedList<T>(List<List<T>> left, List<List<T>> right) {
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (!_sameList(left[index], right[index])) return false;
+  }
+  return true;
+}

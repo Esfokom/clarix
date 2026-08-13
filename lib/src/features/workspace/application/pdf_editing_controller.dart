@@ -8,12 +8,17 @@ import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_text_types.dart';
 import '../infrastructure/pdf_text_engine.dart';
+import '../infrastructure/pdf_edit_save_service.dart';
 import 'pdf_edit_intent_dispatcher.dart';
 
 final class PdfEditingController extends ChangeNotifier {
-  PdfEditingController({String Function()? commandId, PdfTextEngine? engine})
-    : _commandId = commandId ?? _defaultCommandId {
+  PdfEditingController({
+    String Function()? commandId,
+    PdfTextEngine? engine,
+    PdfEditSaveService? saveService,
+  }) : _commandId = commandId ?? _defaultCommandId {
     _engine = engine;
+    _saveService = saveService;
     _dispatcher = PdfEditIntentDispatcher(
       readSession: _sessionForDocument,
       writeSession: _replaceByDocument,
@@ -23,6 +28,7 @@ final class PdfEditingController extends ChangeNotifier {
 
   final String Function() _commandId;
   late final PdfTextEngine? _engine;
+  late final PdfEditSaveService? _saveService;
   final Map<String, PdfEditingSession> _sessions =
       <String, PdfEditingSession>{};
   final Map<String, int> _discoveryGenerations = <String, int>{};
@@ -46,6 +52,27 @@ final class PdfEditingController extends ChangeNotifier {
 
   void markSaved(String tabId) {
     replaceSession(tabId, sessionFor(tabId).markSaved());
+  }
+
+  Future<PdfSaveOutcome> save(String tabId, String path) async {
+    final service = _saveService;
+    if (service == null) throw const PdfNativeEditingUnavailableFailure();
+    final session = sessionFor(tabId);
+    if (session.overflowingLocators.isNotEmpty) {
+      throw PdfTextOverflowFailure(locator: session.overflowingLocators.first);
+    }
+    final outcome = await service.save(
+      PdfSaveRequest(
+        path: path,
+        sourceRevision: session.sourceRevision,
+        draft: session,
+      ),
+    );
+    replaceSession(
+      tabId,
+      session.withSourceRevision(outcome.newRevision).markSaved(),
+    );
+    return outcome;
   }
 
   void removeSession(String tabId) {

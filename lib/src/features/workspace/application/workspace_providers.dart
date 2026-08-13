@@ -17,6 +17,7 @@ import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
 import '../infrastructure/pdf_text_engine.dart';
+import '../infrastructure/pdf_edit_save_service.dart';
 import 'ai_runtime_service.dart';
 import 'pdf_editing_controller.dart';
 import 'workspace_notifier.dart';
@@ -41,8 +42,11 @@ final pdfUtilityServiceProvider = Provider<PdfUtilityService>((Ref ref) {
 });
 
 final pdfDocumentRefProvider = Provider.autoDispose
-    .family<PdfDocumentRefFile, String>(
-      (Ref ref, String path) => PdfDocumentRefFile(path),
+    .family<PdfDocumentRefData, String>(
+      (Ref ref, String filePath) => PdfDocumentRefData(
+        File(filePath).readAsBytesSync(),
+        sourceName: filePath,
+      ),
     );
 
 final chunkStoreProvider = Provider<DocumentChunkStore>(
@@ -121,8 +125,36 @@ final pdfTextEngineProvider = Provider<PdfTextEngine>(
   (Ref ref) => createPdfTextEngine(),
 );
 
+final pdfEditSaveServiceProvider = Provider<PdfEditSaveService>((Ref ref) {
+  final PdfTextEngine engine = ref.watch(pdfTextEngineProvider);
+  return PdfEditSaveService(
+    writeDraft: (File working, draft) async {
+      final PdfDocument document = await PdfDocument.openFile(working.path);
+      late final List<int> bytes;
+      try {
+        bytes = await engine.applyDraft(document: document, draft: draft);
+      } finally {
+        await document.dispose();
+      }
+      await working.writeAsBytes(bytes, flush: true);
+    },
+    validate: (File working) async {
+      final PdfDocument document = await PdfDocument.openFile(working.path);
+      try {
+        for (final PdfPage page in document.pages) {
+          await page.loadText();
+        }
+      } finally {
+        await document.dispose();
+      }
+    },
+  );
+});
+
 final pdfEditingControllerProvider =
     ChangeNotifierProvider<PdfEditingController>(
-      (Ref ref) =>
-          PdfEditingController(engine: ref.watch(pdfTextEngineProvider)),
+      (Ref ref) => PdfEditingController(
+        engine: ref.watch(pdfTextEngineProvider),
+        saveService: ref.watch(pdfEditSaveServiceProvider),
+      ),
     );

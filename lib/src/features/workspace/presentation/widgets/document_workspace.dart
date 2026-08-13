@@ -365,7 +365,7 @@ class _PdfViewerPane extends ConsumerStatefulWidget {
   });
 
   final DocumentTabState tab;
-  final PdfDocumentRefFile documentRef;
+  final PdfDocumentRefData documentRef;
   final List<DocumentAnnotation> annotations;
   final WorkspaceSurfaceTokens colors;
 
