@@ -651,6 +651,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                     ),
                                     onClearSelection: () =>
                                         editing.clearSelection(widget.tab.id),
+                                    onUndo: () =>
+                                        unawaited(editing.undo(widget.tab.id)),
+                                    onRedo: () =>
+                                        unawaited(editing.redo(widget.tab.id)),
                                   ),
                                 ],
                           ),

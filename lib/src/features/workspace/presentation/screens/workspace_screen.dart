@@ -44,8 +44,12 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
 
     final notifier = ref.read(workspaceNotifierProvider.notifier);
     if (notifier.hasUnsavedPdfEdits) {
-      final bool shouldClose = await _showUnsavedPdfDialog();
-      if (!shouldClose || !mounted) return;
+      final choice = await _showUnsavedPdfDialog();
+      if (choice == _CloseChoice.cancel || !mounted) return;
+      if (choice == _CloseChoice.saveAll) {
+        final saved = await notifier.saveAllPdfEdits();
+        if (!saved || !mounted) return;
+      }
     } else if (!state.session.restorePreviousSession &&
         state.session.tabs.isNotEmpty) {
       final bool shouldClose = await _showDiscardDialog();
@@ -68,15 +72,24 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     );
     final editing = ref.watch(pdfEditingControllerProvider);
     final activeTabId = asyncState.value?.session.activeTabId;
+    final activeIsDirty =
+        activeTabId != null &&
+        (editing.sessionsByTabId[activeTabId]?.isDirty ??
+            asyncState.value?.dirtyDocumentIds.contains(activeTabId) ??
+            false);
     final canSave =
-        activeTabId == null ||
+        activeIsDirty &&
+        !(asyncState.value?.pdfSaveInProgress ?? false) &&
         (editing.sessionsByTabId[activeTabId]?.overflowingLocators.isEmpty ??
             true);
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () =>
-            ref.read(workspaceNotifierProvider.notifier).saveActivePdfEdits(),
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+          if (canSave) {
+            ref.read(workspaceNotifierProvider.notifier).saveActivePdfEdits();
+          }
+        },
         const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () =>
             ref.read(workspaceNotifierProvider.notifier).undoPdfEdit(),
         const SingleActivator(
@@ -87,10 +100,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
             ref.read(workspaceNotifierProvider.notifier).redoPdfEdit(),
       },
       child: DesktopWindowChrome(
+        showDocumentActions: activeTabId != null,
         onImport: () =>
             ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
         onOpenSettings: () => showAppSettingsDialog(context),
-        onSave: asyncState.value?.session.activeTabId == null || !canSave
+        onSave: !canSave
             ? null
             : () => ref
                   .read(workspaceNotifierProvider.notifier)
@@ -186,31 +200,38 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     return result ?? false;
   }
 
-  Future<bool> _showUnsavedPdfDialog() async {
-    final bool? result = await showDialog<bool>(
+  Future<_CloseChoice> _showUnsavedPdfDialog() async {
+    final result = await showDialog<_CloseChoice>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         backgroundColor: WorkspaceColors.panel,
         title: const Text(
-          'Discard unsaved PDF edits?',
+          'Unsaved PDF edits',
           style: TextStyle(color: WorkspaceColors.textStrong),
         ),
         content: const Text(
-          'Bookmarks and highlights have not been saved into their PDF files. Closing now will lose those changes.',
+          'Choose whether to save every edited PDF before closing, or discard all drafts.',
           style: TextStyle(color: WorkspaceColors.textMuted),
         ),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(context).pop(_CloseChoice.cancel),
             child: const Text('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(context).pop(_CloseChoice.discard),
             child: const Text('Discard changes'),
+          ),
+          FilledButton(
+            key: const Key('save-all-pdf-edits'),
+            onPressed: () => Navigator.of(context).pop(_CloseChoice.saveAll),
+            child: const Text('Save all'),
           ),
         ],
       ),
     );
-    return result ?? false;
+    return result ?? _CloseChoice.cancel;
   }
 }
+
+enum _CloseChoice { cancel, discard, saveAll }

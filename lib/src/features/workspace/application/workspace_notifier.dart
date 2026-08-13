@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clarix_logger.dart';
@@ -191,6 +192,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
     final DocumentMetadata? metadata = current.documentMetadata[tab.documentId];
     if (metadata == null) return;
+    final progressTimer = Timer(const Duration(milliseconds: 500), () {
+      final value = state.value;
+      if (value != null) {
+        state = AsyncData(
+          value.copyWith(
+            pdfSaveInProgress: true,
+            bannerMessage: 'Saving PDF edits…',
+            clearPdfFailure: true,
+          ),
+        );
+      }
+    });
     try {
       final PdfEditingSession? editing = _pdfEditing.sessionsByTabId[tab.id];
       final bool hasTextChanges = editing?.isDirty ?? false;
@@ -207,6 +220,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       state = AsyncData(
         current.copyWith(
           clearBannerMessage: true,
+          clearPdfFailure: true,
+          pdfSaveInProgress: false,
           dirtyDocumentIds: Set<String>.from(current.dirtyDocumentIds)
             ..remove(tab.id),
         ),
@@ -214,10 +229,154 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       if (_pdfEditing.sessionsByTabId.containsKey(tab.id)) {
         _pdfEditing.markSaved(tab.id);
       }
+    } on PdfEditFailure catch (error) {
+      state = AsyncData(
+        current.copyWith(
+          bannerMessage: presentPdfFailure(error).message,
+          pdfFailure: presentPdfFailure(error),
+          pdfSaveInProgress: false,
+        ),
+      );
     } catch (error) {
       state = AsyncData(
-        current.copyWith(bannerMessage: 'Could not save PDF edits: $error'),
+        current.copyWith(
+          bannerMessage: 'Could not save PDF edits: $error',
+          pdfSaveInProgress: false,
+        ),
       );
+    } finally {
+      progressTimer.cancel();
+    }
+  }
+
+  Future<bool> saveAllPdfEdits() async {
+    final initial = _requireState();
+    final originalActive = initial.session.activeTabId;
+    final dirtyIds = initial.dirtyDocumentIds.toList(growable: false);
+    for (final tabId in dirtyIds) {
+      final current = _requireState();
+      if (!current.session.tabs.any((tab) => tab.id == tabId)) continue;
+      state = AsyncData(
+        current.copyWith(session: current.session.copyWith(activeTabId: tabId)),
+      );
+      await saveActivePdfEdits();
+      if (_requireState().dirtyDocumentIds.contains(tabId)) return false;
+    }
+    final current = _requireState();
+    if (originalActive != null &&
+        current.session.tabs.any((tab) => tab.id == originalActive)) {
+      state = AsyncData(
+        current.copyWith(
+          session: current.session.copyWith(activeTabId: originalActive),
+        ),
+      );
+    }
+    return true;
+  }
+
+  Future<void> reloadActivePdf() async {
+    final current = _requireState();
+    final activeId = current.session.activeTabId;
+    if (activeId == null) return;
+    final tab = current.session.tabs.firstWhere((item) => item.id == activeId);
+    final revision = sha256
+        .convert(await File(tab.filePath).readAsBytes())
+        .toString();
+    final metadata = current.documentMetadata[tab.documentId];
+    var session = PdfEditingSession.empty(
+      tab.documentId,
+      sourceRevision: revision,
+    );
+    if (metadata != null) {
+      session = session.withMetadata(
+        bookmarks: _bookmarkSnapshots(metadata.bookmarks),
+        highlights: _highlightSnapshots(metadata.annotations),
+      );
+    }
+    _pdfEditing.replaceSession(tab.id, session);
+    ref.invalidate(pdfDocumentRefProvider(tab.filePath));
+    state = AsyncData(
+      current.copyWith(
+        clearBannerMessage: true,
+        clearPdfFailure: true,
+        dirtyDocumentIds: Set<String>.from(current.dirtyDocumentIds)
+          ..remove(tab.id),
+      ),
+    );
+  }
+
+  Future<void> saveActivePdfEditsAsCopy() async {
+    final current = _requireState();
+    final activeId = current.session.activeTabId;
+    if (activeId == null) return;
+    final tab = current.session.tabs.firstWhere((item) => item.id == activeId);
+    final destination = await FilePicker.saveFile(
+      dialogTitle: 'Save edited PDF as',
+      fileName:
+          '${tab.title.replaceFirst(RegExp(r'\.pdf$', caseSensitive: false), '')} edited.pdf',
+      type: FileType.custom,
+      allowedExtensions: const <String>['pdf'],
+    );
+    if (destination == null) return;
+    await File(tab.filePath).copy(destination);
+    try {
+      await _pdfEditing.save(tab.id, destination);
+      final nextTabs = current.session.tabs
+          .map(
+            (item) => item.id == tab.id
+                ? item.copyWith(
+                    filePath: destination,
+                    title: destination.split(Platform.pathSeparator).last,
+                  )
+                : item,
+          )
+          .toList(growable: false);
+      ref.invalidate(pdfDocumentRefProvider(tab.filePath));
+      ref.invalidate(pdfDocumentRefProvider(destination));
+      await _commit(
+        current.copyWith(
+          session: current.session.copyWith(tabs: nextTabs),
+          clearBannerMessage: true,
+          clearPdfFailure: true,
+          dirtyDocumentIds: Set<String>.from(current.dirtyDocumentIds)
+            ..remove(tab.id),
+        ),
+        persistAi: false,
+      );
+    } catch (error) {
+      try {
+        await File(destination).delete();
+      } on FileSystemException {
+        // Leave an inaccessible partial copy alone and preserve the draft.
+      }
+      final latest = _requireState();
+      state = AsyncData(
+        error is PdfEditFailure
+            ? latest.copyWith(
+                bannerMessage: presentPdfFailure(error).message,
+                pdfFailure: presentPdfFailure(error),
+              )
+            : latest.copyWith(
+                bannerMessage: 'Could not save a PDF copy: $error',
+              ),
+      );
+    }
+  }
+
+  void recoverPdfFailure(PdfRecoveryAction action) {
+    switch (action) {
+      case PdfRecoveryAction.reload:
+      case PdfRecoveryAction.rediscover:
+        unawaited(reloadActivePdf());
+      case PdfRecoveryAction.saveCopy:
+        unawaited(saveActivePdfEditsAsCopy());
+      case PdfRecoveryAction.selectBlock:
+        final current = state.value;
+        final tabId = current?.session.activeTabId;
+        final locator = current?.pdfFailure?.locator;
+        if (tabId != null && locator != null) {
+          _pdfEditing.selectBlock(tabId, locator);
+        }
     }
   }
 
@@ -1520,3 +1679,39 @@ DocumentMetadata _metadataFromSession(
         .toList(growable: false),
   );
 }
+
+PdfFailurePresentation presentPdfFailure(PdfEditFailure failure) =>
+    switch (failure) {
+      PdfExternalRevisionFailure() => PdfFailurePresentation(
+        message: 'The PDF changed outside Clarix.',
+        actions: const <PdfRecoveryAction>[
+          PdfRecoveryAction.reload,
+          PdfRecoveryAction.saveCopy,
+        ],
+      ),
+      PdfTextOverflowFailure(:final locator) => PdfFailurePresentation(
+        message: 'Text does not fit its box. Resize it or shorten the text.',
+        actions: const <PdfRecoveryAction>[PdfRecoveryAction.selectBlock],
+        locator: locator,
+      ),
+      PdfStaleLocatorFailure() ||
+      PdfAmbiguousLocatorFailure() => PdfFailurePresentation(
+        message: 'The text object changed. Rediscover page text and retry.',
+        actions: const <PdfRecoveryAction>[PdfRecoveryAction.rediscover],
+      ),
+      PdfAtomicReplacementFailure() => PdfFailurePresentation(
+        message: '${failure.message} Your draft is still available in Clarix.',
+        actions: const <PdfRecoveryAction>[PdfRecoveryAction.saveCopy],
+      ),
+      PdfFontUnavailableFailure() ||
+      PdfReadOnlyTextBlockFailure() ||
+      PdfUnsupportedTextOperationFailure() ||
+      PdfValidationFailure() => PdfFailurePresentation(
+        message: failure.message,
+        actions: const <PdfRecoveryAction>[],
+      ),
+      _ => PdfFailurePresentation(
+        message: failure.message,
+        actions: const <PdfRecoveryAction>[],
+      ),
+    };

@@ -140,12 +140,39 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                       horizontal: 14,
                       vertical: 10,
                     ),
-                    child: Text(
-                      widget.state.bannerMessage!,
-                      style: const TextStyle(
-                        color: WorkspaceColors.warning,
-                        fontSize: 11,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        if (widget.state.pdfSaveInProgress)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 8),
+                            child: SizedBox.square(
+                              dimension: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                              ),
+                            ),
+                          ),
+                        Flexible(
+                          child: Text(
+                            widget.state.bannerMessage!,
+                            style: const TextStyle(
+                              color: WorkspaceColors.warning,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                        for (final action
+                            in widget.state.pdfFailure?.actions ??
+                                const <PdfRecoveryAction>[])
+                          TextButton(
+                            key: Key('pdf-recovery-${action.name}'),
+                            onPressed: () => ref
+                                .read(workspaceNotifierProvider.notifier)
+                                .recoverPdfFailure(action),
+                            child: Text(_recoveryLabel(action)),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -169,6 +196,13 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
     return null;
   }
 }
+
+String _recoveryLabel(PdfRecoveryAction action) => switch (action) {
+  PdfRecoveryAction.reload => 'Reload',
+  PdfRecoveryAction.saveCopy => 'Save a Copy',
+  PdfRecoveryAction.selectBlock => 'Show block',
+  PdfRecoveryAction.rediscover => 'Rediscover',
+};
 
 class _TextFormatPane extends ConsumerWidget {
   const _TextFormatPane({required this.activeTab});

@@ -20,6 +20,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
     this.caseMatching = true,
     this.onIntent,
     this.onClearSelection,
+    this.onUndo,
+    this.onRedo,
     super.key,
   });
 
@@ -34,6 +36,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
   final bool caseMatching;
   final ValueChanged<PdfEditIntent>? onIntent;
   final VoidCallback? onClearSelection;
+  final VoidCallback? onUndo;
+  final VoidCallback? onRedo;
 
   @override
   State<PdfTextEditorOverlay> createState() => _PdfTextEditorOverlayState();
@@ -152,6 +156,16 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
                     event.logicalKey == LogicalKeyboardKey.escape) {
                   _typingGroup = null;
                   widget.onClearSelection?.call();
+                  return KeyEventResult.handled;
+                }
+                if (event is KeyDownEvent &&
+                    HardwareKeyboard.instance.isControlPressed &&
+                    event.logicalKey == LogicalKeyboardKey.keyZ) {
+                  if (HardwareKeyboard.instance.isShiftPressed) {
+                    widget.onRedo?.call();
+                  } else {
+                    widget.onUndo?.call();
+                  }
                   return KeyEventResult.handled;
                 }
                 return KeyEventResult.ignored;
