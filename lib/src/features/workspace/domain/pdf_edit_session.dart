@@ -1,110 +1,133 @@
-class PdfBookmarkEdit {
-  const PdfBookmarkEdit({
-    required this.id,
-    required this.title,
-    required this.pageNumber,
+import 'pdf_edit_command.dart';
+import 'pdf_text_types.dart';
+
+final class PdfEditingSession {
+  const PdfEditingSession._({
+    required this.documentId,
+    required this.sourceRevision,
+    required this.mode,
+    required this.blocks,
+    required this.bookmarks,
+    required this.highlights,
+    required this.commands,
+    required this.cursor,
+    required this.savedCursor,
+    required this.selection,
+    required this.caseMatching,
   });
 
-  final String id;
-  final String title;
-  final int pageNumber;
-
-  @override
-  bool operator ==(Object other) =>
-      other is PdfBookmarkEdit &&
-      other.id == id &&
-      other.title == title &&
-      other.pageNumber == pageNumber;
-
-  @override
-  int get hashCode => Object.hash(id, title, pageNumber);
-}
-
-class PdfEditSession {
-  const PdfEditSession._({
-    required this.documentId,
-    required this.bookmarks,
-    required List<PdfBookmarkEdit> savedBookmarks,
-    required List<_BookmarkCommand> undo,
-    required List<_BookmarkCommand> redo,
-  }) : _savedBookmarks = savedBookmarks,
-       _undo = undo,
-       _redo = redo;
-
-  factory PdfEditSession.empty(String documentId) => PdfEditSession._(
+  factory PdfEditingSession.empty(
+    String documentId, {
+    required String sourceRevision,
+  }) => PdfEditingSession._(
     documentId: documentId,
-    bookmarks: const <PdfBookmarkEdit>[],
-    savedBookmarks: const <PdfBookmarkEdit>[],
-    undo: const <_BookmarkCommand>[],
-    redo: const <_BookmarkCommand>[],
+    sourceRevision: sourceRevision,
+    mode: PdfEditingMode.reading,
+    blocks: const <PdfTextBlock>[],
+    bookmarks: const <PdfBookmarkSnapshot>[],
+    highlights: const <PdfHighlightSnapshot>[],
+    commands: const <PdfEditCommand>[],
+    cursor: 0,
+    savedCursor: 0,
+    selection: null,
+    caseMatching: true,
   );
 
   final String documentId;
-  final List<PdfBookmarkEdit> bookmarks;
-  final List<PdfBookmarkEdit> _savedBookmarks;
-  final List<_BookmarkCommand> _undo;
-  final List<_BookmarkCommand> _redo;
+  final String sourceRevision;
+  final PdfEditingMode mode;
+  final List<PdfTextBlock> blocks;
+  final List<PdfBookmarkSnapshot> bookmarks;
+  final List<PdfHighlightSnapshot> highlights;
+  final List<PdfEditCommand> commands;
+  final int cursor;
+  final int savedCursor;
+  final PdfTextSelection? selection;
+  final bool caseMatching;
 
-  bool get canUndo => _undo.isNotEmpty;
-  bool get canRedo => _redo.isNotEmpty;
-  bool get isDirty => !_sameBookmarks(bookmarks, _savedBookmarks);
+  String get revision => sourceRevision;
+  bool get canUndo => cursor > 0;
+  bool get canRedo => cursor < commands.length;
+  bool get isDirty => cursor != savedCursor;
+  Set<PdfTextBlockLocator> get overflowingLocators =>
+      Set<PdfTextBlockLocator>.unmodifiable(
+        blocks
+            .where((PdfTextBlock block) => block.overflow)
+            .map((PdfTextBlock block) => block.locator),
+      );
 
-  PdfEditSession addBookmark(PdfBookmarkEdit bookmark) => _apply(
-    _BookmarkCommand.add(bookmark),
-  );
+  PdfEditingSession withBlocks(List<PdfTextBlock> blocks) =>
+      _copy(blocks: blocks);
 
-  PdfEditSession undo() {
-    if (_undo.isEmpty) return this;
-    final _BookmarkCommand command = _undo.last;
-    return PdfEditSession._(
-      documentId: documentId,
-      bookmarks: command.revert(bookmarks),
-      savedBookmarks: _savedBookmarks,
-      undo: _undo.sublist(0, _undo.length - 1),
-      redo: <_BookmarkCommand>[..._redo, command],
+  PdfEditingSession withMode(PdfEditingMode mode) => _copy(mode: mode);
+
+  PdfEditingSession withSelection(PdfTextSelection? selection) =>
+      _copy(selection: selection, replaceSelection: true);
+
+  PdfEditingSession withCaseMatching(bool caseMatching) =>
+      _copy(caseMatching: caseMatching);
+
+  PdfEditingSession applyCommand(PdfEditCommand command) {
+    final List<PdfEditCommand> kept =
+        commands.take(cursor).toList(growable: true)..add(command);
+    final int checkpoint = savedCursor > cursor ? -1 : savedCursor;
+    return _copy(
+      commands: kept,
+      cursor: kept.length,
+      savedCursor: checkpoint,
+      blocks: command.apply(blocks),
+      bookmarks: command.applyBookmarks(bookmarks),
+      highlights: command.applyHighlights(highlights),
     );
   }
 
-  PdfEditSession redo() {
-    if (_redo.isEmpty) return this;
-    final _BookmarkCommand command = _redo.last;
-    return PdfEditSession._(
-      documentId: documentId,
-      bookmarks: command.apply(bookmarks),
-      savedBookmarks: _savedBookmarks,
-      undo: <_BookmarkCommand>[..._undo, command],
-      redo: _redo.sublist(0, _redo.length - 1),
-    );
-  }
+  PdfEditingSession undo() => cursor == 0
+      ? this
+      : _copy(
+          cursor: cursor - 1,
+          blocks: commands[cursor - 1].revert(blocks),
+          bookmarks: commands[cursor - 1].revertBookmarks(bookmarks),
+          highlights: commands[cursor - 1].revertHighlights(highlights),
+        );
 
-  PdfEditSession _apply(_BookmarkCommand command) => PdfEditSession._(
+  PdfEditingSession redo() => cursor == commands.length
+      ? this
+      : _copy(
+          cursor: cursor + 1,
+          blocks: commands[cursor].apply(blocks),
+          bookmarks: commands[cursor].applyBookmarks(bookmarks),
+          highlights: commands[cursor].applyHighlights(highlights),
+        );
+
+  PdfEditingSession markSaved() => _copy(savedCursor: cursor);
+
+  PdfEditingSession _copy({
+    String? sourceRevision,
+    PdfEditingMode? mode,
+    List<PdfTextBlock>? blocks,
+    List<PdfBookmarkSnapshot>? bookmarks,
+    List<PdfHighlightSnapshot>? highlights,
+    List<PdfEditCommand>? commands,
+    int? cursor,
+    int? savedCursor,
+    PdfTextSelection? selection,
+    bool replaceSelection = false,
+    bool? caseMatching,
+  }) => PdfEditingSession._(
     documentId: documentId,
-    bookmarks: command.apply(bookmarks),
-    savedBookmarks: _savedBookmarks,
-    undo: <_BookmarkCommand>[..._undo, command],
-    redo: const <_BookmarkCommand>[],
+    sourceRevision: sourceRevision ?? this.sourceRevision,
+    mode: mode ?? this.mode,
+    blocks: List<PdfTextBlock>.unmodifiable(blocks ?? this.blocks),
+    bookmarks: List<PdfBookmarkSnapshot>.unmodifiable(
+      bookmarks ?? this.bookmarks,
+    ),
+    highlights: List<PdfHighlightSnapshot>.unmodifiable(
+      highlights ?? this.highlights,
+    ),
+    commands: List<PdfEditCommand>.unmodifiable(commands ?? this.commands),
+    cursor: cursor ?? this.cursor,
+    savedCursor: savedCursor ?? this.savedCursor,
+    selection: replaceSelection ? selection : this.selection,
+    caseMatching: caseMatching ?? this.caseMatching,
   );
-
-  static bool _sameBookmarks(
-    List<PdfBookmarkEdit> left,
-    List<PdfBookmarkEdit> right,
-  ) {
-    if (left.length != right.length) return false;
-    for (int index = 0; index < left.length; index++) {
-      if (left[index] != right[index]) return false;
-    }
-    return true;
-  }
-}
-
-class _BookmarkCommand {
-  const _BookmarkCommand.add(this.bookmark);
-  final PdfBookmarkEdit bookmark;
-
-  List<PdfBookmarkEdit> apply(List<PdfBookmarkEdit> value) =>
-      <PdfBookmarkEdit>[...value, bookmark];
-
-  List<PdfBookmarkEdit> revert(List<PdfBookmarkEdit> value) => value
-      .where((PdfBookmarkEdit item) => item.id != bookmark.id)
-      .toList(growable: false);
 }
