@@ -1,4 +1,5 @@
 import 'pdf_edit_command.dart';
+import 'pdf_page_object.dart';
 import 'pdf_text_types.dart';
 
 final class PdfTextDelta {
@@ -44,6 +45,7 @@ final class PdfEditingSession {
     required this.sourceRevision,
     required this.mode,
     required this.blocks,
+    required this.pageObjects,
     required this.bookmarks,
     required this.highlights,
     required this.commands,
@@ -61,6 +63,7 @@ final class PdfEditingSession {
     sourceRevision: sourceRevision,
     mode: PdfEditingMode.reading,
     blocks: const <PdfTextBlock>[],
+    pageObjects: const <PdfPageObject>[],
     bookmarks: const <PdfBookmarkSnapshot>[],
     highlights: const <PdfHighlightSnapshot>[],
     commands: const <PdfEditCommand>[],
@@ -74,6 +77,7 @@ final class PdfEditingSession {
   final String sourceRevision;
   final PdfEditingMode mode;
   final List<PdfTextBlock> blocks;
+  final List<PdfPageObject> pageObjects;
   final List<PdfBookmarkSnapshot> bookmarks;
   final List<PdfHighlightSnapshot> highlights;
   final List<PdfEditCommand> commands;
@@ -95,6 +99,9 @@ final class PdfEditingSession {
 
   PdfEditingSession withBlocks(List<PdfTextBlock> blocks) =>
       _copy(blocks: blocks);
+
+  PdfEditingSession withPageObjects(List<PdfPageObject> pageObjects) =>
+      _copy(pageObjects: pageObjects);
 
   PdfEditingSession withMetadata({
     required List<PdfBookmarkSnapshot> bookmarks,
@@ -128,6 +135,7 @@ final class PdfEditingSession {
       return _copy(
         commands: kept,
         blocks: materialized.apply(blocks),
+        pageObjects: materialized.applyPageObjects(pageObjects),
         bookmarks: materialized.applyBookmarks(bookmarks),
         highlights: materialized.applyHighlights(highlights),
       );
@@ -140,6 +148,7 @@ final class PdfEditingSession {
       cursor: kept.length,
       savedCursor: checkpoint,
       blocks: materialized.apply(blocks),
+      pageObjects: materialized.applyPageObjects(pageObjects),
       bookmarks: materialized.applyBookmarks(bookmarks),
       highlights: materialized.applyHighlights(highlights),
     );
@@ -150,6 +159,7 @@ final class PdfEditingSession {
       : _copy(
           cursor: cursor - 1,
           blocks: commands[cursor - 1].revert(blocks),
+          pageObjects: commands[cursor - 1].revertPageObjects(pageObjects),
           bookmarks: commands[cursor - 1].revertBookmarks(bookmarks),
           highlights: commands[cursor - 1].revertHighlights(highlights),
         );
@@ -159,6 +169,7 @@ final class PdfEditingSession {
       : _copy(
           cursor: cursor + 1,
           blocks: commands[cursor].apply(blocks),
+          pageObjects: commands[cursor].applyPageObjects(pageObjects),
           bookmarks: commands[cursor].applyBookmarks(bookmarks),
           highlights: commands[cursor].applyHighlights(highlights),
         );
@@ -169,6 +180,7 @@ final class PdfEditingSession {
     String? sourceRevision,
     PdfEditingMode? mode,
     List<PdfTextBlock>? blocks,
+    List<PdfPageObject>? pageObjects,
     List<PdfBookmarkSnapshot>? bookmarks,
     List<PdfHighlightSnapshot>? highlights,
     List<PdfEditCommand>? commands,
@@ -182,6 +194,9 @@ final class PdfEditingSession {
     sourceRevision: sourceRevision ?? this.sourceRevision,
     mode: mode ?? this.mode,
     blocks: List<PdfTextBlock>.unmodifiable(blocks ?? this.blocks),
+    pageObjects: List<PdfPageObject>.unmodifiable(
+      pageObjects ?? this.pageObjects,
+    ),
     bookmarks: List<PdfBookmarkSnapshot>.unmodifiable(
       bookmarks ?? this.bookmarks,
     ),

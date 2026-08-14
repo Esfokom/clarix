@@ -1,8 +1,11 @@
 // ignore_for_file: prefer_initializing_formals
 
+import 'dart:ui';
+
 import '../domain/pdf_edit_command.dart';
 import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
+import '../domain/pdf_page_object.dart';
 import '../domain/pdf_text_case.dart';
 import '../domain/pdf_text_layout.dart';
 import '../domain/pdf_text_types.dart';
@@ -156,6 +159,41 @@ final class PdfEditIntentDispatcher {
           before: _block(session, locator).bounds,
           after: bounds,
         ),
+      MovePdfPageObjectIntent(:final locator, :final transform) =>
+        _transformObjectCommand(
+          session,
+          id,
+          provenance,
+          locator,
+          transform,
+          PdfPageObjectCapability.move,
+          'Move PDF page object',
+        ),
+      ResizePdfPageObjectIntent(:final locator, :final transform) =>
+        _transformObjectCommand(
+          session,
+          id,
+          provenance,
+          locator,
+          transform,
+          PdfPageObjectCapability.resize,
+          'Resize PDF page object',
+        ),
+      RotatePdfPageObjectIntent(
+        :final locator,
+        :final radians,
+        :final centerX,
+        :final centerY,
+      ) =>
+        _rotateObjectCommand(
+          session,
+          id,
+          provenance,
+          locator,
+          radians,
+          centerX,
+          centerY,
+        ),
       ChangePdfBookmarkIntent(:final before, :final after) =>
         ChangePdfBookmarkCommand(
           id: id,
@@ -174,6 +212,79 @@ final class PdfEditIntentDispatcher {
         _metadataCommand(session, id, provenance, bookmarks, highlights),
       _ => throw StateError('The intent does not create an edit command.'),
     };
+  }
+
+  TransformPdfPageObjectCommand _transformObjectCommand(
+    PdfEditingSession session,
+    String id,
+    PdfCommandProvenance provenance,
+    PdfPageObjectLocator locator,
+    PdfTransform transform,
+    PdfPageObjectCapability capability,
+    String summary,
+  ) {
+    final object = _pageObject(session, locator);
+    object.requireCapability(capability);
+    _validateTransform(transform);
+    return TransformPdfPageObjectCommand(
+      id: id,
+      provenance: provenance,
+      locator: locator,
+      before: object.transform,
+      after: transform,
+      summary: summary,
+    );
+  }
+
+  TransformPdfPageObjectCommand _rotateObjectCommand(
+    PdfEditingSession session,
+    String id,
+    PdfCommandProvenance provenance,
+    PdfPageObjectLocator locator,
+    double radians,
+    double? centerX,
+    double? centerY,
+  ) {
+    final object = _pageObject(session, locator);
+    object.requireCapability(PdfPageObjectCapability.rotate);
+    if (!radians.isFinite) throw const PdfInvalidTransformFailure();
+    final localCenter = Offset(
+      (object.bounds.left + object.bounds.right) / 2,
+      (object.bounds.bottom + object.bounds.top) / 2,
+    );
+    final inferredCenter = object.transform.transformPoint(localCenter);
+    final after = object.transform.rotatedAround(
+      radians: radians,
+      center: Offset(
+        centerX ?? inferredCenter.dx,
+        centerY ?? inferredCenter.dy,
+      ),
+    );
+    _validateTransform(after);
+    return TransformPdfPageObjectCommand(
+      id: id,
+      provenance: provenance,
+      locator: locator,
+      before: object.transform,
+      after: after,
+      summary: 'Rotate PDF page object',
+    );
+  }
+
+  void _validateTransform(PdfTransform transform) {
+    if (!transform.isFinite || transform.determinant.abs() < 1e-12) {
+      throw const PdfInvalidTransformFailure();
+    }
+  }
+
+  PdfPageObject _pageObject(
+    PdfEditingSession session,
+    PdfPageObjectLocator locator,
+  ) {
+    for (final object in session.pageObjects) {
+      if (object.locator == locator) return object;
+    }
+    throw PdfStalePageObjectLocatorFailure(locator);
   }
 
   CompoundPdfEditCommand _metadataCommand(

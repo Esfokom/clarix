@@ -1,3 +1,4 @@
+import 'pdf_page_object.dart';
 import 'pdf_text_types.dart';
 
 sealed class PdfEditCommand {
@@ -24,6 +25,11 @@ sealed class PdfEditCommand {
   List<PdfTextBlock> apply(List<PdfTextBlock> blocks);
   List<PdfTextBlock> revert(List<PdfTextBlock> blocks);
 
+  List<PdfPageObject> applyPageObjects(List<PdfPageObject> objects) =>
+      List<PdfPageObject>.unmodifiable(objects);
+  List<PdfPageObject> revertPageObjects(List<PdfPageObject> objects) =>
+      List<PdfPageObject>.unmodifiable(objects);
+
   List<PdfBookmarkSnapshot> applyBookmarks(
     List<PdfBookmarkSnapshot> bookmarks,
   ) => List<PdfBookmarkSnapshot>.unmodifiable(bookmarks);
@@ -47,6 +53,37 @@ sealed class PdfEditCommand {
 
   @override
   int get hashCode => Object.hash(runtimeType, id, provenance, summary);
+}
+
+final class TransformPdfPageObjectCommand extends PdfEditCommand {
+  const TransformPdfPageObjectCommand({
+    required super.id,
+    required super.provenance,
+    required this.locator,
+    required this.before,
+    required this.after,
+    required super.summary,
+  });
+
+  final PdfPageObjectLocator locator;
+  final PdfTransform before;
+  final PdfTransform after;
+
+  @override
+  List<PdfTextBlock> apply(List<PdfTextBlock> blocks) =>
+      List<PdfTextBlock>.unmodifiable(blocks);
+
+  @override
+  List<PdfTextBlock> revert(List<PdfTextBlock> blocks) =>
+      List<PdfTextBlock>.unmodifiable(blocks);
+
+  @override
+  List<PdfPageObject> applyPageObjects(List<PdfPageObject> objects) =>
+      _replacePageObjectTransform(objects, locator, after);
+
+  @override
+  List<PdfPageObject> revertPageObjects(List<PdfPageObject> objects) =>
+      _replacePageObjectTransform(objects, locator, before);
 }
 
 final class ReplacePdfTextCommand extends PdfEditCommand {
@@ -502,6 +539,20 @@ final class CompoundPdfEditCommand extends PdfEditCommand {
       );
 
   @override
+  List<PdfPageObject> applyPageObjects(List<PdfPageObject> objects) =>
+      children.fold(
+        List<PdfPageObject>.unmodifiable(objects),
+        (value, command) => command.applyPageObjects(value),
+      );
+
+  @override
+  List<PdfPageObject> revertPageObjects(List<PdfPageObject> objects) =>
+      children.reversed.fold(
+        List<PdfPageObject>.unmodifiable(objects),
+        (value, command) => command.revertPageObjects(value),
+      );
+
+  @override
   List<PdfBookmarkSnapshot> applyBookmarks(
     List<PdfBookmarkSnapshot> bookmarks,
   ) => children.fold(
@@ -545,6 +596,18 @@ final class CompoundPdfEditCommand extends PdfEditCommand {
 
   @override
   int get hashCode => Object.hash(super.hashCode, Object.hashAll(children));
+}
+
+List<PdfPageObject> _replacePageObjectTransform(
+  List<PdfPageObject> objects,
+  PdfPageObjectLocator locator,
+  PdfTransform transform,
+) {
+  final index = objects.indexWhere((object) => object.locator == locator);
+  if (index == -1) throw PdfStalePageObjectLocatorFailure(locator);
+  final next = List<PdfPageObject>.of(objects);
+  next[index] = next[index].copyWith(transform: transform);
+  return List<PdfPageObject>.unmodifiable(next);
 }
 
 List<PdfTextBlock> _replaceBounds(

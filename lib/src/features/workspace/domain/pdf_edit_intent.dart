@@ -1,3 +1,4 @@
+import 'pdf_page_object.dart';
 import 'pdf_text_types.dart';
 
 sealed class PdfEditIntent {
@@ -27,6 +28,49 @@ sealed class PdfEditIntent {
 
   @override
   int get hashCode => Object.hash(runtimeType, documentId, documentRevision);
+}
+
+final class MovePdfPageObjectIntent extends PdfEditIntent {
+  const MovePdfPageObjectIntent({
+    required super.documentId,
+    required super.documentRevision,
+    required this.locator,
+    required this.transform,
+  });
+  final PdfPageObjectLocator locator;
+  final PdfTransform transform;
+  @override
+  int get editCount => 1;
+}
+
+final class ResizePdfPageObjectIntent extends PdfEditIntent {
+  const ResizePdfPageObjectIntent({
+    required super.documentId,
+    required super.documentRevision,
+    required this.locator,
+    required this.transform,
+  });
+  final PdfPageObjectLocator locator;
+  final PdfTransform transform;
+  @override
+  int get editCount => 1;
+}
+
+final class RotatePdfPageObjectIntent extends PdfEditIntent {
+  const RotatePdfPageObjectIntent({
+    required super.documentId,
+    required super.documentRevision,
+    required this.locator,
+    required this.radians,
+    this.centerX,
+    this.centerY,
+  });
+  final PdfPageObjectLocator locator;
+  final double radians;
+  final double? centerX;
+  final double? centerY;
+  @override
+  int get editCount => 1;
 }
 
 final class SetPdfEditingModeIntent extends PdfEditIntent {
