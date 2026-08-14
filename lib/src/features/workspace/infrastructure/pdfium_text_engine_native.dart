@@ -13,10 +13,10 @@ import '../domain/pdf_page_object.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_native_edit_types.dart';
 import '../domain/pdf_edit_command.dart';
-import '../domain/pdf_text_layout.dart';
 import 'pdf_text_block_grouper.dart';
 import 'pdf_text_engine.dart';
 import 'installed_font_catalog.dart';
+import 'pdf_native_text_layout.dart';
 import 'pdfium_worker_executor.dart';
 
 PdfTextEngine createPdfTextEngine() => const PdfiumTextEngine();
@@ -138,7 +138,7 @@ final class PdfiumTextEngine implements PdfTextEngine {
     return document.encodePdf(incremental: false);
   }
 
-  void _replaceFormattedBlock(
+  List<PdfTextRange> _replaceFormattedBlock(
     FPDF_DOCUMENT document,
     FPDF_PAGE page,
     PdfTextBlock block,
@@ -163,7 +163,7 @@ final class PdfiumTextEngine implements PdfTextEngine {
     }
     final created = <FPDF_PAGEOBJECT>[];
     final loadedFonts = <FPDF_FONT>[];
-    final segments = _segmentsFor(block, reflow: reflow);
+    final segments = _segmentsFor(block, reflow: reflow, font: sourceFont);
     for (final segment in segments) {
       final run = segment.run;
       final face = matchedFaces?[run.range.start];
@@ -208,34 +208,79 @@ final class PdfiumTextEngine implements PdfTextEngine {
     for (final font in loadedFonts) {
       pdfiumBindings.FPDFFont_Close(font);
     }
+    return List<PdfTextRange>.unmodifiable(
+      segments.map((segment) => segment.run.range),
+    );
   }
 
   List<_NativeTextSegment> _segmentsFor(
     PdfTextBlock block, {
     required bool reflow,
+    required FPDF_FONT font,
   }) {
-    if (block.runs.length == 1 && reflow) {
-      final run = block.runs.single;
-      final style = run.style;
-      final layout = const PdfTextLayoutEngine().layout(
-        text: block.text,
-        bounds: block.bounds,
-        style: style,
-        metrics: PdfMonospaceTextMetrics(
-          advance: style.fontSize * 0.5,
-          lineHeight: style.fontSize * 0.8,
-        ),
-      );
-      return layout.lines
-          .map(
-            (line) => _NativeTextSegment(
-              text: line.text,
-              run: run,
-              originX: line.originX,
-              baseline: line.baseline,
-            ),
-          )
-          .toList(growable: false);
+    if (reflow) {
+      final width = calloc<Float>();
+      final ascent = calloc<Float>();
+      final descent = calloc<Float>();
+      try {
+        final layout = const PdfNativeTextLayoutEngine().layout(
+          text: block.text,
+          bounds: block.bounds,
+          runs: block.runs,
+          baseline: block.baseline,
+          direction: block.writingDirection,
+          advance: (codePoint, style) {
+            final measured =
+                pdfiumBindings.FPDFFont_GetGlyphWidth(
+                  font,
+                  codePoint,
+                  style.fontSize,
+                  width,
+                ) !=
+                0;
+            return (measured ? width.value : style.fontSize * 0.5) +
+                style.characterSpacing;
+          },
+          lineHeight: (style) {
+            final hasAscent =
+                pdfiumBindings.FPDFFont_GetAscent(
+                  font,
+                  style.fontSize,
+                  ascent,
+                ) !=
+                0;
+            final hasDescent =
+                pdfiumBindings.FPDFFont_GetDescent(
+                  font,
+                  style.fontSize,
+                  descent,
+                ) !=
+                0;
+            final nativeHeight = hasAscent && hasDescent
+                ? ascent.value - descent.value
+                : style.fontSize;
+            return nativeHeight + style.lineSpacing;
+          },
+        );
+        return layout.lines
+            .where((line) => line.text.isNotEmpty)
+            .map(
+              (line) => _NativeTextSegment(
+                text: line.text,
+                run: PdfTextRun(
+                  range: line.range,
+                  style: block.styleAt(line.range.start),
+                ),
+                originX: line.originX,
+                baseline: line.baseline,
+              ),
+            )
+            .toList(growable: false);
+      } finally {
+        calloc.free(width);
+        calloc.free(ascent);
+        calloc.free(descent);
+      }
     }
     if (block.runs.length == 1) {
       return <_NativeTextSegment>[
@@ -967,13 +1012,14 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
     block.locator.pageNumber - 1,
   );
   if (page.address == 0) throw PdfStaleLocatorFailure(block.locator);
+  late final List<PdfTextRange> lineRanges;
   try {
-    const PdfiumTextEngine()._replaceFormattedBlock(
+    lineRanges = const PdfiumTextEngine()._replaceFormattedBlock(
       nativeDocument,
       page,
       block,
       null,
-      reflow: false,
+      reflow: true,
     );
     if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
       throw PdfValidationFailure(
@@ -999,14 +1045,7 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
     requestedRevision: request.editRevision,
     appliedRevision: request.editRevision,
     block: projected,
-    lines: projected.text.isEmpty
-        ? const <PdfNativeLine>[]
-        : <PdfNativeLine>[
-            PdfNativeLine(
-              range: PdfTextRange(0, projected.text.length),
-              bounds: projected.bounds,
-            ),
-          ],
+    lines: _linesForRanges(lineRanges, characters),
     characters: characters,
     affectedPages: <int>[block.locator.pageNumber],
   );
@@ -1037,6 +1076,7 @@ List<PdfNativeCharacterBox> _characterBoxesForText(
       final value = String.fromCharCode(
         pdfiumBindings.FPDFText_GetUnicode(textPage, index),
       );
+      if (value == '\r' || value == '\n') continue;
       final start = pageText.length;
       pageText.write(value);
       characters.add(
@@ -1047,9 +1087,10 @@ List<PdfNativeCharacterBox> _characterBoxesForText(
         ),
       );
     }
-    final matchStart = pageText.toString().indexOf(text);
+    final searchableText = text.replaceAll('\r', '').replaceAll('\n', '');
+    final matchStart = pageText.toString().indexOf(searchableText);
     if (matchStart == -1) return const <PdfNativeCharacterBox>[];
-    final matchEnd = matchStart + text.length;
+    final matchEnd = matchStart + searchableText.length;
     final result = <PdfNativeCharacterBox>[];
     for (final character in characters.where(
       (character) => character.start < matchEnd && character.end > matchStart,
@@ -1070,7 +1111,7 @@ List<PdfNativeCharacterBox> _characterBoxesForText(
           ? 0
           : character.start - matchStart;
       final lastOffset = character.end > matchEnd
-          ? text.length
+          ? searchableText.length
           : character.end - matchStart;
       for (var offset = firstOffset; offset < lastOffset; offset++) {
         result.add(PdfNativeCharacterBox(offset: offset, bounds: box));
@@ -1085,6 +1126,36 @@ List<PdfNativeCharacterBox> _characterBoxesForText(
     pdfiumBindings.FPDFText_ClosePage(textPage);
     pdfiumBindings.FPDF_ClosePage(page);
   }
+}
+
+List<PdfNativeLine> _linesForRanges(
+  List<PdfTextRange> ranges,
+  List<PdfNativeCharacterBox> characters,
+) {
+  if (ranges.isEmpty || characters.isEmpty) return const <PdfNativeLine>[];
+  final lines = <PdfNativeLine>[];
+  for (final range in ranges) {
+    final boxes = characters
+        .where(
+          (character) =>
+              range.start <= character.offset && character.offset < range.end,
+        )
+        .map((character) => character.bounds)
+        .toList(growable: false);
+    if (boxes.isEmpty) continue;
+    lines.add(
+      PdfNativeLine(
+        range: range,
+        bounds: PdfBox(
+          boxes.map((box) => box.left).reduce((a, b) => a < b ? a : b),
+          boxes.map((box) => box.bottom).reduce((a, b) => a < b ? a : b),
+          boxes.map((box) => box.right).reduce((a, b) => a > b ? a : b),
+          boxes.map((box) => box.top).reduce((a, b) => a > b ? a : b),
+        ),
+      ),
+    );
+  }
+  return List<PdfNativeLine>.unmodifiable(lines);
 }
 
 final class _PageTextCharacter {
