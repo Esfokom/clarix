@@ -340,6 +340,32 @@ impl DocumentModel {
         self.pages.get(page_index)?.objects.get(object_offset)
     }
 
+    pub fn page(&self, page_number: u32) -> Option<&PageNode> {
+        self.pages
+            .iter()
+            .find(|page| page.page_number == page_number)
+    }
+
+    pub(crate) fn hydrate_page(&mut self, page: PageNode) -> Result<(), ModelError> {
+        if let Some(existing) = self.page(page.page_number) {
+            return if existing == &page {
+                Ok(())
+            } else {
+                Err(ModelError::HydratedPageConflict(page.page_number))
+            };
+        }
+        let mut pages = self.pages.clone();
+        pages.push(page);
+        pages.sort_by_key(|page| page.page_number);
+        *self = Self::from_parts(
+            self.id,
+            self.source_fingerprint.clone(),
+            self.revision,
+            pages,
+        )?;
+        Ok(())
+    }
+
     pub(crate) fn replace_object(&mut self, object: DocumentObject) -> Result<(), ModelError> {
         let id = object.id();
         let Some((page_index, object_offset)) = self.object_index.get(&id).copied() else {
@@ -396,4 +422,6 @@ pub enum ModelError {
     CrossPageGroupChild(ObjectId),
     #[error("object {0} does not exist")]
     MissingObject(ObjectId),
+    #[error("page {0} was already hydrated with different content")]
+    HydratedPageConflict(u32),
 }

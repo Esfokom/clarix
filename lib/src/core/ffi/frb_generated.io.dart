@@ -7,6 +7,7 @@ import 'api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
+import 'editing_api.dart';
 import 'frb_generated.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
@@ -20,11 +21,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_NativeEditorSessionPtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr;
+
+  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_NativePdfSessionPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSessionPtr;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
+
+  @protected
+  NativeEditorSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  );
 
   @protected
   NativePdfSession
@@ -39,8 +50,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeEditorSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  );
+
+  @protected
   NativePdfSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    dynamic raw,
+  );
+
+  @protected
+  NativeEditorSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
     dynamic raw,
   );
 
@@ -54,10 +77,38 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<NativeEditorEvent>
+  dco_decode_StreamSink_native_editor_event_Sse(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
   bool dco_decode_bool(dynamic raw);
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  NativeAffineTransform dco_decode_box_autoadd_native_affine_transform(
+    dynamic raw,
+  );
+
+  @protected
+  NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
+
+  @protected
+  NativeOpenEditorRequest dco_decode_box_autoadd_native_open_editor_request(
+    dynamic raw,
+  );
+
+  @protected
+  NativePageSceneRequest dco_decode_box_autoadd_native_page_scene_request(
+    dynamic raw,
+  );
+
+  @protected
+  NativePdfBox dco_decode_box_autoadd_native_pdf_box(dynamic raw);
 
   @protected
   NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(
@@ -80,10 +131,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSubmitCommandRequest
+  dco_decode_box_autoadd_native_submit_command_request(dynamic raw);
+
+  @protected
+  NativeTextStyle dco_decode_box_autoadd_native_text_style(dynamic raw);
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
+
+  @protected
   double dco_decode_f_32(dynamic raw);
 
   @protected
+  double dco_decode_f_64(dynamic raw);
+
+  @protected
+  int dco_decode_i_32(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw);
 
   @protected
   List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw);
@@ -103,6 +176,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw);
+
+  @protected
+  List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw);
+
+  @protected
   List<PdfSearchMatch> dco_decode_list_pdf_search_match(dynamic raw);
 
   @protected
@@ -115,10 +194,46 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint64List dco_decode_list_prim_usize_strict(dynamic raw);
 
   @protected
+  NativeAffineTransform dco_decode_native_affine_transform(dynamic raw);
+
+  @protected
+  NativeCommandResult dco_decode_native_command_result(dynamic raw);
+
+  @protected
+  NativeEditorCommand dco_decode_native_editor_command(dynamic raw);
+
+  @protected
+  NativeEditorCommandKind dco_decode_native_editor_command_kind(dynamic raw);
+
+  @protected
+  NativeEditorEvent dco_decode_native_editor_event(dynamic raw);
+
+  @protected
+  NativeEditorEventKind dco_decode_native_editor_event_kind(dynamic raw);
+
+  @protected
+  NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw);
+
+  @protected
+  NativeObjectPatch dco_decode_native_object_patch(dynamic raw);
+
+  @protected
+  NativeOpenEditorRequest dco_decode_native_open_editor_request(dynamic raw);
+
+  @protected
+  NativePageScene dco_decode_native_page_scene(dynamic raw);
+
+  @protected
+  NativePageSceneRequest dco_decode_native_page_scene_request(dynamic raw);
+
+  @protected
   NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw);
 
   @protected
   NativePdfBookmark dco_decode_native_pdf_bookmark(dynamic raw);
+
+  @protected
+  NativePdfBox dco_decode_native_pdf_box(dynamic raw);
 
   @protected
   NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw);
@@ -154,7 +269,52 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeRagQueryResult dco_decode_native_rag_query_result(dynamic raw);
 
   @protected
+  NativeSceneObject dco_decode_native_scene_object(dynamic raw);
+
+  @protected
+  NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw);
+
+  @protected
+  NativeSubmitCommandRequest dco_decode_native_submit_command_request(
+    dynamic raw,
+  );
+
+  @protected
+  NativeTextRun dco_decode_native_text_run(dynamic raw);
+
+  @protected
+  NativeTextStyle dco_decode_native_text_style(dynamic raw);
+
+  @protected
   String? dco_decode_opt_String(dynamic raw);
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
+
+  @protected
+  NativeAffineTransform? dco_decode_opt_box_autoadd_native_affine_transform(
+    dynamic raw,
+  );
+
+  @protected
+  NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(
+    dynamic raw,
+  );
+
+  @protected
+  NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw);
+
+  @protected
+  NativeTextStyle? dco_decode_opt_box_autoadd_native_text_style(dynamic raw);
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  List<NativeTextRun>? dco_decode_opt_list_native_text_run(dynamic raw);
 
   @protected
   PdfDocumentMetadata dco_decode_pdf_document_metadata(dynamic raw);
@@ -166,6 +326,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   (double, double, double, double) dco_decode_record_f_32_f_32_f_32_f_32(
     dynamic raw,
   );
+
+  @protected
+  int dco_decode_u_16(dynamic raw);
+
+  @protected
+  int dco_decode_u_32(dynamic raw);
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -180,6 +349,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
+  NativeEditorSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativePdfSession
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     SseDeserializer deserializer,
@@ -192,8 +367,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeEditorSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativePdfSession
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
     SseDeserializer deserializer,
   );
 
@@ -209,10 +396,42 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<NativeEditorEvent>
+  sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer);
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  NativeAffineTransform sse_decode_box_autoadd_native_affine_transform(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCommandResult sse_decode_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeOpenEditorRequest sse_decode_box_autoadd_native_open_editor_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePageSceneRequest sse_decode_box_autoadd_native_page_scene_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePdfBox sse_decode_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  );
 
   @protected
   NativePdfComposeRequest sse_decode_box_autoadd_native_pdf_compose_request(
@@ -235,10 +454,38 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSubmitCommandRequest
+  sse_decode_box_autoadd_native_submit_command_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeTextStyle sse_decode_box_autoadd_native_text_style(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_f_32(SseDeserializer deserializer);
 
   @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<NativeObjectPatch> sse_decode_list_native_object_patch(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<NativePdfBookmark> sse_decode_list_native_pdf_bookmark(
@@ -266,6 +513,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeSceneObject> sse_decode_list_native_scene_object(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<NativeTextRun> sse_decode_list_native_text_run(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<PdfSearchMatch> sse_decode_list_pdf_search_match(
     SseDeserializer deserializer,
   );
@@ -280,6 +537,59 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer);
 
   @protected
+  NativeAffineTransform sse_decode_native_affine_transform(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCommandResult sse_decode_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorCommand sse_decode_native_editor_command(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorCommandKind sse_decode_native_editor_command_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorEvent sse_decode_native_editor_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorEventKind sse_decode_native_editor_event_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorMetadata sse_decode_native_editor_metadata(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeObjectPatch sse_decode_native_object_patch(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeOpenEditorRequest sse_decode_native_open_editor_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePageScene sse_decode_native_page_scene(SseDeserializer deserializer);
+
+  @protected
+  NativePageSceneRequest sse_decode_native_page_scene_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativePdfAnnotations sse_decode_native_pdf_annotations(
     SseDeserializer deserializer,
   );
@@ -288,6 +598,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfBookmark sse_decode_native_pdf_bookmark(
     SseDeserializer deserializer,
   );
+
+  @protected
+  NativePdfBox sse_decode_native_pdf_box(SseDeserializer deserializer);
 
   @protected
   NativePdfComposeRequest sse_decode_native_pdf_compose_request(
@@ -341,7 +654,62 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSceneObject sse_decode_native_scene_object(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSceneObjectKind sse_decode_native_scene_object_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSubmitCommandRequest sse_decode_native_submit_command_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeTextRun sse_decode_native_text_run(SseDeserializer deserializer);
+
+  @protected
+  NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer);
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
+
+  @protected
+  NativeAffineTransform? sse_decode_opt_box_autoadd_native_affine_transform(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeTextStyle? sse_decode_opt_box_autoadd_native_text_style(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  List<NativeTextRun>? sse_decode_opt_list_native_text_run(
+    SseDeserializer deserializer,
+  );
 
   @protected
   PdfDocumentMetadata sse_decode_pdf_document_metadata(
@@ -357,6 +725,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  int sse_decode_u_16(SseDeserializer deserializer);
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer);
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -366,11 +743,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
-
-  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
     SseSerializer serializer,
   );
 
@@ -390,8 +771,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     NativePdfSession self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
     SseSerializer serializer,
   );
 
@@ -409,10 +804,49 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_native_editor_event_Sse(
+    RustStreamSink<NativeEditorEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_native_affine_transform(
+    NativeAffineTransform self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_command_result(
+    NativeCommandResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_open_editor_request(
+    NativeOpenEditorRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_page_scene_request(
+    NativePageSceneRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_pdf_box(
+    NativePdfBox self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_box_autoadd_native_pdf_compose_request(
@@ -439,10 +873,40 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_submit_command_request(
+    NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_text_style(
+    NativeTextStyle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
 
   @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_native_object_patch(
+    List<NativeObjectPatch> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_native_pdf_bookmark(
@@ -475,6 +939,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_native_scene_object(
+    List<NativeSceneObject> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_text_run(
+    List<NativeTextRun> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_pdf_search_match(
     List<PdfSearchMatch> self,
     SseSerializer serializer,
@@ -499,6 +975,72 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_affine_transform(
+    NativeAffineTransform self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_command_result(
+    NativeCommandResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_command(
+    NativeEditorCommand self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_command_kind(
+    NativeEditorCommandKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_event(
+    NativeEditorEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_event_kind(
+    NativeEditorEventKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_metadata(
+    NativeEditorMetadata self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_object_patch(
+    NativeObjectPatch self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_open_editor_request(
+    NativeOpenEditorRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_page_scene(
+    NativePageScene self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_page_scene_request(
+    NativePageSceneRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_pdf_annotations(
     NativePdfAnnotations self,
     SseSerializer serializer,
@@ -509,6 +1051,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     NativePdfBookmark self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_native_pdf_box(NativePdfBox self, SseSerializer serializer);
 
   @protected
   void sse_encode_native_pdf_compose_request(
@@ -577,7 +1122,73 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_scene_object(
+    NativeSceneObject self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_scene_object_kind(
+    NativeSceneObjectKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_submit_command_request(
+    NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_text_run(NativeTextRun self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_native_text_style(
+    NativeTextStyle self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_affine_transform(
+    NativeAffineTransform? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_command_result(
+    NativeCommandResult? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_pdf_box(
+    NativePdfBox? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_text_style(
+    NativeTextStyle? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_native_text_run(
+    List<NativeTextRun>? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_pdf_document_metadata(
@@ -598,6 +1209,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_u_16(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer);
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
@@ -605,9 +1225,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
@@ -623,6 +1240,40 @@ class RustLibWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   RustLibWire(ffi.DynamicLibrary dynamicLibrary)
     : _lookup = dynamicLibrary.lookup;
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_clarix_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_clarix_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(

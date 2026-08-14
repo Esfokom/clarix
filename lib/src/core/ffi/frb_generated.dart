@@ -6,6 +6,7 @@
 import 'api.dart';
 import 'dart:async';
 import 'dart:convert';
+import 'editing_api.dart';
 import 'frb_generated.dart';
 import 'frb_generated.io.dart'
     if (dart.library.js_interop) 'frb_generated.web.dart';
@@ -65,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1663186968;
+  int get rustContentHash => 1698049259;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -77,6 +78,32 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<void> crateEditingApiNativeEditorSessionClose({
+    required NativeEditorSession that,
+  });
+
+  Stream<NativeEditorEvent> crateEditingApiNativeEditorSessionEvents({
+    required NativeEditorSession that,
+  });
+
+  Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({
+    required NativeEditorSession that,
+  });
+
+  Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({
+    required NativeOpenEditorRequest request,
+  });
+
+  Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({
+    required NativeEditorSession that,
+    required NativePageSceneRequest request,
+  });
+
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionSubmit({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  });
+
   Stream<String> crateApiNativePdfSessionIndex({
     required NativePdfSession that,
     required BigInt maxCharsPerChunk,
@@ -129,6 +156,15 @@ abstract class RustLibApi extends BaseApi {
   });
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_NativeEditorSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_NativeEditorSession;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_NativeEditorSessionPtr;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_NativePdfSession;
 
   RustArcDecrementStrongCountFnType
@@ -145,6 +181,235 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     required super.generalizedFrbRustBinding,
     required super.portManager,
   });
+
+  @override
+  Future<void> crateEditingApiNativeEditorSessionClose({
+    required NativeEditorSession that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_close",
+        argNames: ["that"],
+      );
+
+  @override
+  Stream<NativeEditorEvent> crateEditingApiNativeEditorSessionEvents({
+    required NativeEditorSession that,
+  }) {
+    final sink = RustStreamSink<NativeEditorEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_native_editor_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 2,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateEditingApiNativeEditorSessionEventsConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionEventsConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_events",
+        argNames: ["that", "sink"],
+      );
+
+  @override
+  Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({
+    required NativeEditorSession that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_editor_metadata,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionMetadataConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionMetadataConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_metadata",
+        argNames: ["that"],
+      );
+
+  @override
+  Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({
+    required NativeOpenEditorRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_open_editor_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionOpenConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionOpenConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_open",
+        argNames: ["request"],
+      );
+
+  @override
+  Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({
+    required NativeEditorSession that,
+    required NativePageSceneRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_page_scene_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_page_scene,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionPageSceneConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionPageSceneConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_page_scene",
+        argNames: ["that", "request"],
+      );
+
+  @override
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionSubmit({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_submit_command_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_command_result,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionSubmitConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionSubmitConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_submit",
+        argNames: ["that", "request"],
+      );
 
   @override
   Stream<String> crateApiNativePdfSessionIndex({
@@ -168,7 +433,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 1,
+              funcId: 7,
               port: port_,
             );
           },
@@ -206,7 +471,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 8,
             port: port_,
           );
         },
@@ -239,7 +504,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 9,
             port: port_,
           );
         },
@@ -278,7 +543,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 10,
             port: port_,
           );
         },
@@ -316,7 +581,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 11,
             port: port_,
           );
         },
@@ -352,7 +617,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 12,
             port: port_,
           );
         },
@@ -382,7 +647,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 13,
             port: port_,
           );
         },
@@ -412,7 +677,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 14,
             port: port_,
           );
         },
@@ -444,7 +709,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 15,
             port: port_,
           );
         },
@@ -476,7 +741,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 16,
             port: port_,
           );
         },
@@ -508,7 +773,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 17,
             port: port_,
           );
         },
@@ -540,7 +805,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 18,
             port: port_,
           );
         },
@@ -561,6 +826,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_NativeEditorSession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_NativeEditorSession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession;
+
+  RustArcIncrementStrongCountFnType
   get rust_arc_increment_strong_count_NativePdfSession => wire
       .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
 
@@ -572,6 +845,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AnyhowException dco_decode_AnyhowException(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return AnyhowException(raw as String);
+  }
+
+  @protected
+  NativeEditorSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -593,12 +875,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeEditorSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
   NativePdfSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  NativeEditorSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
   }
 
   @protected
@@ -617,6 +917,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<NativeEditorEvent>
+  dco_decode_StreamSink_native_editor_event_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   String dco_decode_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as String;
@@ -626,6 +933,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool dco_decode_bool(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as bool;
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  NativeAffineTransform dco_decode_box_autoadd_native_affine_transform(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_affine_transform(raw);
+  }
+
+  @protected
+  NativeCommandResult dco_decode_box_autoadd_native_command_result(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_command_result(raw);
+  }
+
+  @protected
+  NativeOpenEditorRequest dco_decode_box_autoadd_native_open_editor_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_open_editor_request(raw);
+  }
+
+  @protected
+  NativePageSceneRequest dco_decode_box_autoadd_native_page_scene_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_page_scene_request(raw);
+  }
+
+  @protected
+  NativePdfBox dco_decode_box_autoadd_native_pdf_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_pdf_box(raw);
   }
 
   @protected
@@ -661,15 +1012,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeSubmitCommandRequest
+  dco_decode_box_autoadd_native_submit_command_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_submit_command_request(raw);
+  }
+
+  @protected
+  NativeTextStyle dco_decode_box_autoadd_native_text_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_text_style(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
   double dco_decode_f_32(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as double;
   }
 
   @protected
+  double dco_decode_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_object_patch).toList();
   }
 
   @protected
@@ -707,6 +1101,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_scene_object).toList();
+  }
+
+  @protected
+  List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_text_run).toList();
+  }
+
+  @protected
   List<PdfSearchMatch> dco_decode_list_pdf_search_match(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_pdf_search_match).toList();
@@ -731,6 +1137,155 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeAffineTransform dco_decode_native_affine_transform(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeAffineTransform(
+      a: dco_decode_f_64(arr[0]),
+      b: dco_decode_f_64(arr[1]),
+      c: dco_decode_f_64(arr[2]),
+      d: dco_decode_f_64(arr[3]),
+      e: dco_decode_f_64(arr[4]),
+      f: dco_decode_f_64(arr[5]),
+    );
+  }
+
+  @protected
+  NativeCommandResult dco_decode_native_command_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeCommandResult(
+      commandId: dco_decode_String(arr[0]),
+      committedRevision: dco_decode_u_64(arr[1]),
+      objectPatches: dco_decode_list_native_object_patch(arr[2]),
+    );
+  }
+
+  @protected
+  NativeEditorCommand dco_decode_native_editor_command(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return NativeEditorCommand(
+      kind: dco_decode_native_editor_command_kind(arr[0]),
+      objectId: dco_decode_opt_String(arr[1]),
+      start: dco_decode_opt_box_autoadd_u_32(arr[2]),
+      end: dco_decode_opt_box_autoadd_u_32(arr[3]),
+      replacement: dco_decode_opt_String(arr[4]),
+      style: dco_decode_opt_box_autoadd_native_text_style(arr[5]),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[6]),
+      bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[7]),
+      radians: dco_decode_opt_box_autoadd_f_64(arr[8]),
+      centerX: dco_decode_opt_box_autoadd_f_64(arr[9]),
+      centerY: dco_decode_opt_box_autoadd_f_64(arr[10]),
+      label: dco_decode_opt_String(arr[11]),
+    );
+  }
+
+  @protected
+  NativeEditorCommandKind dco_decode_native_editor_command_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorCommandKind.values[raw as int];
+  }
+
+  @protected
+  NativeEditorEvent dco_decode_native_editor_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeEditorEvent(
+      kind: dco_decode_native_editor_event_kind(arr[0]),
+      sequence: dco_decode_u_64(arr[1]),
+      revision: dco_decode_opt_box_autoadd_u_64(arr[2]),
+      latestRevision: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      result: dco_decode_opt_box_autoadd_native_command_result(arr[4]),
+    );
+  }
+
+  @protected
+  NativeEditorEventKind dco_decode_native_editor_event_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorEventKind.values[raw as int];
+  }
+
+  @protected
+  NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeEditorMetadata(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      sessionId: dco_decode_String(arr[1]),
+      documentId: dco_decode_String(arr[2]),
+      sourceFingerprint: dco_decode_String(arr[3]),
+      revision: dco_decode_u_64(arr[4]),
+      pageCount: dco_decode_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  NativeObjectPatch dco_decode_native_object_patch(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativeObjectPatch(
+      objectId: dco_decode_String(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      modifiedRevision: dco_decode_u_64(arr[2]),
+      text: dco_decode_opt_String(arr[3]),
+      textRuns: dco_decode_opt_list_native_text_run(arr[4]),
+      bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[5]),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[6]),
+    );
+  }
+
+  @protected
+  NativeOpenEditorRequest dco_decode_native_open_editor_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return NativeOpenEditorRequest(sourcePath: dco_decode_String(arr[0]));
+  }
+
+  @protected
+  NativePageScene dco_decode_native_page_scene(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativePageScene(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      pageNumber: dco_decode_u_32(arr[2]),
+      width: dco_decode_f_64(arr[3]),
+      height: dco_decode_f_64(arr[4]),
+      revision: dco_decode_u_64(arr[5]),
+      objects: dco_decode_list_native_scene_object(arr[6]),
+    );
+  }
+
+  @protected
+  NativePageSceneRequest dco_decode_native_page_scene_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePageSceneRequest(
+      pageNumber: dco_decode_u_32(arr[0]),
+      expectedRevision: dco_decode_u_64(arr[1]),
+    );
+  }
+
+  @protected
   NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -752,6 +1307,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       id: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
       pageNumber: dco_decode_usize(arr[2]),
+    );
+  }
+
+  @protected
+  NativePdfBox dco_decode_native_pdf_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativePdfBox(
+      left: dco_decode_f_64(arr[0]),
+      bottom: dco_decode_f_64(arr[1]),
+      right: dco_decode_f_64(arr[2]),
+      top: dco_decode_f_64(arr[3]),
     );
   }
 
@@ -909,9 +1478,134 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeSceneObject dco_decode_native_scene_object(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return NativeSceneObject(
+      kind: dco_decode_native_scene_object_kind(arr[0]),
+      objectId: dco_decode_String(arr[1]),
+      pageId: dco_decode_String(arr[2]),
+      text: dco_decode_opt_String(arr[3]),
+      bounds: dco_decode_native_pdf_box(arr[4]),
+      transform: dco_decode_native_affine_transform(arr[5]),
+      capability: dco_decode_String(arr[6]),
+      modifiedRevision: dco_decode_u_64(arr[7]),
+      runs: dco_decode_list_native_text_run(arr[8]),
+    );
+  }
+
+  @protected
+  NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeSceneObjectKind.values[raw as int];
+  }
+
+  @protected
+  NativeSubmitCommandRequest dco_decode_native_submit_command_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeSubmitCommandRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      baseRevision: dco_decode_u_64(arr[2]),
+      payload: dco_decode_native_editor_command(arr[3]),
+    );
+  }
+
+  @protected
+  NativeTextRun dco_decode_native_text_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeTextRun(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+      style: dco_decode_native_text_style(arr[2]),
+    );
+  }
+
+  @protected
+  NativeTextStyle dco_decode_native_text_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeTextStyle(
+      fontFamily: dco_decode_opt_String(arr[0]),
+      fontSize: dco_decode_f_64(arr[1]),
+      fontWeight: dco_decode_u_16(arr[2]),
+      italic: dco_decode_bool(arr[3]),
+      colorRgba: dco_decode_list_prim_u_8_strict(arr[4]),
+    );
+  }
+
+  @protected
   String? dco_decode_opt_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  NativeAffineTransform? dco_decode_opt_box_autoadd_native_affine_transform(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_affine_transform(raw);
+  }
+
+  @protected
+  NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_command_result(raw);
+  }
+
+  @protected
+  NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_native_pdf_box(raw);
+  }
+
+  @protected
+  NativeTextStyle? dco_decode_opt_box_autoadd_native_text_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_native_text_style(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  List<NativeTextRun>? dco_decode_opt_list_native_text_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_native_text_run(raw);
   }
 
   @protected
@@ -959,6 +1653,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int dco_decode_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
   int dco_decode_u_8(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as int;
@@ -981,6 +1693,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_String(deserializer);
     return AnyhowException(inner);
+  }
+
+  @protected
+  NativeEditorSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
   }
 
   @protected
@@ -1008,12 +1732,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeEditorSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
   NativePdfSession
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return NativePdfSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  NativeEditorSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalSseDecode(
       sse_decode_usize(deserializer),
       sse_decode_i_32(deserializer),
     );
@@ -1040,6 +1788,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<NativeEditorEvent>
+  sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   String sse_decode_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_u_8_strict(deserializer);
@@ -1050,6 +1805,52 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   bool sse_decode_bool(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  NativeAffineTransform sse_decode_box_autoadd_native_affine_transform(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_affine_transform(deserializer));
+  }
+
+  @protected
+  NativeCommandResult sse_decode_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_command_result(deserializer));
+  }
+
+  @protected
+  NativeOpenEditorRequest sse_decode_box_autoadd_native_open_editor_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_open_editor_request(deserializer));
+  }
+
+  @protected
+  NativePageSceneRequest sse_decode_box_autoadd_native_page_scene_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_page_scene_request(deserializer));
+  }
+
+  @protected
+  NativePdfBox sse_decode_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_pdf_box(deserializer));
   }
 
   @protected
@@ -1085,9 +1886,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeSubmitCommandRequest
+  sse_decode_box_autoadd_native_submit_command_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_submit_command_request(deserializer));
+  }
+
+  @protected
+  NativeTextStyle sse_decode_box_autoadd_native_text_style(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_text_style(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
   double sse_decode_f_32(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getFloat32();
+  }
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
   }
 
   @protected
@@ -1098,6 +1940,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <String>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeObjectPatch> sse_decode_list_native_object_patch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeObjectPatch>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_object_patch(deserializer));
     }
     return ans_;
   }
@@ -1173,6 +2029,34 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<NativeSceneObject> sse_decode_list_native_scene_object(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeSceneObject>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_scene_object(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeTextRun> sse_decode_list_native_text_run(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeTextRun>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_text_run(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<PdfSearchMatch> sse_decode_list_pdf_search_match(
     SseDeserializer deserializer,
   ) {
@@ -1208,6 +2092,205 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeAffineTransform sse_decode_native_affine_transform(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_a = sse_decode_f_64(deserializer);
+    var var_b = sse_decode_f_64(deserializer);
+    var var_c = sse_decode_f_64(deserializer);
+    var var_d = sse_decode_f_64(deserializer);
+    var var_e = sse_decode_f_64(deserializer);
+    var var_f = sse_decode_f_64(deserializer);
+    return NativeAffineTransform(
+      a: var_a,
+      b: var_b,
+      c: var_c,
+      d: var_d,
+      e: var_e,
+      f: var_f,
+    );
+  }
+
+  @protected
+  NativeCommandResult sse_decode_native_command_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_commandId = sse_decode_String(deserializer);
+    var var_committedRevision = sse_decode_u_64(deserializer);
+    var var_objectPatches = sse_decode_list_native_object_patch(deserializer);
+    return NativeCommandResult(
+      commandId: var_commandId,
+      committedRevision: var_committedRevision,
+      objectPatches: var_objectPatches,
+    );
+  }
+
+  @protected
+  NativeEditorCommand sse_decode_native_editor_command(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_editor_command_kind(deserializer);
+    var var_objectId = sse_decode_opt_String(deserializer);
+    var var_start = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_end = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_replacement = sse_decode_opt_String(deserializer);
+    var var_style = sse_decode_opt_box_autoadd_native_text_style(deserializer);
+    var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
+      deserializer,
+    );
+    var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
+    var var_radians = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_centerX = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_centerY = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_label = sse_decode_opt_String(deserializer);
+    return NativeEditorCommand(
+      kind: var_kind,
+      objectId: var_objectId,
+      start: var_start,
+      end: var_end,
+      replacement: var_replacement,
+      style: var_style,
+      transform: var_transform,
+      bounds: var_bounds,
+      radians: var_radians,
+      centerX: var_centerX,
+      centerY: var_centerY,
+      label: var_label,
+    );
+  }
+
+  @protected
+  NativeEditorCommandKind sse_decode_native_editor_command_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeEditorCommandKind.values[inner];
+  }
+
+  @protected
+  NativeEditorEvent sse_decode_native_editor_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_editor_event_kind(deserializer);
+    var var_sequence = sse_decode_u_64(deserializer);
+    var var_revision = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_latestRevision = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_result = sse_decode_opt_box_autoadd_native_command_result(
+      deserializer,
+    );
+    return NativeEditorEvent(
+      kind: var_kind,
+      sequence: var_sequence,
+      revision: var_revision,
+      latestRevision: var_latestRevision,
+      result: var_result,
+    );
+  }
+
+  @protected
+  NativeEditorEventKind sse_decode_native_editor_event_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeEditorEventKind.values[inner];
+  }
+
+  @protected
+  NativeEditorMetadata sse_decode_native_editor_metadata(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_sessionId = sse_decode_String(deserializer);
+    var var_documentId = sse_decode_String(deserializer);
+    var var_sourceFingerprint = sse_decode_String(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_pageCount = sse_decode_u_32(deserializer);
+    return NativeEditorMetadata(
+      schemaVersion: var_schemaVersion,
+      sessionId: var_sessionId,
+      documentId: var_documentId,
+      sourceFingerprint: var_sourceFingerprint,
+      revision: var_revision,
+      pageCount: var_pageCount,
+    );
+  }
+
+  @protected
+  NativeObjectPatch sse_decode_native_object_patch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_modifiedRevision = sse_decode_u_64(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_textRuns = sse_decode_opt_list_native_text_run(deserializer);
+    var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
+    var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
+      deserializer,
+    );
+    return NativeObjectPatch(
+      objectId: var_objectId,
+      pageId: var_pageId,
+      modifiedRevision: var_modifiedRevision,
+      text: var_text,
+      textRuns: var_textRuns,
+      bounds: var_bounds,
+      transform: var_transform,
+    );
+  }
+
+  @protected
+  NativeOpenEditorRequest sse_decode_native_open_editor_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sourcePath = sse_decode_String(deserializer);
+    return NativeOpenEditorRequest(sourcePath: var_sourcePath);
+  }
+
+  @protected
+  NativePageScene sse_decode_native_page_scene(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_width = sse_decode_f_64(deserializer);
+    var var_height = sse_decode_f_64(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_objects = sse_decode_list_native_scene_object(deserializer);
+    return NativePageScene(
+      schemaVersion: var_schemaVersion,
+      pageId: var_pageId,
+      pageNumber: var_pageNumber,
+      width: var_width,
+      height: var_height,
+      revision: var_revision,
+      objects: var_objects,
+    );
+  }
+
+  @protected
+  NativePageSceneRequest sse_decode_native_page_scene_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_expectedRevision = sse_decode_u_64(deserializer);
+    return NativePageSceneRequest(
+      pageNumber: var_pageNumber,
+      expectedRevision: var_expectedRevision,
+    );
+  }
+
+  @protected
   NativePdfAnnotations sse_decode_native_pdf_annotations(
     SseDeserializer deserializer,
   ) {
@@ -1232,6 +2315,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       id: var_id,
       title: var_title,
       pageNumber: var_pageNumber,
+    );
+  }
+
+  @protected
+  NativePdfBox sse_decode_native_pdf_box(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_left = sse_decode_f_64(deserializer);
+    var var_bottom = sse_decode_f_64(deserializer);
+    var var_right = sse_decode_f_64(deserializer);
+    var var_top = sse_decode_f_64(deserializer);
+    return NativePdfBox(
+      left: var_left,
+      bottom: var_bottom,
+      right: var_right,
+      top: var_top,
     );
   }
 
@@ -1408,11 +2506,188 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeSceneObject sse_decode_native_scene_object(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_scene_object_kind(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    var var_transform = sse_decode_native_affine_transform(deserializer);
+    var var_capability = sse_decode_String(deserializer);
+    var var_modifiedRevision = sse_decode_u_64(deserializer);
+    var var_runs = sse_decode_list_native_text_run(deserializer);
+    return NativeSceneObject(
+      kind: var_kind,
+      objectId: var_objectId,
+      pageId: var_pageId,
+      text: var_text,
+      bounds: var_bounds,
+      transform: var_transform,
+      capability: var_capability,
+      modifiedRevision: var_modifiedRevision,
+      runs: var_runs,
+    );
+  }
+
+  @protected
+  NativeSceneObjectKind sse_decode_native_scene_object_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeSceneObjectKind.values[inner];
+  }
+
+  @protected
+  NativeSubmitCommandRequest sse_decode_native_submit_command_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_payload = sse_decode_native_editor_command(deserializer);
+    return NativeSubmitCommandRequest(
+      schemaVersion: var_schemaVersion,
+      commandId: var_commandId,
+      baseRevision: var_baseRevision,
+      payload: var_payload,
+    );
+  }
+
+  @protected
+  NativeTextRun sse_decode_native_text_run(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_style = sse_decode_native_text_style(deserializer);
+    return NativeTextRun(start: var_start, end: var_end, style: var_style);
+  }
+
+  @protected
+  NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_fontFamily = sse_decode_opt_String(deserializer);
+    var var_fontSize = sse_decode_f_64(deserializer);
+    var var_fontWeight = sse_decode_u_16(deserializer);
+    var var_italic = sse_decode_bool(deserializer);
+    var var_colorRgba = sse_decode_list_prim_u_8_strict(deserializer);
+    return NativeTextStyle(
+      fontFamily: var_fontFamily,
+      fontSize: var_fontSize,
+      fontWeight: var_fontWeight,
+      italic: var_italic,
+      colorRgba: var_colorRgba,
+    );
+  }
+
+  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeAffineTransform? sse_decode_opt_box_autoadd_native_affine_transform(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_affine_transform(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_command_result(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_pdf_box(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeTextStyle? sse_decode_opt_box_autoadd_native_text_style(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_text_style(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  List<NativeTextRun>? sse_decode_opt_list_native_text_run(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_native_text_run(deserializer));
     } else {
       return null;
     }
@@ -1461,6 +2736,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  int sse_decode_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint16();
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
   int sse_decode_u_8(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return deserializer.buffer.getUint8();
@@ -1478,18 +2771,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  int sse_decode_i_32(SseDeserializer deserializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    return deserializer.buffer.getInt32();
-  }
-
-  @protected
   void sse_encode_AnyhowException(
     AnyhowException self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativeEditorSessionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
   }
 
   @protected
@@ -1520,6 +2820,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativeEditorSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     NativePdfSession self,
     SseSerializer serializer,
@@ -1527,6 +2840,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_usize(
       (self as NativePdfSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativeEditorSessionImpl).frbInternalSseEncode(move: null),
       serializer,
     );
   }
@@ -1562,6 +2888,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_native_editor_event_Sse(
+    RustStreamSink<NativeEditorEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_editor_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_String(String self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
@@ -1571,6 +2914,57 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_bool(bool self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_affine_transform(
+    NativeAffineTransform self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_affine_transform(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_command_result(
+    NativeCommandResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_command_result(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_open_editor_request(
+    NativeOpenEditorRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_open_editor_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_page_scene_request(
+    NativePageSceneRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_page_scene_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_pdf_box(
+    NativePdfBox self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_pdf_box(self, serializer);
   }
 
   @protected
@@ -1610,9 +3004,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_native_submit_command_request(
+    NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_submit_command_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_text_style(
+    NativeTextStyle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_text_style(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
   void sse_encode_f_32(double self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putFloat32(self);
+  }
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
   }
 
   @protected
@@ -1621,6 +3057,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_object_patch(
+    List<NativeObjectPatch> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_object_patch(item, serializer);
     }
   }
 
@@ -1685,6 +3133,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_native_scene_object(
+    List<NativeSceneObject> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_scene_object(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_text_run(
+    List<NativeTextRun> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_text_run(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_pdf_search_match(
     List<PdfSearchMatch> self,
     SseSerializer serializer,
@@ -1727,6 +3199,151 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_affine_transform(
+    NativeAffineTransform self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.a, serializer);
+    sse_encode_f_64(self.b, serializer);
+    sse_encode_f_64(self.c, serializer);
+    sse_encode_f_64(self.d, serializer);
+    sse_encode_f_64(self.e, serializer);
+    sse_encode_f_64(self.f, serializer);
+  }
+
+  @protected
+  void sse_encode_native_command_result(
+    NativeCommandResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.committedRevision, serializer);
+    sse_encode_list_native_object_patch(self.objectPatches, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_command(
+    NativeEditorCommand self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_editor_command_kind(self.kind, serializer);
+    sse_encode_opt_String(self.objectId, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.start, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.end, serializer);
+    sse_encode_opt_String(self.replacement, serializer);
+    sse_encode_opt_box_autoadd_native_text_style(self.style, serializer);
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.transform,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.radians, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.centerX, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.centerY, serializer);
+    sse_encode_opt_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_command_kind(
+    NativeEditorCommandKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_event(
+    NativeEditorEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_editor_event_kind(self.kind, serializer);
+    sse_encode_u_64(self.sequence, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.revision, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.latestRevision, serializer);
+    sse_encode_opt_box_autoadd_native_command_result(self.result, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_event_kind(
+    NativeEditorEventKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_metadata(
+    NativeEditorMetadata self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.sessionId, serializer);
+    sse_encode_String(self.documentId, serializer);
+    sse_encode_String(self.sourceFingerprint, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_u_32(self.pageCount, serializer);
+  }
+
+  @protected
+  void sse_encode_native_object_patch(
+    NativeObjectPatch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_u_64(self.modifiedRevision, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_opt_list_native_text_run(self.textRuns, serializer);
+    sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.transform,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_native_open_editor_request(
+    NativeOpenEditorRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.sourcePath, serializer);
+  }
+
+  @protected
+  void sse_encode_native_page_scene(
+    NativePageScene self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_f_64(self.width, serializer);
+    sse_encode_f_64(self.height, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_list_native_scene_object(self.objects, serializer);
+  }
+
+  @protected
+  void sse_encode_native_page_scene_request(
+    NativePageSceneRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_u_64(self.expectedRevision, serializer);
+  }
+
+  @protected
   void sse_encode_native_pdf_annotations(
     NativePdfAnnotations self,
     SseSerializer serializer,
@@ -1745,6 +3362,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.id, serializer);
     sse_encode_String(self.title, serializer);
     sse_encode_usize(self.pageNumber, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_box(NativePdfBox self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.left, serializer);
+    sse_encode_f_64(self.bottom, serializer);
+    sse_encode_f_64(self.right, serializer);
+    sse_encode_f_64(self.top, serializer);
   }
 
   @protected
@@ -1879,12 +3505,169 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_scene_object(
+    NativeSceneObject self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_scene_object_kind(self.kind, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+    sse_encode_native_affine_transform(self.transform, serializer);
+    sse_encode_String(self.capability, serializer);
+    sse_encode_u_64(self.modifiedRevision, serializer);
+    sse_encode_list_native_text_run(self.runs, serializer);
+  }
+
+  @protected
+  void sse_encode_native_scene_object_kind(
+    NativeSceneObjectKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_submit_command_request(
+    NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_native_editor_command(self.payload, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_run(
+    NativeTextRun self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_native_text_style(self.style, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_style(
+    NativeTextStyle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.fontFamily, serializer);
+    sse_encode_f_64(self.fontSize, serializer);
+    sse_encode_u_16(self.fontWeight, serializer);
+    sse_encode_bool(self.italic, serializer);
+    sse_encode_list_prim_u_8_strict(self.colorRgba, serializer);
+  }
+
+  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_affine_transform(
+    NativeAffineTransform? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_affine_transform(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_command_result(
+    NativeCommandResult? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_command_result(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_pdf_box(
+    NativePdfBox? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_pdf_box(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_text_style(
+    NativeTextStyle? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_text_style(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_native_text_run(
+    List<NativeTextRun>? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_native_text_run(self, serializer);
     }
   }
 
@@ -1924,6 +3707,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint16(self);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
   void sse_encode_u_8(int self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putUint8(self);
@@ -1939,12 +3740,58 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     serializer.buffer.putBigUint64(self);
   }
+}
 
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer) {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    serializer.buffer.putInt32(self);
-  }
+@sealed
+class NativeEditorSessionImpl extends RustOpaque
+    implements NativeEditorSession {
+  // Not to be used by end users
+  NativeEditorSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  NativeEditorSessionImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_NativeEditorSession,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_NativeEditorSession,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_NativeEditorSessionPtr,
+  );
+
+  Future<void> close() =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionClose(that: this);
+
+  Stream<NativeEditorEvent> events() =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionEvents(that: this);
+
+  Future<NativeEditorMetadata> metadata() => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionMetadata(that: this);
+
+  Future<NativePageScene> pageScene({
+    required NativePageSceneRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionPageScene(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeCommandResult> submit({
+    required NativeSubmitCommandRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionSubmit(
+    that: this,
+    request: request,
+  );
 }
 
 @sealed

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::text::utf16_range_to_byte_range;
 use crate::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentModel, DocumentObject,
-    DocumentRevision, EditCapability, EditingError, EditorCommand, ObjectId, ObjectPatch,
+    DocumentRevision, EditCapability, EditingError, EditorCommand, ObjectId, ObjectPatch, PageNode,
     SessionId, TextRun, Utf16Range,
 };
 
@@ -103,6 +103,23 @@ impl EditorSessionState {
             committed_revision: next_revision,
             object_patches,
         })
+    }
+
+    pub(crate) fn hydrate_page(
+        &mut self,
+        page: PageNode,
+        expected_revision: DocumentRevision,
+    ) -> Result<(), EditingError> {
+        self.ensure_open()?;
+        if expected_revision != self.revision() {
+            return Err(EditingError::RevisionConflict {
+                expected: expected_revision,
+                actual: self.revision(),
+            });
+        }
+        self.model
+            .hydrate_page(page)
+            .map_err(|error| EditingError::InvalidCommand(error.to_string()))
     }
 
     pub fn close(&mut self) {

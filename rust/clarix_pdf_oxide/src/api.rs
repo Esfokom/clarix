@@ -11,6 +11,8 @@ use crate::{
     PdfDocumentMetadata, PdfDocumentSession, PdfIndexingProgress, PdfSearchMatch, PdfTextChunk,
 };
 
+pub use crate::editing_api::*;
+
 #[derive(Debug, Clone)]
 pub struct NativePdfSource {
     pub path: String,
@@ -43,14 +45,12 @@ pub enum PdfIndexEvent {
 /// A persisted Dart chunk represented at the native RAG boundary. The
 /// fingerprint and ids are supplied by Flutter so an index can never be used
 /// for a different persisted document.
-#[cfg(feature = "rag")]
 #[derive(Debug, Clone)]
 pub struct NativeRagChunk {
     pub id: String,
     pub text: String,
 }
 
-#[cfg(feature = "rag")]
 #[derive(Debug, Clone)]
 pub struct NativeRagIndexRequest {
     pub storage_directory: String,
@@ -59,7 +59,6 @@ pub struct NativeRagIndexRequest {
     pub chunks: Vec<NativeRagChunk>,
 }
 
-#[cfg(feature = "rag")]
 #[derive(Debug, Clone)]
 pub struct NativeRagIndexResponse {
     pub status: String,
@@ -67,7 +66,6 @@ pub struct NativeRagIndexResponse {
     pub outcome: Option<String>,
 }
 
-#[cfg(feature = "rag")]
 #[derive(Debug, Clone)]
 pub struct NativeRagQueryRequest {
     pub storage_directory: String,
@@ -78,14 +76,12 @@ pub struct NativeRagQueryRequest {
     pub limit: usize,
 }
 
-#[cfg(feature = "rag")]
 #[derive(Debug, Clone)]
 pub struct NativeRagQueryResult {
     pub chunk_id: String,
     pub score: f32,
 }
 
-#[cfg(feature = "rag")]
 #[derive(Debug, Clone)]
 pub struct NativeRagQueryResponse {
     pub status: String,
@@ -298,6 +294,39 @@ pub fn local_rag_status(storage_directory: String, document_fingerprint: String)
         "failed".to_string()
     } else {
         "idle".to_string()
+    }
+}
+
+#[cfg(not(feature = "rag"))]
+pub fn local_rag_index(_request: NativeRagIndexRequest) -> NativeRagIndexResponse {
+    rag_disabled_response()
+}
+
+#[cfg(not(feature = "rag"))]
+pub fn local_rag_validate(_request: NativeRagIndexRequest) -> NativeRagIndexResponse {
+    rag_disabled_response()
+}
+
+#[cfg(not(feature = "rag"))]
+pub fn local_rag_query(_request: NativeRagQueryRequest) -> NativeRagQueryResponse {
+    NativeRagQueryResponse {
+        status: "failed".into(),
+        message: Some("native RAG feature is disabled".into()),
+        results: Vec::new(),
+    }
+}
+
+#[cfg(not(feature = "rag"))]
+pub fn local_rag_status(_storage_directory: String, _document_fingerprint: String) -> String {
+    "idle".into()
+}
+
+#[cfg(not(feature = "rag"))]
+fn rag_disabled_response() -> NativeRagIndexResponse {
+    NativeRagIndexResponse {
+        status: "failed".into(),
+        message: Some("native RAG feature is disabled".into()),
+        outcome: None,
     }
 }
 

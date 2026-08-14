@@ -59,6 +59,10 @@ pub struct DocumentRevision(u64);
 impl DocumentRevision {
     pub const INITIAL: Self = Self(0);
 
+    pub const fn from_value(value: u64) -> Self {
+        Self(value)
+    }
+
     pub const fn value(self) -> u64 {
         self.0
     }

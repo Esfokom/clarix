@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, EditingError,
-    EditorSessionState, SessionId,
+    EditorSessionState, PageNode, SessionId,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -34,6 +34,11 @@ enum ActorRequest {
         capacity: usize,
         reply: Sender<Result<Receiver<EditorEvent>, EditingError>>,
     },
+    HydratePage {
+        page: PageNode,
+        expected_revision: DocumentRevision,
+        reply: Sender<Result<(), EditingError>>,
+    },
     Close {
         reply: Sender<Result<(), EditingError>>,
     },
@@ -47,6 +52,7 @@ struct Subscriber {
 
 struct ActorInner {
     sender: Sender<ActorRequest>,
+    session_id: SessionId,
     closed: AtomicBool,
     worker: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
@@ -70,8 +76,11 @@ pub struct EditorSessionActor {
 
 impl EditorSessionActor {
     pub fn spawn(model: DocumentModel) -> Self {
+        Self::spawn_with_session(SessionId::new(), model)
+    }
+
+    pub fn spawn_with_session(session_id: SessionId, model: DocumentModel) -> Self {
         let (sender, receiver) = bounded(REQUEST_CAPACITY);
-        let session_id = SessionId::new();
         let worker = std::thread::Builder::new()
             .name(format!("clarix-editor-{session_id}"))
             .spawn(move || run_actor(receiver, EditorSessionState::new(session_id, model)))
@@ -79,10 +88,15 @@ impl EditorSessionActor {
         Self {
             inner: Arc::new(ActorInner {
                 sender,
+                session_id,
                 closed: AtomicBool::new(false),
                 worker: Mutex::new(Some(worker)),
             }),
         }
+    }
+
+    pub fn session_id(&self) -> SessionId {
+        self.inner.session_id
     }
 
     pub fn submit(&self, command: CommandEnvelope) -> Result<CommandResult, EditingError> {
@@ -111,6 +125,26 @@ impl EditorSessionActor {
 
     pub fn subscribe(&self) -> Result<Receiver<EditorEvent>, EditingError> {
         self.subscribe_with_capacity(DEFAULT_SUBSCRIBER_CAPACITY)
+    }
+
+    pub fn hydrate_page(
+        &self,
+        page: PageNode,
+        expected_revision: DocumentRevision,
+    ) -> Result<(), EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::HydratePage {
+                page,
+                expected_revision,
+                reply,
+            })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
     }
 
     pub fn subscribe_with_capacity(
@@ -204,6 +238,13 @@ fn run_actor(receiver: Receiver<ActorRequest>, mut session: EditorSessionState) 
                     });
                     let _ = reply.send(Ok(events));
                 }
+            }
+            ActorRequest::HydratePage {
+                page,
+                expected_revision,
+                reply,
+            } => {
+                let _ = reply.send(session.hydrate_page(page, expected_revision));
             }
             ActorRequest::Close { reply } => {
                 let revision = session.revision();
