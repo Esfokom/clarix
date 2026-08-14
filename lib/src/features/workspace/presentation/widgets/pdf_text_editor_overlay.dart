@@ -1,13 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../domain/pdf_edit_intent.dart';
-import '../../domain/pdf_edit_session.dart';
 import '../../domain/pdf_page_object.dart';
 import '../../domain/pdf_text_types.dart';
-import 'pdf_inline_text_editor.dart';
+import 'pdf_native_text_input.dart';
 
 typedef PdfTextBlockRectResolver = Rect Function(PdfTextBlock block);
 
@@ -54,20 +52,10 @@ final class PdfTextEditorOverlay extends StatefulWidget {
 
 final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
   PdfTextBlockLocator? _hovered;
-  TextEditingController? _textController;
-  FocusNode? _focusNode;
   PdfTextBlockLocator? _editingLocator;
-  String? _lastText;
   String? _typingGroup;
   PdfBox? _previewBounds;
   double _previewRotation = 0;
-
-  @override
-  void dispose() {
-    _textController?.dispose();
-    _focusNode?.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,22 +125,8 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
 
   Widget _inlineEditor(PdfTextBlock block) {
     if (_editingLocator != block.locator) {
-      _textController?.dispose();
-      _focusNode?.dispose();
       _editingLocator = block.locator;
-      _lastText = block.text;
       _typingGroup = _newTypingGroup();
-      _textController = TextEditingController(text: block.text);
-      _focusNode = FocusNode()..requestFocus();
-    } else if (_textController!.text != block.text && _lastText != block.text) {
-      final selection = _textController!.selection;
-      _textController!.value = TextEditingValue(
-        text: block.text,
-        selection: TextSelection.collapsed(
-          offset: selection.extentOffset.clamp(0, block.text.length),
-        ),
-      );
-      _lastText = block.text;
     }
     return Positioned.fromRect(
       rect: widget.rectForBlock(block),
@@ -160,51 +134,33 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
-            child: Focus(
-              onKeyEvent: (_, event) {
-                if (event is KeyDownEvent &&
-                    event.logicalKey == LogicalKeyboardKey.escape) {
+            child: Container(
+              key: const Key('pdf-text-block-outline'),
+              decoration: BoxDecoration(
+                color: const Color(0xff2563eb).withValues(alpha: 0.04),
+                border: Border.all(color: const Color(0xff2563eb), width: 1.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: PdfNativeTextInput(
+                block: block,
+                selection: widget.selection!,
+                onEscape: () {
                   _typingGroup = null;
                   widget.onClearSelection?.call();
-                  return KeyEventResult.handled;
-                }
-                if (event is KeyDownEvent &&
-                    HardwareKeyboard.instance.isControlPressed &&
-                    event.logicalKey == LogicalKeyboardKey.keyZ) {
-                  if (HardwareKeyboard.instance.isShiftPressed) {
-                    widget.onRedo?.call();
-                  } else {
-                    widget.onUndo?.call();
-                  }
-                  return KeyEventResult.handled;
-                }
-                return KeyEventResult.ignored;
-              },
-              child: PdfInlineTextEditor(
-                block: block,
-                controller: _textController!,
-                focusNode: _focusNode!,
-                geometry: PdfInlineTextGeometry.resolve(
-                  block: block,
-                  pageSize: Size(block.bounds.width, block.bounds.height),
-                  overlaySize: widget.rectForBlock(block).size,
-                ),
-                onChanged: (next) {
-                  final before = _lastText ?? block.text;
-                  final delta = PdfTextDelta.between(before, next);
-                  _lastText = next;
-                  widget.onIntent!(
-                    ReplacePdfTextIntent(
-                      documentId: widget.documentId!,
-                      documentRevision: widget.documentRevision!,
-                      locator: block.locator,
-                      range: delta.replacedRange,
-                      replacement: delta.insertedText,
-                      caseMatching: widget.caseMatching,
-                      coalescingKey: _typingGroup ??= _newTypingGroup(),
-                    ),
-                  );
                 },
+                onUndo: widget.onUndo,
+                onRedo: widget.onRedo,
+                onDelta: (delta) => widget.onIntent!(
+                  ReplacePdfTextIntent(
+                    documentId: widget.documentId!,
+                    documentRevision: widget.documentRevision!,
+                    locator: block.locator,
+                    range: delta.replacedRange,
+                    replacement: delta.insertedText,
+                    caseMatching: widget.caseMatching,
+                    coalescingKey: _typingGroup ??= _newTypingGroup(),
+                  ),
+                ),
               ),
             ),
           ),

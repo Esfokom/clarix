@@ -252,12 +252,12 @@ final class PdfEditingController extends ChangeNotifier {
     PdfDocument document,
     PdfTextBlockLocator locator,
   ) async {
+    registerDocument(tabId, document);
     final session = sessionFor(tabId);
-    final block = session.blocks.firstWhere(
+    session.blocks.firstWhere(
       (candidate) => candidate.locator == locator,
       orElse: () => throw PdfStaleLocatorFailure(locator),
     );
-    await _preview?.suppressText(document, block);
     replaceSession(
       tabId,
       session.withSelection(
@@ -266,7 +266,7 @@ final class PdfEditingController extends ChangeNotifier {
     );
   }
 
-  @Deprecated('Use selectTextBlock so native glyph suppression is awaited.')
+  @Deprecated('Use selectTextBlock so the live document is registered.')
   void selectBlock(String tabId, PdfTextBlockLocator locator) {
     final session = sessionFor(tabId);
     replaceSession(
@@ -278,8 +278,7 @@ final class PdfEditingController extends ChangeNotifier {
   }
 
   Future<void> clearSelection(String tabId, {PdfDocument? document}) async {
-    final target = document ?? _documentsByTab[tabId];
-    if (target != null) await _preview?.restoreSuppressedText(target);
+    if (document != null) registerDocument(tabId, document);
     replaceSession(tabId, sessionFor(tabId).withSelection(null));
   }
 

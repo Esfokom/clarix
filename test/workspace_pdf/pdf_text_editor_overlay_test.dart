@@ -1,3 +1,4 @@
+import 'package:clarix/src/features/workspace/domain/pdf_edit_intent.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_text_editor_overlay.dart';
 import 'package:flutter/material.dart';
@@ -69,6 +70,44 @@ void main() {
     expect(find.byKey(const Key('pdf-text-block-read-only')), findsOneWidget);
     await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
     expect(selected, _locator);
+  });
+
+  testWidgets('selected block accepts input without painting editable glyphs', (
+    tester,
+  ) async {
+    final intents = <PdfEditIntent>[];
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PdfTextEditorOverlay(
+            mode: PdfEditingMode.object,
+            blocks: <PdfTextBlock>[_block()],
+            selection: PdfTextSelection(
+              locator: _locator,
+              range: const PdfTextRange(0, 13),
+            ),
+            rectForBlock: (_) => const Rect.fromLTWH(20, 30, 120, 24),
+            onSelect: (_) {},
+            documentId: 'document',
+            documentRevision: 'revision',
+            onIntent: intents.add,
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(EditableText), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    expect(find.byKey(const Key('pdf-native-text-input')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-text-block-outline')), findsOneWidget);
+
+    tester.testTextInput.enterText('After');
+    await tester.pump();
+
+    final intent = intents.single as ReplacePdfTextIntent;
+    expect(intent.range, const PdfTextRange(0, 13));
+    expect(intent.replacement, 'After');
   });
 }
 

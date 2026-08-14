@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Ctrl+Z routes to PDF history while inline editor has focus', (
+  testWidgets('Ctrl+Z routes to PDF history while native input has focus', (
     tester,
   ) async {
     var undoCount = 0;
@@ -31,7 +31,8 @@ void main() {
         ),
       ),
     );
-    await tester.tap(find.byKey(const Key('pdf-inline-text-editor')));
+    await tester.pump();
+    expect(find.byKey(const Key('pdf-native-text-input')), findsOneWidget);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
