@@ -8,6 +8,7 @@ mod ids;
 mod model;
 mod session;
 mod text;
+mod tools;
 
 pub use actor::{EditorEvent, EditorSessionActor};
 pub use command::{ActorKind, CommandEnvelope, CommandResult, EditorCommand, ObjectPatch};
@@ -20,3 +21,4 @@ pub use model::{
 };
 pub use session::EditorSessionState;
 pub use text::{validate_utf16_range, TextRangeError, TextRun, TextStyle, Utf16Range};
+pub use tools::{EditingToolGateway, ObjectSummary, ToolObservation, ToolRequest, ToolRisk};
