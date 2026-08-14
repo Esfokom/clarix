@@ -83,8 +83,9 @@ final class PdfEditingController extends ChangeNotifier {
     if (session.overflowingLocators.isNotEmpty) {
       throw PdfTextOverflowFailure(locator: session.overflowingLocators.first);
     }
-    if (document != null && coordinator == null)
+    if (document != null && coordinator == null) {
       await _preview?.clear(document);
+    }
     final outcome = document != null && coordinator != null
         ? await service.saveEncoded(
             path: path,
