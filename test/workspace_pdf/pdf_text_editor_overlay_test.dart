@@ -77,6 +77,7 @@ void main() {
     tester,
   ) async {
     final intents = <PdfEditIntent>[];
+    final selections = <PdfTextRange>[];
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -93,6 +94,7 @@ void main() {
             documentId: 'document',
             documentRevision: 'revision',
             onIntent: intents.add,
+            onSelectionChanged: selections.add,
           ),
         ),
       ),
@@ -116,6 +118,11 @@ void main() {
     final intent = intents.single as ReplacePdfTextIntent;
     expect(intent.range, const PdfTextRange(0, 13));
     expect(intent.replacement, 'After');
+    expect(
+      selections,
+      <PdfTextRange>[const PdfTextRange(5, 5)],
+      reason: 'The visible caret must follow the platform text client.',
+    );
   });
 
   testWidgets('single click selects an object and double click enters text', (

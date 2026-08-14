@@ -70,6 +70,24 @@ void main() {
 
     expect(coordinator.latestResult(document), isNull);
   });
+
+  test('reloads the page prefix required by pdfrx for a later page', () async {
+    final fixture = await PdfTextFixture.singleBlock('Before');
+    addTearDown(() => fixture.parent.delete(recursive: true));
+    final document = await PdfDocument.openFile(fixture.path);
+    addTearDown(document.dispose);
+    final reloads = <List<int>>[];
+    final coordinator = PdfNativeEditCoordinator(
+      mutator: _ImmediateLiveMutator(affectedPages: const <int>[1, 3]),
+      reloadPages: (_, pages) async => reloads.add(List<int>.of(pages)),
+    );
+
+    await coordinator.projectBlock(document, _request(4, 'Changed'));
+
+    expect(reloads, <List<int>>[
+      <int>[1, 2, 3],
+    ]);
+  });
 }
 
 Future<void> _waitFor(bool Function() predicate) async {
@@ -169,11 +187,22 @@ final class _ControlledLiveMutator implements PdfLiveDocumentMutator {
 }
 
 final class _ImmediateLiveMutator implements PdfLiveDocumentMutator {
+  _ImmediateLiveMutator({this.affectedPages = const <int>[1]});
+
+  final List<int> affectedPages;
+
   @override
   Future<PdfNativeProjectionResult> projectTextBlock({
     required PdfDocument document,
     required PdfNativeProjectionRequest request,
-  }) async => _result(request.editRevision, request.block.text);
+  }) async => PdfNativeProjectionResult(
+    requestedRevision: request.editRevision,
+    appliedRevision: request.editRevision,
+    block: request.block,
+    lines: const <PdfNativeLine>[],
+    characters: const <PdfNativeCharacterBox>[],
+    affectedPages: affectedPages,
+  );
 
   @override
   Future<Uint8List> encodeLiveDocument({required PdfDocument document}) async =>

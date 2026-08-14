@@ -50,7 +50,7 @@ final class PdfNativeEditCoordinator {
       state.latestResult = result;
       if (request.readOnlyGeometry) return;
       final pages = result.affectedPages.toSet().toList()..sort();
-      await _reloadPages(document, pages);
+      await _reloadPages(document, _pdfrxReloadPrefix(pages));
     });
   }
 
@@ -86,6 +86,14 @@ final class PdfNativeEditCoordinator {
     PdfDocument document,
     List<int> pageNumbers,
   ) => document.reloadPages(pageNumbersToReload: pageNumbers);
+
+  static List<int> _pdfrxReloadPrefix(List<int> affectedPages) {
+    if (affectedPages.isEmpty) return const <int>[];
+    // pdfrx_engine 0.4.6 installs partial reload results by result index
+    // instead of the requested page number. Supplying the complete prefix
+    // keeps those indices aligned and invalidates the actual edited page.
+    return List<int>.generate(affectedPages.last, (index) => index + 1);
+  }
 }
 
 final class _DocumentProjectionState {

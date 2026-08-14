@@ -194,6 +194,7 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
                   },
                   onUndo: widget.onUndo,
                   onRedo: widget.onRedo,
+                  onSelectionChanged: widget.onSelectionChanged,
                   onDelta: (delta) => widget.onIntent!(
                     ReplacePdfTextIntent(
                       documentId: widget.documentId!,

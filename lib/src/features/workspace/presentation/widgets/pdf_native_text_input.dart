@@ -9,6 +9,7 @@ final class PdfNativeTextInput extends StatefulWidget {
     required this.block,
     required this.selection,
     required this.onDelta,
+    this.onSelectionChanged,
     this.onEscape,
     this.onUndo,
     this.onRedo,
@@ -18,6 +19,7 @@ final class PdfNativeTextInput extends StatefulWidget {
   final PdfTextBlock block;
   final PdfTextSelection selection;
   final ValueChanged<PdfTextDelta> onDelta;
+  final ValueChanged<PdfTextRange>? onSelectionChanged;
   final VoidCallback? onEscape;
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
@@ -137,6 +139,11 @@ final class _PdfNativeTextInputState extends State<PdfNativeTextInput>
     if (value == _value) return;
     final delta = PdfTextDelta.between(_value.text, value.text);
     _value = value;
+    if (value.selection.isValid) {
+      widget.onSelectionChanged?.call(
+        PdfTextRange(value.selection.start, value.selection.end),
+      );
+    }
     if (delta.replacedRange.isEmpty && delta.insertedText.isEmpty) return;
     _pendingTexts.add(value.text);
     widget.onDelta(delta);
