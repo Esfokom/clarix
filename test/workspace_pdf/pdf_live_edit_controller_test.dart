@@ -29,6 +29,20 @@ void main() {
     expect(harness.controller.sessionFor('tab').blocks.single.text, 'After');
   });
 
+  test('selecting a text block primes native caret geometry', () async {
+    final harness = await _Harness.create();
+    addTearDown(harness.dispose);
+
+    await harness.controller.selectTextBlock(
+      'tab',
+      harness.document,
+      harness.controller.sessionFor('tab').blocks.single.locator,
+    );
+
+    expect(harness.mutator.requests, hasLength(1));
+    expect(harness.controller.nativeResultFor('tab')?.block.text, 'Before');
+  });
+
   test('native projection failure restores the prior session', () async {
     final harness = await _Harness.create(failProjection: true);
     addTearDown(harness.dispose);

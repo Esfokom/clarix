@@ -55,12 +55,29 @@ final class PdfTextEditorOverlay extends StatefulWidget {
   State<PdfTextEditorOverlay> createState() => _PdfTextEditorOverlayState();
 }
 
-final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
+final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
+    with SingleTickerProviderStateMixin {
   PdfTextBlockLocator? _hovered;
   PdfTextBlockLocator? _editingLocator;
   String? _typingGroup;
   PdfBox? _previewBounds;
   double _previewRotation = 0;
+  AnimationController? _caretController;
+
+  @override
+  void initState() {
+    super.initState();
+    _caretController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 530),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _caretController?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +268,14 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
         top: caretRect.top,
         width: 1.2,
         height: caretRect.height.clamp(1, double.infinity),
-        child: const ColoredBox(color: Color(0xff2563eb)),
+        child: FadeTransition(
+          key: const Key('pdf-native-caret-blink'),
+          opacity: Tween<double>(
+            begin: 0.15,
+            end: 1,
+          ).animate(_caretController!),
+          child: const ColoredBox(color: Color(0xff2563eb)),
+        ),
       ),
     );
     return widgets;

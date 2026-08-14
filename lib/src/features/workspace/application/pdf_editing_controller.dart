@@ -369,6 +369,9 @@ final class PdfEditingController extends ChangeNotifier {
         PdfTextSelection(locator: locator, range: const PdfTextRange(0, 0)),
       ),
     );
+    await _projectBlocks(tabId, sessionFor(tabId), <PdfTextBlockLocator>[
+      locator,
+    ]);
   }
 
   @Deprecated('Use selectTextBlock so the live document is registered.')

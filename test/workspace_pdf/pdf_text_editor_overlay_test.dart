@@ -101,6 +101,12 @@ void main() {
     expect(find.byType(TextField), findsNothing);
     expect(find.byKey(const Key('pdf-native-text-input')), findsOneWidget);
     expect(find.byKey(const Key('pdf-text-block-outline')), findsOneWidget);
+    expect(tester.testTextInput.hasAnyClients, isTrue);
+    expect(
+      tester.testTextInput.setClientArgs?['viewId'],
+      tester.view.viewId,
+      reason: 'Windows rejects text input clients without an owning view ID.',
+    );
 
     tester.testTextInput.enterText('After');
     await tester.pump();

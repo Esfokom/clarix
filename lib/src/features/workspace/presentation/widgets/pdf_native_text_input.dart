@@ -111,7 +111,8 @@ final class _PdfNativeTextInputState extends State<PdfNativeTextInput>
       // the framework a mounted view and avoids a dead text-input client.
       final connection = TextInput.attach(
         this,
-        const TextInputConfiguration(
+        TextInputConfiguration(
+          viewId: View.of(context).viewId,
           inputType: TextInputType.multiline,
           inputAction: TextInputAction.newline,
           autocorrect: true,

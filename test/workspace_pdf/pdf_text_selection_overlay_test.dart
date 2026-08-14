@@ -34,6 +34,7 @@ void main() {
     await tester.pump();
 
     expect(find.byKey(const Key('pdf-native-caret')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-native-caret-blink')), findsOneWidget);
     expect(find.byKey(const Key('pdf-native-selection')), findsNWidgets(2));
     expect(find.byType(EditableText), findsNothing);
 
