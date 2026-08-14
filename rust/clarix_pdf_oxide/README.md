@@ -38,3 +38,22 @@ cargo build --release --features ocr --manifest-path rust/clarix_pdf_oxide/Cargo
 ```
 
 Document bytes and OCR inputs remain local. Model acquisition is a separate, user-initiated network operation.
+
+## Phase 0 editing foundation
+
+The Windows editing foundation is split into four crates: the canonical model and
+session actor in `clarix_editing_core`, typed agent tools in `clarix_agent_core`,
+the read-only PDF qualification adapter in `clarix_pdf_adapter`, and this crate as
+the only Flutter FFI/DLL facade. Canonical IDs and snapshots never contain native
+PDF handles.
+
+From the repository root, run the reproducible checks with:
+
+```text
+pwsh -File tool/editing_foundation/run_phase0_checks.ps1
+pwsh -File tool/editing_foundation/record_baseline.ps1 -OutputPath docs/testing/editing-phase0-baseline.json
+```
+
+Binding regeneration is opt-in with `-IncludeBindingGeneration`. The Windows
+release build is deliberately opt-in with `-IncludeNativeBuild`; its explicit
+manual command remains the `cargo build --release` command above.

@@ -454,6 +454,7 @@ fn safe_file_stem(value: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::items_after_test_module)]
 mod tests {
     use super::{EmbeddingBackend, RagChunk, RagIndexPaths, VectorRagEngine};
     use std::collections::HashMap;
