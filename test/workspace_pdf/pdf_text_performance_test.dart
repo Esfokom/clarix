@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:clarix/src/features/workspace/application/pdf_editing_controller.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_edit_intent.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_native_edit_types.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_page_object.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/infrastructure/pdf_text_engine.dart';
@@ -105,6 +106,16 @@ PdfEditingSession _session() {
 
 final class _CountingPdfTextEngine implements PdfTextEngine {
   int inspectCalls = 0;
+
+  @override
+  Future<PdfNativeProjectionResult> projectTextBlock({
+    required PdfDocument document,
+    required PdfNativeProjectionRequest request,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<Uint8List> encodeLiveDocument({required PdfDocument document}) async =>
+      Uint8List(0);
 
   @override
   Future<Uint8List> applyDraft({

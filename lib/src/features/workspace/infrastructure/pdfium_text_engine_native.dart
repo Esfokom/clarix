@@ -11,6 +11,7 @@ import 'package:pdfium_flutter/pdfium_flutter.dart';
 import '../domain/pdf_text_types.dart';
 import '../domain/pdf_page_object.dart';
 import '../domain/pdf_edit_session.dart';
+import '../domain/pdf_native_edit_types.dart';
 import '../domain/pdf_edit_command.dart';
 import '../domain/pdf_text_layout.dart';
 import 'pdf_text_block_grouper.dart';
@@ -24,6 +25,16 @@ final class PdfiumTextEngine implements PdfTextEngine {
   const PdfiumTextEngine({this.fontCatalog});
 
   final InstalledFontCatalog? fontCatalog;
+
+  @override
+  Future<PdfNativeProjectionResult> projectTextBlock({
+    required PdfDocument document,
+    required PdfNativeProjectionRequest request,
+  }) => throw const PdfNativeEditingUnavailableFailure();
+
+  @override
+  Future<Uint8List> encodeLiveDocument({required PdfDocument document}) =>
+      document.encodePdf(incremental: false);
 
   static final Expando<String> _knownRevisions = Expando<String>();
   @override

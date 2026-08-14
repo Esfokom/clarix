@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../domain/pdf_edit_session.dart';
+import '../domain/pdf_native_edit_types.dart';
 import '../domain/pdf_page_object.dart';
 import '../domain/pdf_text_types.dart';
 import 'pdf_text_engine.dart';
@@ -11,6 +12,16 @@ PdfTextEngine createPdfTextEngine() => const PdfiumTextEngineStub();
 
 final class PdfiumTextEngineStub implements PdfTextEngine {
   const PdfiumTextEngineStub();
+
+  @override
+  Future<PdfNativeProjectionResult> projectTextBlock({
+    required PdfDocument document,
+    required PdfNativeProjectionRequest request,
+  }) => throw const PdfNativeEditingUnavailableFailure();
+
+  @override
+  Future<Uint8List> encodeLiveDocument({required PdfDocument document}) =>
+      throw const PdfNativeEditingUnavailableFailure();
 
   @override
   Future<Uint8List> applyDraft({
