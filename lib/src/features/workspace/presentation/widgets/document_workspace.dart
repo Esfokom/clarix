@@ -17,9 +17,11 @@ import '../../../../core/theme_profile.dart';
 import '../../application/pdf_editing_controller.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/pdf_edit_session.dart';
+import '../../domain/pdf_page_object.dart';
 import '../../domain/pdf_text_types.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'pdf_text_editor_overlay.dart';
+import 'pdf_object_transform_overlay.dart';
 import 'pdf_viewer_interaction_math.dart';
 import 'workspace_common.dart';
 
@@ -617,6 +619,46 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             viewerOverlayBuilder: _buildViewerOverlay,
                             pageOverlaysBuilder: (context, pageRect, page) =>
                                 <Widget>[
+                                  if (editSession?.mode ==
+                                          PdfEditingMode.text &&
+                                      editSession != null)
+                                    PdfObjectTransformOverlay(
+                                      objects: editSession.pageObjects
+                                          .where(
+                                            (object) =>
+                                                object.locator.pageNumber ==
+                                                    page.pageNumber &&
+                                                object.locator.type !=
+                                                    PdfPageObjectType.text,
+                                          )
+                                          .toList(growable: false),
+                                      rectForObject: (object) =>
+                                          PdfRect(
+                                            object.bounds.left,
+                                            object.bounds.top,
+                                            object.bounds.right,
+                                            object.bounds.bottom,
+                                          ).toRect(
+                                            page: page,
+                                            scaledPageSize: pageRect.size,
+                                          ),
+                                      documentId: editSession.documentId,
+                                      documentRevision: editSession.revision,
+                                      onIntent: (intent) => unawaited(
+                                        editing.dispatch(
+                                          intent,
+                                          provenance:
+                                              PdfCommandProvenance.manual,
+                                        ),
+                                      ),
+                                      onPreview: (locator, transform) =>
+                                          editing.previewTransform(
+                                            widget.tab.id,
+                                            _controller.document,
+                                            locator,
+                                            transform,
+                                          ),
+                                    ),
                                   PdfTextEditorOverlay(
                                     mode:
                                         editSession?.mode ??
