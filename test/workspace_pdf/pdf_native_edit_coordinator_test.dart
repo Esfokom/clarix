@@ -71,7 +71,7 @@ void main() {
     expect(coordinator.latestResult(document), isNull);
   });
 
-  test('reloads the page prefix required by pdfrx for a later page', () async {
+  test('requests repaint only for affected pages', () async {
     final fixture = await PdfTextFixture.singleBlock('Before');
     addTearDown(() => fixture.parent.delete(recursive: true));
     final document = await PdfDocument.openFile(fixture.path);
@@ -85,7 +85,7 @@ void main() {
     await coordinator.projectBlock(document, _request(4, 'Changed'));
 
     expect(reloads, <List<int>>[
-      <int>[1, 2, 3],
+      <int>[1, 3],
     ]);
   });
 }

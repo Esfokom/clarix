@@ -1,6 +1,8 @@
 import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/document_workspace.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/services.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 void main() {
   test(
@@ -20,4 +22,23 @@ void main() {
       );
     },
   );
+
+  test('pdfrx page navigation keys are consumed during text editing', () {
+    expect(
+      viewerKeyHandlerFor(PdfEditingInteraction.textEditing)(
+        const PdfViewerKeyHandlerParams(),
+        LogicalKeyboardKey.space,
+        true,
+      ),
+      isTrue,
+    );
+    expect(
+      viewerKeyHandlerFor(PdfEditingInteraction.reading)(
+        const PdfViewerKeyHandlerParams(),
+        LogicalKeyboardKey.space,
+        true,
+      ),
+      isNull,
+    );
+  });
 }

@@ -134,13 +134,13 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
         },
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
-          onTap: () => widget.onSelect(block.locator),
-          onDoubleTap: block.isEditable
-              ? () => widget.onBeginTextEditing?.call(
+          onTapDown: block.isEditable
+              ? (details) => widget.onBeginTextEditing?.call(
                   block.locator,
-                  PdfTextRange(0, block.text.length),
+                  _collapsedRangeAt(block, details.localPosition),
                 )
               : null,
+          onTap: block.isEditable ? null : () => widget.onSelect(block.locator),
           child: Container(
             key: const Key('pdf-text-block-outline'),
             decoration: BoxDecoration(
@@ -246,6 +246,32 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
       projection.characters,
     );
     callback(PdfTextRange(offset, offset));
+  }
+
+  int _offsetAtPosition(PdfTextBlock block, Offset localPosition) {
+    final projection = widget.nativeProjection;
+    final rect = widget.rectForBlock(block);
+    if (projection != null &&
+        projection.block.locator == block.locator &&
+        projection.characters.isNotEmpty) {
+      final x =
+          block.bounds.left +
+          localPosition.dx / rect.width * block.bounds.width;
+      final y =
+          block.bounds.top -
+          localPosition.dy / rect.height * block.bounds.height;
+      return PdfNativeTextGeometry.offsetNearest(x, y, projection.characters);
+    }
+    if (block.text.isEmpty || rect.width <= 0) return 0;
+    return (localPosition.dx / rect.width * block.text.length).round().clamp(
+      0,
+      block.text.length,
+    );
+  }
+
+  PdfTextRange _collapsedRangeAt(PdfTextBlock block, Offset localPosition) {
+    final offset = _offsetAtPosition(block, localPosition);
+    return PdfTextRange(offset, offset);
   }
 
   List<Widget> _selectionChrome(PdfTextBlock block) {

@@ -407,6 +407,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   Offset? _selectionMenuPosition;
   Offset? _selectionAutoPanPointer;
   Timer? _selectionAutoPanTimer;
+  int? _lastRepaintedEditRevision;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -509,6 +510,16 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     );
     final PdfEditingSession? editSession =
         editing.sessionsByTabId[widget.tab.id];
+    final nativeProjection = editing.nativeResultFor(widget.tab.id);
+    if (nativeProjection != null &&
+        nativeProjection.appliedRevision != _lastRepaintedEditRevision) {
+      _lastRepaintedEditRevision = nativeProjection.appliedRevision;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _controller.isReady) {
+          _controller.forceRepaintAllPageImages();
+        }
+      });
+    }
     final String? readerBackgroundPath = ref
         .watch(clarixThemeProvider)
         .value
@@ -614,6 +625,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                               editSession?.interaction ??
                                   PdfEditingInteraction.reading,
                             ),
+                            onKey: viewerKeyHandlerFor(
+                              editSession?.interaction ??
+                                  PdfEditingInteraction.reading,
+                            ),
                             buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
                                 input.interactionDelegateProvider,
@@ -686,9 +701,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                             .toList(growable: false) ??
                                         const <PdfTextBlock>[],
                                     selection: editSession?.selection,
-                                    nativeProjection: editing.nativeResultFor(
-                                      widget.tab.id,
-                                    ),
+                                    nativeProjection: nativeProjection,
                                     onSelectionChanged: (range) => editing
                                         .setTextSelection(widget.tab.id, range),
                                     pageObjects:
@@ -735,14 +748,22 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                       }());
                                     },
                                     onBeginTextEditing: (locator, range) {
-                                      unawaited(
-                                        editing.beginTextEditing(
+                                      unawaited(() async {
+                                        await editing.beginTextEditing(
                                           widget.tab.id,
                                           _controller.document,
                                           locator,
                                           range,
-                                        ),
-                                      );
+                                        );
+                                        await ref
+                                            .read(
+                                              workspaceNotifierProvider
+                                                  .notifier,
+                                            )
+                                            .selectRightToolWindow(
+                                              RightToolWindow.textFormat,
+                                            );
+                                      }());
                                     },
                                     documentId: editSession?.documentId,
                                     documentRevision: editSession?.revision,
@@ -2135,3 +2156,6 @@ PdfTextSelectionParams textSelectionParamsFor(
   enabled: interaction == PdfEditingInteraction.reading,
   showContextMenuAutomatically: interaction == PdfEditingInteraction.reading,
 );
+
+PdfViewerOnKeyCallback viewerKeyHandlerFor(PdfEditingInteraction interaction) =>
+    (_, _, _) => interaction == PdfEditingInteraction.textEditing ? true : null;

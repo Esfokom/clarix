@@ -125,10 +125,9 @@ void main() {
     );
   });
 
-  testWidgets('single click selects an object and double click enters text', (
+  testWidgets('single click enters text with a collapsed caret', (
     tester,
   ) async {
-    final selected = <PdfTextBlockLocator>[];
     final editingRanges = <PdfTextRange>[];
     var interaction = PdfEditingInteraction.reading;
     late StateSetter update;
@@ -150,7 +149,6 @@ void main() {
                       ),
                 rectForBlock: (_) => const Rect.fromLTWH(20, 30, 120, 24),
                 onSelect: (locator) {
-                  selected.add(locator);
                   update(
                     () => interaction = PdfEditingInteraction.objectSelected,
                   );
@@ -169,18 +167,12 @@ void main() {
       ),
     );
 
-    await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
-    await tester.pump(const Duration(milliseconds: 400));
-    expect(selected, <PdfTextBlockLocator>[_locator]);
-    expect(find.byKey(const Key('pdf-native-text-input')), findsNothing);
-
-    await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
-    await tester.pump(const Duration(milliseconds: 50));
-    await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
+    await tester.tapAt(const Offset(80, 42));
     await tester.pump();
-    expect(editingRanges, <PdfTextRange>[const PdfTextRange(0, 13)]);
+    expect(editingRanges, hasLength(1));
+    expect(editingRanges.single.isEmpty, isTrue);
+    expect(editingRanges.single, isNot(const PdfTextRange(0, 13)));
     expect(find.byKey(const Key('pdf-native-text-input')), findsOneWidget);
-    await tester.pump(const Duration(milliseconds: 400));
   });
 }
 

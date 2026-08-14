@@ -14,7 +14,7 @@ final class PdfNativeEditCoordinator {
   PdfNativeEditCoordinator({
     required this.mutator,
     PdfNativePageReloader? reloadPages,
-  }) : _reloadPages = reloadPages ?? _reloadDocumentPages;
+  }) : _reloadPages = reloadPages ?? _deferViewerRepaint;
 
   final PdfLiveDocumentMutator mutator;
   final PdfNativePageReloader _reloadPages;
@@ -50,7 +50,7 @@ final class PdfNativeEditCoordinator {
       state.latestResult = result;
       if (request.readOnlyGeometry) return;
       final pages = result.affectedPages.toSet().toList()..sort();
-      await _reloadPages(document, _pdfrxReloadPrefix(pages));
+      await _reloadPages(document, pages);
     });
   }
 
@@ -82,18 +82,12 @@ final class PdfNativeEditCoordinator {
     return next;
   }
 
-  static Future<void> _reloadDocumentPages(
+  // The viewer observes the published projection and clears its image cache.
+  // Replacing PdfPage objects here moves pdfrx's scroll anchor while typing.
+  static Future<void> _deferViewerRepaint(
     PdfDocument document,
     List<int> pageNumbers,
-  ) => document.reloadPages(pageNumbersToReload: pageNumbers);
-
-  static List<int> _pdfrxReloadPrefix(List<int> affectedPages) {
-    if (affectedPages.isEmpty) return const <int>[];
-    // pdfrx_engine 0.4.6 installs partial reload results by result index
-    // instead of the requested page number. Supplying the complete prefix
-    // keeps those indices aligned and invalidates the actual edited page.
-    return List<int>.generate(affectedPages.last, (index) => index + 1);
-  }
+  ) async {}
 }
 
 final class _DocumentProjectionState {
