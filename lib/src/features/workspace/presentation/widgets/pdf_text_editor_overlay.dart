@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../domain/pdf_edit_intent.dart';
 import '../../domain/pdf_edit_session.dart';
+import '../../domain/pdf_page_object.dart';
 import '../../domain/pdf_text_types.dart';
 import 'pdf_inline_text_editor.dart';
 
@@ -15,6 +18,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
     required this.selection,
     required this.rectForBlock,
     required this.onSelect,
+    this.pageObjects = const <PdfPageObject>[],
+    this.onObjectPreview,
     this.loading = false,
     this.documentId,
     this.documentRevision,
@@ -31,6 +36,9 @@ final class PdfTextEditorOverlay extends StatefulWidget {
   final PdfTextSelection? selection;
   final PdfTextBlockRectResolver rectForBlock;
   final ValueChanged<PdfTextBlockLocator> onSelect;
+  final List<PdfPageObject> pageObjects;
+  final Future<void> Function(PdfPageObjectLocator, PdfTransform)?
+  onObjectPreview;
   final bool loading;
   final String? documentId;
   final String? documentRevision;
@@ -52,6 +60,7 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
   String? _lastText;
   String? _typingGroup;
   PdfBox? _previewBounds;
+  double _previewRotation = 0;
 
   @override
   void dispose() {
@@ -200,6 +209,8 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
             ),
           ),
           _moveHandle(block),
+          if (_pageObjectFor(block) case final object?)
+            _textRotateHandle(object),
           _resizeHandle(block, 'north-west', -1, 1),
           _resizeHandle(block, 'north', 0, 1),
           _resizeHandle(block, 'north-east', 1, 1),
@@ -212,6 +223,55 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
       ),
     );
   }
+
+  PdfPageObject? _pageObjectFor(PdfTextBlock block) {
+    for (final object in widget.pageObjects) {
+      if (object.locator.type == PdfPageObjectType.text &&
+          _samePath(object.locator.objectPath, block.locator.objectPath)) {
+        return object;
+      }
+    }
+    return null;
+  }
+
+  Widget _textRotateHandle(PdfPageObject object) => Positioned(
+    top: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    child: GestureDetector(
+      key: const Key('pdf-text-rotate-handle'),
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (_) => _previewRotation = 0,
+      onPanUpdate: (details) {
+        _previewRotation += (details.delta.dx + details.delta.dy) * 0.01;
+        final center = object.transform.transformPoint(
+          Offset(
+            (object.bounds.left + object.bounds.right) / 2,
+            (object.bounds.bottom + object.bounds.top) / 2,
+          ),
+        );
+        final next = object.transform.rotatedAround(
+          radians: _previewRotation,
+          center: center,
+        );
+        final preview = widget.onObjectPreview;
+        if (preview != null) unawaited(preview(object.locator, next));
+      },
+      onPanEnd: (_) {
+        if (_previewRotation == 0 || widget.onIntent == null) return;
+        widget.onIntent!(
+          RotatePdfPageObjectIntent(
+            documentId: widget.documentId!,
+            documentRevision: widget.documentRevision!,
+            locator: object.locator,
+            radians: _previewRotation,
+          ),
+        );
+      },
+      child: const Icon(Icons.rotate_right, size: 14),
+    ),
+  );
 
   Widget _moveHandle(PdfTextBlock block) => Positioned(
     top: 2,
@@ -340,4 +400,12 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
 
   String _newTypingGroup() =>
       'typing-${DateTime.now().microsecondsSinceEpoch}-${identityHashCode(this)}';
+}
+
+bool _samePath(List<int> left, List<int> right) {
+  if (left.length != right.length) return false;
+  for (var index = 0; index < left.length; index++) {
+    if (left[index] != right[index]) return false;
+  }
+  return true;
 }

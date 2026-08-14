@@ -673,6 +673,22 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                             .toList(growable: false) ??
                                         const <PdfTextBlock>[],
                                     selection: editSession?.selection,
+                                    pageObjects:
+                                        editSession?.pageObjects
+                                            .where(
+                                              (object) =>
+                                                  object.locator.pageNumber ==
+                                                  page.pageNumber,
+                                            )
+                                            .toList(growable: false) ??
+                                        const <PdfPageObject>[],
+                                    onObjectPreview: (locator, transform) =>
+                                        editing.previewTransform(
+                                          widget.tab.id,
+                                          _controller.document,
+                                          locator,
+                                          transform,
+                                        ),
                                     rectForBlock: (block) =>
                                         PdfRect(
                                           block.bounds.left,
