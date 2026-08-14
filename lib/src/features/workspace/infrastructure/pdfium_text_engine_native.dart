@@ -33,6 +33,11 @@ final class PdfiumTextEngine implements PdfTextEngine {
     required PdfDocument document,
     required PdfEditingSession draft,
   }) async {
+    final transformedLocators = draft.commands
+        .take(draft.cursor)
+        .whereType<TransformPdfPageObjectCommand>()
+        .map((command) => command.locator)
+        .toSet();
     final formattedLocators = draft.commands
         .take(draft.cursor)
         .whereType<FormatPdfTextCommand>()
@@ -149,6 +154,57 @@ final class PdfiumTextEngine implements PdfTextEngine {
             );
           }
         } finally {
+          pdfiumBindings.FPDF_ClosePage(page);
+        }
+      }
+      final transformedByPage = <int, List<PdfPageObject>>{};
+      for (final object in draft.pageObjects.where(
+        (object) => transformedLocators.contains(object.locator),
+      )) {
+        transformedByPage
+            .putIfAbsent(object.locator.pageNumber, () => <PdfPageObject>[])
+            .add(object);
+      }
+      for (final entry in transformedByPage.entries) {
+        final page = pdfiumBindings.FPDF_LoadPage(
+          nativeDocument,
+          entry.key - 1,
+        );
+        if (page.address == 0) {
+          throw PdfValidationFailure('Could not load PDF page ${entry.key}.');
+        }
+        final matrix = calloc<FS_MATRIX>();
+        try {
+          for (final object in entry.value) {
+            final nativeObject = _objectAtPath(page, object.locator.objectPath);
+            if (nativeObject.address == 0 ||
+                _pageObjectType(
+                      pdfiumBindings.FPDFPageObj_GetType(nativeObject),
+                    ) !=
+                    object.locator.type) {
+              throw PdfStalePageObjectLocatorFailure(object.locator);
+            }
+            matrix.ref
+              ..a = object.transform.a
+              ..b = object.transform.b
+              ..c = object.transform.c
+              ..d = object.transform.d
+              ..e = object.transform.translateX
+              ..f = object.transform.translateY;
+            if (pdfiumBindings.FPDFPageObj_SetMatrix(nativeObject, matrix) ==
+                0) {
+              throw const PdfValidationFailure(
+                'Could not persist a PDF object transform.',
+              );
+            }
+          }
+          if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
+            throw PdfValidationFailure(
+              'Could not regenerate PDF page ${entry.key}.',
+            );
+          }
+        } finally {
+          calloc.free(matrix);
           pdfiumBindings.FPDF_ClosePage(page);
         }
       }
@@ -623,13 +679,7 @@ final class PdfiumTextEngine implements PdfTextEngine {
   }) {
     if (object.address == 0) return;
     final nativeType = pdfiumBindings.FPDFPageObj_GetType(object);
-    final type = switch (nativeType) {
-      FPDF_PAGEOBJ_TEXT => PdfPageObjectType.text,
-      FPDF_PAGEOBJ_IMAGE => PdfPageObjectType.image,
-      FPDF_PAGEOBJ_PATH => PdfPageObjectType.path,
-      FPDF_PAGEOBJ_FORM => PdfPageObjectType.form,
-      _ => null,
-    };
+    final type = _pageObjectType(nativeType);
     if (type == null) return;
     final left = calloc<Float>();
     final bottom = calloc<Float>();
@@ -1100,6 +1150,14 @@ String _digest(String value) => sha256.convert(utf8.encode(value)).toString();
 
 String _textPreviewKey(PdfTextBlock block) =>
     '${block.locator.pageNumber}:${block.objectPaths.map((path) => path.join('.')).join(',')}';
+
+PdfPageObjectType? _pageObjectType(int nativeType) => switch (nativeType) {
+  FPDF_PAGEOBJ_TEXT => PdfPageObjectType.text,
+  FPDF_PAGEOBJ_IMAGE => PdfPageObjectType.image,
+  FPDF_PAGEOBJ_PATH => PdfPageObjectType.path,
+  FPDF_PAGEOBJ_FORM => PdfPageObjectType.form,
+  _ => null,
+};
 
 String _geometryDigest(PdfTextObjectGroup group) => _digest(
   group.objects
