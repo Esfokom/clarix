@@ -7,6 +7,39 @@ import '../support/pdf_text_fixture.dart';
 
 void main() {
   test(
+    'read-only geometry does not regenerate or alter the PDF page',
+    () async {
+      final fixture = await PdfTextFixture.singleBlock('Before');
+      addTearDown(() => fixture.parent.delete(recursive: true));
+      final document = await PdfDocument.openFile(fixture.path);
+      addTearDown(document.dispose);
+      const engine = PdfiumTextEngine();
+      final revision = await sha256File(fixture);
+      final original = (await engine.inspectPages(
+        document: document,
+        sourceRevision: revision,
+        pageNumbers: const <int>[1],
+      )).single;
+      final before = (await document.pages.first.loadText())!.fullText;
+
+      final result = await engine.projectTextBlock(
+        document: document,
+        request: PdfNativeProjectionRequest(
+          documentRevision: revision,
+          editRevision: 1,
+          block: original,
+          readOnlyGeometry: true,
+        ),
+      );
+
+      expect(result.block.locator, original.locator);
+      expect(result.block.text, original.text);
+      expect(result.characters, isNotEmpty);
+      expect((await document.pages.first.loadText())!.fullText, before);
+    },
+  );
+
+  test(
     'native character boxes map every UTF-16 offset in edited text',
     () async {
       final fixture = await PdfTextFixture.singleBlock('Before');

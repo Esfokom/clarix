@@ -43,6 +43,7 @@ final class PdfNativeEditCoordinator {
 
       state.latestResult = result;
       state.nativeResults[request.block.locator] = result;
+      if (request.readOnlyGeometry) return;
       final pages = result.affectedPages.toSet().toList()..sort();
       await _reloadPages(document, pages);
     });

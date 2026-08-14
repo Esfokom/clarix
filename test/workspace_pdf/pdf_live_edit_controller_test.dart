@@ -38,8 +38,18 @@ void main() {
       harness.document,
       harness.controller.sessionFor('tab').blocks.single.locator,
     );
+    await harness.controller.selectTextBlock(
+      'tab',
+      harness.document,
+      harness.controller.sessionFor('tab').blocks.single.locator,
+    );
 
-    expect(harness.mutator.requests, hasLength(1));
+    expect(harness.mutator.requests, hasLength(2));
+    expect(
+      harness.mutator.requests.every((request) => request.readOnlyGeometry),
+      isTrue,
+    );
+    expect(harness.reloadedPages, isEmpty);
     expect(harness.controller.nativeResultFor('tab')?.block.text, 'Before');
   });
 
@@ -116,26 +126,34 @@ ReplacePdfTextIntent _replacement(PdfEditingSession session, String after) =>
     );
 
 final class _Harness {
-  _Harness(this.controller, this.document, this.fixture, this.mutator);
+  _Harness(
+    this.controller,
+    this.document,
+    this.fixture,
+    this.mutator,
+    this.reloadedPages,
+  );
 
   static Future<_Harness> create({bool failProjection = false}) async {
     final fixture = await PdfTextFixture.singleBlock('Before');
     final document = await PdfDocument.openFile(fixture.path);
     final mutator = _RecordingLiveMutator(failProjection: failProjection);
+    final reloadedPages = <List<int>>[];
     final coordinator = PdfNativeEditCoordinator(
       mutator: mutator,
-      reloadPages: (_, _) async {},
+      reloadPages: (_, pages) async => reloadedPages.add(List<int>.of(pages)),
     );
     final controller = PdfEditingController(nativeCoordinator: coordinator)
       ..registerSession('tab', _session())
       ..registerDocument('tab', document);
-    return _Harness(controller, document, fixture, mutator);
+    return _Harness(controller, document, fixture, mutator, reloadedPages);
   }
 
   final PdfEditingController controller;
   final PdfDocument document;
   final File fixture;
   final _RecordingLiveMutator mutator;
+  final List<List<int>> reloadedPages;
 
   Future<void> dispose() async {
     controller.dispose();

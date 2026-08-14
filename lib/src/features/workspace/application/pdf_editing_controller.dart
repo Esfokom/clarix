@@ -369,9 +369,7 @@ final class PdfEditingController extends ChangeNotifier {
         PdfTextSelection(locator: locator, range: const PdfTextRange(0, 0)),
       ),
     );
-    await _projectBlocks(tabId, sessionFor(tabId), <PdfTextBlockLocator>[
-      locator,
-    ]);
+    await _primeBlockGeometry(tabId, sessionFor(tabId), locator);
   }
 
   @Deprecated('Use selectTextBlock so the live document is registered.')
@@ -508,6 +506,34 @@ final class PdfEditingController extends ChangeNotifier {
         ),
       );
     }
+    notifyListeners();
+  }
+
+  Future<void> _primeBlockGeometry(
+    String tabId,
+    PdfEditingSession session,
+    PdfTextBlockLocator locator,
+  ) async {
+    final coordinator = _native;
+    final document = _documentsByTab[tabId];
+    if (coordinator == null || document == null) {
+      throw const PdfNativeEditingUnavailableFailure();
+    }
+    final block = session.blocks.firstWhere(
+      (candidate) => candidate.locator == locator,
+      orElse: () => throw PdfStaleLocatorFailure(locator),
+    );
+    final revision = (_editRevisions[tabId] ?? 0) + 1;
+    _editRevisions[tabId] = revision;
+    await coordinator.projectBlock(
+      document,
+      PdfNativeProjectionRequest(
+        documentRevision: session.sourceRevision,
+        editRevision: revision,
+        block: block,
+        readOnlyGeometry: true,
+      ),
+    );
     notifyListeners();
   }
 

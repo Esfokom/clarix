@@ -1007,6 +1007,26 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
     );
   }
   final nativeDocument = FPDF_DOCUMENT.fromAddress(input.documentAddress);
+  if (request.readOnlyGeometry) {
+    final characters = _characterBoxesForText(
+      nativeDocument,
+      block.locator.pageNumber,
+      block.text,
+    );
+    return PdfNativeProjectionResult(
+      requestedRevision: request.editRevision,
+      appliedRevision: request.editRevision,
+      block: block,
+      lines: <PdfNativeLine>[
+        PdfNativeLine(
+          range: PdfTextRange(0, block.text.length),
+          bounds: block.bounds,
+        ),
+      ],
+      characters: characters,
+      affectedPages: <int>[block.locator.pageNumber],
+    );
+  }
   final page = pdfiumBindings.FPDF_LoadPage(
     nativeDocument,
     block.locator.pageNumber - 1,

@@ -88,6 +88,7 @@ final class PdfNativeProjectionRequest {
     required this.editRevision,
     required this.block,
     this.nativeTarget,
+    this.readOnlyGeometry = false,
   }) {
     if (documentRevision.isEmpty) {
       throw ArgumentError.value(
@@ -111,6 +112,7 @@ final class PdfNativeProjectionRequest {
   final int editRevision;
   final PdfTextBlock block;
   final PdfTextBlock? nativeTarget;
+  final bool readOnlyGeometry;
 
   PdfNativeProjectionRequest withNativeTarget(PdfTextBlock target) =>
       PdfNativeProjectionRequest(
@@ -118,6 +120,7 @@ final class PdfNativeProjectionRequest {
         editRevision: editRevision,
         block: block,
         nativeTarget: target,
+        readOnlyGeometry: readOnlyGeometry,
       );
 }
 
