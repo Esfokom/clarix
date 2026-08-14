@@ -642,20 +642,21 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                           scaledPageSize: pageRect.size,
                                         ),
                                     onSelect: (locator) {
-                                      editing.selectBlock(
-                                        widget.tab.id,
-                                        locator,
-                                      );
-                                      unawaited(
-                                        ref
+                                      unawaited(() async {
+                                        await editing.selectTextBlock(
+                                          widget.tab.id,
+                                          _controller.document,
+                                          locator,
+                                        );
+                                        await ref
                                             .read(
                                               workspaceNotifierProvider
                                                   .notifier,
                                             )
                                             .selectRightToolWindow(
                                               RightToolWindow.textFormat,
-                                            ),
-                                      );
+                                            );
+                                      }());
                                     },
                                     documentId: editSession?.documentId,
                                     documentRevision: editSession?.revision,
@@ -667,12 +668,24 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                         provenance: PdfCommandProvenance.manual,
                                       ),
                                     ),
-                                    onClearSelection: () =>
-                                        editing.clearSelection(widget.tab.id),
-                                    onUndo: () =>
-                                        unawaited(editing.undo(widget.tab.id)),
-                                    onRedo: () =>
-                                        unawaited(editing.redo(widget.tab.id)),
+                                    onClearSelection: () => unawaited(
+                                      editing.clearSelection(
+                                        widget.tab.id,
+                                        document: _controller.document,
+                                      ),
+                                    ),
+                                    onUndo: () => unawaited(
+                                      editing.undo(
+                                        widget.tab.id,
+                                        document: _controller.document,
+                                      ),
+                                    ),
+                                    onRedo: () => unawaited(
+                                      editing.redo(
+                                        widget.tab.id,
+                                        document: _controller.document,
+                                      ),
+                                    ),
                                   ),
                                 ],
                           ),
@@ -905,7 +918,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     final editing = ref.read(pdfEditingControllerProvider);
     final session = editing.sessionFor(widget.tab.id);
     if (session.mode == PdfEditingMode.text) {
-      await editing.leaveTextMode(widget.tab.id);
+      await editing.leaveTextMode(
+        widget.tab.id,
+        document: _controller.document,
+      );
     } else {
       await editing.enterTextMode(widget.tab.id, _controller.document, _page);
     }
