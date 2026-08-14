@@ -16,9 +16,13 @@ pub use error::EditingError;
 pub use geometry::{AffineTransform, GeometryError, PdfBox};
 pub use ids::{CommandId, DocumentId, DocumentRevision, ObjectId, PageId, SessionId};
 pub use model::{
-    AnnotationNode, DocumentModel, DocumentObject, EditCapability, GroupNode, ImageNode,
-    ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
+    AnnotationNode, CapabilityReason, DocumentModel, DocumentObject, EditCapability, GroupNode,
+    ImageNode, ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
 };
 pub use session::EditorSessionState;
-pub use text::{validate_utf16_range, TextRangeError, TextRun, TextStyle, Utf16Range};
+pub use text::{
+    validate_utf16_range, FontRef, FontSource, OverflowPolicy, ParagraphStyle, SourceGlyph,
+    TextAffinity, TextAlignment, TextAnchor, TextLayoutRecipe, TextRangeError, TextRun, TextStyle,
+    Utf16Range, WritingDirection,
+};
 pub use tools::{EditingToolGateway, ObjectSummary, ToolObservation, ToolRequest, ToolRisk};

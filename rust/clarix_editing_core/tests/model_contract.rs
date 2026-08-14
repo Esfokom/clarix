@@ -23,7 +23,7 @@ fn document_graph_indexes_stable_objects() {
         "Hello",
         PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
     );
-    let page = PageNode::new(page_id, 1, 612.0, 792.0, vec![DocumentObject::Text(block)]);
+    let page = PageNode::new(page_id, 1, 612.0, 792.0, vec![DocumentObject::text(block)]);
     let model = DocumentModel::new(
         DocumentId::from_source_key("doc"),
         "source-sha256".into(),
@@ -45,8 +45,8 @@ fn document_graph_rejects_duplicate_object_ids() {
         612.0,
         792.0,
         vec![
-            DocumentObject::Text(TextBlock::plain(object_id, page_id, "one", bounds)),
-            DocumentObject::Text(TextBlock::plain(object_id, page_id, "two", bounds)),
+            DocumentObject::text(TextBlock::plain(object_id, page_id, "one", bounds)),
+            DocumentObject::text(TextBlock::plain(object_id, page_id, "two", bounds)),
         ],
     );
 
@@ -74,7 +74,7 @@ fn document_json_round_trip_rebuilds_indexes_without_native_state() {
             1,
             612.0,
             792.0,
-            vec![DocumentObject::Text(TextBlock::plain(
+            vec![DocumentObject::text(TextBlock::plain(
                 object_id,
                 page_id,
                 "Hello 😀",

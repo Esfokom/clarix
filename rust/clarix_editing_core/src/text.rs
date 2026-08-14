@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use unicode_segmentation::UnicodeSegmentation;
+
+use crate::ObjectId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Utf16Range {
@@ -44,6 +47,43 @@ pub fn validate_utf16_range(text: &str, range: Utf16Range) -> Result<(), TextRan
         return Err(TextRangeError::SplitsSurrogatePair);
     }
     Ok(())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TextAffinity {
+    Upstream,
+    Downstream,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TextAnchor {
+    pub object_id: ObjectId,
+    pub utf16_offset: u32,
+    pub affinity: TextAffinity,
+}
+
+impl TextAnchor {
+    pub fn new(
+        object_id: ObjectId,
+        text: &str,
+        utf16_offset: u32,
+        affinity: TextAffinity,
+    ) -> Result<Self, TextRangeError> {
+        let byte_offset =
+            utf16_range_to_byte_range(text, Utf16Range::new(utf16_offset, utf16_offset)?)?.start;
+        let is_grapheme_boundary = byte_offset == text.len()
+            || text
+                .grapheme_indices(true)
+                .any(|(boundary, _)| boundary == byte_offset);
+        if !is_grapheme_boundary {
+            return Err(TextRangeError::SplitsGraphemeCluster);
+        }
+        Ok(Self {
+            object_id,
+            utf16_offset,
+            affinity,
+        })
+    }
 }
 
 pub(crate) fn utf16_range_to_byte_range(
@@ -94,6 +134,115 @@ impl Default for TextStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FontSource {
+    Embedded,
+    Installed,
+    ApprovedFallback,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FontRef {
+    pub postscript_name: String,
+    pub bytes_sha256: String,
+    pub asset_id: Option<String>,
+    pub source: FontSource,
+    pub embeddable: bool,
+}
+
+impl FontRef {
+    pub fn is_valid(&self) -> bool {
+        !self.postscript_name.trim().is_empty()
+            && self.bytes_sha256.len() == 64
+            && self
+                .bytes_sha256
+                .bytes()
+                .all(|byte| byte.is_ascii_hexdigit())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum TextAlignment {
+    Left,
+    Center,
+    Right,
+    Justify,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WritingDirection {
+    LeftToRight,
+    RightToLeft,
+    TopToBottom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum OverflowPolicy {
+    Reject,
+    IncreaseBounds,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ParagraphStyle {
+    pub alignment: TextAlignment,
+    pub line_spacing: f64,
+}
+
+impl Default for ParagraphStyle {
+    fn default() -> Self {
+        Self {
+            alignment: TextAlignment::Left,
+            line_spacing: 1.0,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TextLayoutRecipe {
+    pub paragraph: ParagraphStyle,
+    pub baseline: f64,
+    pub line_height: f64,
+    pub character_spacing: f64,
+    pub horizontal_scale: f64,
+    pub direction: WritingDirection,
+    pub overflow: OverflowPolicy,
+}
+
+impl Default for TextLayoutRecipe {
+    fn default() -> Self {
+        Self {
+            paragraph: ParagraphStyle::default(),
+            baseline: 0.0,
+            line_height: 12.0,
+            character_spacing: 0.0,
+            horizontal_scale: 1.0,
+            direction: WritingDirection::LeftToRight,
+            overflow: OverflowPolicy::Reject,
+        }
+    }
+}
+
+impl TextLayoutRecipe {
+    pub fn is_valid(&self) -> bool {
+        self.baseline.is_finite()
+            && self.line_height.is_finite()
+            && self.line_height > 0.0
+            && self.character_spacing.is_finite()
+            && self.horizontal_scale.is_finite()
+            && self.horizontal_scale > 0.0
+            && self.paragraph.line_spacing.is_finite()
+            && self.paragraph.line_spacing > 0.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceGlyph {
+    pub utf16_start: u32,
+    pub utf16_end: u32,
+    pub character_code: u32,
+    pub glyph_id: u32,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextRun {
     pub range: Utf16Range,
@@ -108,6 +257,20 @@ pub enum TextRangeError {
     OutOfBounds { end: u32, length: u32 },
     #[error("UTF-16 range splits a surrogate pair")]
     SplitsSurrogatePair,
+    #[error("UTF-16 offset splits a grapheme cluster")]
+    SplitsGraphemeCluster,
     #[error("text is too long to address with a 32-bit UTF-16 offset")]
     LengthOverflow,
+}
+
+impl TextRangeError {
+    pub const fn code(&self) -> &'static str {
+        match self {
+            Self::SplitsGraphemeCluster => "invalid_grapheme_boundary",
+            Self::Reversed { .. }
+            | Self::OutOfBounds { .. }
+            | Self::SplitsSurrogatePair
+            | Self::LengthOverflow => "invalid_text_boundary",
+        }
+    }
 }

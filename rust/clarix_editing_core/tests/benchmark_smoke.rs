@@ -14,7 +14,7 @@ fn session() -> (EditorSessionState, ObjectId) {
             1,
             612.0,
             792.0,
-            vec![DocumentObject::Text(TextBlock::plain(
+            vec![DocumentObject::text(TextBlock::plain(
                 object_id,
                 page_id,
                 "A",

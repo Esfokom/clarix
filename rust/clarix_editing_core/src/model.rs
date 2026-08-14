@@ -4,8 +4,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use thiserror::Error;
 
 use crate::{
-    AffineTransform, DocumentId, DocumentRevision, ObjectId, PageId, PdfBox, TextRun, TextStyle,
-    Utf16Range,
+    validate_utf16_range, AffineTransform, DocumentId, DocumentRevision, FontRef, ObjectId, PageId,
+    PdfBox, SourceGlyph, TextLayoutRecipe, TextRun, TextStyle, Utf16Range,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,6 +23,12 @@ pub enum ObjectKind {
     Annotation,
     OcrLayer,
     Group,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CapabilityReason {
+    pub code: String,
+    pub message: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -66,6 +72,10 @@ pub struct TextBlock {
     base: NodeBase,
     pub text: String,
     pub runs: Vec<TextRun>,
+    pub font: Option<FontRef>,
+    pub layout: TextLayoutRecipe,
+    pub source_glyphs: Vec<SourceGlyph>,
+    pub capability_reason: Option<CapabilityReason>,
 }
 
 impl TextBlock {
@@ -79,12 +89,50 @@ impl TextBlock {
                 range: Utf16Range::new(0, utf16_length).expect("plain text range is ordered"),
                 style: TextStyle::default(),
             }],
+            font: None,
+            layout: TextLayoutRecipe::default(),
+            source_glyphs: Vec::new(),
+            capability_reason: None,
         }
     }
 
     pub fn with_source_binding(mut self, source_binding: SourceBinding) -> Self {
         self.base.source_binding = Some(source_binding);
         self
+    }
+
+    pub fn with_text_contract(
+        mut self,
+        font: FontRef,
+        layout: TextLayoutRecipe,
+        source_glyphs: Vec<SourceGlyph>,
+    ) -> Self {
+        self.font = Some(font);
+        self.layout = layout;
+        self.source_glyphs = source_glyphs;
+        self
+    }
+
+    pub fn with_capability(
+        mut self,
+        capability: EditCapability,
+        reason: Option<CapabilityReason>,
+    ) -> Self {
+        self.base.capability = capability;
+        self.capability_reason = reason;
+        self
+    }
+
+    pub fn capability(&self) -> EditCapability {
+        self.base.capability
+    }
+
+    pub fn font(&self) -> Option<&FontRef> {
+        self.font.as_ref()
+    }
+
+    pub fn capability_reason(&self) -> Option<&CapabilityReason> {
+        self.capability_reason.as_ref()
     }
 }
 
@@ -141,7 +189,7 @@ impl GroupNode {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DocumentObject {
-    Text(TextBlock),
+    Text(Box<TextBlock>),
     Image(ImageNode),
     Vector(VectorNode),
     Annotation(AnnotationNode),
@@ -150,6 +198,10 @@ pub enum DocumentObject {
 }
 
 impl DocumentObject {
+    pub fn text(block: TextBlock) -> Self {
+        Self::Text(Box::new(block))
+    }
+
     fn base(&self) -> &NodeBase {
         match self {
             Self::Text(node) => &node.base,
@@ -308,6 +360,9 @@ impl DocumentModel {
                 {
                     return Err(ModelError::DuplicateObjectId(object.id()));
                 }
+                if let DocumentObject::Text(block) = object {
+                    validate_text_block(block)?;
+                }
             }
         }
 
@@ -424,4 +479,48 @@ pub enum ModelError {
     MissingObject(ObjectId),
     #[error("page {0} was already hydrated with different content")]
     HydratedPageConflict(u32),
+    #[error("editable imported text {0} has no complete font/materialization contract")]
+    IncompleteEditableText(ObjectId),
+    #[error("text object {0} has an invalid layout recipe")]
+    InvalidTextLayout(ObjectId),
+    #[error("text object {0} has invalid or incomplete runs")]
+    InvalidTextRuns(ObjectId),
+    #[error("non-editable text object {0} has no capability reason")]
+    MissingCapabilityReason(ObjectId),
+}
+
+fn validate_text_block(block: &TextBlock) -> Result<(), ModelError> {
+    let id = block.base.id;
+    if !block.layout.is_valid() {
+        return Err(ModelError::InvalidTextLayout(id));
+    }
+    let text_length = block.text.encode_utf16().count() as u32;
+    let mut expected_start = 0;
+    for run in &block.runs {
+        if run.range.start != expected_start
+            || validate_utf16_range(&block.text, run.range).is_err()
+            || !run.style.font_size.is_finite()
+            || run.style.font_size <= 0.0
+        {
+            return Err(ModelError::InvalidTextRuns(id));
+        }
+        expected_start = run.range.end;
+    }
+    if expected_start != text_length || block.runs.is_empty() {
+        return Err(ModelError::InvalidTextRuns(id));
+    }
+    if block.base.source_binding.is_some() && block.base.capability == EditCapability::Editable {
+        let complete = block
+            .font
+            .as_ref()
+            .is_some_and(|font| font.is_valid() && font.embeddable)
+            && !block.source_glyphs.is_empty();
+        if !complete {
+            return Err(ModelError::IncompleteEditableText(id));
+        }
+    }
+    if block.base.capability != EditCapability::Editable && block.capability_reason.is_none() {
+        return Err(ModelError::MissingCapabilityReason(id));
+    }
+    Ok(())
 }

@@ -1,5 +1,6 @@
 use clarix_editing_core::{
-    DocumentObject, ObjectId, PageId, PageNode, PdfBox, SourceBinding, TextBlock,
+    CapabilityReason, DocumentObject, EditCapability, ObjectId, PageId, PageNode, PdfBox,
+    SourceBinding, TextBlock,
 };
 use pdf_oxide::PdfDocument;
 use sha2::{Digest, Sha256};
@@ -97,9 +98,17 @@ impl PdfImporter for PdfOxideImporter {
                 source_key: object_key,
                 confidence: 1.0,
             };
-            objects.push(DocumentObject::Text(
+            objects.push(DocumentObject::text(
                 TextBlock::plain(object_id, page_id, span.text, bounds)
-                    .with_source_binding(binding),
+                    .with_source_binding(binding)
+                    .with_capability(
+                        EditCapability::ReadOnly,
+                        Some(CapabilityReason {
+                            code: "phase0_text_fidelity_unqualified".into(),
+                            message: "font and materialization fidelity are not yet qualified"
+                                .into(),
+                        }),
+                    ),
             ));
         }
 

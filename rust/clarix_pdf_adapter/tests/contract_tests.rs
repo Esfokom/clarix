@@ -39,7 +39,7 @@ impl PdfImporter for FakeImporter {
                 page_number,
                 612.0,
                 792.0,
-                vec![DocumentObject::Text(TextBlock::plain(
+                vec![DocumentObject::text(TextBlock::plain(
                     object_id,
                     page_id,
                     "Hello",
