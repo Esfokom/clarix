@@ -62,7 +62,7 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.mode != PdfEditingMode.text) return const SizedBox.shrink();
+    if (widget.mode == PdfEditingMode.reading) return const SizedBox.shrink();
     return Stack(
       fit: StackFit.expand,
       children: <Widget>[

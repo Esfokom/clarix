@@ -423,8 +423,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tab.id != widget.tab.id) {
       final editing = ref.read(pdfEditingControllerProvider);
-      if (editing.sessionsByTabId[oldWidget.tab.id]?.mode ==
-          PdfEditingMode.text) {
+      if (editing.sessionsByTabId[oldWidget.tab.id]?.mode !=
+          PdfEditingMode.reading) {
         unawaited(editing.leaveTextMode(oldWidget.tab.id));
       }
       _disposeSearcher();
@@ -619,8 +619,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             viewerOverlayBuilder: _buildViewerOverlay,
                             pageOverlaysBuilder: (context, pageRect, page) =>
                                 <Widget>[
-                                  if (editSession?.mode ==
-                                          PdfEditingMode.text &&
+                                  if (editSession?.mode !=
+                                          PdfEditingMode.reading &&
                                       editSession != null)
                                     PdfObjectTransformOverlay(
                                       objects: editSession.pageObjects
@@ -875,7 +875,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                 ? _highlightSelection
                                 : null,
                             textEditing:
-                                editSession?.mode == PdfEditingMode.text,
+                                editSession != null &&
+                                editSession.mode != PdfEditingMode.reading,
                             onToggleTextEditing: _controller.isReady
                                 ? _toggleTextEditing
                                 : null,
@@ -959,7 +960,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   Future<void> _toggleTextEditing() async {
     final editing = ref.read(pdfEditingControllerProvider);
     final session = editing.sessionFor(widget.tab.id);
-    if (session.mode == PdfEditingMode.text) {
+    if (session.mode != PdfEditingMode.reading) {
       await editing.leaveTextMode(
         widget.tab.id,
         document: _controller.document,
@@ -2008,7 +2009,9 @@ class _ViewerHud extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             Tooltip(
-              message: textEditing ? 'Leave text editing' : 'Edit PDF text',
+              message: textEditing
+                  ? 'Leave PDF object editing'
+                  : 'Edit PDF objects',
               child: _HudIcon(
                 key: const Key('pdf-text-edit-toggle'),
                 icon: LucideIcons.textCursorInput,

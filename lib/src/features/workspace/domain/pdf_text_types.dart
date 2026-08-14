@@ -1,4 +1,9 @@
-enum PdfEditingMode { reading, text }
+enum PdfEditingMode {
+  reading,
+  @Deprecated('Use object for the unified native PDF object editor.')
+  text,
+  object,
+}
 
 enum PdfCommandProvenance { manual, agent }
 

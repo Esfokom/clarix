@@ -145,7 +145,7 @@ final class PdfEditingController extends ChangeNotifier {
       SetPdfEditingModeIntent(
         documentId: session.documentId,
         documentRevision: session.revision,
-        mode: PdfEditingMode.text,
+        mode: PdfEditingMode.object,
       ),
       provenance: PdfCommandProvenance.manual,
     );
