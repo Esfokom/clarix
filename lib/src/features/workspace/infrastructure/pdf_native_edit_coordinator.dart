@@ -48,8 +48,12 @@ final class PdfNativeEditCoordinator {
     });
   }
 
-  PdfNativeProjectionResult? latestResult(PdfDocument document) =>
-      _states[document]?.latestResult;
+  PdfNativeProjectionResult? latestResult(
+    PdfDocument document, {
+    PdfTextBlockLocator? logicalLocator,
+  }) => logicalLocator == null
+      ? _states[document]?.latestResult
+      : _states[document]?.nativeResults[logicalLocator];
 
   Future<Uint8List> encode(PdfDocument document) {
     final state = _states.putIfAbsent(document, _DocumentProjectionState.new);

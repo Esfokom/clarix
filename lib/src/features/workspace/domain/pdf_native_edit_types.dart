@@ -1,5 +1,56 @@
 import 'pdf_text_types.dart';
 
+abstract final class PdfNativeTextGeometry {
+  static int offsetNearest(
+    double x,
+    double y,
+    List<PdfNativeCharacterBox> characters,
+  ) {
+    if (characters.isEmpty) return 0;
+    var best = characters.first;
+    var bestDistance = double.infinity;
+    for (final character in characters) {
+      final bounds = character.bounds;
+      final centerX = (bounds.left + bounds.right) / 2;
+      final centerY = (bounds.bottom + bounds.top) / 2;
+      final distance = (centerX - x).abs() + (centerY - y).abs();
+      if (distance < bestDistance) {
+        best = character;
+        bestDistance = distance;
+      }
+    }
+    return x > (best.bounds.left + best.bounds.right) / 2
+        ? best.offset + 1
+        : best.offset;
+  }
+
+  static PdfBox caretForOffset(
+    int offset,
+    List<PdfNativeCharacterBox> characters,
+  ) {
+    if (characters.isEmpty) return const PdfBox(0, 0, 0, 0);
+    final character = characters.firstWhere(
+      (candidate) => candidate.offset >= offset,
+      orElse: () => characters.last,
+    );
+    final atEnd = offset > character.offset;
+    final x = atEnd ? character.bounds.right : character.bounds.left;
+    return PdfBox(x, character.bounds.bottom, x, character.bounds.top);
+  }
+
+  static List<PdfBox> boxesForRange(
+    PdfTextRange range,
+    List<PdfNativeCharacterBox> characters,
+  ) => List<PdfBox>.unmodifiable(
+    characters
+        .where(
+          (character) =>
+              range.start <= character.offset && character.offset < range.end,
+        )
+        .map((character) => character.bounds),
+  );
+}
+
 final class PdfNativeBlockState {
   PdfNativeBlockState({
     required this.blockId,

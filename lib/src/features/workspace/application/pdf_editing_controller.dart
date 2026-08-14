@@ -113,6 +113,26 @@ final class PdfEditingController extends ChangeNotifier {
     return session;
   }
 
+  PdfNativeProjectionResult? nativeResultFor(String tabId) {
+    final document = _documentsByTab[tabId];
+    final locator = _sessions[tabId]?.selection?.locator;
+    return document == null || locator == null
+        ? null
+        : _native?.latestResult(document, logicalLocator: locator);
+  }
+
+  void setTextSelection(String tabId, PdfTextRange range) {
+    final session = sessionFor(tabId);
+    final selection = session.selection;
+    if (selection == null) return;
+    replaceSession(
+      tabId,
+      session.withSelection(
+        PdfTextSelection(locator: selection.locator, range: range),
+      ),
+    );
+  }
+
   Future<PdfEditResult> dispatch(
     PdfEditIntent intent, {
     required PdfCommandProvenance provenance,
@@ -400,6 +420,7 @@ final class PdfEditingController extends ChangeNotifier {
         ),
       );
     }
+    notifyListeners();
   }
 
   PdfEditingSession _sessionForDocument(String documentId) {

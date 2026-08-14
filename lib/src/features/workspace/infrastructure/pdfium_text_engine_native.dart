@@ -990,6 +990,11 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
     request.documentRevision,
   );
   final projected = _closestProjectedBlock(projectedBlocks, block);
+  final characters = _characterBoxesForText(
+    nativeDocument,
+    block.locator.pageNumber,
+    projected.text,
+  );
   return PdfNativeProjectionResult(
     requestedRevision: request.editRevision,
     appliedRevision: request.editRevision,
@@ -1002,9 +1007,96 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
               bounds: projected.bounds,
             ),
           ],
-    characters: const <PdfNativeCharacterBox>[],
+    characters: characters,
     affectedPages: <int>[block.locator.pageNumber],
   );
+}
+
+List<PdfNativeCharacterBox> _characterBoxesForText(
+  FPDF_DOCUMENT document,
+  int pageNumber,
+  String text,
+) {
+  if (text.isEmpty) return const <PdfNativeCharacterBox>[];
+  final page = pdfiumBindings.FPDF_LoadPage(document, pageNumber - 1);
+  if (page.address == 0) return const <PdfNativeCharacterBox>[];
+  final textPage = pdfiumBindings.FPDFText_LoadPage(page);
+  if (textPage.address == 0) {
+    pdfiumBindings.FPDF_ClosePage(page);
+    return const <PdfNativeCharacterBox>[];
+  }
+  final left = calloc<Double>();
+  final right = calloc<Double>();
+  final bottom = calloc<Double>();
+  final top = calloc<Double>();
+  try {
+    final pageText = StringBuffer();
+    final characters = <_PageTextCharacter>[];
+    final count = pdfiumBindings.FPDFText_CountChars(textPage);
+    for (var index = 0; index < count; index++) {
+      final value = String.fromCharCode(
+        pdfiumBindings.FPDFText_GetUnicode(textPage, index),
+      );
+      final start = pageText.length;
+      pageText.write(value);
+      characters.add(
+        _PageTextCharacter(
+          nativeIndex: index,
+          start: start,
+          end: start + value.length,
+        ),
+      );
+    }
+    final matchStart = pageText.toString().indexOf(text);
+    if (matchStart == -1) return const <PdfNativeCharacterBox>[];
+    final matchEnd = matchStart + text.length;
+    final result = <PdfNativeCharacterBox>[];
+    for (final character in characters.where(
+      (character) => character.start < matchEnd && character.end > matchStart,
+    )) {
+      if (pdfiumBindings.FPDFText_GetCharBox(
+            textPage,
+            character.nativeIndex,
+            left,
+            right,
+            bottom,
+            top,
+          ) ==
+          0) {
+        continue;
+      }
+      final box = PdfBox(left.value, bottom.value, right.value, top.value);
+      final firstOffset = character.start < matchStart
+          ? 0
+          : character.start - matchStart;
+      final lastOffset = character.end > matchEnd
+          ? text.length
+          : character.end - matchStart;
+      for (var offset = firstOffset; offset < lastOffset; offset++) {
+        result.add(PdfNativeCharacterBox(offset: offset, bounds: box));
+      }
+    }
+    return List<PdfNativeCharacterBox>.unmodifiable(result);
+  } finally {
+    calloc.free(left);
+    calloc.free(right);
+    calloc.free(bottom);
+    calloc.free(top);
+    pdfiumBindings.FPDFText_ClosePage(textPage);
+    pdfiumBindings.FPDF_ClosePage(page);
+  }
+}
+
+final class _PageTextCharacter {
+  const _PageTextCharacter({
+    required this.nativeIndex,
+    required this.start,
+    required this.end,
+  });
+
+  final int nativeIndex;
+  final int start;
+  final int end;
 }
 
 PdfTextBlock _retargetBlock(PdfTextBlock desired, PdfTextBlock nativeTarget) =>

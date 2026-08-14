@@ -673,6 +673,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                             .toList(growable: false) ??
                                         const <PdfTextBlock>[],
                                     selection: editSession?.selection,
+                                    nativeProjection: editing.nativeResultFor(
+                                      widget.tab.id,
+                                    ),
+                                    onSelectionChanged: (range) => editing
+                                        .setTextSelection(widget.tab.id, range),
                                     pageObjects:
                                         editSession?.pageObjects
                                             .where(

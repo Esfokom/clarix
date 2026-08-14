@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../domain/pdf_edit_intent.dart';
+import '../../domain/pdf_native_edit_types.dart';
 import '../../domain/pdf_page_object.dart';
 import '../../domain/pdf_text_types.dart';
 import 'pdf_native_text_input.dart';
@@ -26,6 +27,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
     this.onClearSelection,
     this.onUndo,
     this.onRedo,
+    this.nativeProjection,
+    this.onSelectionChanged,
     super.key,
   });
 
@@ -45,6 +48,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
   final VoidCallback? onClearSelection;
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
+  final PdfNativeProjectionResult? nativeProjection;
+  final ValueChanged<PdfTextRange>? onSelectionChanged;
 
   @override
   State<PdfTextEditorOverlay> createState() => _PdfTextEditorOverlayState();
@@ -134,36 +139,44 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
         clipBehavior: Clip.none,
         children: <Widget>[
           Positioned.fill(
-            child: Container(
-              key: const Key('pdf-text-block-outline'),
-              decoration: BoxDecoration(
-                color: const Color(0xff2563eb).withValues(alpha: 0.04),
-                border: Border.all(color: const Color(0xff2563eb), width: 1.2),
-                borderRadius: BorderRadius.circular(2),
-              ),
-              child: PdfNativeTextInput(
-                block: block,
-                selection: widget.selection!,
-                onEscape: () {
-                  _typingGroup = null;
-                  widget.onClearSelection?.call();
-                },
-                onUndo: widget.onUndo,
-                onRedo: widget.onRedo,
-                onDelta: (delta) => widget.onIntent!(
-                  ReplacePdfTextIntent(
-                    documentId: widget.documentId!,
-                    documentRevision: widget.documentRevision!,
-                    locator: block.locator,
-                    range: delta.replacedRange,
-                    replacement: delta.insertedText,
-                    caseMatching: widget.caseMatching,
-                    coalescingKey: _typingGroup ??= _newTypingGroup(),
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTapDown: (details) => _moveCaret(block, details.localPosition),
+              child: Container(
+                key: const Key('pdf-text-block-outline'),
+                decoration: BoxDecoration(
+                  color: const Color(0xff2563eb).withValues(alpha: 0.04),
+                  border: Border.all(
+                    color: const Color(0xff2563eb),
+                    width: 1.2,
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                child: PdfNativeTextInput(
+                  block: block,
+                  selection: widget.selection!,
+                  onEscape: () {
+                    _typingGroup = null;
+                    widget.onClearSelection?.call();
+                  },
+                  onUndo: widget.onUndo,
+                  onRedo: widget.onRedo,
+                  onDelta: (delta) => widget.onIntent!(
+                    ReplacePdfTextIntent(
+                      documentId: widget.documentId!,
+                      documentRevision: widget.documentRevision!,
+                      locator: block.locator,
+                      range: delta.replacedRange,
+                      replacement: delta.insertedText,
+                      caseMatching: widget.caseMatching,
+                      coalescingKey: _typingGroup ??= _newTypingGroup(),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
+          ..._selectionChrome(block),
           _moveHandle(block),
           if (_pageObjectFor(block) case final object?)
             _textRotateHandle(object),
@@ -177,6 +190,82 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
           _resizeHandle(block, 'west', -1, 0),
         ],
       ),
+    );
+  }
+
+  void _moveCaret(PdfTextBlock block, Offset localPosition) {
+    final projection = widget.nativeProjection;
+    final callback = widget.onSelectionChanged;
+    if (projection == null ||
+        projection.characters.isEmpty ||
+        callback == null) {
+      return;
+    }
+    final rect = widget.rectForBlock(block);
+    final x =
+        block.bounds.left + localPosition.dx / rect.width * block.bounds.width;
+    final y =
+        block.bounds.top - localPosition.dy / rect.height * block.bounds.height;
+    final offset = PdfNativeTextGeometry.offsetNearest(
+      x,
+      y,
+      projection.characters,
+    );
+    callback(PdfTextRange(offset, offset));
+  }
+
+  List<Widget> _selectionChrome(PdfTextBlock block) {
+    final projection = widget.nativeProjection;
+    final selection = widget.selection;
+    if (projection == null ||
+        selection == null ||
+        projection.characters.isEmpty) {
+      return const <Widget>[];
+    }
+    final widgets = <Widget>[];
+    for (final box in PdfNativeTextGeometry.boxesForRange(
+      selection.range,
+      projection.characters,
+    )) {
+      widgets.add(
+        Positioned.fromRect(
+          rect: _localRectForBox(block, box),
+          child: IgnorePointer(
+            child: ColoredBox(
+              key: const Key('pdf-native-selection'),
+              color: const Color(0x332563eb),
+            ),
+          ),
+        ),
+      );
+    }
+    final caret = PdfNativeTextGeometry.caretForOffset(
+      selection.range.end,
+      projection.characters,
+    );
+    final caretRect = _localRectForBox(block, caret);
+    widgets.add(
+      Positioned(
+        key: const Key('pdf-native-caret'),
+        left: caretRect.left,
+        top: caretRect.top,
+        width: 1.2,
+        height: caretRect.height.clamp(1, double.infinity),
+        child: const ColoredBox(color: Color(0xff2563eb)),
+      ),
+    );
+    return widgets;
+  }
+
+  Rect _localRectForBox(PdfTextBlock block, PdfBox box) {
+    final rect = widget.rectForBlock(block);
+    final scaleX = rect.width / block.bounds.width;
+    final scaleY = rect.height / block.bounds.height;
+    return Rect.fromLTRB(
+      (box.left - block.bounds.left) * scaleX,
+      (block.bounds.top - box.top) * scaleY,
+      (box.right - block.bounds.left) * scaleX,
+      (block.bounds.top - box.bottom) * scaleY,
     );
   }
 
