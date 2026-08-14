@@ -700,7 +700,7 @@ final class PdfHighlightSnapshot {
   );
 }
 
-sealed class PdfEditFailure implements Exception {
+abstract class PdfEditFailure implements Exception {
   const PdfEditFailure(this.code, this.message);
 
   final String code;
