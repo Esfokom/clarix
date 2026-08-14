@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../domain/pdf_edit_intent.dart';
 import '../../domain/pdf_edit_session.dart';
 import '../../domain/pdf_text_types.dart';
+import 'pdf_inline_text_editor.dart';
 
 typedef PdfTextBlockRectResolver = Rect Function(PdfTextBlock block);
 
@@ -170,29 +171,15 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay> {
                 }
                 return KeyEventResult.ignored;
               },
-              child: TextField(
-                key: const Key('pdf-inline-text-editor'),
-                controller: _textController,
-                focusNode: _focusNode,
-                expands: true,
-                maxLines: null,
-                minLines: null,
-                textAlignVertical: TextAlignVertical.top,
-                style: TextStyle(
-                  fontFamily: block.runs.first.style.fontFamily,
-                  fontSize: block.runs.first.style.fontSize,
-                  color: Color(block.runs.first.style.fillColorValue),
-                  height: 1,
+              child: PdfInlineTextEditor(
+                block: block,
+                controller: _textController!,
+                focusNode: _focusNode!,
+                geometry: PdfInlineTextGeometry.resolve(
+                  block: block,
+                  pageSize: Size(block.bounds.width, block.bounds.height),
+                  overlaySize: widget.rectForBlock(block).size,
                 ),
-                decoration: const InputDecoration(
-                  contentPadding: EdgeInsets.zero,
-                  border: OutlineInputBorder(),
-                  isDense: true,
-                ),
-                onTapOutside: (_) {
-                  _typingGroup = null;
-                  _focusNode?.unfocus();
-                },
                 onChanged: (next) {
                   final before = _lastText ?? block.text;
                   final delta = PdfTextDelta.between(before, next);
