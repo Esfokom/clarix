@@ -2,6 +2,8 @@ import 'pdf_edit_command.dart';
 import 'pdf_page_object.dart';
 import 'pdf_text_types.dart';
 
+enum PdfEditingInteraction { reading, objectSelected, textEditing }
+
 final class PdfTextDelta {
   const PdfTextDelta({
     required this.replacedRange,
@@ -44,6 +46,7 @@ final class PdfEditingSession {
     required this.documentId,
     required this.sourceRevision,
     required this.mode,
+    required this.interaction,
     required this.blocks,
     required this.pageObjects,
     required this.bookmarks,
@@ -62,6 +65,7 @@ final class PdfEditingSession {
     documentId: documentId,
     sourceRevision: sourceRevision,
     mode: PdfEditingMode.reading,
+    interaction: PdfEditingInteraction.reading,
     blocks: const <PdfTextBlock>[],
     pageObjects: const <PdfPageObject>[],
     bookmarks: const <PdfBookmarkSnapshot>[],
@@ -76,6 +80,7 @@ final class PdfEditingSession {
   final String documentId;
   final String sourceRevision;
   final PdfEditingMode mode;
+  final PdfEditingInteraction interaction;
   final List<PdfTextBlock> blocks;
   final List<PdfPageObject> pageObjects;
   final List<PdfBookmarkSnapshot> bookmarks;
@@ -108,10 +113,85 @@ final class PdfEditingSession {
     required List<PdfHighlightSnapshot> highlights,
   }) => _copy(bookmarks: bookmarks, highlights: highlights);
 
-  PdfEditingSession withMode(PdfEditingMode mode) => _copy(mode: mode);
+  PdfEditingSession withMode(PdfEditingMode mode) =>
+      mode == PdfEditingMode.reading
+      ? _copy(
+          mode: mode,
+          interaction: PdfEditingInteraction.reading,
+          selection: null,
+          replaceSelection: true,
+        )
+      : _copy(mode: mode);
 
   PdfEditingSession withSelection(PdfTextSelection? selection) =>
       _copy(selection: selection, replaceSelection: true);
+
+  PdfEditingSession selectObject(PdfTextBlockLocator locator) {
+    blocks.firstWhere(
+      (block) => block.locator == locator,
+      orElse: () => throw StateError('No PDF text block matches $locator.'),
+    );
+    return _copy(
+      mode: PdfEditingMode.object,
+      interaction: PdfEditingInteraction.objectSelected,
+      selection: PdfTextSelection(
+        locator: locator,
+        range: const PdfTextRange(0, 0),
+      ),
+      replaceSelection: true,
+    );
+  }
+
+  PdfEditingSession beginTextEditing(PdfTextRange range) {
+    final activeSelection = selection;
+    if (activeSelection == null) {
+      throw StateError('Select a PDF text object before editing it.');
+    }
+    final block = blocks.firstWhere(
+      (candidate) => candidate.locator == activeSelection.locator,
+      orElse: () => throw StateError(
+        'The selected PDF text object is no longer available.',
+      ),
+    );
+    if (!block.isEditable) {
+      final reason = block.readOnlyReason;
+      if (reason != null) {
+        throw PdfReadOnlyTextBlockFailure(
+          locator: block.locator,
+          reason: reason,
+        );
+      }
+      throw PdfUnsupportedTextOperationFailure(
+        locator: block.locator,
+        capability: PdfTextCapability.replace,
+      );
+    }
+    if (range.start < 0 ||
+        range.end < range.start ||
+        range.end > block.text.length) {
+      throw RangeError.range(
+        range.end,
+        range.start,
+        block.text.length,
+        'range',
+      );
+    }
+    return _copy(
+      interaction: PdfEditingInteraction.textEditing,
+      selection: PdfTextSelection(locator: block.locator, range: range),
+      replaceSelection: true,
+    );
+  }
+
+  PdfEditingSession leaveTextEditing() => selection == null
+      ? clearObjectSelection()
+      : _copy(interaction: PdfEditingInteraction.objectSelected);
+
+  PdfEditingSession clearObjectSelection() => _copy(
+    interaction: PdfEditingInteraction.reading,
+    selection: null,
+    replaceSelection: true,
+  );
 
   PdfEditingSession withCaseMatching(bool caseMatching) =>
       _copy(caseMatching: caseMatching);
@@ -200,6 +280,7 @@ final class PdfEditingSession {
   PdfEditingSession _copy({
     String? sourceRevision,
     PdfEditingMode? mode,
+    PdfEditingInteraction? interaction,
     List<PdfTextBlock>? blocks,
     List<PdfPageObject>? pageObjects,
     List<PdfBookmarkSnapshot>? bookmarks,
@@ -214,6 +295,7 @@ final class PdfEditingSession {
     documentId: documentId,
     sourceRevision: sourceRevision ?? this.sourceRevision,
     mode: mode ?? this.mode,
+    interaction: interaction ?? this.interaction,
     blocks: List<PdfTextBlock>.unmodifiable(blocks ?? this.blocks),
     pageObjects: List<PdfPageObject>.unmodifiable(
       pageObjects ?? this.pageObjects,

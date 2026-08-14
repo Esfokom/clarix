@@ -610,9 +610,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             panEnabled: true,
                             scaleEnabled: input.pdfrxScaleEnabled,
                             scaleByPointerScale: readerPointerZoomSensitivity,
-                            textSelectionParams: const PdfTextSelectionParams(
-                              enabled: true,
-                              showContextMenuAutomatically: true,
+                            textSelectionParams: textSelectionParamsFor(
+                              editSession?.interaction ??
+                                  PdfEditingInteraction.reading,
                             ),
                             buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
@@ -2105,3 +2105,10 @@ class _HudDivider extends StatelessWidget {
     return Container(width: 1, height: 16, color: WorkspaceColors.border);
   }
 }
+
+PdfTextSelectionParams textSelectionParamsFor(
+  PdfEditingInteraction interaction,
+) => PdfTextSelectionParams(
+  enabled: interaction == PdfEditingInteraction.reading,
+  showContextMenuAutomatically: interaction == PdfEditingInteraction.reading,
+);

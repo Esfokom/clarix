@@ -53,6 +53,60 @@ void main() {
     expect(harness.controller.nativeResultFor('tab')?.block.text, 'Before');
   });
 
+  test(
+    'object selection does not activate text input until requested',
+    () async {
+      final harness = await _Harness.create();
+      addTearDown(harness.dispose);
+      final locator = harness.controller
+          .sessionFor('tab')
+          .blocks
+          .single
+          .locator;
+
+      await harness.controller.selectTextObject(
+        'tab',
+        harness.document,
+        locator,
+      );
+
+      expect(
+        harness.controller.sessionFor('tab').interaction,
+        PdfEditingInteraction.objectSelected,
+      );
+      expect(harness.mutator.requests.single.readOnlyGeometry, isTrue);
+
+      await harness.controller.beginTextEditing(
+        'tab',
+        harness.document,
+        locator,
+        const PdfTextRange(1, 4),
+      );
+      expect(
+        harness.controller.sessionFor('tab').interaction,
+        PdfEditingInteraction.textEditing,
+      );
+      expect(
+        harness.controller.sessionFor('tab').selection?.range,
+        const PdfTextRange(1, 4),
+      );
+
+      harness.controller.leaveTextEditing('tab');
+      expect(
+        harness.controller.sessionFor('tab').interaction,
+        PdfEditingInteraction.objectSelected,
+      );
+      expect(harness.controller.sessionFor('tab').selection?.locator, locator);
+
+      await harness.controller.clearSelection('tab');
+      expect(
+        harness.controller.sessionFor('tab').interaction,
+        PdfEditingInteraction.reading,
+      );
+      expect(harness.controller.sessionFor('tab').selection, isNull);
+    },
+  );
+
   test('native projection failure restores the prior session', () async {
     final harness = await _Harness.create(failProjection: true);
     addTearDown(harness.dispose);

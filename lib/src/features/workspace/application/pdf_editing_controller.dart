@@ -352,7 +352,7 @@ final class PdfEditingController extends ChangeNotifier {
     );
   }
 
-  Future<void> selectTextBlock(
+  Future<void> selectTextObject(
     String tabId,
     PdfDocument document,
     PdfTextBlockLocator locator,
@@ -363,14 +363,35 @@ final class PdfEditingController extends ChangeNotifier {
       (candidate) => candidate.locator == locator,
       orElse: () => throw PdfStaleLocatorFailure(locator),
     );
-    replaceSession(
-      tabId,
-      session.withSelection(
-        PdfTextSelection(locator: locator, range: const PdfTextRange(0, 0)),
-      ),
-    );
+    replaceSession(tabId, session.selectObject(locator));
     await _primeBlockGeometry(tabId, sessionFor(tabId), locator);
   }
+
+  Future<void> beginTextEditing(
+    String tabId,
+    PdfDocument document,
+    PdfTextBlockLocator locator,
+    PdfTextRange range,
+  ) async {
+    registerDocument(tabId, document);
+    var session = sessionFor(tabId);
+    if (session.selection?.locator != locator) {
+      session = session.selectObject(locator);
+    }
+    replaceSession(tabId, session.beginTextEditing(range));
+    await _primeBlockGeometry(tabId, sessionFor(tabId), locator);
+  }
+
+  void leaveTextEditing(String tabId) {
+    replaceSession(tabId, sessionFor(tabId).leaveTextEditing());
+  }
+
+  @Deprecated('Use selectTextObject and beginTextEditing explicitly.')
+  Future<void> selectTextBlock(
+    String tabId,
+    PdfDocument document,
+    PdfTextBlockLocator locator,
+  ) => selectTextObject(tabId, document, locator);
 
   @Deprecated('Use selectTextBlock so the live document is registered.')
   void selectBlock(String tabId, PdfTextBlockLocator locator) {
@@ -385,7 +406,7 @@ final class PdfEditingController extends ChangeNotifier {
 
   Future<void> clearSelection(String tabId, {PdfDocument? document}) async {
     if (document != null) registerDocument(tabId, document);
-    replaceSession(tabId, sessionFor(tabId).withSelection(null));
+    replaceSession(tabId, sessionFor(tabId).clearObjectSelection());
   }
 
   Future<void> selectPageObject(

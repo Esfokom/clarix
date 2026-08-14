@@ -4,6 +4,48 @@ import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('object selection and text editing are distinct interaction states', () {
+    final block = editableBlock(text: 'Revenue');
+    final session = PdfEditingSession.empty(
+      'doc',
+      sourceRevision: 'sha256:a',
+    ).withBlocks(<PdfTextBlock>[block]);
+
+    expect(session.interaction, PdfEditingInteraction.reading);
+
+    final selected = session.selectObject(block.locator);
+    expect(selected.interaction, PdfEditingInteraction.objectSelected);
+    expect(selected.selection?.range, const PdfTextRange(0, 0));
+
+    final editing = selected.beginTextEditing(const PdfTextRange(2, 5));
+    expect(editing.interaction, PdfEditingInteraction.textEditing);
+    expect(editing.selection?.range, const PdfTextRange(2, 5));
+
+    final objectOnly = editing.leaveTextEditing();
+    expect(objectOnly.interaction, PdfEditingInteraction.objectSelected);
+    expect(objectOnly.selection?.locator, block.locator);
+
+    final reading = objectOnly.clearObjectSelection();
+    expect(reading.interaction, PdfEditingInteraction.reading);
+    expect(reading.selection, isNull);
+  });
+
+  test('read-only text cannot enter text editing', () {
+    final block = editableBlock(
+      text: 'Locked',
+      readOnlyReason: PdfReadOnlyReason.type3Font,
+    );
+    final selected = PdfEditingSession.empty(
+      'doc',
+      sourceRevision: 'sha256:a',
+    ).withBlocks(<PdfTextBlock>[block]).selectObject(block.locator);
+
+    expect(
+      () => selected.beginTextEditing(const PdfTextRange(0, 6)),
+      throwsA(isA<PdfReadOnlyTextBlockFailure>()),
+    );
+  });
+
   test('saved checkpoint survives undo and redo', () {
     final PdfTextBlock block = editableBlock(text: 'Revenue');
     final PdfEditingSession session =
