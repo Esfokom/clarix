@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:clarix/src/features/workspace/application/pdf_editing_controller.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_edit_intent.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_page_object.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/infrastructure/pdf_text_engine.dart';
 import 'package:clarix/src/features/workspace/infrastructure/pdfium_text_engine_native.dart';
@@ -126,4 +127,31 @@ final class _CountingPdfTextEngine implements PdfTextEngine {
     required PdfDocument document,
     required PdfTextBlockLocator locator,
   }) => throw UnimplementedError();
+
+  @override
+  Future<List<PdfPageObject>> inspectPageObjects({
+    required PdfDocument document,
+    required String sourceRevision,
+    required List<int> pageNumbers,
+  }) async => const <PdfPageObject>[];
+
+  @override
+  Future<PdfPageObject> resolvePageObject({
+    required PdfDocument document,
+    required PdfPageObjectLocator locator,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> setTextObjectsVisible({
+    required PdfDocument document,
+    required PdfTextBlock block,
+    required bool visible,
+  }) async {}
+
+  @override
+  Future<void> setPageObjectPreviewTransform({
+    required PdfDocument document,
+    required PdfPageObjectLocator locator,
+    required PdfTransform transform,
+  }) async {}
 }

@@ -1,5 +1,7 @@
 import 'dart:collection';
 
+// ignore_for_file: prefer_initializing_formals
+
 import 'package:pdfrx/pdfrx.dart';
 
 import '../domain/pdf_edit_session.dart';
