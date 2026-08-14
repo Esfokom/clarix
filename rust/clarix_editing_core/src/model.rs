@@ -81,6 +81,11 @@ impl TextBlock {
             }],
         }
     }
+
+    pub fn with_source_binding(mut self, source_binding: SourceBinding) -> Self {
+        self.base.source_binding = Some(source_binding);
+        self
+    }
 }
 
 macro_rules! reserved_node {

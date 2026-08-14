@@ -688,6 +688,13 @@ name = "clarix_pdf_adapter"
 version = "0.1.0"
 dependencies = [
  "clarix_editing_core",
+ "lopdf",
+ "pdf_oxide",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "subsetter",
+ "thiserror",
 ]
 
 [[package]]

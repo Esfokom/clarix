@@ -31,6 +31,24 @@ imply clean-patch rendering, materialization, or validation support. An
 unsupported operation must report `Unsupported` with a reason and must never
 return fabricated success data.
 
-Task 6 adds the deterministic fixture generator and the command used to run
-the corpus twice. The two runs must produce identical stable IDs, object
-counts, capabilities, and stable error codes.
+## Regeneration
+
+From the repository root, generate the committed corpus with:
+
+```powershell
+cargo run -p clarix_pdf_adapter --example generate_corpus --manifest-path rust/Cargo.toml -- test_fixtures/editing_corpus/generated
+```
+
+Generate the ignored Windows font cases with:
+
+```powershell
+cargo run -p clarix_pdf_adapter --example generate_corpus --manifest-path rust/Cargo.toml -- test_fixtures/editing_corpus/generated --private-font-path C:\Windows\Fonts\arial.ttf --private-output test_fixtures/editing_corpus/local
+```
+
+The subset case uses a real reduced TrueType program. It retains glyph IDs
+0–255 so the fixture exercises PDF subset-font handling without committing
+licensed font bytes.
+
+Run `qualification_tests` twice. The runs must produce identical stable IDs,
+object counts, capabilities, and stable error codes. The tests also verify each
+generated file against the SHA-256 recorded in the manifest.

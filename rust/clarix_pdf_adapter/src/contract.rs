@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use clarix_editing_core::{DocumentId, DocumentModel, DocumentRevision, PageId, PageNode, PdfBox};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -18,6 +19,15 @@ impl SourceRef {
         }
     }
 
+    pub fn from_path(path: impl Into<PathBuf>) -> Result<Self, PdfAdapterError> {
+        let path = path.into();
+        let bytes = std::fs::read(&path).map_err(|error| PdfAdapterError::Io(error.to_string()))?;
+        Ok(Self {
+            fingerprint: sha256_hex(&bytes),
+            path,
+        })
+    }
+
     pub fn fingerprint(&self) -> &str {
         &self.fingerprint
     }
@@ -25,6 +35,13 @@ impl SourceRef {
     pub fn path(&self) -> &Path {
         &self.path
     }
+}
+
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
