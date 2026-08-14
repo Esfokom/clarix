@@ -276,13 +276,20 @@ class _IndexStatusIndicator extends StatefulWidget {
 
 class _IndexStatusIndicatorState extends State<_IndexStatusIndicator>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+  AnimationController? _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+  }
+
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
@@ -314,7 +321,10 @@ class _IndexStatusIndicatorState extends State<_IndexStatusIndicator>
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: active
             ? FadeTransition(
-                opacity: Tween<double>(begin: .35, end: 1).animate(_controller),
+                opacity: Tween<double>(
+                  begin: .35,
+                  end: 1,
+                ).animate(_controller!),
                 child: _dot(color),
               )
             : _dot(color),
