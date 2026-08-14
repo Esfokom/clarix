@@ -35,3 +35,25 @@ flutter run -d windows
 
 - `pdfrx` on Windows requires Developer Mode to be enabled.
 - The Flutter app currently falls back to a Dart extraction path while the Rust `pdf_oxide` dynamic library wiring is still scaffolded rather than fully linked.
+
+## PDF text editing scope
+
+Clarix edits genuine, existing PDF text objects. Saved text remains selectable,
+searchable, and extractable; pages are never rasterized to simulate an edit.
+The first release does not perform OCR, so image-only text and unsupported PDF
+objects (including Type 3 glyphs, vector outlines, and unsafe shared form
+objects) remain visibly read-only.
+
+Text can be replaced, formatted, moved, resized, undone, and redone through the
+same command history used by manual UI actions and agent tools. Font matching
+uses the closest compatible installed face and discloses substitutions. A font
+whose license prohibits embedding is rejected. Text overflow must be resolved
+before Save is enabled.
+
+Saving writes and validates a working copy before replacing the destination.
+If validation, external-change detection, font embedding, or replacement fails,
+the original PDF and the in-memory edit draft are preserved. Clarix then offers
+the relevant recovery action, such as reload, select the overflowing block, or
+save a copy. Agent edits and saves obey the configured `Allow`, `Ask when
+risky`, or `Always ask` permission policy; a granted workspace scope is reused
+until it is revoked.

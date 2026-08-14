@@ -2,7 +2,11 @@ import 'dart:async';
 
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/features/workspace/application/ai_agent_runtime.dart';
+import 'package:clarix/src/features/workspace/application/action_permission_service.dart';
+import 'package:clarix/src/features/workspace/application/ai_tool_registry.dart';
+import 'package:clarix/src/features/workspace/application/pdf_editing_controller.dart';
 import 'package:clarix/src/features/workspace/domain/ai_provider.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/infrastructure/local_rag_service.dart';
 import 'package:clarix/src/features/workspace/infrastructure/openai_compatible_provider.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -254,6 +258,63 @@ void main() {
     );
 
     expect(provider.requests.single.tools, isEmpty);
+  });
+
+  test('delegates scoped PDF mutation tools to the registry', () async {
+    final editing = PdfEditingController(commandId: () => 'agent');
+    final registry = AiToolRegistry(
+      editing: editing,
+      permissions: ActionPermissionService(
+        store: MemoryActionPermissionStore(),
+        defaultPolicy: ActionPermissionPolicy.allow,
+      ),
+      pathForDocument: (_) => null,
+    );
+    final provider = _FakeProvider(<List<AiProviderEvent>>[
+      <AiProviderEvent>[
+        const AiCompletionFinished(
+          toolCalls: <AiToolCall>[
+            AiToolCall(
+              id: 'call_1',
+              name: 'inspect_pdf_text_blocks',
+              argumentsJson: '{"documentId":"document-1"}',
+            ),
+          ],
+        ),
+      ],
+      <AiProviderEvent>[
+        const AiTextDelta('Inspected.'),
+        const AiCompletionFinished(),
+      ],
+    ]);
+    // Registering an empty session is enough to verify scope and delegation.
+    editing.registerSession(
+      'tab',
+      PdfEditingSession.empty('document-1', sourceRevision: 'rev'),
+    );
+    final runtime = AiAgentRuntime(
+      provider: provider,
+      localRag: LocalRagService(readChunks: (_) async => chunks),
+      toolRegistry: registry,
+    );
+
+    final reply = await runtime.run(
+      AiAgentRequest(
+        profile: profile,
+        apiKey: 'sk-test',
+        prompt: 'Inspect editable text',
+        documentIds: const <String>['document-1'],
+      ),
+    );
+
+    expect(reply.text, 'Inspected.');
+    expect(
+      provider.requests.first.tools.any(
+        (tool) => (tool['function'] as Map)['name'] == 'replace_pdf_text',
+      ),
+      isTrue,
+    );
+    expect(provider.requests.last.messages.last.content, contains('blocks'));
   });
 }
 

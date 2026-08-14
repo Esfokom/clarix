@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -15,7 +16,13 @@ import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
+import '../infrastructure/pdf_text_engine.dart';
+import '../infrastructure/pdf_edit_save_service.dart';
+import '../infrastructure/installed_font_catalog.dart';
 import 'ai_runtime_service.dart';
+import 'action_permission_service.dart';
+import 'ai_tool_registry.dart';
+import 'pdf_editing_controller.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
 
@@ -38,8 +45,11 @@ final pdfUtilityServiceProvider = Provider<PdfUtilityService>((Ref ref) {
 });
 
 final pdfDocumentRefProvider = Provider.autoDispose
-    .family<PdfDocumentRefFile, String>(
-      (Ref ref, String path) => PdfDocumentRefFile(path),
+    .family<PdfDocumentRefData, String>(
+      (Ref ref, String filePath) => PdfDocumentRefData(
+        File(filePath).readAsBytesSync(),
+        sourceName: filePath,
+      ),
     );
 
 final chunkStoreProvider = Provider<DocumentChunkStore>(
@@ -99,11 +109,36 @@ final conversationStoreProvider = FutureProvider<ConversationStore>((
   return store;
 });
 
+final actionPermissionServiceProvider = Provider<ActionPermissionService>(
+  (Ref ref) => ActionPermissionService(
+    store: SharedPreferencesActionPermissionStore(
+      ref.watch(sharedPreferencesProvider),
+    ),
+    defaultPolicy: ActionPermissionPolicy.askAlways,
+  ),
+);
+
+final aiToolRegistryProvider = Provider<AiToolRegistry>((Ref ref) {
+  return AiToolRegistry(
+    editing: ref.watch(pdfEditingControllerProvider),
+    permissions: ref.watch(actionPermissionServiceProvider),
+    pathForDocument: (documentId) {
+      final workspace = ref.read(workspaceNotifierProvider).value;
+      if (workspace == null) return null;
+      for (final tab in workspace.session.tabs) {
+        if (tab.documentId == documentId) return tab.filePath;
+      }
+      return null;
+    },
+  );
+});
+
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
     providerProfiles: ref.watch(providerProfileStoreProvider),
     chunkStore: ref.watch(chunkStoreProvider),
     localRag: ref.watch(localRagServiceProvider),
+    toolRegistry: ref.watch(aiToolRegistryProvider),
   );
   ref.onDispose(service.dispose);
   return service;
@@ -112,4 +147,46 @@ final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
 final workspaceNotifierProvider =
     AsyncNotifierProvider<WorkspaceNotifier, WorkspaceFeatureState>(
       WorkspaceNotifier.new,
+    );
+
+final pdfTextEngineProvider = Provider<PdfTextEngine>(
+  (Ref ref) => createPdfTextEngine(),
+);
+
+final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(
+  (Ref ref) => InstalledFontCatalog.scan(),
+);
+
+final pdfEditSaveServiceProvider = Provider<PdfEditSaveService>((Ref ref) {
+  final PdfTextEngine engine = ref.watch(pdfTextEngineProvider);
+  return PdfEditSaveService(
+    writeDraft: (File working, draft) async {
+      final PdfDocument document = await PdfDocument.openFile(working.path);
+      late final List<int> bytes;
+      try {
+        bytes = await engine.applyDraft(document: document, draft: draft);
+      } finally {
+        await document.dispose();
+      }
+      await working.writeAsBytes(bytes, flush: true);
+    },
+    validate: (File working) async {
+      final PdfDocument document = await PdfDocument.openFile(working.path);
+      try {
+        for (final PdfPage page in document.pages) {
+          await page.loadText();
+        }
+      } finally {
+        await document.dispose();
+      }
+    },
+  );
+});
+
+final pdfEditingControllerProvider =
+    ChangeNotifierProvider<PdfEditingController>(
+      (Ref ref) => PdfEditingController(
+        engine: ref.watch(pdfTextEngineProvider),
+        saveService: ref.watch(pdfEditSaveServiceProvider),
+      ),
     );

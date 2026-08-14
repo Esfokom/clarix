@@ -1,5 +1,20 @@
 import '../../../core/models.dart';
 import 'ai_provider.dart';
+import 'pdf_text_types.dart';
+
+enum PdfRecoveryAction { reload, saveCopy, selectBlock, rediscover }
+
+final class PdfFailurePresentation {
+  PdfFailurePresentation({
+    required this.message,
+    required List<PdfRecoveryAction> actions,
+    this.locator,
+  }) : actions = List<PdfRecoveryAction>.unmodifiable(actions);
+
+  final String message;
+  final List<PdfRecoveryAction> actions;
+  final PdfTextBlockLocator? locator;
+}
 
 class OutlineNodeState {
   const OutlineNodeState({
@@ -23,6 +38,8 @@ class WorkspaceFeatureState {
     required this.bannerMessage,
     this.providerProfiles = const <AiProviderProfile>[],
     this.dirtyDocumentIds = const <String>{},
+    this.pdfFailure,
+    this.pdfSaveInProgress = false,
   });
 
   final WorkspaceSession session;
@@ -33,6 +50,8 @@ class WorkspaceFeatureState {
   final String? bannerMessage;
   final List<AiProviderProfile> providerProfiles;
   final Set<String> dirtyDocumentIds;
+  final PdfFailurePresentation? pdfFailure;
+  final bool pdfSaveInProgress;
 
   WorkspaceFeatureState copyWith({
     WorkspaceSession? session,
@@ -44,6 +63,9 @@ class WorkspaceFeatureState {
     bool clearBannerMessage = false,
     List<AiProviderProfile>? providerProfiles,
     Set<String>? dirtyDocumentIds,
+    PdfFailurePresentation? pdfFailure,
+    bool clearPdfFailure = false,
+    bool? pdfSaveInProgress,
   }) {
     return WorkspaceFeatureState(
       session: session ?? this.session,
@@ -56,6 +78,8 @@ class WorkspaceFeatureState {
           : bannerMessage ?? this.bannerMessage,
       providerProfiles: providerProfiles ?? this.providerProfiles,
       dirtyDocumentIds: dirtyDocumentIds ?? this.dirtyDocumentIds,
+      pdfFailure: clearPdfFailure ? null : pdfFailure ?? this.pdfFailure,
+      pdfSaveInProgress: pdfSaveInProgress ?? this.pdfSaveInProgress,
     );
   }
 }

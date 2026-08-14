@@ -16,6 +16,7 @@ class DesktopWindowChrome extends ConsumerWidget {
     this.onSave,
     this.onUndo,
     this.onRedo,
+    this.showDocumentActions = false,
     this.useNativeWindowControls = true,
     super.key,
   });
@@ -27,6 +28,7 @@ class DesktopWindowChrome extends ConsumerWidget {
   final VoidCallback? onSave;
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
+  final bool showDocumentActions;
   final bool useNativeWindowControls;
 
   static const double _titleBarHeight = 56;
@@ -47,24 +49,27 @@ class DesktopWindowChrome extends ConsumerWidget {
             child: Row(
               children: <Widget>[
                 const SizedBox(width: 24),
-                IconButton(
-                  key: const Key('chrome-save'),
-                  tooltip: 'Save PDF (Ctrl+S)',
-                  onPressed: onSave,
-                  icon: Icon(Icons.save_outlined, color: colors.textMuted),
-                ),
-                IconButton(
-                  key: const Key('chrome-undo'),
-                  tooltip: 'Undo (Ctrl+Z)',
-                  onPressed: onUndo,
-                  icon: Icon(Icons.undo, color: colors.textMuted),
-                ),
-                IconButton(
-                  key: const Key('chrome-redo'),
-                  tooltip: 'Redo (Ctrl+Shift+Z)',
-                  onPressed: onRedo,
-                  icon: Icon(Icons.redo, color: colors.textMuted),
-                ),
+                if (showDocumentActions)
+                  IconButton(
+                    key: const Key('chrome-save'),
+                    tooltip: 'Save PDF (Ctrl+S)',
+                    onPressed: onSave,
+                    icon: Icon(Icons.save_outlined, color: colors.textMuted),
+                  ),
+                if (showDocumentActions)
+                  IconButton(
+                    key: const Key('chrome-undo'),
+                    tooltip: 'Undo (Ctrl+Z)',
+                    onPressed: onUndo,
+                    icon: Icon(Icons.undo, color: colors.textMuted),
+                  ),
+                if (showDocumentActions)
+                  IconButton(
+                    key: const Key('chrome-redo'),
+                    tooltip: 'Redo (Ctrl+Shift+Z)',
+                    onPressed: onRedo,
+                    icon: Icon(Icons.redo, color: colors.textMuted),
+                  ),
                 Expanded(
                   child: _SearchShell(
                     onImport: onImport,
