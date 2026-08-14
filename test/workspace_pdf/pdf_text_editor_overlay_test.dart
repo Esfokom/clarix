@@ -1,4 +1,5 @@
 import 'package:clarix/src/features/workspace/domain/pdf_edit_intent.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_text_editor_overlay.dart';
 import 'package:flutter/material.dart';
@@ -81,6 +82,7 @@ void main() {
         home: Scaffold(
           body: PdfTextEditorOverlay(
             mode: PdfEditingMode.object,
+            interaction: PdfEditingInteraction.textEditing,
             blocks: <PdfTextBlock>[_block()],
             selection: PdfTextSelection(
               locator: _locator,
@@ -114,6 +116,64 @@ void main() {
     final intent = intents.single as ReplacePdfTextIntent;
     expect(intent.range, const PdfTextRange(0, 13));
     expect(intent.replacement, 'After');
+  });
+
+  testWidgets('single click selects an object and double click enters text', (
+    tester,
+  ) async {
+    final selected = <PdfTextBlockLocator>[];
+    final editingRanges = <PdfTextRange>[];
+    var interaction = PdfEditingInteraction.reading;
+    late StateSetter update;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            update = setState;
+            return Scaffold(
+              body: PdfTextEditorOverlay(
+                mode: PdfEditingMode.object,
+                interaction: interaction,
+                blocks: <PdfTextBlock>[_block()],
+                selection: interaction == PdfEditingInteraction.reading
+                    ? null
+                    : PdfTextSelection(
+                        locator: _locator,
+                        range: const PdfTextRange(0, 0),
+                      ),
+                rectForBlock: (_) => const Rect.fromLTWH(20, 30, 120, 24),
+                onSelect: (locator) {
+                  selected.add(locator);
+                  update(
+                    () => interaction = PdfEditingInteraction.objectSelected,
+                  );
+                },
+                onBeginTextEditing: (_, range) {
+                  editingRanges.add(range);
+                  update(() => interaction = PdfEditingInteraction.textEditing);
+                },
+                documentId: 'document',
+                documentRevision: 'revision',
+                onIntent: (_) {},
+              ),
+            );
+          },
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(selected, <PdfTextBlockLocator>[_locator]);
+    expect(find.byKey(const Key('pdf-native-text-input')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
+    await tester.pump(const Duration(milliseconds: 50));
+    await tester.tap(find.byKey(const Key('pdf-text-block-outline')));
+    await tester.pump();
+    expect(editingRanges, <PdfTextRange>[const PdfTextRange(0, 13)]);
+    expect(find.byKey(const Key('pdf-native-text-input')), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 400));
   });
 }
 

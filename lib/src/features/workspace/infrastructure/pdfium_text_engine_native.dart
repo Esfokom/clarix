@@ -138,7 +138,7 @@ final class PdfiumTextEngine implements PdfTextEngine {
     return document.encodePdf(incremental: false);
   }
 
-  List<PdfTextRange> _replaceFormattedBlock(
+  _NativeBlockReplacement _replaceFormattedBlock(
     FPDF_DOCUMENT document,
     FPDF_PAGE page,
     PdfTextBlock block,
@@ -208,8 +208,11 @@ final class PdfiumTextEngine implements PdfTextEngine {
     for (final font in loadedFonts) {
       pdfiumBindings.FPDFFont_Close(font);
     }
-    return List<PdfTextRange>.unmodifiable(
-      segments.map((segment) => segment.run.range),
+    return _NativeBlockReplacement(
+      lineRanges: List<PdfTextRange>.unmodifiable(
+        segments.map((segment) => segment.run.range),
+      ),
+      textObjectCount: segments.length,
     );
   }
 
@@ -218,6 +221,24 @@ final class PdfiumTextEngine implements PdfTextEngine {
     required bool reflow,
     required FPDF_FONT font,
   }) {
+    // Keep an invisible whitespace text object as the editable insertion
+    // anchor. PDFium discards a truly empty object during content generation;
+    // if the last object disappears, the next keystroke has no native target.
+    if (block.text.isEmpty) {
+      final style = block.runs.isEmpty
+          ? throw const PdfFontUnavailableFailure(
+              'The empty text block has no reusable font style.',
+            )
+          : block.runs.first.style;
+      return <_NativeTextSegment>[
+        _NativeTextSegment(
+          text: ' ',
+          run: PdfTextRun(range: const PdfTextRange(0, 0), style: style),
+          originX: block.bounds.left,
+          baseline: block.baseline,
+        ),
+      ];
+    }
     if (reflow) {
       final width = calloc<Float>();
       final ascent = calloc<Float>();
@@ -1032,9 +1053,10 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
     block.locator.pageNumber - 1,
   );
   if (page.address == 0) throw PdfStaleLocatorFailure(block.locator);
-  late final List<PdfTextRange> lineRanges;
+  late final _NativeBlockReplacement replacement;
+  late final List<List<int>> createdObjectPaths;
   try {
-    lineRanges = const PdfiumTextEngine()._replaceFormattedBlock(
+    replacement = const PdfiumTextEngine()._replaceFormattedBlock(
       nativeDocument,
       page,
       block,
@@ -1046,29 +1068,80 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
         'Could not regenerate PDF page ${block.locator.pageNumber}.',
       );
     }
+    final paths = <List<int>>[];
+    final count = pdfiumBindings.FPDFPage_CountObjects(page);
+    for (
+      var index = count - 1;
+      index >= 0 && paths.length < replacement.textObjectCount;
+      index--
+    ) {
+      final object = pdfiumBindings.FPDFPage_GetObject(page, index);
+      if (object.address != 0 &&
+          pdfiumBindings.FPDFPageObj_GetType(object) == FPDF_PAGEOBJ_TEXT) {
+        paths.add(<int>[index]);
+      }
+    }
+    if (paths.length != replacement.textObjectCount) {
+      throw const PdfValidationFailure(
+        'PDFium did not preserve every inserted text object.',
+      );
+    }
+    createdObjectPaths = List<List<int>>.unmodifiable(paths.reversed);
   } finally {
     pdfiumBindings.FPDF_ClosePage(page);
   }
 
-  final projectedBlocks = const PdfiumTextEngine()._inspectPage(
+  final projected = _blockWithObjectPaths(block, createdObjectPaths);
+  if (block.text.isEmpty) {
+    return PdfNativeProjectionResult(
+      requestedRevision: request.editRevision,
+      appliedRevision: request.editRevision,
+      block: projected,
+      lines: const <PdfNativeLine>[],
+      characters: const <PdfNativeCharacterBox>[],
+      affectedPages: <int>[block.locator.pageNumber],
+    );
+  }
+
+  final extractedCharacters = _characterBoxesForText(
     nativeDocument,
     block.locator.pageNumber,
-    request.documentRevision,
+    block.text,
   );
-  final projected = _closestProjectedBlock(projectedBlocks, block);
-  final characters = _characterBoxesForText(
-    nativeDocument,
-    block.locator.pageNumber,
-    projected.text,
-  );
+  final characters = extractedCharacters.isEmpty
+      ? _fallbackCharacterBoxes(block)
+      : extractedCharacters;
   return PdfNativeProjectionResult(
     requestedRevision: request.editRevision,
     appliedRevision: request.editRevision,
     block: projected,
-    lines: _linesForRanges(lineRanges, characters),
+    lines: _linesForRanges(replacement.lineRanges, characters),
     characters: characters,
     affectedPages: <int>[block.locator.pageNumber],
   );
+}
+
+List<PdfNativeCharacterBox> _fallbackCharacterBoxes(PdfTextBlock block) {
+  if (block.text.isEmpty) return const <PdfNativeCharacterBox>[];
+  final visibleOffsets = <int>[
+    for (var offset = 0; offset < block.text.length; offset++)
+      if (block.text[offset] != '\r' && block.text[offset] != '\n') offset,
+  ];
+  if (visibleOffsets.isEmpty) return const <PdfNativeCharacterBox>[];
+  final width =
+      (block.bounds.right - block.bounds.left) / visibleOffsets.length;
+  return List<PdfNativeCharacterBox>.unmodifiable(<PdfNativeCharacterBox>[
+    for (var index = 0; index < visibleOffsets.length; index++)
+      PdfNativeCharacterBox(
+        offset: visibleOffsets[index],
+        bounds: PdfBox(
+          block.bounds.left + (width * index),
+          block.bounds.bottom,
+          block.bounds.left + (width * (index + 1)),
+          block.bounds.top,
+        ),
+      ),
+  ]);
 }
 
 List<PdfNativeCharacterBox> _characterBoxesForText(
@@ -1190,6 +1263,16 @@ final class _PageTextCharacter {
   final int end;
 }
 
+final class _NativeBlockReplacement {
+  const _NativeBlockReplacement({
+    required this.lineRanges,
+    required this.textObjectCount,
+  });
+
+  final List<PdfTextRange> lineRanges;
+  final int textObjectCount;
+}
+
 PdfTextBlock _retargetBlock(PdfTextBlock desired, PdfTextBlock nativeTarget) =>
     PdfTextBlock(
       locator: nativeTarget.locator,
@@ -1206,33 +1289,23 @@ PdfTextBlock _retargetBlock(PdfTextBlock desired, PdfTextBlock nativeTarget) =>
       overflow: desired.overflow,
     );
 
-PdfTextBlock _closestProjectedBlock(
-  List<PdfTextBlock> candidates,
-  PdfTextBlock requested,
-) {
-  final matchingText = candidates
-      .where((candidate) => candidate.text == requested.text)
-      .toList(growable: false);
-  if (matchingText.isEmpty) {
-    throw const PdfValidationFailure(
-      'PDFium regenerated the page but could not resolve the edited text.',
-    );
-  }
-  if (matchingText.length == 1) return matchingText.single;
-  return matchingText.reduce(
-    (best, candidate) =>
-        _boundsDistance(candidate.bounds, requested.bounds) <
-            _boundsDistance(best.bounds, requested.bounds)
-        ? candidate
-        : best,
-  );
-}
-
-double _boundsDistance(PdfBox first, PdfBox second) =>
-    (first.left - second.left).abs() +
-    (first.bottom - second.bottom).abs() +
-    (first.right - second.right).abs() +
-    (first.top - second.top).abs();
+PdfTextBlock _blockWithObjectPaths(
+  PdfTextBlock block,
+  List<List<int>> objectPaths,
+) => PdfTextBlock(
+  locator: block.locator,
+  text: block.text,
+  originalText: block.originalText,
+  runs: block.runs,
+  bounds: block.bounds,
+  transform: block.transform,
+  baseline: block.baseline,
+  writingDirection: block.writingDirection,
+  capabilities: block.capabilities.toList(growable: false),
+  readOnlyReason: block.readOnlyReason,
+  objectPaths: objectPaths,
+  overflow: block.overflow,
+);
 
 void _applyDraftOnWorker(PdfiumWorkerInput<_ApplyDraftWorkerMessage> input) {
   final message = input.message;

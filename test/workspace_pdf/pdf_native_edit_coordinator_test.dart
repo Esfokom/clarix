@@ -36,6 +36,12 @@ void main() {
       1,
       2,
     ]);
+    expect(
+      mutator.requests[1].nativeTarget?.text,
+      'First',
+      reason:
+          'Each queued mutation must target the native object produced by the previous mutation.',
+    );
     expect(coordinator.latestResult(document)?.block.text, 'Second');
     expect(reloads, <List<int>>[
       <int>[1],

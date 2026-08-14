@@ -673,6 +673,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                     mode:
                                         editSession?.mode ??
                                         PdfEditingMode.reading,
+                                    interaction:
+                                        editSession?.interaction ??
+                                        PdfEditingInteraction.reading,
                                     blocks:
                                         editSession?.blocks
                                             .where(
@@ -716,7 +719,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                         ),
                                     onSelect: (locator) {
                                       unawaited(() async {
-                                        await editing.selectTextBlock(
+                                        await editing.selectTextObject(
                                           widget.tab.id,
                                           _controller.document,
                                           locator,
@@ -731,16 +734,36 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                             );
                                       }());
                                     },
+                                    onBeginTextEditing: (locator, range) {
+                                      unawaited(
+                                        editing.beginTextEditing(
+                                          widget.tab.id,
+                                          _controller.document,
+                                          locator,
+                                          range,
+                                        ),
+                                      );
+                                    },
                                     documentId: editSession?.documentId,
                                     documentRevision: editSession?.revision,
                                     caseMatching:
                                         editSession?.caseMatching ?? true,
-                                    onIntent: (intent) => unawaited(
-                                      editing.dispatch(
-                                        intent,
-                                        provenance: PdfCommandProvenance.manual,
-                                      ),
-                                    ),
+                                    onIntent: (intent) => unawaited(() async {
+                                      try {
+                                        await editing.dispatch(
+                                          intent,
+                                          provenance:
+                                              PdfCommandProvenance.manual,
+                                        );
+                                      } catch (error) {
+                                        ref
+                                            .read(
+                                              workspaceNotifierProvider
+                                                  .notifier,
+                                            )
+                                            .reportPdfEditFailure(error);
+                                      }
+                                    }()),
                                     onClearSelection: () => unawaited(
                                       editing.clearSelection(
                                         widget.tab.id,

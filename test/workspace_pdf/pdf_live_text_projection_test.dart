@@ -77,4 +77,61 @@ void main() {
       contains('Again'),
     );
   });
+
+  test(
+    'empty replacement remains editable and accepts following text',
+    () async {
+      final fixture = await PdfTextFixture.singleBlock('Before');
+      addTearDown(() => fixture.parent.delete(recursive: true));
+      final document = await PdfDocument.openFile(fixture.path);
+      addTearDown(document.dispose);
+      const engine = PdfiumTextEngine();
+      final revision = await sha256File(fixture);
+      final logicalBlock = (await engine.inspectPages(
+        document: document,
+        sourceRevision: revision,
+        pageNumbers: const <int>[1],
+      )).single;
+      final coordinator = PdfNativeEditCoordinator(mutator: engine);
+
+      await coordinator.projectBlock(
+        document,
+        PdfNativeProjectionRequest(
+          documentRevision: revision,
+          editRevision: 1,
+          block: logicalBlock.copyWith(text: ''),
+        ),
+      );
+
+      final empty = coordinator.latestResult(
+        document,
+        logicalLocator: logicalBlock.locator,
+      )!;
+      expect(empty.block.text, isEmpty);
+      expect(empty.characters, isEmpty);
+      expect(
+        (await document.pages.first.loadText())!.fullText,
+        isNot(contains('Before')),
+      );
+
+      await coordinator.projectBlock(
+        document,
+        PdfNativeProjectionRequest(
+          documentRevision: revision,
+          editRevision: 2,
+          block: logicalBlock.copyWith(text: 'After'),
+        ),
+      );
+
+      final restored = coordinator.latestResult(
+        document,
+        logicalLocator: logicalBlock.locator,
+      )!;
+      expect(restored.block.text, 'After');
+      expect(
+        (await document.pages.first.loadText())!.fullText,
+        contains('After'),
+      );
+    },
+  );
 }

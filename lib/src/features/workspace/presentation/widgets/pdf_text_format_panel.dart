@@ -100,22 +100,23 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
         children: <Widget>[
           Text('Text format', style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 16),
-          DropdownButtonFormField<String>(
-            key: const Key('pdf-font-family'),
-            isExpanded: true,
-            initialValue: widget.availableFamilies.contains(family)
+          DropdownMenu<String>(
+            key: const Key('pdf-font-search'),
+            width: double.infinity,
+            enableFilter: true,
+            enableSearch: true,
+            requestFocusOnTap: true,
+            initialSelection: widget.availableFamilies.contains(family)
                 ? family
                 : null,
-            decoration: const InputDecoration(labelText: 'Font family'),
-            items: widget.availableFamilies
+            label: const Text('Font family'),
+            dropdownMenuEntries: widget.availableFamilies
                 .map(
-                  (value) => DropdownMenuItem(
-                    value: value,
-                    child: Text(value, overflow: TextOverflow.ellipsis),
-                  ),
+                  (value) =>
+                      DropdownMenuEntry<String>(value: value, label: value),
                 )
                 .toList(growable: false),
-            onChanged: (value) {
+            onSelected: (value) {
               if (value != null) _apply(PdfTextStylePatch(fontFamily: value));
             },
           ),
@@ -216,19 +217,46 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
             ],
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<PdfTextAlignment>(
+          Row(
             key: const Key('pdf-text-alignment'),
-            initialValue: alignment,
-            decoration: const InputDecoration(labelText: 'Alignment'),
-            items: PdfTextAlignment.values
-                .map(
-                  (value) =>
-                      DropdownMenuItem(value: value, child: Text(value.name)),
-                )
-                .toList(growable: false),
-            onChanged: (value) {
-              if (value != null) _apply(PdfTextStylePatch(alignment: value));
-            },
+            children: <Widget>[
+              _AlignmentToggle(
+                key: const Key('pdf-align-left'),
+                icon: Icons.format_align_left,
+                label: 'Align left',
+                selected: alignment == PdfTextAlignment.left,
+                onPressed: () => _apply(
+                  const PdfTextStylePatch(alignment: PdfTextAlignment.left),
+                ),
+              ),
+              _AlignmentToggle(
+                key: const Key('pdf-align-center'),
+                icon: Icons.format_align_center,
+                label: 'Align center',
+                selected: alignment == PdfTextAlignment.center,
+                onPressed: () => _apply(
+                  const PdfTextStylePatch(alignment: PdfTextAlignment.center),
+                ),
+              ),
+              _AlignmentToggle(
+                key: const Key('pdf-align-right'),
+                icon: Icons.format_align_right,
+                label: 'Align right',
+                selected: alignment == PdfTextAlignment.right,
+                onPressed: () => _apply(
+                  const PdfTextStylePatch(alignment: PdfTextAlignment.right),
+                ),
+              ),
+              _AlignmentToggle(
+                key: const Key('pdf-align-justify'),
+                icon: Icons.format_align_justify,
+                label: 'Justify',
+                selected: alignment == PdfTextAlignment.justify,
+                onPressed: () => _apply(
+                  const PdfTextStylePatch(alignment: PdfTextAlignment.justify),
+                ),
+              ),
+            ],
           ),
           ExpansionTile(
             key: const Key('pdf-text-geometry'),
@@ -391,5 +419,38 @@ final class _Toggle extends StatelessWidget {
     ),
     onPressed: onPressed,
     child: Text(label),
+  );
+}
+
+final class _AlignmentToggle extends StatelessWidget {
+  const _AlignmentToggle({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Expanded(
+    child: Semantics(
+      selected: selected,
+      button: true,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: IconButton(
+          isSelected: selected,
+          selectedIcon: Icon(icon),
+          onPressed: onPressed,
+          icon: Icon(icon),
+        ),
+      ),
+    ),
   );
 }

@@ -1,4 +1,5 @@
 import 'package:clarix/src/features/workspace/domain/pdf_native_edit_types.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_text_editor_overlay.dart';
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ void main() {
         home: Scaffold(
           body: PdfTextEditorOverlay(
             mode: PdfEditingMode.object,
+            interaction: PdfEditingInteraction.textEditing,
             blocks: <PdfTextBlock>[block],
             selection: PdfTextSelection(
               locator: block.locator,
@@ -40,6 +42,44 @@ void main() {
 
     await tester.tapAt(const Offset(35, 45));
     expect(tappedRange, const PdfTextRange(1, 1));
+  });
+
+  testWidgets('empty edited block keeps a blinking insertion caret', (
+    tester,
+  ) async {
+    final block = _block().replaceText(const PdfTextRange(0, 4), 'Text', '');
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PdfTextEditorOverlay(
+            mode: PdfEditingMode.object,
+            interaction: PdfEditingInteraction.textEditing,
+            blocks: <PdfTextBlock>[block],
+            selection: PdfTextSelection(
+              locator: block.locator,
+              range: const PdfTextRange(0, 0),
+            ),
+            nativeProjection: PdfNativeProjectionResult(
+              requestedRevision: 2,
+              appliedRevision: 2,
+              block: block,
+              lines: const <PdfNativeLine>[],
+              characters: const <PdfNativeCharacterBox>[],
+              affectedPages: const <int>[1],
+            ),
+            rectForBlock: (_) => const Rect.fromLTWH(20, 30, 100, 20),
+            onSelect: (_) {},
+            documentId: 'document',
+            documentRevision: 'revision',
+            onIntent: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('pdf-native-caret')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-native-caret-blink')), findsOneWidget);
   });
 }
 

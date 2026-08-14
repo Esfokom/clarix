@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../domain/pdf_edit_intent.dart';
+import '../../domain/pdf_edit_session.dart';
 import '../../domain/pdf_native_edit_types.dart';
 import '../../domain/pdf_page_object.dart';
 import '../../domain/pdf_text_types.dart';
 import 'pdf_native_text_input.dart';
 
 typedef PdfTextBlockRectResolver = Rect Function(PdfTextBlock block);
+typedef PdfBeginTextEditing =
+    void Function(PdfTextBlockLocator locator, PdfTextRange range);
 
 final class PdfTextEditorOverlay extends StatefulWidget {
   const PdfTextEditorOverlay({
@@ -17,6 +20,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
     required this.selection,
     required this.rectForBlock,
     required this.onSelect,
+    this.interaction = PdfEditingInteraction.reading,
+    this.onBeginTextEditing,
     this.pageObjects = const <PdfPageObject>[],
     this.onObjectPreview,
     this.loading = false,
@@ -37,6 +42,8 @@ final class PdfTextEditorOverlay extends StatefulWidget {
   final PdfTextSelection? selection;
   final PdfTextBlockRectResolver rectForBlock;
   final ValueChanged<PdfTextBlockLocator> onSelect;
+  final PdfEditingInteraction interaction;
+  final PdfBeginTextEditing? onBeginTextEditing;
   final List<PdfPageObject> pageObjects;
   final Future<void> Function(PdfPageObjectLocator, PdfTransform)?
   onObjectPreview;
@@ -112,7 +119,10 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
         : hovered
         ? const Color(0xff64748b)
         : const Color(0x66718096);
-    if (selected && block.isEditable && widget.onIntent != null) {
+    if (selected &&
+        widget.interaction == PdfEditingInteraction.textEditing &&
+        block.isEditable &&
+        widget.onIntent != null) {
       return _inlineEditor(block);
     }
     return Positioned.fromRect(
@@ -125,6 +135,12 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
         child: GestureDetector(
           behavior: HitTestBehavior.translucent,
           onTap: () => widget.onSelect(block.locator),
+          onDoubleTap: block.isEditable
+              ? () => widget.onBeginTextEditing?.call(
+                  block.locator,
+                  PdfTextRange(0, block.text.length),
+                )
+              : null,
           child: Container(
             key: const Key('pdf-text-block-outline'),
             decoration: BoxDecoration(
@@ -234,10 +250,29 @@ final class _PdfTextEditorOverlayState extends State<PdfTextEditorOverlay>
   List<Widget> _selectionChrome(PdfTextBlock block) {
     final projection = widget.nativeProjection;
     final selection = widget.selection;
-    if (projection == null ||
-        selection == null ||
-        projection.characters.isEmpty) {
+    if (projection == null || selection == null) {
       return const <Widget>[];
+    }
+    if (projection.characters.isEmpty) {
+      if (block.text.isNotEmpty) return const <Widget>[];
+      final rect = widget.rectForBlock(block);
+      return <Widget>[
+        Positioned(
+          key: const Key('pdf-native-caret'),
+          left: 0,
+          top: 0,
+          width: 1.2,
+          height: rect.height.clamp(1, double.infinity),
+          child: FadeTransition(
+            key: const Key('pdf-native-caret-blink'),
+            opacity: Tween<double>(
+              begin: 0.15,
+              end: 1,
+            ).animate(_caretController!),
+            child: const ColoredBox(color: Color(0xff2563eb)),
+          ),
+        ),
+      ];
     }
     final widgets = <Widget>[];
     for (final box in PdfNativeTextGeometry.boxesForRange(

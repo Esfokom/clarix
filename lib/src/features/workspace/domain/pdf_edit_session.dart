@@ -124,7 +124,9 @@ final class PdfEditingSession {
       : _copy(mode: mode);
 
   PdfEditingSession withSelection(PdfTextSelection? selection) =>
-      _copy(selection: selection, replaceSelection: true);
+      selection == null
+      ? clearObjectSelection()
+      : _copy(selection: selection, replaceSelection: true);
 
   PdfEditingSession selectObject(PdfTextBlockLocator locator) {
     blocks.firstWhere(

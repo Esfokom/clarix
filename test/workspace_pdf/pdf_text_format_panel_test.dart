@@ -70,6 +70,43 @@ void main() {
     expect((intents.single as FormatPdfTextIntent).patch.fontWeight, 700);
     expect(find.byKey(const Key('pdf-case-matching')), findsOneWidget);
   });
+
+  testWidgets('font search and alignment are direct inspector controls', (
+    tester,
+  ) async {
+    final intents = <PdfEditIntent>[];
+    final block = _block();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PdfTextFormatPanel(
+            documentId: 'doc',
+            documentRevision: 'rev',
+            block: block,
+            selection: PdfTextSelection(
+              locator: block.locator,
+              range: const PdfTextRange(0, 2),
+            ),
+            availableFamilies: const <String>['Arial', 'Calibri', 'Cambria'],
+            onIntent: intents.add,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('pdf-font-search')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-align-left')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-align-center')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-align-right')), findsOneWidget);
+    expect(find.byKey(const Key('pdf-align-justify')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('pdf-align-right')));
+    await tester.pump();
+    expect(
+      (intents.single as FormatPdfTextIntent).patch.alignment,
+      PdfTextAlignment.right,
+    );
+  });
 }
 
 PdfTextBlock _block() {

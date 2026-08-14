@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'windows_font_source.dart';
+
 enum FontEmbeddingRights { installable, editable, previewPrint, restricted }
 
 final class InstalledFontFace {
@@ -74,20 +76,44 @@ final class InstalledFontCatalog {
   List<String> get families =>
       (faces.map((face) => face.family).toSet().toList()..sort()).toList();
 
-  static Future<InstalledFontCatalog> scan() async {
-    final directories = <Directory>{
-      if (Platform.environment['WINDIR'] case final windir?)
-        Directory('$windir${Platform.pathSeparator}Fonts'),
-      if (Platform.environment['LOCALAPPDATA'] case final local?)
-        Directory(
-          '$local${Platform.pathSeparator}Microsoft${Platform.pathSeparator}Windows${Platform.pathSeparator}Fonts',
-        ),
-    };
+  static Future<InstalledFontCatalog> scan({
+    WindowsFontSource source = const WindowsFontSource(),
+  }) async {
+    final directoryPaths = windowsFontDirectories(Platform.environment);
+    final directories = directoryPaths.map(Directory.new).toSet();
     final result = <InstalledFontFace>[];
+    final seen = <String>{};
+    final registeredPaths = <String>{};
+    final registrations = await source.registrations();
+    for (final registration in registrations) {
+      final path = resolveRegisteredFontPath(
+        registration.registeredPath,
+        directoryPaths,
+        exists: (candidate) => File(candidate).existsSync(),
+      );
+      if (path == null) continue;
+      final identity =
+          '${registration.family.toLowerCase()}|${path.toLowerCase()}';
+      if (!seen.add(identity)) continue;
+      registeredPaths.add(path.toLowerCase());
+      try {
+        result.add(
+          await _faceFromFile(
+            File(path),
+            registeredFamily: registration.family,
+          ),
+        );
+      } on FileSystemException {
+        // A registered font can disappear or become inaccessible during scan.
+      }
+    }
     for (final directory in directories) {
       if (!await directory.exists()) continue;
       await for (final entity in directory.list(followLinks: false)) {
-        if (entity is! File || !_isFontPath(entity.path)) continue;
+        if (entity is! File || !isSupportedFontPath(entity.path)) continue;
+        if (registeredPaths.contains(entity.path.toLowerCase())) continue;
+        final identity = '|${entity.path.toLowerCase()}';
+        if (!seen.add(identity)) continue;
         try {
           result.add(await _faceFromFile(entity));
         } on FileSystemException {
@@ -146,12 +172,10 @@ final class InstalledFontCatalog {
   }
 }
 
-bool _isFontPath(String path) {
-  final lower = path.toLowerCase();
-  return lower.endsWith('.ttf') || lower.endsWith('.otf');
-}
-
-Future<InstalledFontFace> _faceFromFile(File file) async {
+Future<InstalledFontFace> _faceFromFile(
+  File file, {
+  String? registeredFamily,
+}) async {
   final bytes = await file.readAsBytes();
   final stem = file.uri.pathSegments.last.replaceFirst(
     RegExp(r'\.(ttf|otf)$', caseSensitive: false),
@@ -162,12 +186,17 @@ Future<InstalledFontFace> _faceFromFile(File file) async {
   final italic = lower.contains('italic') || lower.contains('oblique');
   return InstalledFontFace(
     path: file.path,
-    family: stem
-        .replaceAll(
-          RegExp(r'[-_](bold|italic|oblique|regular).*$', caseSensitive: false),
-          '',
-        )
-        .trim(),
+    family:
+        registeredFamily ??
+        stem
+            .replaceAll(
+              RegExp(
+                r'[-_](bold|italic|oblique|regular).*$',
+                caseSensitive: false,
+              ),
+              '',
+            )
+            .trim(),
     face: bold && italic
         ? 'Bold Italic'
         : bold

@@ -35,14 +35,19 @@ final class PdfNativeEditCoordinator {
             : request.withNativeTarget(nativeTarget),
       );
       if (!identical(_states[document], state) ||
-          state.latestRequestedRevision != request.editRevision ||
           result.requestedRevision != request.editRevision ||
           result.appliedRevision != request.editRevision) {
         return;
       }
 
-      state.latestResult = result;
+      // Even when a newer logical edit is already queued, this mutation has
+      // changed the live PDF. Preserve its newly created object paths so the
+      // next serialized mutation targets those objects instead of the stale
+      // paths from an earlier page state.
       state.nativeResults[request.block.locator] = result;
+      if (state.latestRequestedRevision != request.editRevision) return;
+
+      state.latestResult = result;
       if (request.readOnlyGeometry) return;
       final pages = result.affectedPages.toSet().toList()..sort();
       await _reloadPages(document, pages);

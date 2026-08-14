@@ -408,6 +408,21 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     }
   }
 
+  void reportPdfEditFailure(Object error) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncData(
+      error is PdfEditFailure
+          ? current.copyWith(
+              bannerMessage: presentPdfFailure(error).message,
+              pdfFailure: presentPdfFailure(error),
+            )
+          : current.copyWith(
+              bannerMessage: 'Could not edit PDF content: $error',
+            ),
+    );
+  }
+
   bool get canUndoActive {
     final String? id = state.value?.session.activeTabId;
     return id != null && _pdfEditing.sessionsByTabId[id]?.canUndo == true;

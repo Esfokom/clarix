@@ -12,6 +12,7 @@ import '../support/pdf_text_fixture.dart';
 
 void main() {
   for (final type in <PdfPageObjectType>[
+    PdfPageObjectType.text,
     PdfPageObjectType.image,
     PdfPageObjectType.path,
   ]) {

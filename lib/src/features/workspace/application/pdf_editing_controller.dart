@@ -278,7 +278,7 @@ final class PdfEditingController extends ChangeNotifier {
         'The saved PDF checkpoint is no longer available in this session.',
       );
     }
-    final restored = before.atCursor(before.savedCursor).withSelection(null);
+    final restored = before.atCursor(before.savedCursor).clearObjectSelection();
     final affected = _changedTextLocators(before, restored);
     replaceSession(tabId, restored);
     if (affected.isEmpty ||
@@ -396,12 +396,7 @@ final class PdfEditingController extends ChangeNotifier {
   @Deprecated('Use selectTextBlock so the live document is registered.')
   void selectBlock(String tabId, PdfTextBlockLocator locator) {
     final session = sessionFor(tabId);
-    replaceSession(
-      tabId,
-      session.withSelection(
-        PdfTextSelection(locator: locator, range: const PdfTextRange(0, 0)),
-      ),
-    );
+    replaceSession(tabId, session.selectObject(locator));
   }
 
   Future<void> clearSelection(String tabId, {PdfDocument? document}) async {
