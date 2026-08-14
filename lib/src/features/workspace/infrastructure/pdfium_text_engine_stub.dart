@@ -49,4 +49,18 @@ final class PdfiumTextEngineStub implements PdfTextEngine {
     required PdfDocument document,
     required PdfPageObjectLocator locator,
   }) => Future<PdfPageObject>.error(const PdfNativeEditingUnavailableFailure());
+
+  @override
+  Future<void> setTextObjectsVisible({
+    required PdfDocument document,
+    required PdfTextBlock block,
+    required bool visible,
+  }) => Future<void>.error(const PdfNativeEditingUnavailableFailure());
+
+  @override
+  Future<void> setPageObjectPreviewTransform({
+    required PdfDocument document,
+    required PdfPageObjectLocator locator,
+    required PdfTransform transform,
+  }) => Future<void>.error(const PdfNativeEditingUnavailableFailure());
 }

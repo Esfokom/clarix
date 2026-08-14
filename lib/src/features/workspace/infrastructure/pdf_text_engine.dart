@@ -9,7 +9,21 @@ import 'pdfium_text_engine_stub.dart'
     if (dart.library.io) 'pdfium_text_engine_native.dart'
     as implementation;
 
-abstract interface class PdfTextEngine {
+abstract interface class PdfPreviewMutator {
+  Future<void> setTextObjectsVisible({
+    required PdfDocument document,
+    required PdfTextBlock block,
+    required bool visible,
+  });
+
+  Future<void> setPageObjectPreviewTransform({
+    required PdfDocument document,
+    required PdfPageObjectLocator locator,
+    required PdfTransform transform,
+  });
+}
+
+abstract interface class PdfTextEngine implements PdfPreviewMutator {
   Future<List<PdfTextBlock>> inspectPages({
     required PdfDocument document,
     required String sourceRevision,
