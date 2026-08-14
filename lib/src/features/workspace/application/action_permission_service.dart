@@ -165,6 +165,9 @@ PdfEditRiskAssessment classifyPdfEditRisk(PdfEditIntent intent) {
   final reasons = <String>[];
   if (intent is SavePdfEditsIntent) reasons.add('writes the PDF file');
   if (intent is MovePdfTextBlockIntent) reasons.add('moves page content');
+  if (intent is MovePdfPageObjectIntent) reasons.add('moves page content');
+  if (intent is ResizePdfPageObjectIntent) reasons.add('resizes page content');
+  if (intent is RotatePdfPageObjectIntent) reasons.add('rotates page content');
   if (intent.editCount > 10) reasons.add('changes more than ten objects');
   if (intent is ReplacePdfTextIntent &&
       intent.range.length > 0 &&
@@ -180,6 +183,9 @@ String _preview(PdfEditIntent intent) => switch (intent) {
   FormatPdfTextIntent() => 'Change PDF text formatting.',
   MovePdfTextBlockIntent() => 'Move a PDF text block.',
   ResizePdfTextBlockIntent() => 'Resize a PDF text block.',
+  MovePdfPageObjectIntent() => 'Move a native PDF page object.',
+  ResizePdfPageObjectIntent() => 'Resize a native PDF page object.',
+  RotatePdfPageObjectIntent() => 'Rotate native PDF page content.',
   SavePdfEditsIntent() => 'Save edits to the PDF file.',
   UndoPdfEditIntent() => 'Undo the latest PDF edit.',
   RedoPdfEditIntent() => 'Redo the latest PDF edit.',

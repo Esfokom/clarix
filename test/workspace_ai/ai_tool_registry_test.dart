@@ -9,9 +9,18 @@ import 'package:clarix/src/features/workspace/infrastructure/openai_compatible_p
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('exposes nine strict PDF editing tool schemas', () {
+  test('exposes strict text and generic object editing tool schemas', () {
     final registry = _registry();
-    expect(registry.schemas, hasLength(9));
+    expect(registry.schemas, hasLength(13));
+    expect(
+      AiToolRegistry.names,
+      containsAll(<String>{
+        'inspect_pdf_page_objects',
+        'move_pdf_page_object',
+        'resize_pdf_page_object',
+        'rotate_pdf_page_object',
+      }),
+    );
     expect(
       registry.schemas.every(
         (schema) =>
