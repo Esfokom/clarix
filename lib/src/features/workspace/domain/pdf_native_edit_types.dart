@@ -36,6 +36,7 @@ final class PdfNativeProjectionRequest {
     required this.documentRevision,
     required this.editRevision,
     required this.block,
+    this.nativeTarget,
   }) {
     if (documentRevision.isEmpty) {
       throw ArgumentError.value(
@@ -45,11 +46,28 @@ final class PdfNativeProjectionRequest {
       );
     }
     RangeError.checkNotNegative(editRevision, 'editRevision');
+    if (nativeTarget != null &&
+        nativeTarget!.locator.pageNumber != block.locator.pageNumber) {
+      throw ArgumentError.value(
+        nativeTarget,
+        'nativeTarget',
+        'Must be on the same page as the logical block.',
+      );
+    }
   }
 
   final String documentRevision;
   final int editRevision;
   final PdfTextBlock block;
+  final PdfTextBlock? nativeTarget;
+
+  PdfNativeProjectionRequest withNativeTarget(PdfTextBlock target) =>
+      PdfNativeProjectionRequest(
+        documentRevision: documentRevision,
+        editRevision: editRevision,
+        block: block,
+        nativeTarget: target,
+      );
 }
 
 final class PdfNativeProjectionResult {

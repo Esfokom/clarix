@@ -950,7 +950,11 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
   PdfiumWorkerInput<PdfNativeProjectionRequest> input,
 ) {
   final request = input.message;
-  final block = request.block;
+  final logicalBlock = request.block;
+  final block = _retargetBlock(
+    logicalBlock,
+    request.nativeTarget ?? logicalBlock,
+  );
   if (!block.isEditable) {
     throw PdfReadOnlyTextBlockFailure(
       locator: block.locator,
@@ -1002,6 +1006,22 @@ PdfNativeProjectionResult _projectTextBlockOnWorker(
     affectedPages: <int>[block.locator.pageNumber],
   );
 }
+
+PdfTextBlock _retargetBlock(PdfTextBlock desired, PdfTextBlock nativeTarget) =>
+    PdfTextBlock(
+      locator: nativeTarget.locator,
+      text: desired.text,
+      originalText: desired.originalText,
+      runs: desired.runs,
+      bounds: desired.bounds,
+      transform: desired.transform,
+      baseline: desired.baseline,
+      writingDirection: desired.writingDirection,
+      capabilities: desired.capabilities.toList(growable: false),
+      readOnlyReason: desired.readOnlyReason,
+      objectPaths: nativeTarget.objectPaths,
+      overflow: desired.overflow,
+    );
 
 PdfTextBlock _closestProjectedBlock(
   List<PdfTextBlock> candidates,

@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../domain/pdf_native_edit_types.dart';
+import '../domain/pdf_text_types.dart';
 import 'pdf_text_engine.dart';
 
 typedef PdfNativePageReloader =
@@ -26,9 +27,12 @@ final class PdfNativeEditCoordinator {
     final state = _states.putIfAbsent(document, _DocumentProjectionState.new);
     state.latestRequestedRevision = request.editRevision;
     return _serialized(state, () async {
+      final nativeTarget = state.nativeResults[request.block.locator]?.block;
       final result = await mutator.projectTextBlock(
         document: document,
-        request: request,
+        request: nativeTarget == null
+            ? request
+            : request.withNativeTarget(nativeTarget),
       );
       if (!identical(_states[document], state) ||
           state.latestRequestedRevision != request.editRevision ||
@@ -38,6 +42,7 @@ final class PdfNativeEditCoordinator {
       }
 
       state.latestResult = result;
+      state.nativeResults[request.block.locator] = result;
       final pages = result.affectedPages.toSet().toList()..sort();
       await _reloadPages(document, pages);
     });
@@ -76,5 +81,7 @@ final class PdfNativeEditCoordinator {
 final class _DocumentProjectionState {
   int? latestRequestedRevision;
   PdfNativeProjectionResult? latestResult;
+  final Map<PdfTextBlockLocator, PdfNativeProjectionResult> nativeResults =
+      <PdfTextBlockLocator, PdfNativeProjectionResult>{};
   Future<void> queue = Future<void>.value();
 }

@@ -6,8 +6,10 @@ import 'package:pdfrx/pdfrx.dart' hide PdfTextSelection;
 
 import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
+import '../domain/pdf_native_edit_types.dart';
 import '../domain/pdf_page_object.dart';
 import '../domain/pdf_text_types.dart';
+import '../infrastructure/pdf_native_edit_coordinator.dart';
 import '../infrastructure/pdf_preview_document_controller.dart';
 import '../infrastructure/pdf_text_engine.dart';
 import '../infrastructure/pdf_edit_save_service.dart';
@@ -19,12 +21,16 @@ final class PdfEditingController extends ChangeNotifier {
     PdfTextEngine? engine,
     PdfEditSaveService? saveService,
     PdfPreviewDocumentController? previewController,
+    PdfNativeEditCoordinator? nativeCoordinator,
   }) : _commandId = commandId ?? _defaultCommandId {
     _engine = engine;
     _saveService = saveService;
     _preview =
         previewController ??
         (engine == null ? null : PdfPreviewDocumentController(mutator: engine));
+    _native =
+        nativeCoordinator ??
+        (engine == null ? null : PdfNativeEditCoordinator(mutator: engine));
     _dispatcher = PdfEditIntentDispatcher(
       readSession: _sessionForDocument,
       writeSession: _replaceByDocument,
@@ -36,10 +42,12 @@ final class PdfEditingController extends ChangeNotifier {
   late final PdfTextEngine? _engine;
   late final PdfEditSaveService? _saveService;
   late final PdfPreviewDocumentController? _preview;
+  late final PdfNativeEditCoordinator? _native;
   final Map<String, PdfDocument> _documentsByTab = <String, PdfDocument>{};
   final Map<String, PdfEditingSession> _sessions =
       <String, PdfEditingSession>{};
   final Map<String, int> _discoveryGenerations = <String, int>{};
+  final Map<String, int> _editRevisions = <String, int>{};
   late final PdfEditIntentDispatcher _dispatcher;
 
   Map<String, PdfEditingSession> get sessionsByTabId =>
@@ -48,6 +56,10 @@ final class PdfEditingController extends ChangeNotifier {
   void registerSession(String tabId, PdfEditingSession session) {
     _sessions[tabId] = session;
     notifyListeners();
+  }
+
+  void registerDocument(String tabId, PdfDocument document) {
+    _documentsByTab[tabId] = document;
   }
 
   void replaceSession(String tabId, PdfEditingSession session) {
@@ -87,7 +99,11 @@ final class PdfEditingController extends ChangeNotifier {
 
   void removeSession(String tabId) {
     final document = _documentsByTab.remove(tabId);
-    if (document != null) unawaited(_preview?.clear(document));
+    if (document != null) {
+      unawaited(_preview?.clear(document));
+      _native?.forgetDocument(document);
+    }
+    _editRevisions.remove(tabId);
     if (_sessions.remove(tabId) != null) notifyListeners();
   }
 
@@ -100,16 +116,58 @@ final class PdfEditingController extends ChangeNotifier {
   Future<PdfEditResult> dispatch(
     PdfEditIntent intent, {
     required PdfCommandProvenance provenance,
-  }) => _dispatcher.dispatch(intent, provenance: provenance);
+  }) {
+    if (intent.affectedLocators.isNotEmpty) {
+      for (final entry in _sessions.entries) {
+        if (entry.value.documentId == intent.documentId &&
+            _documentsByTab.containsKey(entry.key)) {
+          return dispatchAndProject(
+            tabId: entry.key,
+            intent: intent,
+            provenance: provenance,
+          );
+        }
+      }
+    }
+    return _dispatcher.dispatch(intent, provenance: provenance);
+  }
+
+  Future<PdfEditResult> dispatchAndProject({
+    required String tabId,
+    required PdfEditIntent intent,
+    required PdfCommandProvenance provenance,
+  }) async {
+    final before = sessionFor(tabId);
+    final result = await _dispatcher.dispatch(intent, provenance: provenance);
+    if (!result.isSuccess || result.affectedLocators.isEmpty) return result;
+    try {
+      await _projectBlocks(tabId, sessionFor(tabId), result.affectedLocators);
+      return result;
+    } catch (error, stackTrace) {
+      replaceSession(tabId, before);
+      try {
+        await _projectBlocks(tabId, before, result.affectedLocators);
+      } catch (_) {
+        // Preserve the original projection failure for the caller.
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
 
   Future<PdfEditResult> undo(String tabId, {PdfDocument? document}) async {
     final session = sessionFor(tabId);
-    final result = await dispatch(
+    if (document != null) registerDocument(tabId, document);
+    final affected = session.canUndo
+        ? session.commands[session.cursor - 1].affectedLocators
+        : const <PdfTextBlockLocator>[];
+    final result = await _dispatchAndProjectAffected(
       UndoPdfEditIntent(
         documentId: session.documentId,
         documentRevision: session.revision,
       ),
+      tabId: tabId,
       provenance: PdfCommandProvenance.manual,
+      affectedLocators: affected,
     );
     final target = document ?? _documentsByTab[tabId];
     if (result.isSuccess && target != null) {
@@ -120,12 +178,18 @@ final class PdfEditingController extends ChangeNotifier {
 
   Future<PdfEditResult> redo(String tabId, {PdfDocument? document}) async {
     final session = sessionFor(tabId);
-    final result = await dispatch(
+    if (document != null) registerDocument(tabId, document);
+    final affected = session.canRedo
+        ? session.commands[session.cursor].affectedLocators
+        : const <PdfTextBlockLocator>[];
+    final result = await _dispatchAndProjectAffected(
       RedoPdfEditIntent(
         documentId: session.documentId,
         documentRevision: session.revision,
       ),
+      tabId: tabId,
       provenance: PdfCommandProvenance.manual,
+      affectedLocators: affected,
     );
     final target = document ?? _documentsByTab[tabId];
     if (result.isSuccess && target != null) {
@@ -139,7 +203,7 @@ final class PdfEditingController extends ChangeNotifier {
     PdfDocument document,
     int currentPage,
   ) async {
-    _documentsByTab[tabId] = document;
+    registerDocument(tabId, document);
     final session = sessionFor(tabId);
     await dispatch(
       SetPdfEditingModeIntent(
@@ -281,6 +345,62 @@ final class PdfEditingController extends ChangeNotifier {
             ...pageObjects,
           ]),
     );
+  }
+
+  Future<PdfEditResult> _dispatchAndProjectAffected(
+    PdfEditIntent intent, {
+    required String tabId,
+    required PdfCommandProvenance provenance,
+    required List<PdfTextBlockLocator> affectedLocators,
+  }) async {
+    final before = sessionFor(tabId);
+    final result = await _dispatcher.dispatch(intent, provenance: provenance);
+    if (!result.isSuccess ||
+        affectedLocators.isEmpty ||
+        _native == null ||
+        !_documentsByTab.containsKey(tabId)) {
+      return result;
+    }
+    try {
+      await _projectBlocks(tabId, sessionFor(tabId), affectedLocators);
+      return result;
+    } catch (error, stackTrace) {
+      replaceSession(tabId, before);
+      try {
+        await _projectBlocks(tabId, before, affectedLocators);
+      } catch (_) {
+        // Preserve the original projection failure for the caller.
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
+
+  Future<void> _projectBlocks(
+    String tabId,
+    PdfEditingSession session,
+    List<PdfTextBlockLocator> locators,
+  ) async {
+    final coordinator = _native;
+    final document = _documentsByTab[tabId];
+    if (coordinator == null || document == null) {
+      throw const PdfNativeEditingUnavailableFailure();
+    }
+    for (final locator in locators.toSet()) {
+      final block = session.blocks.firstWhere(
+        (candidate) => candidate.locator == locator,
+        orElse: () => throw PdfStaleLocatorFailure(locator),
+      );
+      final revision = (_editRevisions[tabId] ?? 0) + 1;
+      _editRevisions[tabId] = revision;
+      await coordinator.projectBlock(
+        document,
+        PdfNativeProjectionRequest(
+          documentRevision: session.sourceRevision,
+          editRevision: revision,
+          block: block,
+        ),
+      );
+    }
   }
 
   PdfEditingSession _sessionForDocument(String documentId) {
