@@ -17,6 +17,14 @@ class ClarixRustRuntime {
 
   static Future<bool> ensureInitialized() => _initializing ??= _initialize();
 
+  static Future<void> requireInitialized() async {
+    if (!await ensureInitialized()) {
+      throw StateError(
+        'Clarix Rust runtime is unavailable: ${_initializationError ?? 'unknown error'}',
+      );
+    }
+  }
+
   static Future<bool> _initialize() async {
     try {
       if (Platform.isWindows) {
