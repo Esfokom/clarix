@@ -24,7 +24,7 @@ class AppSettingsDialog extends ConsumerStatefulWidget {
 }
 
 class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
-  int _tab = 1;
+  int _tab = 2;
 
   @override
   Widget build(BuildContext context) {
