@@ -30,7 +30,11 @@ final class PdfiumTextEngine implements PdfTextEngine {
   Future<PdfNativeProjectionResult> projectTextBlock({
     required PdfDocument document,
     required PdfNativeProjectionRequest request,
-  }) => throw const PdfNativeEditingUnavailableFailure();
+  }) => const PdfiumWorkerExecutor().run(
+    document: document,
+    callback: _projectTextBlockOnWorker,
+    message: request,
+  );
 
   @override
   Future<Uint8List> encodeLiveDocument({required PdfDocument document}) =>
@@ -941,6 +945,91 @@ List<PdfTextBlock> _inspectTextOnWorker(
   }
   return List<PdfTextBlock>.unmodifiable(result);
 }
+
+PdfNativeProjectionResult _projectTextBlockOnWorker(
+  PdfiumWorkerInput<PdfNativeProjectionRequest> input,
+) {
+  final request = input.message;
+  final block = request.block;
+  if (!block.isEditable) {
+    throw PdfReadOnlyTextBlockFailure(
+      locator: block.locator,
+      reason: block.readOnlyReason ?? PdfReadOnlyReason.complexRendering,
+    );
+  }
+  final nativeDocument = FPDF_DOCUMENT.fromAddress(input.documentAddress);
+  final page = pdfiumBindings.FPDF_LoadPage(
+    nativeDocument,
+    block.locator.pageNumber - 1,
+  );
+  if (page.address == 0) throw PdfStaleLocatorFailure(block.locator);
+  try {
+    const PdfiumTextEngine()._replaceFormattedBlock(
+      nativeDocument,
+      page,
+      block,
+      null,
+      reflow: false,
+    );
+    if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
+      throw PdfValidationFailure(
+        'Could not regenerate PDF page ${block.locator.pageNumber}.',
+      );
+    }
+  } finally {
+    pdfiumBindings.FPDF_ClosePage(page);
+  }
+
+  final projectedBlocks = const PdfiumTextEngine()._inspectPage(
+    nativeDocument,
+    block.locator.pageNumber,
+    request.documentRevision,
+  );
+  final projected = _closestProjectedBlock(projectedBlocks, block);
+  return PdfNativeProjectionResult(
+    requestedRevision: request.editRevision,
+    appliedRevision: request.editRevision,
+    block: projected,
+    lines: projected.text.isEmpty
+        ? const <PdfNativeLine>[]
+        : <PdfNativeLine>[
+            PdfNativeLine(
+              range: PdfTextRange(0, projected.text.length),
+              bounds: projected.bounds,
+            ),
+          ],
+    characters: const <PdfNativeCharacterBox>[],
+    affectedPages: <int>[block.locator.pageNumber],
+  );
+}
+
+PdfTextBlock _closestProjectedBlock(
+  List<PdfTextBlock> candidates,
+  PdfTextBlock requested,
+) {
+  final matchingText = candidates
+      .where((candidate) => candidate.text == requested.text)
+      .toList(growable: false);
+  if (matchingText.isEmpty) {
+    throw const PdfValidationFailure(
+      'PDFium regenerated the page but could not resolve the edited text.',
+    );
+  }
+  if (matchingText.length == 1) return matchingText.single;
+  return matchingText.reduce(
+    (best, candidate) =>
+        _boundsDistance(candidate.bounds, requested.bounds) <
+            _boundsDistance(best.bounds, requested.bounds)
+        ? candidate
+        : best,
+  );
+}
+
+double _boundsDistance(PdfBox first, PdfBox second) =>
+    (first.left - second.left).abs() +
+    (first.bottom - second.bottom).abs() +
+    (first.right - second.right).abs() +
+    (first.top - second.top).abs();
 
 void _applyDraftOnWorker(PdfiumWorkerInput<_ApplyDraftWorkerMessage> input) {
   final message = input.message;
