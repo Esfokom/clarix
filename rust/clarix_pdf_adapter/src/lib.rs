@@ -1,0 +1,2 @@
+pub const PDF_ADAPTER_SCHEMA_VERSION: u32 = 1;
+

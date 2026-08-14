@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = [
+  "clarix_editing_core",
+  "clarix_pdf_adapter",
+  "clarix_agent_core",
+  "clarix_pdf_oxide",
+]
+
+[workspace.package]
+edition = "2021"
+license = "LicenseRef-Clarix-Proprietary"
+
+[workspace.dependencies]
+crossbeam-channel = "0.5"
+flutter_rust_bridge = "=2.12.0"
+lopdf = "0.40"
+pdf_oxide = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+

@@ -1,0 +1,2 @@
+pub const EDITOR_CORE_SCHEMA_VERSION: u32 = 1;
+
