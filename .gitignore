@@ -46,6 +46,7 @@ app.*.map.json
 /assets/models/
 /Users/
 /rust/**/target/
+/test_fixtures/editing_corpus/local/
 
 .superpowers/
 .worktrees/
