@@ -1,0 +1,245 @@
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+
+use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
+use serde::{Deserialize, Serialize};
+
+use crate::{
+    CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, EditingError,
+    EditorSessionState, SessionId,
+};
+
+const REQUEST_CAPACITY: usize = 64;
+const DEFAULT_SUBSCRIBER_CAPACITY: usize = 32;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EditorEvent {
+    Ready { revision: DocumentRevision },
+    CommandCommitted { result: CommandResult },
+    Lagged { latest_revision: DocumentRevision },
+    Closed { revision: DocumentRevision },
+}
+
+enum ActorRequest {
+    Submit {
+        command: CommandEnvelope,
+        reply: Sender<Result<CommandResult, EditingError>>,
+    },
+    Snapshot {
+        reply: Sender<Result<DocumentModel, EditingError>>,
+    },
+    Subscribe {
+        capacity: usize,
+        reply: Sender<Result<Receiver<EditorEvent>, EditingError>>,
+    },
+    Close {
+        reply: Sender<Result<(), EditingError>>,
+    },
+    Shutdown,
+}
+
+struct Subscriber {
+    sender: Sender<EditorEvent>,
+    lagged: bool,
+}
+
+struct ActorInner {
+    sender: Sender<ActorRequest>,
+    closed: AtomicBool,
+    worker: Mutex<Option<std::thread::JoinHandle<()>>>,
+}
+
+impl Drop for ActorInner {
+    fn drop(&mut self) {
+        self.closed.store(true, Ordering::Release);
+        let _ = self.sender.send(ActorRequest::Shutdown);
+        if let Ok(worker) = self.worker.get_mut() {
+            if let Some(worker) = worker.take() {
+                let _ = worker.join();
+            }
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct EditorSessionActor {
+    inner: Arc<ActorInner>,
+}
+
+impl EditorSessionActor {
+    pub fn spawn(model: DocumentModel) -> Self {
+        let (sender, receiver) = bounded(REQUEST_CAPACITY);
+        let session_id = SessionId::new();
+        let worker = std::thread::Builder::new()
+            .name(format!("clarix-editor-{session_id}"))
+            .spawn(move || run_actor(receiver, EditorSessionState::new(session_id, model)))
+            .expect("failed to spawn editor session actor");
+        Self {
+            inner: Arc::new(ActorInner {
+                sender,
+                closed: AtomicBool::new(false),
+                worker: Mutex::new(Some(worker)),
+            }),
+        }
+    }
+
+    pub fn submit(&self, command: CommandEnvelope) -> Result<CommandResult, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::Submit { command, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
+    pub fn snapshot(&self) -> Result<DocumentModel, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::Snapshot { reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
+    pub fn subscribe(&self) -> Result<Receiver<EditorEvent>, EditingError> {
+        self.subscribe_with_capacity(DEFAULT_SUBSCRIBER_CAPACITY)
+    }
+
+    pub fn subscribe_with_capacity(
+        &self,
+        capacity: usize,
+    ) -> Result<Receiver<EditorEvent>, EditingError> {
+        self.ensure_open()?;
+        if capacity == 0 {
+            return Err(EditingError::InvalidCommand(
+                "subscriber capacity must be greater than zero".into(),
+            ));
+        }
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::Subscribe { capacity, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
+    pub fn close(&self) -> Result<(), EditingError> {
+        if self.inner.closed.swap(true, Ordering::AcqRel) {
+            return Ok(());
+        }
+        let (reply, response) = bounded(1);
+        if self
+            .inner
+            .sender
+            .send(ActorRequest::Close { reply })
+            .is_err()
+        {
+            return Err(EditingError::ActorUnavailable);
+        }
+        let result = response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        if let Some(worker) = self
+            .inner
+            .worker
+            .lock()
+            .map_err(|_| EditingError::ActorUnavailable)?
+            .take()
+        {
+            worker.join().map_err(|_| EditingError::ActorUnavailable)?;
+        }
+        result
+    }
+
+    fn ensure_open(&self) -> Result<(), EditingError> {
+        if self.inner.closed.load(Ordering::Acquire) {
+            Err(EditingError::SessionClosed)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+fn run_actor(receiver: Receiver<ActorRequest>, mut session: EditorSessionState) {
+    let mut subscribers: Vec<Subscriber> = Vec::new();
+    while let Ok(request) = receiver.recv() {
+        match request {
+            ActorRequest::Submit { command, reply } => {
+                let result = session.submit(command);
+                if let Ok(committed) = &result {
+                    broadcast(
+                        &mut subscribers,
+                        EditorEvent::CommandCommitted {
+                            result: committed.clone(),
+                        },
+                        committed.committed_revision,
+                    );
+                }
+                let _ = reply.send(result);
+            }
+            ActorRequest::Snapshot { reply } => {
+                let _ = reply.send(session.snapshot());
+            }
+            ActorRequest::Subscribe { capacity, reply } => {
+                let (sender, events) = bounded(capacity);
+                let ready = EditorEvent::Ready {
+                    revision: session.revision(),
+                };
+                if sender.try_send(ready).is_err() {
+                    let _ = reply.send(Err(EditingError::ActorUnavailable));
+                } else {
+                    subscribers.push(Subscriber {
+                        sender,
+                        lagged: false,
+                    });
+                    let _ = reply.send(Ok(events));
+                }
+            }
+            ActorRequest::Close { reply } => {
+                let revision = session.revision();
+                session.close();
+                broadcast(&mut subscribers, EditorEvent::Closed { revision }, revision);
+                let _ = reply.send(Ok(()));
+                break;
+            }
+            ActorRequest::Shutdown => break,
+        }
+    }
+}
+
+fn broadcast(
+    subscribers: &mut Vec<Subscriber>,
+    event: EditorEvent,
+    latest_revision: DocumentRevision,
+) {
+    subscribers.retain_mut(|subscriber| {
+        if subscriber.lagged {
+            match subscriber
+                .sender
+                .try_send(EditorEvent::Lagged { latest_revision })
+            {
+                Ok(()) => subscriber.lagged = false,
+                Err(TrySendError::Full(_)) => return true,
+                Err(TrySendError::Disconnected(_)) => return false,
+            }
+        }
+        match subscriber.sender.try_send(event.clone()) {
+            Ok(()) => true,
+            Err(TrySendError::Full(_)) => {
+                subscriber.lagged = true;
+                true
+            }
+            Err(TrySendError::Disconnected(_)) => false,
+        }
+    });
+}

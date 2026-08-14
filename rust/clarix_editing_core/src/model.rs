@@ -156,6 +156,17 @@ impl DocumentObject {
         }
     }
 
+    fn base_mut(&mut self) -> &mut NodeBase {
+        match self {
+            Self::Text(node) => &mut node.base,
+            Self::Image(node) => &mut node.base,
+            Self::Vector(node) => &mut node.base,
+            Self::Annotation(node) => &mut node.base,
+            Self::OcrLayer(node) => &mut node.base,
+            Self::Group(node) => &mut node.base,
+        }
+    }
+
     pub fn id(&self) -> ObjectId {
         self.base().id
     }
@@ -186,6 +197,18 @@ impl DocumentObject {
 
     pub fn source_binding(&self) -> Option<&SourceBinding> {
         self.base().source_binding.as_ref()
+    }
+
+    pub(crate) fn set_bounds(&mut self, bounds: PdfBox) {
+        self.base_mut().bounds = bounds;
+    }
+
+    pub(crate) fn set_transform(&mut self, transform: AffineTransform) {
+        self.base_mut().transform = transform;
+    }
+
+    pub(crate) fn set_modified_revision(&mut self, revision: DocumentRevision) {
+        self.base_mut().modified_revision = revision;
     }
 
     pub const fn kind(&self) -> ObjectKind {
@@ -311,6 +334,19 @@ impl DocumentModel {
         let (page_index, object_offset) = *self.object_index.get(&id)?;
         self.pages.get(page_index)?.objects.get(object_offset)
     }
+
+    pub(crate) fn replace_object(&mut self, object: DocumentObject) -> Result<(), ModelError> {
+        let id = object.id();
+        let Some((page_index, object_offset)) = self.object_index.get(&id).copied() else {
+            return Err(ModelError::MissingObject(id));
+        };
+        self.pages[page_index].objects[object_offset] = object;
+        Ok(())
+    }
+
+    pub(crate) fn set_revision(&mut self, revision: DocumentRevision) {
+        self.revision = revision;
+    }
 }
 
 impl<'de> Deserialize<'de> for DocumentModel {
@@ -353,4 +389,6 @@ pub enum ModelError {
     MissingGroupChild(ObjectId),
     #[error("group references child {0} on a different page")]
     CrossPageGroupChild(ObjectId),
+    #[error("object {0} does not exist")]
+    MissingObject(ObjectId),
 }

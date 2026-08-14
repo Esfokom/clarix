@@ -46,6 +46,33 @@ pub fn validate_utf16_range(text: &str, range: Utf16Range) -> Result<(), TextRan
     Ok(())
 }
 
+pub(crate) fn utf16_range_to_byte_range(
+    text: &str,
+    range: Utf16Range,
+) -> Result<std::ops::Range<usize>, TextRangeError> {
+    validate_utf16_range(text, range)?;
+    let mut utf16_offset = 0_u32;
+    let mut start = None;
+    let mut end = None;
+    for (byte_offset, character) in text.char_indices() {
+        if utf16_offset == range.start {
+            start = Some(byte_offset);
+        }
+        if utf16_offset == range.end {
+            end = Some(byte_offset);
+            break;
+        }
+        utf16_offset += character.len_utf16() as u32;
+    }
+    if utf16_offset == range.start {
+        start.get_or_insert(text.len());
+    }
+    if utf16_offset == range.end {
+        end.get_or_insert(text.len());
+    }
+    Ok(start.expect("validated start boundary")..end.expect("validated end boundary"))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TextStyle {
     pub font_family: Option<String>,
