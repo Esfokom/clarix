@@ -26,6 +26,22 @@ void main() {
     expect(session.undo().redo().isDirty, isFalse);
   });
 
+  test('saved checkpoint can be restored without rewriting history', () {
+    final session = sessionWithOneBlock()
+        .applyCommand(replaceCommand('c1', 'A', 'B'))
+        .markSaved()
+        .applyCommand(replaceCommand('c2', 'B', 'C'));
+
+    final restored = session.atCursor(session.savedCursor);
+
+    expect(restored.blocks.single.text, 'B');
+    expect(restored.cursor, 1);
+    expect(restored.commands.map((command) => command.id), <String>[
+      'c1',
+      'c2',
+    ]);
+  });
+
   test('a new command after undo clears redo across command kinds', () {
     final PdfEditingSession session = sessionWithOneBlock()
         .applyCommand(replaceCommand('c1', 'A', 'B'))

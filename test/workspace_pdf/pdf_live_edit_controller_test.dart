@@ -64,6 +64,32 @@ void main() {
       <String>['Before', 'After'],
     );
   });
+
+  test(
+    'discard projects the saved native text state without writing the file',
+    () async {
+      final harness = await _Harness.create();
+      addTearDown(harness.dispose);
+      await harness.controller.dispatchAndProject(
+        tabId: 'tab',
+        intent: _replacement(harness.controller.sessionFor('tab'), 'Saved'),
+        provenance: PdfCommandProvenance.manual,
+      );
+      harness.controller.markSaved('tab');
+      await harness.controller.dispatchAndProject(
+        tabId: 'tab',
+        intent: _replacement(harness.controller.sessionFor('tab'), 'Draft'),
+        provenance: PdfCommandProvenance.manual,
+      );
+      harness.mutator.requests.clear();
+
+      await harness.controller.discardChanges('tab');
+
+      expect(harness.controller.sessionFor('tab').blocks.single.text, 'Saved');
+      expect(harness.controller.sessionFor('tab').isDirty, isFalse);
+      expect(harness.mutator.requests.single.block.text, 'Saved');
+    },
+  );
 }
 
 ReplacePdfTextIntent _replacement(PdfEditingSession session, String after) =>

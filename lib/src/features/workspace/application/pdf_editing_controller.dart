@@ -218,6 +218,38 @@ final class PdfEditingController extends ChangeNotifier {
     return result;
   }
 
+  /// Reverts the in-memory session and its open native PDF document to the
+  /// last saved checkpoint.  The source file is never touched here.
+  Future<void> discardChanges(String tabId, {PdfDocument? document}) async {
+    if (document != null) registerDocument(tabId, document);
+    final before = sessionFor(tabId);
+    if (!before.isDirty) return;
+    if (before.savedCursor < 0) {
+      throw StateError(
+        'The saved PDF checkpoint is no longer available in this session.',
+      );
+    }
+    final restored = before.atCursor(before.savedCursor).withSelection(null);
+    final affected = _changedTextLocators(before, restored);
+    replaceSession(tabId, restored);
+    if (affected.isEmpty ||
+        _native == null ||
+        !_documentsByTab.containsKey(tabId)) {
+      return;
+    }
+    try {
+      await _projectBlocks(tabId, restored, affected);
+    } catch (error, stackTrace) {
+      replaceSession(tabId, before);
+      try {
+        await _projectBlocks(tabId, before, affected);
+      } catch (_) {
+        // Preserve the original native projection failure for the caller.
+      }
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+  }
+
   Future<void> enterTextMode(
     String tabId,
     PdfDocument document,
@@ -442,6 +474,24 @@ final class PdfEditingController extends ChangeNotifier {
       _sessions[tabId] = next;
     }
     notifyListeners();
+  }
+
+  static List<PdfTextBlockLocator> _changedTextLocators(
+    PdfEditingSession before,
+    PdfEditingSession after,
+  ) {
+    final beforeByLocator = <PdfTextBlockLocator, PdfTextBlock>{
+      for (final block in before.blocks) block.locator: block,
+    };
+    final afterByLocator = <PdfTextBlockLocator, PdfTextBlock>{
+      for (final block in after.blocks) block.locator: block,
+    };
+    return <PdfTextBlockLocator>{
+          ...beforeByLocator.keys,
+          ...afterByLocator.keys,
+        }
+        .where((locator) => beforeByLocator[locator] != afterByLocator[locator])
+        .toList(growable: false);
   }
 
   static var _nextId = 0;

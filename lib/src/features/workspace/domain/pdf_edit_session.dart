@@ -174,6 +174,27 @@ final class PdfEditingSession {
           highlights: commands[cursor].applyHighlights(highlights),
         );
 
+  /// Restores a historical state without changing the command timeline.
+  ///
+  /// This is used to return an already-open native PDF document to its saved
+  /// checkpoint when the user discards edits.
+  PdfEditingSession atCursor(int targetCursor) {
+    RangeError.checkValueInInterval(
+      targetCursor,
+      0,
+      commands.length,
+      'targetCursor',
+    );
+    var result = this;
+    while (result.cursor > targetCursor) {
+      result = result.undo();
+    }
+    while (result.cursor < targetCursor) {
+      result = result.redo();
+    }
+    return result;
+  }
+
   PdfEditingSession markSaved() => _copy(savedCursor: cursor);
 
   PdfEditingSession _copy({
