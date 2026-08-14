@@ -44,6 +44,33 @@ final class PdfTextFixture {
     ]);
   }
 
+  static Future<File> mixedPageObjects() async {
+    final image = pw.MemoryImage(
+      base64Decode(
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+      ),
+    );
+    return _write('mixed-objects.pdf', <pw.Page>[
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (_) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: <pw.Widget>[
+            pw.Text('Selectable text'),
+            pw.SizedBox(height: 16),
+            pw.Image(image, width: 24, height: 24),
+            pw.SizedBox(height: 16),
+            pw.Container(
+              width: 80,
+              height: 30,
+              decoration: pw.BoxDecoration(border: pw.Border.all(width: 2)),
+            ),
+          ],
+        ),
+      ),
+    ]);
+  }
+
   static Future<File> malformed() async {
     final Directory directory = await Directory.systemTemp.createTemp(
       'clarix-pdf-text-',

@@ -9,6 +9,7 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:pdfium_flutter/pdfium_flutter.dart';
 
 import '../domain/pdf_text_types.dart';
+import '../domain/pdf_page_object.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_edit_command.dart';
 import '../domain/pdf_text_layout.dart';
@@ -437,6 +438,189 @@ final class PdfiumTextEngine implements PdfTextEngine {
       throw PdfAmbiguousLocatorFailure(locator, verified.length);
     }
     return PdfResolvedTextObject(block: verified.single);
+  }
+
+  @override
+  Future<List<PdfPageObject>> inspectPageObjects({
+    required PdfDocument document,
+    required String sourceRevision,
+    required List<int> pageNumbers,
+  }) async {
+    for (final pageNumber in pageNumbers) {
+      if (pageNumber < 1 || pageNumber > document.pages.length) {
+        throw RangeError.range(
+          pageNumber,
+          1,
+          document.pages.length,
+          'pageNumber',
+        );
+      }
+    }
+    final result = await document.useNativeDocumentHandle((address) {
+      final nativeDocument = FPDF_DOCUMENT.fromAddress(address);
+      final objects = <PdfPageObject>[];
+      for (final pageNumber in pageNumbers) {
+        final page = pdfiumBindings.FPDF_LoadPage(
+          nativeDocument,
+          pageNumber - 1,
+        );
+        if (page.address == 0) continue;
+        try {
+          final count = pdfiumBindings.FPDFPage_CountObjects(page);
+          for (var index = 0; index < count; index++) {
+            _visitPageObject(
+              object: pdfiumBindings.FPDFPage_GetObject(page, index),
+              pageNumber: pageNumber,
+              path: <int>[index],
+              sourceRevision: sourceRevision,
+              nested: false,
+              output: objects,
+            );
+          }
+        } finally {
+          pdfiumBindings.FPDF_ClosePage(page);
+        }
+      }
+      return List<PdfPageObject>.unmodifiable(objects);
+    });
+    _knownRevisions[document] = sourceRevision;
+    return result;
+  }
+
+  @override
+  Future<PdfPageObject> resolvePageObject({
+    required PdfDocument document,
+    required PdfPageObjectLocator locator,
+  }) async {
+    if (_knownRevisions[document] != locator.sourceRevision) {
+      throw PdfStalePageObjectLocatorFailure(locator);
+    }
+    final objects = await inspectPageObjects(
+      document: document,
+      sourceRevision: locator.sourceRevision,
+      pageNumbers: <int>[locator.pageNumber],
+    );
+    for (final object in objects) {
+      if (object.locator == locator) return object;
+    }
+    throw PdfStalePageObjectLocatorFailure(locator);
+  }
+
+  void _visitPageObject({
+    required FPDF_PAGEOBJECT object,
+    required int pageNumber,
+    required List<int> path,
+    required String sourceRevision,
+    required bool nested,
+    required List<PdfPageObject> output,
+  }) {
+    if (object.address == 0) return;
+    final nativeType = pdfiumBindings.FPDFPageObj_GetType(object);
+    final type = switch (nativeType) {
+      FPDF_PAGEOBJ_TEXT => PdfPageObjectType.text,
+      FPDF_PAGEOBJ_IMAGE => PdfPageObjectType.image,
+      FPDF_PAGEOBJ_PATH => PdfPageObjectType.path,
+      FPDF_PAGEOBJ_FORM => PdfPageObjectType.form,
+      _ => null,
+    };
+    if (type == null) return;
+    final left = calloc<Float>();
+    final bottom = calloc<Float>();
+    final right = calloc<Float>();
+    final top = calloc<Float>();
+    final matrix = calloc<FS_MATRIX>();
+    try {
+      final hasBounds =
+          pdfiumBindings.FPDFPageObj_GetBounds(
+            object,
+            left,
+            bottom,
+            right,
+            top,
+          ) !=
+          0;
+      pdfiumBindings.FPDFPageObj_GetMatrix(object, matrix);
+      final bounds = hasBounds
+          ? PdfBox(left.value, bottom.value, right.value, top.value)
+          : const PdfBox(0, 0, 0, 0);
+      final transform = PdfTransform(
+        matrix.ref.a,
+        matrix.ref.b,
+        matrix.ref.c,
+        matrix.ref.d,
+        matrix.ref.e,
+        matrix.ref.f,
+      );
+      final geometryDigest = _digest(
+        <Object>[
+          _quantize(bounds.left),
+          _quantize(bounds.bottom),
+          _quantize(bounds.right),
+          _quantize(bounds.top),
+          _quantize(transform.a),
+          _quantize(transform.b),
+          _quantize(transform.c),
+          _quantize(transform.d),
+          _quantize(transform.translateX),
+          _quantize(transform.translateY),
+        ].join('|'),
+      );
+      final readOnlyReason = nested
+          ? PdfPageObjectReadOnlyReason.sharedFormObject
+          : (transform.determinant.abs() < 1e-12
+                ? PdfPageObjectReadOnlyReason.singularTransform
+                : null);
+      final capabilities =
+          readOnlyReason == null && type != PdfPageObjectType.form
+          ? <PdfPageObjectCapability>{
+              PdfPageObjectCapability.inspect,
+              PdfPageObjectCapability.move,
+              PdfPageObjectCapability.resize,
+              PdfPageObjectCapability.rotate,
+              if (type == PdfPageObjectType.text)
+                PdfPageObjectCapability.editText,
+            }
+          : <PdfPageObjectCapability>{PdfPageObjectCapability.inspect};
+      output.add(
+        PdfPageObject(
+          locator: PdfPageObjectLocator(
+            pageNumber: pageNumber,
+            objectPath: path,
+            type: type,
+            contentDigest: _digest('${type.name}:${path.join('.')}'),
+            geometryDigest: geometryDigest,
+            sourceRevision: sourceRevision,
+          ),
+          bounds: bounds,
+          transform: transform,
+          capabilities: capabilities,
+          readOnlyReason:
+              readOnlyReason ??
+              (type == PdfPageObjectType.form
+                  ? PdfPageObjectReadOnlyReason.sharedFormObject
+                  : null),
+        ),
+      );
+      if (type == PdfPageObjectType.form) {
+        final count = pdfiumBindings.FPDFFormObj_CountObjects(object);
+        for (var index = 0; index < count; index++) {
+          _visitPageObject(
+            object: pdfiumBindings.FPDFFormObj_GetObject(object, index),
+            pageNumber: pageNumber,
+            path: <int>[...path, index],
+            sourceRevision: sourceRevision,
+            nested: true,
+            output: output,
+          );
+        }
+      }
+    } finally {
+      calloc.free(left);
+      calloc.free(bottom);
+      calloc.free(right);
+      calloc.free(top);
+      calloc.free(matrix);
+    }
   }
 
   Future<List<PdfTextBlock>> _inspect({

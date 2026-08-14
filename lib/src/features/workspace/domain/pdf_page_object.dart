@@ -121,6 +121,16 @@ final class PdfInvalidTransformFailure extends PdfEditFailure {
     : super('invalid_transform', 'The PDF object transform is singular.');
 }
 
+final class PdfStalePageObjectLocatorFailure extends PdfEditFailure {
+  const PdfStalePageObjectLocatorFailure(this.locator)
+    : super(
+        'stale_page_object_locator',
+        'The PDF object no longer matches the source document.',
+      );
+
+  final PdfPageObjectLocator locator;
+}
+
 extension PdfTransformOperations on PdfTransform {
   double get determinant => a * d - b * c;
 
