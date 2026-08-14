@@ -151,19 +151,52 @@ final class PdfEditingController extends ChangeNotifier {
     PdfEditIntent intent, {
     required PdfCommandProvenance provenance,
   }) {
-    if (intent.affectedLocators.isNotEmpty) {
-      for (final entry in _sessions.entries) {
-        if (entry.value.documentId == intent.documentId &&
-            _documentsByTab.containsKey(entry.key)) {
-          return dispatchAndProject(
-            tabId: entry.key,
-            intent: intent,
-            provenance: provenance,
-          );
-        }
+    for (final entry in _sessions.entries) {
+      if (entry.value.documentId != intent.documentId) continue;
+      final document = _documentsByTab[entry.key];
+      if (document == null) continue;
+      if (intent.affectedLocators.isNotEmpty) {
+        return dispatchAndProject(
+          tabId: entry.key,
+          intent: intent,
+          provenance: provenance,
+        );
       }
+      return _dispatchPageObjectAndPreview(
+        tabId: entry.key,
+        document: document,
+        intent: intent,
+        provenance: provenance,
+      );
     }
     return _dispatcher.dispatch(intent, provenance: provenance);
+  }
+
+  Future<PdfEditResult> _dispatchPageObjectAndPreview({
+    required String tabId,
+    required PdfDocument document,
+    required PdfEditIntent intent,
+    required PdfCommandProvenance provenance,
+  }) async {
+    final locator = switch (intent) {
+      MovePdfPageObjectIntent(:final locator) ||
+      ResizePdfPageObjectIntent(:final locator) ||
+      RotatePdfPageObjectIntent(:final locator) => locator,
+      _ => null,
+    };
+    if (locator == null) {
+      return _dispatcher.dispatch(intent, provenance: provenance);
+    }
+    final before = sessionFor(
+      tabId,
+    ).pageObjects.firstWhere((object) => object.locator == locator);
+    final result = await _dispatcher.dispatch(intent, provenance: provenance);
+    if (!result.isSuccess) return result;
+    final after = sessionFor(
+      tabId,
+    ).pageObjects.firstWhere((object) => object.locator == locator);
+    await _preview?.previewTransform(document, before, after.transform);
+    return result;
   }
 
   Future<PdfEditResult> dispatchAndProject({
