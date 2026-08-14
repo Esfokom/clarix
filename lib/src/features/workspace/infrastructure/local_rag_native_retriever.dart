@@ -109,14 +109,12 @@ class FrbNativeRagGateway implements NativeRagGateway {
 
 class NativeLocalRagRetriever implements LocalRagRetriever, LocalRagIndexer {
   NativeLocalRagRetriever({
-    required LocalRagStore store,
-    required PdfChunkReader readChunks,
+    required this._store,
+    required this._readChunks,
     NativeRagGateway? gateway,
     bool Function()? isNativeAvailable,
     Future<bool> Function()? ensureNativeInitialized,
-  }) : _store = store,
-       _readChunks = readChunks,
-       _gateway = gateway ?? const FrbNativeRagGateway(),
+  }) : _gateway = gateway ?? const FrbNativeRagGateway(),
        _isNativeAvailable =
            isNativeAvailable ?? (() => ClarixRustRuntime.isAvailable),
        _ensureNativeInitialized =

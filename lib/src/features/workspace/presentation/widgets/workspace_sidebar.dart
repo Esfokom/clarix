@@ -203,9 +203,7 @@ class _BookmarksPane extends ConsumerWidget {
             IconButton(
               tooltip: 'Add bookmark',
               icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
-              onPressed: () => ref
-                  .read(workspaceNotifierProvider.notifier)
-                  .toggleBookmark(tab.id, tab.currentPage),
+              onPressed: () => _addNamedBookmark(context, ref),
             ),
           ],
         ),
@@ -278,6 +276,37 @@ class _BookmarksPane extends ConsumerWidget {
       ],
     );
   }
+
+  Future<void> _addNamedBookmark(BuildContext context, WidgetRef ref) async {
+    final controller = TextEditingController(text: 'Page ${tab.currentPage}');
+    final String? label = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add bookmark'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (label != null) {
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .addBookmark(
+            tabId: tab.id,
+            pageNumber: tab.currentPage,
+            label: label,
+          );
+    }
+  }
 }
 
 class _HighlightsPane extends ConsumerWidget {
@@ -287,7 +316,7 @@ class _HighlightsPane extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final items =
+    final rawItems =
         (ref
                     .watch(workspaceNotifierProvider)
                     .value
@@ -296,6 +325,13 @@ class _HighlightsPane extends ConsumerWidget {
                 const <DocumentAnnotation>[])
             .where((item) => item.kind == AnnotationKind.highlight)
             .toList(growable: false);
+    final seenGroups = <String>{};
+    final items = rawItems
+        .where((item) {
+          final group = item.id.split(':').first;
+          return seenGroups.add(group);
+        })
+        .toList(growable: false);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -359,16 +395,18 @@ class _HighlightsPane extends ConsumerWidget {
       ),
     );
     if (action == 'delete') {
+      final String groupId = item.id.split(':').first;
       await ref
           .read(workspaceNotifierProvider.notifier)
-          .removeAnnotation(tab.id, item.id);
+          .removeAnnotation(tab.id, groupId);
     }
     if (action == 'yellow' || action == 'blue') {
+      final String groupId = item.id.split(':').first;
       await ref
           .read(workspaceNotifierProvider.notifier)
           .updateHighlightColor(
             tabId: tab.id,
-            annotationId: item.id,
+            annotationId: groupId,
             colorValue: action == 'yellow' ? 0x66FFD54F : 0x668EC5FF,
           );
     }

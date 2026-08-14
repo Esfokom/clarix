@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `rag_backend`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PdfIndexEvent`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<NativePdfComposeResponse> composePdfs({
   required NativePdfComposeRequest request,
@@ -18,6 +18,9 @@ Future<NativePdfComposeResponse> composePdfs({
 Future<NativeRagIndexResponse> localRagIndex({
   required NativeRagIndexRequest request,
 }) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
+
+Future<NativePdfAnnotations> readPdfAnnotations({required String path}) =>
+    RustLib.instance.api.crateApiReadPdfAnnotations(path: path);
 
 Future<void> savePdfAnnotations({required NativePdfSaveRequest request}) =>
     RustLib.instance.api.crateApiSavePdfAnnotations(request: request);
@@ -53,6 +56,27 @@ abstract class NativePdfSession implements RustOpaqueInterface {
   Future<String> pageText({required BigInt pageNumber});
 
   Future<List<PdfSearchMatch>> search({required String query});
+}
+
+class NativePdfAnnotations {
+  final List<NativePdfBookmark> bookmarks;
+  final List<NativePdfHighlight> highlights;
+
+  const NativePdfAnnotations({
+    required this.bookmarks,
+    required this.highlights,
+  });
+
+  @override
+  int get hashCode => bookmarks.hashCode ^ highlights.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePdfAnnotations &&
+          runtimeType == other.runtimeType &&
+          bookmarks == other.bookmarks &&
+          highlights == other.highlights;
 }
 
 class NativePdfBookmark {
@@ -137,6 +161,7 @@ class NativePdfHighlight {
   final double blue;
   final double opacity;
   final String text;
+  final Float32List quadPoints;
 
   const NativePdfHighlight({
     required this.id,
@@ -150,6 +175,7 @@ class NativePdfHighlight {
     required this.blue,
     required this.opacity,
     required this.text,
+    required this.quadPoints,
   });
 
   @override
@@ -164,7 +190,8 @@ class NativePdfHighlight {
       green.hashCode ^
       blue.hashCode ^
       opacity.hashCode ^
-      text.hashCode;
+      text.hashCode ^
+      quadPoints.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -181,22 +208,29 @@ class NativePdfHighlight {
           green == other.green &&
           blue == other.blue &&
           opacity == other.opacity &&
-          text == other.text;
+          text == other.text &&
+          quadPoints == other.quadPoints;
 }
 
 class NativePdfSaveRequest {
   final String path;
+  final String? outputPath;
   final List<NativePdfBookmark> bookmarks;
   final List<NativePdfHighlight> highlights;
 
   const NativePdfSaveRequest({
     required this.path,
+    this.outputPath,
     required this.bookmarks,
     required this.highlights,
   });
 
   @override
-  int get hashCode => path.hashCode ^ bookmarks.hashCode ^ highlights.hashCode;
+  int get hashCode =>
+      path.hashCode ^
+      outputPath.hashCode ^
+      bookmarks.hashCode ^
+      highlights.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -204,6 +238,7 @@ class NativePdfSaveRequest {
       other is NativePdfSaveRequest &&
           runtimeType == other.runtimeType &&
           path == other.path &&
+          outputPath == other.outputPath &&
           bookmarks == other.bookmarks &&
           highlights == other.highlights;
 }

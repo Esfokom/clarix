@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:path/path.dart' as p;
@@ -20,6 +21,7 @@ abstract class PdfOxideBridge {
   Future<String?> extractPageText(String path, int pageNumber);
   Future<List<String>> extractDocumentText(String path);
   Future<List<PdfSearchMatch>> searchDocument(String path, Pattern query);
+  Future<PdfNativeAnnotations> readPdfAnnotations(String path);
   Stream<List<PdfChunkRecord>> buildChunkBatches(
     String path, {
     required String documentId,
@@ -59,7 +61,7 @@ class FrbPdfOxideBridge implements PdfOxideBridge {
   Future<ffi.NativePdfSession> _session(String path) async {
     if (!await ClarixRustRuntime.ensureInitialized()) {
       throw UnimplementedError(
-        'The bundled Clarix Rust runtime is unavailable.',
+        'The bundled Clarix Rust runtime is unavailable: ${ClarixRustRuntime.initializationError ?? 'no runtime DLL was loaded'}',
       );
     }
     return ffi.NativePdfSession.open(path: path);
@@ -168,6 +170,48 @@ class FrbPdfOxideBridge implements PdfOxideBridge {
   }
 
   @override
+  Future<PdfNativeAnnotations> readPdfAnnotations(String path) async {
+    if (!await ClarixRustRuntime.ensureInitialized()) {
+      throw UnimplementedError(
+        'The bundled Clarix Rust runtime is unavailable: ${ClarixRustRuntime.initializationError ?? 'no runtime DLL was loaded'}',
+      );
+    }
+    final ffi.NativePdfAnnotations native = await ffi.readPdfAnnotations(
+      path: path,
+    );
+    return PdfNativeAnnotations(
+      bookmarks: native.bookmarks
+          .map(
+            (item) => DocumentBookmark(
+              id: item.id,
+              label: item.title,
+              pageNumber: item.pageNumber.toInt(),
+              createdAt: DateTime.now().toUtc(),
+            ),
+          )
+          .toList(growable: false),
+      highlights: native.highlights
+          .map(
+            (item) => DocumentAnnotation(
+              id: item.id,
+              kind: AnnotationKind.highlight,
+              pageNumber: item.pageNumber.toInt(),
+              pageRects: _pageRectsFromQuadPoints(item),
+              selectedText: item.text,
+              note: null,
+              colorValue:
+                  (((item.opacity * 255).round().clamp(0, 255)) << 24) |
+                  (((item.red * 255).round().clamp(0, 255)) << 16) |
+                  (((item.green * 255).round().clamp(0, 255)) << 8) |
+                  ((item.blue * 255).round().clamp(0, 255)),
+              createdAt: DateTime.now().toUtc(),
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  @override
   Future<void> savePdfAnnotations({
     required String path,
     required List<DocumentBookmark> bookmarks,
@@ -175,47 +219,124 @@ class FrbPdfOxideBridge implements PdfOxideBridge {
   }) async {
     if (!await ClarixRustRuntime.ensureInitialized()) {
       throw UnimplementedError(
-        'The bundled Clarix Rust runtime is unavailable.',
+        'The bundled Clarix Rust runtime is unavailable: ${ClarixRustRuntime.initializationError ?? 'no runtime DLL was loaded'}',
       );
     }
-    await ffi.savePdfAnnotations(
-      request: ffi.NativePdfSaveRequest(
-        path: path,
-        bookmarks: bookmarks
-            .map(
-              (item) => ffi.NativePdfBookmark(
-                id: item.id,
-                title: item.label,
-                pageNumber: BigInt.from(item.pageNumber),
+    final ffi.NativePdfSaveRequest request = ffi.NativePdfSaveRequest(
+      path: path,
+      bookmarks: bookmarks
+          .map(
+            (item) => ffi.NativePdfBookmark(
+              id: item.id,
+              title: item.label,
+              pageNumber: BigInt.from(item.pageNumber),
+            ),
+          )
+          .toList(growable: false),
+      highlights: annotations
+          .where(
+            (item) =>
+                item.kind == AnnotationKind.highlight &&
+                item.pageRects.isNotEmpty,
+          )
+          .map((item) {
+            final Rect rect = item.pageRects.first;
+            final int color = item.colorValue;
+            return ffi.NativePdfHighlight(
+              id: item.id,
+              pageNumber: BigInt.from(item.pageNumber),
+              left: rect.left,
+              top: rect.top,
+              right: rect.right,
+              bottom: rect.bottom,
+              red: ((color >> 16) & 0xff) / 255,
+              green: ((color >> 8) & 0xff) / 255,
+              blue: (color & 0xff) / 255,
+              opacity: ((color >> 24) & 0xff) / 255,
+              text: item.selectedText,
+              quadPoints: Float32List.fromList(
+                item.pageRects
+                    .expand(
+                      (rect) => <double>[
+                        rect.left,
+                        rect.bottom,
+                        rect.right,
+                        rect.bottom,
+                        rect.left,
+                        rect.top,
+                        rect.right,
+                        rect.top,
+                      ],
+                    )
+                    .toList(growable: false),
               ),
-            )
-            .toList(growable: false),
-        highlights: annotations
-            .where(
-              (item) =>
-                  item.kind == AnnotationKind.highlight &&
-                  item.pageRects.isNotEmpty,
-            )
-            .map((item) {
-              final Rect rect = item.pageRects.first;
-              final int color = item.colorValue;
-              return ffi.NativePdfHighlight(
-                id: item.id,
-                pageNumber: BigInt.from(item.pageNumber),
-                left: rect.left,
-                top: rect.top,
-                right: rect.right,
-                bottom: rect.bottom,
-                red: ((color >> 16) & 0xff) / 255,
-                green: ((color >> 8) & 0xff) / 255,
-                blue: (color & 0xff) / 255,
-                opacity: ((color >> 24) & 0xff) / 255,
-                text: item.selectedText,
-              );
-            })
-            .toList(growable: false),
+            );
+          })
+          .toList(growable: false),
+    );
+    try {
+      await ffi.savePdfAnnotations(request: request);
+    } catch (error) {
+      if (!error.toString().contains('invalid file trailer')) rethrow;
+      final File normalized = await _normalizeWithPdfium(path);
+      try {
+        await ffi.savePdfAnnotations(
+          request: ffi.NativePdfSaveRequest(
+            path: normalized.path,
+            outputPath: path,
+            bookmarks: request.bookmarks,
+            highlights: request.highlights,
+          ),
+        );
+      } finally {
+        if (await normalized.exists()) await normalized.delete();
+      }
+    }
+  }
+
+  Future<File> _normalizeWithPdfium(String path) async {
+    await pdfrxInitialize();
+    final PdfDocument document = await PdfDocument.openFile(path);
+    final File normalized = File(
+      p.join(
+        p.dirname(path),
+        '.${p.basenameWithoutExtension(path)}.clarix-normalized-${DateTime.now().microsecondsSinceEpoch}.pdf',
       ),
     );
+    try {
+      await normalized.writeAsBytes(
+        await document.encodePdf(incremental: false),
+        flush: true,
+      );
+      return normalized;
+    } catch (_) {
+      if (await normalized.exists()) await normalized.delete();
+      rethrow;
+    } finally {
+      await document.dispose();
+    }
+  }
+
+  List<Rect> _pageRectsFromQuadPoints(ffi.NativePdfHighlight highlight) {
+    if (highlight.quadPoints.length < 8) {
+      return <Rect>[
+        Rect.fromLTRB(
+          highlight.left,
+          highlight.bottom,
+          highlight.right,
+          highlight.top,
+        ),
+      ];
+    }
+    return <Rect>[
+      for (int index = 0; index + 7 < highlight.quadPoints.length; index += 8)
+        Rect.fromLTRB(
+          highlight.quadPoints[index],
+          highlight.quadPoints[index + 5],
+          highlight.quadPoints[index + 2],
+          highlight.quadPoints[index + 1],
+        ),
+    ];
   }
 }
 
@@ -240,6 +361,12 @@ class PdfrxFallbackBridge extends PdfOxideBridge {
     }
     return metadata;
   }
+
+  @override
+  Future<PdfNativeAnnotations> readPdfAnnotations(String path) =>
+      throw UnsupportedError(
+        'Reading PDF annotations requires the native Clarix runtime.',
+      );
 
   @override
   Future<void> savePdfAnnotations({
@@ -499,6 +626,9 @@ class HybridPdfExtractionService {
     }
   }
 
+  Future<PdfNativeAnnotations> readPdfAnnotations(String path) =>
+      _primary.readPdfAnnotations(path);
+
   Future<List<String>> extractDocumentText(String path) async {
     try {
       return await _primary.extractDocumentText(path);
@@ -529,4 +659,13 @@ class HybridPdfExtractionService {
   );
 
   Future<bool> fileExists(String path) => File(path).exists();
+}
+
+class PdfNativeAnnotations {
+  const PdfNativeAnnotations({
+    required this.bookmarks,
+    required this.highlights,
+  });
+  final List<DocumentBookmark> bookmarks;
+  final List<DocumentAnnotation> highlights;
 }

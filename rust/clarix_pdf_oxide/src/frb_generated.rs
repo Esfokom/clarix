@@ -39,7 +39,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2137464188;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1663186968;
 
 // Section: executor
 
@@ -465,6 +465,39 @@ fn wire__crate__api__local_rag_validate_impl(
         },
     )
 }
+fn wire__crate__api__read_pdf_annotations_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "read_pdf_annotations",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_path = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::api::read_pdf_annotations(api_path)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__save_pdf_annotations_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -649,6 +682,18 @@ impl SseDecode for Vec<crate::PdfSearchMatch> {
     }
 }
 
+impl SseDecode for Vec<f32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<f32>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -670,6 +715,18 @@ impl SseDecode for Vec<usize> {
             ans_.push(<usize>::sse_decode(deserializer));
         }
         return ans_;
+    }
+}
+
+impl SseDecode for crate::api::NativePdfAnnotations {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_bookmarks = <Vec<crate::api::NativePdfBookmark>>::sse_decode(deserializer);
+        let mut var_highlights = <Vec<crate::api::NativePdfHighlight>>::sse_decode(deserializer);
+        return crate::api::NativePdfAnnotations {
+            bookmarks: var_bookmarks,
+            highlights: var_highlights,
+        };
     }
 }
 
@@ -727,6 +784,7 @@ impl SseDecode for crate::api::NativePdfHighlight {
         let mut var_blue = <f32>::sse_decode(deserializer);
         let mut var_opacity = <f32>::sse_decode(deserializer);
         let mut var_text = <String>::sse_decode(deserializer);
+        let mut var_quadPoints = <Vec<f32>>::sse_decode(deserializer);
         return crate::api::NativePdfHighlight {
             id: var_id,
             page_number: var_pageNumber,
@@ -739,6 +797,7 @@ impl SseDecode for crate::api::NativePdfHighlight {
             blue: var_blue,
             opacity: var_opacity,
             text: var_text,
+            quad_points: var_quadPoints,
         };
     }
 }
@@ -747,10 +806,12 @@ impl SseDecode for crate::api::NativePdfSaveRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_path = <String>::sse_decode(deserializer);
+        let mut var_outputPath = <Option<String>>::sse_decode(deserializer);
         let mut var_bookmarks = <Vec<crate::api::NativePdfBookmark>>::sse_decode(deserializer);
         let mut var_highlights = <Vec<crate::api::NativePdfHighlight>>::sse_decode(deserializer);
         return crate::api::NativePdfSaveRequest {
             path: var_path,
+            output_path: var_outputPath,
             bookmarks: var_bookmarks,
             highlights: var_highlights,
         };
@@ -954,7 +1015,8 @@ fn pde_ffi_dispatcher_primary_impl(
         8 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
         9 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
         10 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -988,6 +1050,27 @@ impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<NativePdfSession>> for NativeP
     }
 }
 
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::NativePdfAnnotations {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.bookmarks.into_into_dart().into_dart(),
+            self.highlights.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::NativePdfAnnotations
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfAnnotations>
+    for crate::api::NativePdfAnnotations
+{
+    fn into_into_dart(self) -> crate::api::NativePdfAnnotations {
+        self
+    }
+}
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::NativePdfBookmark {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
@@ -1065,6 +1148,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::NativePdfHighlight {
             self.blue.into_into_dart().into_dart(),
             self.opacity.into_into_dart().into_dart(),
             self.text.into_into_dart().into_dart(),
+            self.quad_points.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -1085,6 +1169,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::NativePdfSaveRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.path.into_into_dart().into_dart(),
+            self.output_path.into_into_dart().into_dart(),
             self.bookmarks.into_into_dart().into_dart(),
             self.highlights.into_into_dart().into_dart(),
         ]
@@ -1408,6 +1493,16 @@ impl SseEncode for Vec<crate::PdfSearchMatch> {
     }
 }
 
+impl SseEncode for Vec<f32> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <f32>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<u8> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -1425,6 +1520,14 @@ impl SseEncode for Vec<usize> {
         for item in self {
             <usize>::sse_encode(item, serializer);
         }
+    }
+}
+
+impl SseEncode for crate::api::NativePdfAnnotations {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Vec<crate::api::NativePdfBookmark>>::sse_encode(self.bookmarks, serializer);
+        <Vec<crate::api::NativePdfHighlight>>::sse_encode(self.highlights, serializer);
     }
 }
 
@@ -1468,6 +1571,7 @@ impl SseEncode for crate::api::NativePdfHighlight {
         <f32>::sse_encode(self.blue, serializer);
         <f32>::sse_encode(self.opacity, serializer);
         <String>::sse_encode(self.text, serializer);
+        <Vec<f32>>::sse_encode(self.quad_points, serializer);
     }
 }
 
@@ -1475,6 +1579,7 @@ impl SseEncode for crate::api::NativePdfSaveRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.path, serializer);
+        <Option<String>>::sse_encode(self.output_path, serializer);
         <Vec<crate::api::NativePdfBookmark>>::sse_encode(self.bookmarks, serializer);
         <Vec<crate::api::NativePdfHighlight>>::sse_encode(self.highlights, serializer);
     }

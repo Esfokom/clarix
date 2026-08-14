@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 
@@ -30,6 +31,8 @@ import 'workspace_providers.dart';
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   PdfEditingController get _pdfEditing =>
       ref.read(pdfEditingControllerProvider);
+  final Map<String, DocumentMetadata> _savedPdfMetadata =
+      <String, DocumentMetadata>{};
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
@@ -147,6 +150,29 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       if (documentMetadata.identity.path != identity.path) {
         documentMetadata = documentMetadata.copyWith(identity: identity);
       }
+      // PDF-native annotations are authoritative whenever the Rust runtime is
+      // available. Keep Clarix-only notes, but never let stale metadata hide
+      // bookmarks or highlights embedded in the file.
+      try {
+        final native = await _pdfExtraction.readPdfAnnotations(identity.path);
+        documentMetadata = documentMetadata.copyWith(
+          bookmarks: native.bookmarks,
+          annotations: <DocumentAnnotation>[
+            ...native.highlights,
+            ...documentMetadata.annotations.where(
+              (item) => item.kind != AnnotationKind.highlight,
+            ),
+          ],
+        );
+      } on UnsupportedError {
+        // The web/fallback reader deliberately has no PDF writer/parser.
+      } catch (error, stackTrace) {
+        clarixLog.w(
+          'Could not load native PDF annotations: $path',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
       await store.write(documentMetadata);
       metadata[identity.fingerprint] = documentMetadata;
 
@@ -157,6 +183,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         title: identity.title,
       );
       tabs.add(tab);
+      _savedPdfMetadata[tab.id] = documentMetadata;
       tabsToIndex.add(tab);
       activeTabId = tab.id;
 
@@ -229,6 +256,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       if (_pdfEditing.sessionsByTabId.containsKey(tab.id)) {
         _pdfEditing.markSaved(tab.id);
       }
+      _savedPdfMetadata[tab.id] = metadata;
     } on PdfEditFailure catch (error) {
       state = AsyncData(
         current.copyWith(
@@ -1064,6 +1092,34 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
   }
 
+  Future<void> addBookmark({
+    required String tabId,
+    required int pageNumber,
+    required String label,
+  }) async {
+    final String title = label.trim();
+    if (title.isEmpty) return;
+    final WorkspaceFeatureState current = _requireState();
+    final DocumentTabState tab = current.session.tabs.firstWhere(
+      (item) => item.id == tabId,
+    );
+    final DocumentMetadata? document = current.documentMetadata[tab.documentId];
+    if (document == null) return;
+    final bookmarks = <DocumentBookmark>[
+      ...document.bookmarks,
+      DocumentBookmark(
+        id: 'bookmark_${DateTime.now().microsecondsSinceEpoch}',
+        pageNumber: pageNumber,
+        label: title,
+        createdAt: DateTime.now().toUtc(),
+      ),
+    ]..sort((a, b) => a.pageNumber.compareTo(b.pageNumber));
+    await _saveDocumentMetadata(
+      current,
+      document.copyWith(bookmarks: bookmarks),
+    );
+  }
+
   Future<void> renameBookmark({
     required String tabId,
     required String bookmarkId,
@@ -1135,9 +1191,10 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   Future<void> addHighlight({
     required String tabId,
     required int pageNumber,
-    required Rect pageRect,
+    required List<Rect> pageRects,
     required String selectedText,
     int colorValue = 0x66FFD54F,
+    String? highlightId,
   }) async {
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState tab = current.session.tabs.firstWhere(
@@ -1150,10 +1207,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final List<DocumentAnnotation> annotations =
         List<DocumentAnnotation>.from(document.annotations)..add(
           DocumentAnnotation(
-            id: 'highlight_${DateTime.now().microsecondsSinceEpoch}',
+            id:
+                highlightId ??
+                'highlight_${DateTime.now().microsecondsSinceEpoch}',
             kind: AnnotationKind.highlight,
             pageNumber: pageNumber,
-            pageRects: <Rect>[pageRect],
+            pageRects: pageRects,
             selectedText: selectedText,
             note: null,
             colorValue: colorValue,
@@ -1209,7 +1268,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       current,
       document.copyWith(
         annotations: document.annotations
-            .where((DocumentAnnotation item) => item.id != annotationId)
+            .where(
+              (DocumentAnnotation item) =>
+                  item.id != annotationId &&
+                  !item.id.startsWith('$annotationId:'),
+            )
             .toList(growable: false),
       ),
     );
@@ -1231,7 +1294,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       document.copyWith(
         annotations: document.annotations
             .map(
-              (item) => item.id == annotationId
+              (item) =>
+                  item.id == annotationId ||
+                      item.id.startsWith('$annotationId:')
                   ? item.copyWith(colorValue: colorValue)
                   : item,
             )
@@ -1275,7 +1340,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         documentMetadata: metadata,
         dirtyDocumentIds: activeTabId == null
             ? current.dirtyDocumentIds
-            : (Set<String>.from(current.dirtyDocumentIds)..add(activeTabId)),
+            : _dirtyIdsFor(current, activeTabId, document),
       ),
     );
   }
@@ -1320,6 +1385,22 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
   }
 
+  Set<String> _dirtyIdsFor(
+    WorkspaceFeatureState current,
+    String tabId,
+    DocumentMetadata value,
+  ) {
+    final Set<String> dirty = Set<String>.from(current.dirtyDocumentIds);
+    final DocumentMetadata? saved = _savedPdfMetadata[tabId];
+    if (saved != null &&
+        jsonEncode(saved.toJson()) == jsonEncode(value.toJson())) {
+      dirty.remove(tabId);
+    } else {
+      dirty.add(tabId);
+    }
+    return dirty;
+  }
+
   Future<Map<String, DocumentMetadata>> _loadDocumentMetadata(
     WorkspaceSession session,
   ) async {
@@ -1339,9 +1420,31 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       if (document.identity.path != identity.path ||
           document.identity.modifiedAt != identity.modifiedAt) {
         document = document.copyWith(identity: identity);
-        await store.write(document);
       }
+      try {
+        final PdfNativeAnnotations native = await _pdfExtraction
+            .readPdfAnnotations(identity.path);
+        document = document.copyWith(
+          bookmarks: native.bookmarks,
+          annotations: <DocumentAnnotation>[
+            ...native.highlights,
+            ...document.annotations.where(
+              (item) => item.kind != AnnotationKind.highlight,
+            ),
+          ],
+        );
+      } on UnsupportedError {
+        // Native parsing is intentionally unavailable in the fallback reader.
+      } catch (error, stackTrace) {
+        clarixLog.w(
+          'Could not restore native PDF annotations: ${identity.path}',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }
+      await store.write(document);
       output[tab.documentId] = document;
+      _savedPdfMetadata[tab.id] = document;
     }
     return output;
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -45,12 +46,23 @@ final pdfUtilityServiceProvider = Provider<PdfUtilityService>((Ref ref) {
 });
 
 final pdfDocumentRefProvider = Provider.autoDispose
-    .family<PdfDocumentRefData, String>(
-      (Ref ref, String filePath) => PdfDocumentRefData(
-        File(filePath).readAsBytesSync(),
-        sourceName: filePath,
-      ),
-    );
+    .family<PdfDocumentRef, String>((Ref ref, String path) {
+      final File file = File(path);
+      Future<Uint8List>? bytes;
+      final int fileSize = file.existsSync() ? file.lengthSync() : 0;
+      return PdfDocumentRefCustom(
+        fileSize: fileSize,
+        sourceName: path,
+        key: PdfDocumentRefKey(path),
+        read: (Uint8List buffer, int position, int size) async {
+          final Uint8List data = await (bytes ??= file.readAsBytes());
+          if (position >= data.length) return 0;
+          final int count = size.clamp(0, data.length - position);
+          buffer.setRange(0, count, data, position);
+          return count;
+        },
+      );
+    });
 
 final chunkStoreProvider = Provider<DocumentChunkStore>(
   (Ref ref) => DocumentChunkStore(),

@@ -178,13 +178,25 @@ pub struct NativePdfHighlight {
     pub blue: f32,
     pub opacity: f32,
     pub text: String,
+    pub quad_points: Vec<f32>,
 }
 
 #[derive(Debug, Clone)]
 pub struct NativePdfSaveRequest {
     pub path: String,
+    pub output_path: Option<String>,
     pub bookmarks: Vec<NativePdfBookmark>,
     pub highlights: Vec<NativePdfHighlight>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePdfAnnotations {
+    pub bookmarks: Vec<NativePdfBookmark>,
+    pub highlights: Vec<NativePdfHighlight>,
+}
+
+pub fn read_pdf_annotations(path: String) -> Result<NativePdfAnnotations, String> {
+    crate::pdf_annotations::read(&path)
 }
 
 pub fn save_pdf_annotations(request: NativePdfSaveRequest) -> Result<(), String> {

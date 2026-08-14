@@ -365,7 +365,7 @@ class _PdfViewerPane extends ConsumerStatefulWidget {
   });
 
   final DocumentTabState tab;
-  final PdfDocumentRefData documentRef;
+  final PdfDocumentRef documentRef;
   final List<DocumentAnnotation> annotations;
   final WorkspaceSurfaceTokens colors;
 
@@ -390,6 +390,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   Offset? _lastPointerGlobalPosition;
   bool _colorInspectorOpen = false;
   int _customHighlightColor = 0x66FFD54F;
+  final Map<String, List<Rect>> _annotationHitAreas = <String, List<Rect>>{};
+  Offset? _selectionDragStart;
+  Offset? _selectionMenuPosition;
+  Offset? _selectionAutoPanPointer;
+  Timer? _selectionAutoPanTimer;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -456,6 +461,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   @override
   void dispose() {
     _viewerStateDebounce?.cancel();
+    _selectionAutoPanTimer?.cancel();
     _disposeSearcher();
     _controller.removeListener(_syncViewerMetrics);
     _metrics.dispose();
@@ -550,9 +556,19 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
             Positioned.fill(
               child: Listener(
                 onPointerHover: _rememberPointerPosition,
-                onPointerDown: _rememberPointerPosition,
-                onPointerMove: _rememberPointerPosition,
-                onPointerUp: _rememberPointerPosition,
+                onPointerDown: (PointerDownEvent event) {
+                  _rememberPointerPosition(event);
+                  _selectionDragStart = event.localPosition;
+                },
+                onPointerMove: (PointerMoveEvent event) {
+                  _rememberPointerPosition(event);
+                  _updateSelectionAutoPan(event);
+                },
+                onPointerUp: (PointerUpEvent event) {
+                  _rememberPointerPosition(event);
+                  _stopSelectionAutoPan();
+                  unawaited(_showSelectionMenuAfterDrag(event));
+                },
                 onPointerCancel: _rememberPointerPosition,
                 onPointerPanZoomStart: _rememberTrackpadZoomStart,
                 onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
@@ -584,6 +600,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             scaleByPointerScale: readerPointerZoomSensitivity,
                             textSelectionParams: const PdfTextSelectionParams(
                               enabled: true,
+                              showContextMenuAutomatically: true,
                             ),
                             buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
@@ -596,6 +613,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                               if (_searcher != null)
                                 _searcher!.pageTextMatchPaintCallback,
                             ],
+                            onGeneralTap: _onViewerTap,
                             viewerOverlayBuilder: _buildViewerOverlay,
                             pageOverlaysBuilder: (context, pageRect, page) =>
                                 <Widget>[
@@ -683,6 +701,20 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                   ),
                 ),
               ),
+            if (_selectionMenuPosition case final Offset position)
+              Positioned(
+                left: position.dx,
+                top: position.dy,
+                child: _QuickSelectionMenu(
+                  colors: widget.colors,
+                  onCopy: _copyCurrentSelection,
+                  onBookmark: _addNamedBookmark,
+                  onHighlight: (int color) =>
+                      _highlightSelection(colorValue: color),
+                  onDismiss: () =>
+                      setState(() => _selectionMenuPosition = null),
+                ),
+              ),
             if (_colorInspectorOpen)
               Positioned(
                 top: 18,
@@ -716,18 +748,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                               borderRadius: BorderRadius.circular(5),
                             ),
                           ),
-                          for (final int shift in const <int>[16, 8, 0])
-                            Slider(
-                              value: ((_customHighlightColor >> shift) & 0xff)
-                                  .toDouble(),
-                              min: 0,
-                              max: 255,
-                              onChanged: (value) => setState(
-                                () => _customHighlightColor =
-                                    (_customHighlightColor & ~(0xff << shift)) |
-                                    (value.round() << shift),
-                              ),
+                          const SizedBox(height: 12),
+                          _ColourWheel(
+                            color: Color(_customHighlightColor),
+                            onChanged: (Color color) => setState(
+                              () => _customHighlightColor = color.toARGB32(),
                             ),
+                          ),
                           FilledButton(
                             onPressed: () async {
                               await _highlightSelection(
@@ -956,13 +983,153 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
         final Rect rendered = bounds
             .toRect(page: page, scaledPageSize: pageRect.size)
             .translate(pageRect.left, pageRect.top);
+        final Rect documentRect = bounds.toRectInDocument(
+          page: page,
+          pageRect: pageRect,
+        );
+        _annotationHitAreas
+            .putIfAbsent(annotation.id, () => <Rect>[])
+            .add(documentRect);
         canvas.drawRect(rendered, paint);
       }
     }
   }
 
+  bool _onViewerTap(
+    BuildContext context,
+    PdfViewerController controller,
+    PdfViewerGeneralTapHandlerDetails details,
+  ) {
+    if (details.type != PdfViewerGeneralTapType.tap) return false;
+    for (final DocumentAnnotation annotation in widget.annotations) {
+      if (annotation.kind == AnnotationKind.highlight &&
+          (_annotationHitAreas[annotation.id] ?? const <Rect>[]).any(
+            (area) => area.inflate(3).contains(details.documentPosition),
+          )) {
+        unawaited(_showHighlightEditor(annotation));
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Future<void> _showHighlightEditor(DocumentAnnotation annotation) async {
+    final String? action = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit highlight'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'delete'),
+            child: const Text('Delete'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'yellow'),
+            child: const Text('Yellow'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, 'blue'),
+            child: const Text('Blue'),
+          ),
+        ],
+      ),
+    );
+    if (action == 'delete') {
+      final String groupId = annotation.id.split(':').first;
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .removeAnnotation(widget.tab.id, groupId);
+    } else if (action == 'yellow' || action == 'blue') {
+      final String groupId = annotation.id.split(':').first;
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .updateHighlightColor(
+            tabId: widget.tab.id,
+            annotationId: groupId,
+            colorValue: action == 'yellow' ? 0x66FFD54F : 0x668EC5FF,
+          );
+    }
+  }
+
   void _rememberPointerPosition(PointerEvent event) {
     _lastPointerGlobalPosition = event.position;
+  }
+
+  Future<void> _showSelectionMenuAfterDrag(PointerUpEvent event) async {
+    final Offset? start = _selectionDragStart;
+    _selectionDragStart = null;
+    if (start == null || (event.localPosition - start).distance < 4) return;
+    if (!_controller.isReady) return;
+    final ranges = await _controller.textSelectionDelegate
+        .getSelectedTextRanges();
+    if (!mounted || ranges.isEmpty) return;
+    setState(
+      () => _selectionMenuPosition = event.localPosition.translate(8, 8),
+    );
+  }
+
+  void _updateSelectionAutoPan(PointerMoveEvent event) {
+    if (_selectionDragStart == null ||
+        event.buttons == 0 ||
+        !_controller.isReady) {
+      _stopSelectionAutoPan();
+      return;
+    }
+    _selectionAutoPanPointer = event.localPosition;
+    const edge = 32.0;
+    final Size size = _controller.viewSize;
+    final Offset point = event.localPosition;
+    final bool nearEdge =
+        point.dx < edge ||
+        point.dx > size.width - edge ||
+        point.dy < edge ||
+        point.dy > size.height - edge;
+    if (nearEdge && _selectionAutoPanTimer == null) {
+      _selectionAutoPanTimer = Timer.periodic(
+        const Duration(milliseconds: 16),
+        (_) => _autoPanSelection(),
+      );
+    } else if (!nearEdge) {
+      _stopSelectionAutoPan();
+    }
+  }
+
+  void _autoPanSelection() {
+    final Offset? point = _selectionAutoPanPointer;
+    if (point == null || !_controller.isReady) return;
+    const edge = 32.0;
+    const maxSpeed = 12.0;
+    final Size size = _controller.viewSize;
+    double velocity(double value, double extent) {
+      if (value < edge) return maxSpeed * (1 - value / edge);
+      if (value > extent - edge) {
+        return -maxSpeed * (1 - (extent - value) / edge);
+      }
+      return 0;
+    }
+
+    final double dx = velocity(point.dx, size.width);
+    final double dy = velocity(point.dy, size.height);
+    if (dx == 0 && dy == 0) return;
+    final matrix = _controller.value.clone()
+      ..setEntry(0, 3, _controller.value.entry(0, 3) + dx)
+      ..setEntry(1, 3, _controller.value.entry(1, 3) + dy);
+    _controller.value = _controller.makeMatrixInSafeRange(
+      matrix,
+      forceClamp: true,
+    );
+  }
+
+  void _stopSelectionAutoPan() {
+    _selectionAutoPanTimer?.cancel();
+    _selectionAutoPanTimer = null;
+    _selectionAutoPanPointer = null;
+  }
+
+  Future<void> _copyCurrentSelection() async {
+    final String text = await _controller.textSelectionDelegate
+        .getSelectedText();
+    await Clipboard.setData(ClipboardData(text: text));
   }
 
   void _rememberTrackpadZoomStart(PointerPanZoomStartEvent event) {
@@ -1000,9 +1167,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
             ),
             TextButton.icon(
               onPressed: () async {
-                await ref
-                    .read(workspaceNotifierProvider.notifier)
-                    .toggleBookmark(widget.tab.id, _page);
+                await _addNamedBookmark();
                 params.dismissContextMenu();
               },
               icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
@@ -1041,6 +1206,33 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     );
   }
 
+  Future<void> _addNamedBookmark() async {
+    final controller = TextEditingController(text: 'Page $_page');
+    final String? label = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add bookmark'),
+        content: TextField(controller: controller, autofocus: true),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (label != null) {
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .addBookmark(tabId: widget.tab.id, pageNumber: _page, label: label);
+    }
+  }
+
   Future<void> _highlightSelection({int? colorValue}) async {
     final profile = ref.read(clarixThemeProvider).value;
     final int resolvedColor =
@@ -1050,24 +1242,52 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     final List<PdfPageTextRange> ranges = await _controller
         .textSelectionDelegate
         .getSelectedTextRanges();
+    final String selectedText = await _controller.textSelectionDelegate
+        .getSelectedText();
+    final String highlightGroup =
+        'highlight_${DateTime.now().microsecondsSinceEpoch}';
     for (final PdfPageTextRange range in ranges) {
-      final PdfRect bounds = range.bounds;
-      await ref
-          .read(workspaceNotifierProvider.notifier)
-          .addHighlight(
-            tabId: widget.tab.id,
-            pageNumber: range.pageNumber,
-            pageRect: Rect.fromLTRB(
+      final List<Rect> pageRects = _selectionLineRects(range)
+          .map(
+            (bounds) => Rect.fromLTRB(
               bounds.left,
               bounds.bottom,
               bounds.right,
               bounds.top,
             ),
-            selectedText: range.text,
-            colorValue: resolvedColor,
-          );
+          )
+          .toList(growable: false);
+      if (pageRects.isNotEmpty) {
+        await ref
+            .read(workspaceNotifierProvider.notifier)
+            .addHighlight(
+              tabId: widget.tab.id,
+              pageNumber: range.pageNumber,
+              pageRects: pageRects,
+              selectedText: selectedText,
+              colorValue: resolvedColor,
+              highlightId: '$highlightGroup:${range.pageNumber}',
+            );
+      }
     }
     await _controller.textSelectionDelegate.clearTextSelection();
+    if (mounted) setState(() => _selectionMenuPosition = null);
+  }
+
+  List<PdfRect> _selectionLineRects(PdfPageTextRange range) {
+    final List<PdfRect> lines = <PdfRect>[];
+    for (int index = range.start; index < range.end; index++) {
+      final PdfRect rect = range.pageText.charRects[index];
+      if (rect.isEmpty) continue;
+      if (lines.isNotEmpty &&
+          (lines.last.top - rect.top).abs() < 2 &&
+          (lines.last.bottom - rect.bottom).abs() < 2) {
+        lines[lines.length - 1] = lines.last.merge(rect);
+      } else {
+        lines.add(rect);
+      }
+    }
+    return lines;
   }
 
   Future<void> _zoomInAtPointer() async {
@@ -1459,6 +1679,135 @@ class _PdfScrollbarThumb extends StatefulWidget {
 
   @override
   State<_PdfScrollbarThumb> createState() => _PdfScrollbarThumbState();
+}
+
+class _QuickSelectionMenu extends StatelessWidget {
+  const _QuickSelectionMenu({
+    required this.colors,
+    required this.onCopy,
+    required this.onBookmark,
+    required this.onHighlight,
+    required this.onDismiss,
+  });
+
+  final WorkspaceSurfaceTokens colors;
+  final Future<void> Function() onCopy;
+  final Future<void> Function() onBookmark;
+  final Future<void> Function(int color) onHighlight;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: colors.panelRaised,
+    borderRadius: BorderRadius.circular(8),
+    child: Padding(
+      padding: const EdgeInsets.all(4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TextButton.icon(
+            onPressed: () async {
+              await onCopy();
+              onDismiss();
+            },
+            icon: const Icon(LucideIcons.copy, size: 14),
+            label: const Text('Copy'),
+          ),
+          TextButton.icon(
+            onPressed: () async {
+              await onBookmark();
+              onDismiss();
+            },
+            icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
+            label: const Text('Bookmark'),
+          ),
+          for (final color in const <int>[0x66FFD54F, 0x6686EFAC, 0x668EC5FF])
+            IconButton(
+              tooltip: 'Highlight',
+              onPressed: () async {
+                await onHighlight(color);
+                onDismiss();
+              },
+              icon: Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Color(color),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _ColourWheel extends StatelessWidget {
+  const _ColourWheel({required this.color, required this.onChanged});
+
+  final Color color;
+  final ValueChanged<Color> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final HSVColor hsv = HSVColor.fromColor(color);
+    return SizedBox(
+      width: 176,
+      height: 176,
+      child: GestureDetector(
+        key: const Key('highlight-colour-wheel'),
+        onPanDown: (details) => _select(details.localPosition),
+        onPanUpdate: (details) => _select(details.localPosition),
+        child: CustomPaint(painter: _ColourWheelPainter(hsv)),
+      ),
+    );
+  }
+
+  void _select(Offset point) {
+    const double radius = 88;
+    final Offset vector = point - const Offset(radius, radius);
+    final double distance = vector.distance;
+    if (distance > radius) return;
+    final double hue = (vector.direction * 180 / 3.141592653589793 + 360) % 360;
+    final double saturation = (distance / radius).clamp(0.0, 1.0);
+    onChanged(HSVColor.fromAHSV(color.a, hue, saturation, 1).toColor());
+  }
+}
+
+class _ColourWheelPainter extends CustomPainter {
+  const _ColourWheelPainter(this.selected);
+  final HSVColor selected;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Offset center = size.center(Offset.zero);
+    final double radius = size.shortestSide / 2;
+    final Paint paint = Paint();
+    for (int degrees = 0; degrees < 360; degrees++) {
+      paint.color = HSVColor.fromAHSV(1, degrees.toDouble(), 1, 1).toColor();
+      final double start = degrees * 3.141592653589793 / 180;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        start,
+        0.025,
+        true,
+        paint,
+      );
+    }
+    final Offset marker =
+        center +
+        Offset.fromDirection(
+          selected.hue * 3.141592653589793 / 180,
+          selected.saturation * radius,
+        );
+    canvas.drawCircle(marker, 7, Paint()..color = Colors.white);
+    canvas.drawCircle(marker, 4, Paint()..color = selected.toColor());
+  }
+
+  @override
+  bool shouldRepaint(covariant _ColourWheelPainter oldDelegate) =>
+      oldDelegate.selected != selected;
 }
 
 class _PdfScrollbarThumbState extends State<_PdfScrollbarThumb> {

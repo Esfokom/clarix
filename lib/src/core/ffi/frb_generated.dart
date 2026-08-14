@@ -65,7 +65,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -2137464188;
+  int get rustContentHash => -1663186968;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -118,6 +118,10 @@ abstract class RustLibApi extends BaseApi {
 
   Future<NativeRagIndexResponse> crateApiLocalRagValidate({
     required NativeRagIndexRequest request,
+  });
+
+  Future<NativePdfAnnotations> crateApiReadPdfAnnotations({
+    required String path,
   });
 
   Future<void> crateApiSavePdfAnnotations({
@@ -493,6 +497,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<NativePdfAnnotations> crateApiReadPdfAnnotations({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_pdf_annotations,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateApiReadPdfAnnotationsConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiReadPdfAnnotationsConstMeta => const TaskConstMeta(
+    debugName: "read_pdf_annotations",
+    argNames: ["path"],
+  );
+
+  @override
   Future<void> crateApiSavePdfAnnotations({
     required NativePdfSaveRequest request,
   }) {
@@ -504,7 +540,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 12,
             port: port_,
           );
         },
@@ -677,6 +713,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Float32List;
+  }
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint8List;
@@ -686,6 +728,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Uint64List dco_decode_list_prim_usize_strict(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw as Uint64List;
+  }
+
+  @protected
+  NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePdfAnnotations(
+      bookmarks: dco_decode_list_native_pdf_bookmark(arr[0]),
+      highlights: dco_decode_list_native_pdf_highlight(arr[1]),
+    );
   }
 
   @protected
@@ -730,8 +784,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativePdfHighlight dco_decode_native_pdf_highlight(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 11)
-      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
     return NativePdfHighlight(
       id: dco_decode_String(arr[0]),
       pageNumber: dco_decode_usize(arr[1]),
@@ -744,6 +798,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       blue: dco_decode_f_32(arr[8]),
       opacity: dco_decode_f_32(arr[9]),
       text: dco_decode_String(arr[10]),
+      quadPoints: dco_decode_list_prim_f_32_strict(arr[11]),
     );
   }
 
@@ -751,12 +806,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativePdfSaveRequest dco_decode_native_pdf_save_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
     return NativePdfSaveRequest(
       path: dco_decode_String(arr[0]),
-      bookmarks: dco_decode_list_native_pdf_bookmark(arr[1]),
-      highlights: dco_decode_list_native_pdf_highlight(arr[2]),
+      outputPath: dco_decode_opt_String(arr[1]),
+      bookmarks: dco_decode_list_native_pdf_bookmark(arr[2]),
+      highlights: dco_decode_list_native_pdf_highlight(arr[3]),
     );
   }
 
@@ -1131,6 +1187,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getFloat32List(len_);
+  }
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
@@ -1142,6 +1205,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var len_ = sse_decode_i_32(deserializer);
     return deserializer.buffer.getUint64List(len_);
+  }
+
+  @protected
+  NativePdfAnnotations sse_decode_native_pdf_annotations(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
+    var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
+    return NativePdfAnnotations(
+      bookmarks: var_bookmarks,
+      highlights: var_highlights,
+    );
   }
 
   @protected
@@ -1203,6 +1279,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_blue = sse_decode_f_32(deserializer);
     var var_opacity = sse_decode_f_32(deserializer);
     var var_text = sse_decode_String(deserializer);
+    var var_quadPoints = sse_decode_list_prim_f_32_strict(deserializer);
     return NativePdfHighlight(
       id: var_id,
       pageNumber: var_pageNumber,
@@ -1215,6 +1292,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       blue: var_blue,
       opacity: var_opacity,
       text: var_text,
+      quadPoints: var_quadPoints,
     );
   }
 
@@ -1224,10 +1302,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_path = sse_decode_String(deserializer);
+    var var_outputPath = sse_decode_opt_String(deserializer);
     var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
     var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
     return NativePdfSaveRequest(
       path: var_path,
+      outputPath: var_outputPath,
       bookmarks: var_bookmarks,
       highlights: var_highlights,
     );
@@ -1617,6 +1697,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_prim_f_32_strict(
+    Float32List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putFloat32List(self);
+  }
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -1634,6 +1724,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_i_32(self.length, serializer);
     serializer.buffer.putUint64List(self);
+  }
+
+  @protected
+  void sse_encode_native_pdf_annotations(
+    NativePdfAnnotations self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
+    sse_encode_list_native_pdf_highlight(self.highlights, serializer);
   }
 
   @protected
@@ -1685,6 +1785,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_f_32(self.blue, serializer);
     sse_encode_f_32(self.opacity, serializer);
     sse_encode_String(self.text, serializer);
+    sse_encode_list_prim_f_32_strict(self.quadPoints, serializer);
   }
 
   @protected
@@ -1694,6 +1795,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.path, serializer);
+    sse_encode_opt_String(self.outputPath, serializer);
     sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
     sse_encode_list_native_pdf_highlight(self.highlights, serializer);
   }

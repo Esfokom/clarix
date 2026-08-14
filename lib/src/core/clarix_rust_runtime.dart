@@ -11,6 +11,8 @@ class ClarixRustRuntime {
 
   static bool _available = false;
   static bool get isAvailable => _available;
+  static Object? _initializationError;
+  static Object? get initializationError => _initializationError;
   static Future<bool>? _initializing;
 
   static Future<bool> ensureInitialized() => _initializing ??= _initialize();
@@ -31,8 +33,9 @@ class ClarixRustRuntime {
         await frb.RustLib.init();
       }
       _available = true;
-    } catch (_) {
+    } catch (error) {
       _available = false;
+      _initializationError = error;
     }
     return _available;
   }
