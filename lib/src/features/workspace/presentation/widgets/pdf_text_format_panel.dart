@@ -102,13 +102,17 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
             key: const Key('pdf-font-family'),
+            isExpanded: true,
             initialValue: widget.availableFamilies.contains(family)
                 ? family
                 : null,
             decoration: const InputDecoration(labelText: 'Font family'),
             items: widget.availableFamilies
                 .map(
-                  (value) => DropdownMenuItem(value: value, child: Text(value)),
+                  (value) => DropdownMenuItem(
+                    value: value,
+                    child: Text(value, overflow: TextOverflow.ellipsis),
+                  ),
                 )
                 .toList(growable: false),
             onChanged: (value) {

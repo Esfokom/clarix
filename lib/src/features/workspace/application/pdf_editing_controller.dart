@@ -305,6 +305,10 @@ final class PdfEditingController extends ChangeNotifier {
     int currentPage,
   ) async {
     registerDocument(tabId, document);
+    // Older editor sessions could leave the selected native text hidden for a
+    // Flutter overlay. Native editing never paints replacement glyphs, so make
+    // visibility explicit whenever edit mode begins.
+    await _preview?.restoreSuppressedText(document);
     final session = sessionFor(tabId);
     await dispatch(
       SetPdfEditingModeIntent(

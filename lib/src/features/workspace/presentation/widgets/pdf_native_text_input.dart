@@ -32,6 +32,7 @@ final class _PdfNativeTextInputState extends State<PdfNativeTextInput>
   TextInputConnection? _connection;
   late TextEditingValue _value;
   final List<String> _pendingTexts = <String>[];
+  bool _attachScheduled = false;
 
   @override
   void initState() {
@@ -92,7 +93,23 @@ final class _PdfNativeTextInputState extends State<PdfNativeTextInput>
 
   void _handleFocusChanged() {
     if (_focusNode.hasFocus) {
-      _connection ??= TextInput.attach(
+      _scheduleAttach();
+    } else {
+      _connection?.close();
+      _connection = null;
+    }
+  }
+
+  void _scheduleAttach() {
+    if (_attachScheduled || _connection != null) return;
+    _attachScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _attachScheduled = false;
+      if (!mounted || !_focusNode.hasFocus || _connection != null) return;
+      // Attaching in the focus callback can happen before Flutter has assigned
+      // a view ID to this overlay on Windows.  Waiting for the next frame gives
+      // the framework a mounted view and avoids a dead text-input client.
+      final connection = TextInput.attach(
         this,
         const TextInputConfiguration(
           inputType: TextInputType.multiline,
@@ -101,13 +118,11 @@ final class _PdfNativeTextInputState extends State<PdfNativeTextInput>
           enableSuggestions: true,
         ),
       );
-      _connection!
+      _connection = connection;
+      connection
         ..setEditingState(_value)
         ..show();
-    } else {
-      _connection?.close();
-      _connection = null;
-    }
+    });
   }
 
   @override
