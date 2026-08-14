@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_initializing_formals
 
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:crypto/crypto.dart';
 
@@ -58,6 +59,37 @@ final class PdfEditSaveService {
       await _writeDraft(working, request.draft);
       await _validate(working);
       final newRevision = await _revision(working);
+      await _replace(working, source);
+      return PdfSaveOutcome(newRevision: newRevision);
+    } finally {
+      if (await working.exists()) await working.delete();
+    }
+  }
+
+  /// Installs a fully encoded, already-mutated PDF document.
+  ///
+  /// Unlike [save], this does not replay a draft against a new file handle:
+  /// the live PDFium document already contains the authoritative edit.
+  Future<PdfSaveOutcome> saveEncoded({
+    required String path,
+    required String sourceRevision,
+    required Uint8List encodedPdf,
+    Future<void> Function()? beforeReplace,
+  }) async {
+    final source = File(path);
+    final actualRevision = await _revision(source);
+    if (actualRevision != sourceRevision) {
+      throw PdfExternalRevisionFailure(
+        expected: sourceRevision,
+        actual: actualRevision,
+      );
+    }
+    final working = File(_workingPath(source));
+    try {
+      await working.writeAsBytes(encodedPdf, flush: true);
+      await _validate(working);
+      final newRevision = await _revision(working);
+      await beforeReplace?.call();
       await _replace(working, source);
       return PdfSaveOutcome(newRevision: newRevision);
     } finally {

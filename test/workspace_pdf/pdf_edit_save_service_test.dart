@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/infrastructure/pdf_edit_save_service.dart';
@@ -58,4 +60,27 @@ void main() {
       );
     },
   );
+
+  test('installs encoded live bytes without replaying a draft', () async {
+    final directory = await Directory.systemTemp.createTemp('clarix-save');
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}${Platform.pathSeparator}document.pdf');
+    await file.writeAsBytes(<int>[1, 2, 3]);
+    final revision = sha256.convert(await file.readAsBytes()).toString();
+    var released = false;
+    final service = PdfEditSaveService(
+      writeDraft: (_, _) => throw StateError('draft replay must not run'),
+    );
+
+    final outcome = await service.saveEncoded(
+      path: file.path,
+      sourceRevision: revision,
+      encodedPdf: Uint8List.fromList(<int>[9, 8, 7]),
+      beforeReplace: () async => released = true,
+    );
+
+    expect(released, isTrue);
+    expect(await file.readAsBytes(), <int>[9, 8, 7]);
+    expect(outcome.newRevision, sha256.convert(<int>[9, 8, 7]).toString());
+  });
 }

@@ -79,17 +79,31 @@ final class PdfEditingController extends ChangeNotifier {
     if (service == null) throw const PdfNativeEditingUnavailableFailure();
     final session = sessionFor(tabId);
     final document = _documentsByTab[tabId];
+    final coordinator = _native;
     if (document != null) await _preview?.clear(document);
     if (session.overflowingLocators.isNotEmpty) {
       throw PdfTextOverflowFailure(locator: session.overflowingLocators.first);
     }
-    final outcome = await service.save(
-      PdfSaveRequest(
-        path: path,
-        sourceRevision: session.sourceRevision,
-        draft: session,
-      ),
-    );
+    final outcome = document != null && coordinator != null
+        ? await service.saveEncoded(
+            path: path,
+            sourceRevision: session.sourceRevision,
+            encodedPdf: await coordinator.encode(document),
+            // PDFium keeps the source handle open on Windows. Release it only
+            // after the replacement has been fully encoded and validated.
+            beforeReplace: () async {
+              _documentsByTab.remove(tabId);
+              coordinator.forgetDocument(document);
+              await document.dispose();
+            },
+          )
+        : await service.save(
+            PdfSaveRequest(
+              path: path,
+              sourceRevision: session.sourceRevision,
+              draft: session,
+            ),
+          );
     replaceSession(
       tabId,
       session.withSourceRevision(outcome.newRevision).markSaved(),
