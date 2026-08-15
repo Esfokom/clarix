@@ -13,6 +13,8 @@ enum EditorCommandKind {
 
 enum EditorEventKind { ready, commandCommitted, lagged, closed }
 
+enum EditorViewportPriority { background, preload, visible, activeSelection }
+
 class EditorPdfBox {
   const EditorPdfBox({
     required this.left,

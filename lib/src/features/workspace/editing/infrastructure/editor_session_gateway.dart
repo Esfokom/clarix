@@ -6,7 +6,11 @@ abstract class EditorSessionGateway {
 
   Future<EditorSessionMetadata> open(String sourcePath);
 
-  Future<EditorPageScene> requestPage(int pageNumber, int expectedRevision);
+  Future<EditorPageScene> requestPage(
+    int pageNumber,
+    int expectedRevision, {
+    EditorViewportPriority priority = EditorViewportPriority.visible,
+  });
 
   Future<EditorCommandResult> submit(EditorCommandRequest request);
 
@@ -36,11 +40,15 @@ class BridgeEditorSessionGateway implements EditorSessionGateway {
   }
 
   @override
-  Future<EditorPageScene> requestPage(int pageNumber, int expectedRevision) =>
-      _required().pageScene(
-        pageNumber: pageNumber,
-        expectedRevision: expectedRevision,
-      );
+  Future<EditorPageScene> requestPage(
+    int pageNumber,
+    int expectedRevision, {
+    EditorViewportPriority priority = EditorViewportPriority.visible,
+  }) => _required().pageScene(
+    pageNumber: pageNumber,
+    expectedRevision: expectedRevision,
+    priority: priority,
+  );
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>

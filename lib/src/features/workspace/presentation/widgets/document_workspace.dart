@@ -16,6 +16,8 @@ import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/pdf_editing_controller.dart';
 import '../../application/workspace_providers.dart';
+import '../../editing/presentation/page_scene_host.dart';
+import '../../editing/presentation/pdfrx_page_surface.dart';
 import '../../domain/pdf_edit_session.dart';
 import '../../domain/pdf_page_object.dart';
 import '../../domain/pdf_text_types.dart';
@@ -394,7 +396,9 @@ class _ReaderViewportMetrics {
 
 class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   late PdfViewerController _controller;
+  late PdfrxPageSurface _pageSurface;
   late ValueNotifier<_ReaderViewportMetrics> _metrics;
+  PageSceneLifecycle? _pageSceneLifecycle;
   PdfTextSearcher? _searcher;
   VoidCallback? _searchListener;
   String? _pendingSearchQuery;
@@ -420,6 +424,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   void _createController() {
     _controller = PdfViewerController();
+    _pageSurface = PdfrxPageSurface(_controller);
     _metrics = ValueNotifier<_ReaderViewportMetrics>(
       _ReaderViewportMetrics(
         page: widget.tab.currentPage,
@@ -433,6 +438,12 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   void didUpdateWidget(covariant _PdfViewerPane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tab.id != widget.tab.id) {
+      _pageSceneLifecycle?.dispose();
+      _pageSceneLifecycle = null;
+      _pageSurface.dispose();
+      unawaited(
+        ref.read(editorSessionRegistryProvider).close(oldWidget.tab.id),
+      );
       final editing = ref.read(pdfEditingControllerProvider);
       if (editing.sessionsByTabId[oldWidget.tab.id]?.mode !=
           PdfEditingMode.reading) {
@@ -477,6 +488,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     _selectionAutoPanTimer?.cancel();
     _disposeSearcher();
     _controller.removeListener(_syncViewerMetrics);
+    _pageSceneLifecycle?.dispose();
+    _pageSurface.dispose();
+    unawaited(ref.read(editorSessionRegistryProvider).close(widget.tab.id));
     _metrics.dispose();
     super.dispose();
   }
@@ -644,6 +658,14 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             viewerOverlayBuilder: _buildViewerOverlay,
                             pageOverlaysBuilder: (context, pageRect, page) =>
                                 <Widget>[
+                                  if (_pageSceneLifecycle
+                                      case final PageSceneLifecycle lifecycle)
+                                    Positioned.fill(
+                                      child: PageSceneHost(
+                                        lifecycle: lifecycle,
+                                        pageNumber: page.pageNumber,
+                                      ),
+                                    ),
                                   if (editSession?.mode !=
                                           PdfEditingMode.reading &&
                                       editSession != null)
@@ -982,6 +1004,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     PdfDocument document,
     PdfViewerController controller,
   ) async {
+    _pageSurface.refresh();
+    unawaited(_openNativeEditor(widget.tab.id, widget.tab.filePath));
     final editing = ref.read(pdfEditingControllerProvider);
     if (!editing.sessionsByTabId.containsKey(widget.tab.id)) {
       editing.registerSession(
@@ -1029,6 +1053,26 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       );
     } else {
       searcher.dispose();
+    }
+  }
+
+  Future<void> _openNativeEditor(String tabId, String sourcePath) async {
+    try {
+      final controller = await ref
+          .read(editorSessionRegistryProvider)
+          .open(tabId: tabId, sourcePath: sourcePath);
+      if (!mounted || widget.tab.id != tabId) {
+        await ref.read(editorSessionRegistryProvider).close(tabId);
+        return;
+      }
+      _pageSceneLifecycle?.dispose();
+      _pageSceneLifecycle = PageSceneLifecycle(
+        surface: _pageSurface,
+        controller: controller,
+      )..start();
+      setState(() {});
+    } catch (_) {
+      // The reader remains available if the optional native editor cannot open.
     }
   }
 

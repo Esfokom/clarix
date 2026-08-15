@@ -66,8 +66,11 @@ class RegistryGateway implements EditorSessionGateway {
       throw UnimplementedError();
 
   @override
-  Future<EditorPageScene> requestPage(int pageNumber, int expectedRevision) =>
-      throw UnimplementedError();
+  Future<EditorPageScene> requestPage(
+    int pageNumber,
+    int expectedRevision, {
+    EditorViewportPriority priority = EditorViewportPriority.visible,
+  }) => throw UnimplementedError();
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>

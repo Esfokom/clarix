@@ -195,8 +195,9 @@ class FakeEditorSessionGateway implements EditorSessionGateway {
   @override
   Future<EditorPageScene> requestPage(
     int pageNumber,
-    int expectedRevision,
-  ) async {
+    int expectedRevision, {
+    EditorViewportPriority priority = EditorViewportPriority.visible,
+  }) async {
     pageRequests++;
     return _scene(expectedRevision);
   }

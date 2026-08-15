@@ -21,6 +21,7 @@ class EditorSessionController {
   final StreamController<EditorDocumentState> _changes =
       StreamController<EditorDocumentState>.broadcast(sync: true);
   StreamSubscription<EditorEvent>? _events;
+  final Map<int, int> _pageRequestGenerations = <int, int>{};
   EditorDocumentState _state = const EditorDocumentState();
   bool _disposed = false;
 
@@ -46,11 +47,31 @@ class EditorSessionController {
     }
   }
 
-  Future<void> refreshPage(int pageNumber) async {
+  Future<void> refreshPage(
+    int pageNumber, {
+    EditorViewportPriority priority = EditorViewportPriority.visible,
+    bool force = false,
+  }) async {
     _ensureActive();
+    if (pageNumber < 1 || pageNumber > _state.pageCount) {
+      return;
+    }
+    if (!force && _state.scenes[pageNumber]?.revision == _state.revision) {
+      return;
+    }
     final requestedRevision = _state.revision;
-    final scene = await _gateway.requestPage(pageNumber, requestedRevision);
-    if (_disposed || scene.revision != _state.revision) return;
+    final generation = (_pageRequestGenerations[pageNumber] ?? 0) + 1;
+    _pageRequestGenerations[pageNumber] = generation;
+    final scene = await _gateway.requestPage(
+      pageNumber,
+      requestedRevision,
+      priority: priority,
+    );
+    if (_disposed ||
+        _pageRequestGenerations[pageNumber] != generation ||
+        scene.revision != _state.revision) {
+      return;
+    }
     final scenes = Map<int, EditorPageScene>.of(_state.scenes)
       ..[pageNumber] = scene;
     final objects = Map<String, EditorObjectState>.of(_state.objects);
@@ -64,6 +85,40 @@ class EditorSessionController {
       );
     }
     _emit(_state.copyWith(scenes: scenes, objects: objects));
+  }
+
+  void updateViewport(Set<int> visiblePages, {int preloadRadius = 2}) {
+    _ensureActive();
+    final visible = visiblePages
+        .where((page) => page >= 1 && page <= _state.pageCount)
+        .toSet();
+    final warm = <int>{};
+    for (final page in visible) {
+      for (
+        var candidate = page - preloadRadius;
+        candidate <= page + preloadRadius;
+        candidate++
+      ) {
+        if (candidate >= 1 && candidate <= _state.pageCount) {
+          warm.add(candidate);
+        }
+      }
+    }
+    for (final page in _pageRequestGenerations.keys.toList(growable: false)) {
+      if (!warm.contains(page) && !_state.scenes.containsKey(page)) {
+        _pageRequestGenerations[page] = _pageRequestGenerations[page]! + 1;
+      }
+    }
+    for (final page in warm) {
+      unawaited(
+        refreshPage(
+          page,
+          priority: visible.contains(page)
+              ? EditorViewportPriority.visible
+              : EditorViewportPriority.preload,
+        ),
+      );
+    }
   }
 
   void applyLocalDelta({
@@ -206,7 +261,9 @@ class EditorSessionController {
             .where((entry) => entry.value.pageId == stalePage)
             .map((entry) => entry.key)
             .firstOrNull;
-        if (pageNumber != null) unawaited(refreshPage(pageNumber));
+        if (pageNumber != null) {
+          unawaited(refreshPage(pageNumber, force: true));
+        }
       }
     }
   }
@@ -215,7 +272,7 @@ class EditorSessionController {
     if (_disposed || event.sessionId != _state.sessionId) return;
     if (event.kind == EditorEventKind.lagged) {
       for (final pageNumber in _state.scenes.keys.toList(growable: false)) {
-        unawaited(refreshPage(pageNumber));
+        unawaited(refreshPage(pageNumber, force: true));
       }
     }
   }

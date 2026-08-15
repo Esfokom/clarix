@@ -18,6 +18,7 @@ abstract class NativeEditorPort {
   Future<EditorPageScene> pageScene({
     required int pageNumber,
     required int expectedRevision,
+    required EditorViewportPriority priority,
   });
 
   Future<EditorCommandResult> submit(EditorCommandRequest request);
@@ -92,11 +93,13 @@ class EditorBridgeSession {
   Future<EditorPageScene> pageScene({
     required int pageNumber,
     required int expectedRevision,
+    EditorViewportPriority priority = EditorViewportPriority.visible,
   }) async {
     _ensureOpen();
     final value = await _native.pageScene(
       pageNumber: pageNumber,
       expectedRevision: expectedRevision,
+      priority: priority,
     );
     _ensureOpen();
     _validateSchema(value.schemaVersion);
@@ -222,12 +225,22 @@ class _FrbNativeEditorPort implements NativeEditorPort {
   Future<EditorPageScene> pageScene({
     required int pageNumber,
     required int expectedRevision,
+    required EditorViewportPriority priority,
   }) async {
     final value = await _session.pageScene(
       request: native.NativePageSceneRequest(
         pageNumber: pageNumber,
         expectedRevision: BigInt.from(expectedRevision),
-        priority: native.NativeViewportPriority.visible,
+        priority: switch (priority) {
+          EditorViewportPriority.background =>
+            native.NativeViewportPriority.background,
+          EditorViewportPriority.preload =>
+            native.NativeViewportPriority.preload,
+          EditorViewportPriority.visible =>
+            native.NativeViewportPriority.visible,
+          EditorViewportPriority.activeSelection =>
+            native.NativeViewportPriority.activeSelection,
+        },
       ),
     );
     return EditorPageScene(

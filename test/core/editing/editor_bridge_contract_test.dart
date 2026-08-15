@@ -36,6 +36,7 @@ class FakeNativeEditorPort implements NativeEditorPort {
   Future<EditorPageScene> pageScene({
     required int pageNumber,
     required int expectedRevision,
+    required EditorViewportPriority priority,
   }) async => EditorPageScene(
     schemaVersion: schemaVersion,
     pageId: '00000000-0000-4000-8000-000000000003',
