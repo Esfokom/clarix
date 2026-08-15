@@ -220,6 +220,8 @@ pub enum PdfAdapterError {
     UnsafeCleanPatch(String),
     #[error("operation was cancelled")]
     Cancelled,
+    #[error("native PDF materialization is unsupported: {0}")]
+    UnsupportedMaterialization(String),
 }
 
 impl PdfAdapterError {
@@ -233,6 +235,7 @@ impl PdfAdapterError {
             Self::Adapter(_) => "adapter_error",
             Self::UnsafeCleanPatch(_) => "unsafe_clean_patch",
             Self::Cancelled => "cancelled",
+            Self::UnsupportedMaterialization(_) => "unsupported_materialization",
         }
     }
 }
