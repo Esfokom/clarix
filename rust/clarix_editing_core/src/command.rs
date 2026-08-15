@@ -102,6 +102,8 @@ pub struct CommandResult {
     pub object_patches: Vec<ObjectPatch>,
     pub selection_rebase: Option<SelectionRebase>,
     pub warnings: Vec<CommandWarning>,
+    #[serde(default)]
+    pub durable: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

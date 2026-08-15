@@ -7,8 +7,8 @@ use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, EditingError,
-    EditorSessionState, PageNode, SessionId,
+    CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, DurableCommit, EditingError,
+    EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SessionId,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -80,10 +80,43 @@ impl EditorSessionActor {
     }
 
     pub fn spawn_with_session(session_id: SessionId, model: DocumentModel) -> Self {
+        Self::spawn_with_repository(session_id, model, None)
+    }
+
+    pub fn spawn_durable(
+        session_id: SessionId,
+        model: DocumentModel,
+        repository: Arc<dyn ProjectRepository>,
+    ) -> Self {
+        Self::spawn_with_repository(session_id, model, Some(repository))
+    }
+
+    pub fn spawn_recovered(
+        session_id: SessionId,
+        repository: Arc<dyn ProjectRepository>,
+        request: RecoveryRequest,
+    ) -> Result<Self, EditingError> {
+        let recovered = repository
+            .recover(request)
+            .map_err(|error| EditingError::SidecarCommitFailed(error.to_string()))?;
+        Ok(Self::spawn_durable(session_id, recovered.model, repository))
+    }
+
+    fn spawn_with_repository(
+        session_id: SessionId,
+        model: DocumentModel,
+        repository: Option<Arc<dyn ProjectRepository>>,
+    ) -> Self {
         let (sender, receiver) = bounded(REQUEST_CAPACITY);
         let worker = std::thread::Builder::new()
             .name(format!("clarix-editor-{session_id}"))
-            .spawn(move || run_actor(receiver, EditorSessionState::new(session_id, model)))
+            .spawn(move || {
+                run_actor(
+                    receiver,
+                    EditorSessionState::new(session_id, model),
+                    repository,
+                )
+            })
             .expect("failed to spawn editor session actor");
         Self {
             inner: Arc::new(ActorInner {
@@ -204,12 +237,29 @@ impl EditorSessionActor {
     }
 }
 
-fn run_actor(receiver: Receiver<ActorRequest>, mut session: EditorSessionState) {
+fn run_actor(
+    receiver: Receiver<ActorRequest>,
+    mut session: EditorSessionState,
+    repository: Option<Arc<dyn ProjectRepository>>,
+) {
     let mut subscribers: Vec<Subscriber> = Vec::new();
     while let Ok(request) = receiver.recv() {
         match request {
             ActorRequest::Submit { command, reply } => {
-                let result = session.submit(command);
+                let result = if let Some(repository) = &repository {
+                    session.prepare(command).and_then(|prepared| {
+                        repository
+                            .append(&DurableCommit::from_prepared(&prepared))
+                            .map_err(|error| {
+                                EditingError::SidecarCommitFailed(error.to_string())
+                            })?;
+                        let mut result = session.publish(prepared)?;
+                        result.durable = true;
+                        Ok(result)
+                    })
+                } else {
+                    session.submit(command)
+                };
                 if let Ok(committed) = &result {
                     broadcast(
                         &mut subscribers,
@@ -249,8 +299,14 @@ fn run_actor(receiver: Receiver<ActorRequest>, mut session: EditorSessionState) 
             ActorRequest::Close { reply } => {
                 let revision = session.revision();
                 session.close();
-                broadcast(&mut subscribers, EditorEvent::Closed { revision }, revision);
-                let _ = reply.send(Ok(()));
+                let result = repository
+                    .as_ref()
+                    .map_or(Ok(()), |repository| repository.close())
+                    .map_err(|error| EditingError::SidecarCommitFailed(error.to_string()));
+                if result.is_ok() {
+                    broadcast(&mut subscribers, EditorEvent::Closed { revision }, revision);
+                }
+                let _ = reply.send(result);
                 break;
             }
             ActorRequest::Shutdown => break,

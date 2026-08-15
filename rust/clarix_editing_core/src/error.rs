@@ -31,6 +31,8 @@ pub enum EditingError {
     InvalidCommand(String),
     #[error("editor actor is unavailable")]
     ActorUnavailable,
+    #[error("editing sidecar commit failed: {0}")]
+    SidecarCommitFailed(String),
 }
 
 impl EditingError {
@@ -48,6 +50,7 @@ impl EditingError {
             Self::RevisionOverflow => "revision_overflow",
             Self::InvalidCommand(_) => "invalid_command",
             Self::ActorUnavailable => "actor_unavailable",
+            Self::SidecarCommitFailed(_) => "sidecar_commit_failed",
         }
     }
 }

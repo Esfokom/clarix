@@ -183,6 +183,7 @@ impl EditorSessionState {
             object_patches,
             selection_rebase,
             warnings: Vec::new(),
+            durable: false,
         })
     }
 
