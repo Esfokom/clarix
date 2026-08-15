@@ -249,6 +249,13 @@ class FakeEditorSessionGateway implements EditorSessionGateway {
       _scene(0).objects.single;
 
   @override
+  Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> releaseCleanPatchMemory() async {}
+
+  @override
   Future<void> close() async {
     order?.add('gateway-close');
     await _events.close();

@@ -121,6 +121,16 @@ class EditorSessionController {
     }
   }
 
+  Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi) {
+    _ensureActive();
+    return _gateway.cleanPatch(objectId, dpi);
+  }
+
+  Future<void> releaseCleanPatchMemory() {
+    _ensureActive();
+    return _gateway.releaseCleanPatchMemory();
+  }
+
   void applyLocalDelta({
     required String objectId,
     required EditorTextRange range,

@@ -16,6 +16,10 @@ abstract class EditorSessionGateway {
 
   Future<EditorSceneObject> objectDetails(String objectId);
 
+  Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi);
+
+  Future<void> releaseCleanPatchMemory();
+
   Future<void> close();
 }
 
@@ -57,6 +61,14 @@ class BridgeEditorSessionGateway implements EditorSessionGateway {
   @override
   Future<EditorSceneObject> objectDetails(String objectId) =>
       _required().objectDetails(objectId);
+
+  @override
+  Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi) =>
+      _required().cleanPatch(objectId: objectId, dpi: dpi);
+
+  @override
+  Future<void> releaseCleanPatchMemory() =>
+      _required().releaseCleanPatchMemory();
 
   @override
   Future<void> close() async {

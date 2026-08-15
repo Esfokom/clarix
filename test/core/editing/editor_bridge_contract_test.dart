@@ -64,6 +64,15 @@ class FakeNativeEditorPort implements NativeEditorPort {
       throw UnimplementedError();
 
   @override
+  Future<EditorCleanPatchAsset> cleanPatch({
+    required String objectId,
+    required int dpi,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> releaseCleanPatchMemory() async {}
+
+  @override
   Future<EditorCommandResult> checkpoint({
     required int baseRevision,
     required String label,

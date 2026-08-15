@@ -1,8 +1,8 @@
 use clarix_editing_core::CommandId;
 use clarix_pdf_oxide::editing_api::{
-    NativeEditorCommand, NativeEditorCommandKind, NativeEditorSession, NativeObjectDetailsRequest,
-    NativeOpenEditorRequest, NativePageSceneRequest, NativeSubmitCommandRequest,
-    NativeViewportPriority,
+    NativeCleanPatchRequest, NativeEditorCommand, NativeEditorCommandKind, NativeEditorSession,
+    NativeObjectDetailsRequest, NativeOpenEditorRequest, NativePageSceneRequest,
+    NativeSubmitCommandRequest, NativeViewportPriority,
 };
 
 fn fixture_path() -> String {
@@ -39,6 +39,21 @@ fn native_editor_session_opens_edits_and_closes() {
         })
         .unwrap();
     let object_id = scene.objects[0].object_id.clone();
+    let patch = session
+        .clean_patch(NativeCleanPatchRequest {
+            object_id: object_id.clone(),
+            dpi: 144,
+        })
+        .unwrap();
+    assert_eq!(patch.object_id, object_id);
+    assert_eq!(
+        patch.rgba_bytes.len(),
+        patch.width as usize * patch.height as usize * 4
+    );
+    assert!(patch
+        .rgba_bytes
+        .chunks_exact(4)
+        .all(|pixel| pixel == [255, 255, 255, 255]));
     let committed = session
         .submit(NativeSubmitCommandRequest {
             schema_version: 1,

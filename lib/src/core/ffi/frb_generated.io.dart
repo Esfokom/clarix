@@ -100,6 +100,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeCleanPatchRequest dco_decode_box_autoadd_native_clean_patch_request(
+    dynamic raw,
+  );
+
+  @protected
   NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
 
   @protected
@@ -217,6 +222,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw);
+
+  @protected
+  NativeCleanPatchAsset dco_decode_native_clean_patch_asset(dynamic raw);
+
+  @protected
+  NativeCleanPatchRequest dco_decode_native_clean_patch_request(dynamic raw);
 
   @protected
   NativeCommandResult dco_decode_native_command_result(dynamic raw);
@@ -465,6 +476,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeCleanPatchRequest sse_decode_box_autoadd_native_clean_patch_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeCommandResult sse_decode_box_autoadd_native_command_result(
     SseDeserializer deserializer,
   );
@@ -610,6 +626,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCheckpointRequest sse_decode_native_checkpoint_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCleanPatchAsset sse_decode_native_clean_patch_asset(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCleanPatchRequest sse_decode_native_clean_patch_request(
     SseDeserializer deserializer,
   );
 
@@ -933,6 +959,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_clean_patch_request(
+    NativeCleanPatchRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_command_result(
     NativeCommandResult self,
     SseSerializer serializer,
@@ -1109,6 +1141,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_checkpoint_request(
     NativeCheckpointRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_clean_patch_asset(
+    NativeCleanPatchAsset self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_clean_patch_request(
+    NativeCleanPatchRequest self,
     SseSerializer serializer,
   );
 

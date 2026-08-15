@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 enum EditorSceneObjectKind { text, unsupported }
 
 enum EditorCommandKind {
@@ -14,6 +16,28 @@ enum EditorCommandKind {
 enum EditorEventKind { ready, commandCommitted, lagged, closed }
 
 enum EditorViewportPriority { background, preload, visible, activeSelection }
+
+class EditorCleanPatchAsset {
+  const EditorCleanPatchAsset({
+    required this.handle,
+    required this.objectId,
+    required this.bounds,
+    required this.dpi,
+    required this.width,
+    required this.height,
+    required this.rgbaBytes,
+    required this.bleedPoints,
+  });
+
+  final String handle;
+  final String objectId;
+  final EditorPdfBox bounds;
+  final int dpi;
+  final int width;
+  final int height;
+  final Uint8List rgbaBytes;
+  final double bleedPoints;
+}
 
 class EditorPdfBox {
   const EditorPdfBox({

@@ -9,7 +9,10 @@ use clarix_editing_core::{
     SourceReference, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
-use clarix_pdf_adapter::{PdfImporter, PdfOxideImporter, SourceRef};
+use clarix_pdf_adapter::{
+    CleanPatchCache, CleanPatchRenderRequest, CleanPatchRenderer, PdfImporter, PdfOxideImporter,
+    SourceRef,
+};
 
 use crate::frb_generated::StreamSink;
 
@@ -49,6 +52,24 @@ pub enum NativeViewportPriority {
 #[derive(Debug, Clone)]
 pub struct NativeObjectDetailsRequest {
     pub object_id: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeCleanPatchRequest {
+    pub object_id: String,
+    pub dpi: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeCleanPatchAsset {
+    pub handle: String,
+    pub object_id: String,
+    pub bounds: NativePdfBox,
+    pub dpi: u32,
+    pub width: u32,
+    pub height: u32,
+    pub rgba_bytes: Vec<u8>,
+    pub bleed_points: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -221,6 +242,7 @@ pub struct NativeEditorEvent {
 pub struct NativeEditorSession {
     actor: EditorSessionActor,
     page_service: PageSceneService,
+    clean_patches: CleanPatchCache,
     _repository: Arc<SqliteProjectRepository>,
     source: SourceRef,
     document_id: DocumentId,
@@ -273,6 +295,7 @@ impl NativeEditorSession {
         Ok(Self {
             actor,
             page_service,
+            clean_patches: CleanPatchCache::for_document(Arc::new(CleanPatchRenderer)),
             _repository: repository,
             source,
             document_id,
@@ -367,6 +390,53 @@ impl NativeEditorSession {
             .ok_or_else(|| format!("object_not_found: {object_id}"))
     }
 
+    pub fn clean_patch(
+        &self,
+        request: NativeCleanPatchRequest,
+    ) -> Result<NativeCleanPatchAsset, String> {
+        let object_id = parse_object_id(&request.object_id)?;
+        let snapshot = self.actor.snapshot().map_err(editing_error)?;
+        let object = snapshot
+            .object(object_id)
+            .ok_or_else(|| format!("object_not_found: {object_id}"))?;
+        let page_number = snapshot
+            .pages
+            .iter()
+            .find(|page| page.id == object.page_id())
+            .map(|page| page.page_number)
+            .ok_or_else(|| format!("page_not_loaded: object {object_id} has no loaded page"))?;
+        let binding = object.source_binding().ok_or_else(|| {
+            format!("clean_patch_unavailable: object {object_id} has no source binding")
+        })?;
+        let patch = self
+            .clean_patches
+            .get_or_render(CleanPatchRenderRequest {
+                source: self.source.clone(),
+                page_number,
+                source_key: binding.source_key.clone(),
+                bounds: object.bounds(),
+                dpi: request.dpi,
+            })
+            .map_err(adapter_error)?;
+        Ok(NativeCleanPatchAsset {
+            handle: format!(
+                "{}:{}:{}",
+                patch.key.source_fingerprint, patch.key.source_key, patch.key.dpi_bucket
+            ),
+            object_id: object_id.to_string(),
+            bounds: native_box(patch.bounds),
+            dpi: patch.key.dpi_bucket,
+            width: patch.width,
+            height: patch.height,
+            rgba_bytes: patch.rgba_bytes.clone(),
+            bleed_points: patch.bleed_points,
+        })
+    }
+
+    pub fn release_clean_patch_memory(&self) {
+        self.clean_patches.clear();
+    }
+
     pub fn checkpoint(
         &self,
         request: NativeCheckpointRequest,
@@ -403,6 +473,7 @@ impl NativeEditorSession {
     }
 
     pub fn close(&self) -> Result<(), String> {
+        self.clean_patches.cancel();
         self.actor.close().map_err(editing_error)
     }
 }

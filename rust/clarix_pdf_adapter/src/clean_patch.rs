@@ -155,7 +155,7 @@ impl CleanPatchBackend for CleanPatchRenderer {
                 "page background contains paint operations that cannot be safely reproduced".into(),
             ));
         }
-        transparent_blank_patch(request)
+        opaque_blank_patch(request)
     }
 }
 
@@ -264,6 +264,10 @@ impl CleanPatchCache {
 
     pub fn cancel(&self) {
         self.cancelled.store(true, Ordering::Release);
+        self.clear();
+    }
+
+    pub fn clear(&self) {
         if let Ok(mut state) = self.state.lock() {
             state.entries.clear();
             state.decoded_bytes = 0;
@@ -271,9 +275,7 @@ impl CleanPatchCache {
     }
 }
 
-fn transparent_blank_patch(
-    request: CleanPatchRenderRequest,
-) -> Result<CleanPatch, PdfAdapterError> {
+fn opaque_blank_patch(request: CleanPatchRenderRequest) -> Result<CleanPatch, PdfAdapterError> {
     let bleed = 1.0_f64;
     let scale = f64::from(request.dpi) / 72.0;
     let left = request.bounds.left - bleed;
@@ -282,7 +284,7 @@ fn transparent_blank_patch(
     let top = request.bounds.top + bleed;
     let width = ((right - left) * scale).ceil().max(1.0) as u32;
     let height = ((top - bottom) * scale).ceil().max(1.0) as u32;
-    let rgba_bytes = vec![0; width as usize * height as usize * 4];
+    let rgba_bytes = vec![255; width as usize * height as usize * 4];
     Ok(CleanPatch {
         key: request.key(),
         bounds: PdfBox::new(left, bottom, right, top)

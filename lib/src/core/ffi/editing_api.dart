@@ -7,12 +7,16 @@ import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `required`, `text_style`, `viewport_priority`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
   Future<NativeCommandResult> checkpoint({
     required NativeCheckpointRequest request,
+  });
+
+  Future<NativeCleanPatchAsset> cleanPatch({
+    required NativeCleanPatchRequest request,
   });
 
   Future<void> close();
@@ -32,6 +36,8 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   );
 
   Future<NativePageScene> pageScene({required NativePageSceneRequest request});
+
+  Future<void> releaseCleanPatchMemory();
 
   Future<NativeCommandResult> submit({
     required NativeSubmitCommandRequest request,
@@ -96,6 +102,71 @@ class NativeCheckpointRequest {
           runtimeType == other.runtimeType &&
           baseRevision == other.baseRevision &&
           label == other.label;
+}
+
+class NativeCleanPatchAsset {
+  final String handle;
+  final String objectId;
+  final NativePdfBox bounds;
+  final int dpi;
+  final int width;
+  final int height;
+  final Uint8List rgbaBytes;
+  final double bleedPoints;
+
+  const NativeCleanPatchAsset({
+    required this.handle,
+    required this.objectId,
+    required this.bounds,
+    required this.dpi,
+    required this.width,
+    required this.height,
+    required this.rgbaBytes,
+    required this.bleedPoints,
+  });
+
+  @override
+  int get hashCode =>
+      handle.hashCode ^
+      objectId.hashCode ^
+      bounds.hashCode ^
+      dpi.hashCode ^
+      width.hashCode ^
+      height.hashCode ^
+      rgbaBytes.hashCode ^
+      bleedPoints.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeCleanPatchAsset &&
+          runtimeType == other.runtimeType &&
+          handle == other.handle &&
+          objectId == other.objectId &&
+          bounds == other.bounds &&
+          dpi == other.dpi &&
+          width == other.width &&
+          height == other.height &&
+          rgbaBytes == other.rgbaBytes &&
+          bleedPoints == other.bleedPoints;
+}
+
+class NativeCleanPatchRequest {
+  final String objectId;
+  final int dpi;
+
+  const NativeCleanPatchRequest({required this.objectId, required this.dpi});
+
+  @override
+  int get hashCode => objectId.hashCode ^ dpi.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeCleanPatchRequest &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          dpi == other.dpi;
 }
 
 class NativeCommandResult {

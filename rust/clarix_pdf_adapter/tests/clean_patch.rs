@@ -47,7 +47,7 @@ fn clean_patch_omits_only_the_bound_source_text() {
     assert!(result
         .rgba_bytes
         .chunks_exact(4)
-        .all(|pixel| pixel == [0, 0, 0, 0]));
+        .all(|pixel| pixel == [255, 255, 255, 255]));
 }
 
 struct CountingBackend(AtomicUsize);

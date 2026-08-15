@@ -17,6 +17,7 @@ import '../../../../core/theme_profile.dart';
 import '../../application/pdf_editing_controller.dart';
 import '../../application/workspace_providers.dart';
 import '../../editing/presentation/page_scene_host.dart';
+import '../../editing/presentation/page_edit_scene.dart';
 import '../../editing/presentation/pdfrx_page_surface.dart';
 import '../../domain/pdf_edit_session.dart';
 import '../../domain/pdf_page_object.dart';
@@ -664,6 +665,17 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                       child: PageSceneHost(
                                         lifecycle: lifecycle,
                                         pageNumber: page.pageNumber,
+                                        builder: (context, scene) =>
+                                            PageEditScene(
+                                              scene: scene,
+                                              document:
+                                                  lifecycle.controller.state,
+                                              displaySize: pageRect.size,
+                                              cleanPatches: lifecycle
+                                                  .cleanPatchesFor(
+                                                    page.pageNumber,
+                                                  ),
+                                            ),
                                       ),
                                     ),
                                   if (editSession?.mode !=

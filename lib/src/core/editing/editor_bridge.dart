@@ -25,6 +25,13 @@ abstract class NativeEditorPort {
 
   Future<EditorSceneObject> objectDetails(String objectId);
 
+  Future<EditorCleanPatchAsset> cleanPatch({
+    required String objectId,
+    required int dpi,
+  });
+
+  Future<void> releaseCleanPatchMemory();
+
   Future<EditorCommandResult> checkpoint({
     required int baseRevision,
     required String label,
@@ -130,6 +137,27 @@ class EditorBridgeSession {
     );
     _ensureOpen();
     return value;
+  }
+
+  Future<EditorCleanPatchAsset> cleanPatch({
+    required String objectId,
+    required int dpi,
+  }) async {
+    _ensureOpen();
+    final value = await _native.cleanPatch(objectId: objectId, dpi: dpi);
+    _ensureOpen();
+    if (value.objectId != objectId || value.dpi <= 0) {
+      throw const EditorProtocolViolation(
+        'native clean patch identity is invalid',
+      );
+    }
+    return value;
+  }
+
+  Future<void> releaseCleanPatchMemory() async {
+    _ensureOpen();
+    await _native.releaseCleanPatchMemory();
+    _ensureOpen();
   }
 
   Future<EditorCommandResult> checkpoint({
@@ -276,6 +304,29 @@ class _FrbNativeEditorPort implements NativeEditorPort {
     );
     return _sceneObjectFromNative(value);
   }
+
+  @override
+  Future<EditorCleanPatchAsset> cleanPatch({
+    required String objectId,
+    required int dpi,
+  }) async {
+    final value = await _session.cleanPatch(
+      request: native.NativeCleanPatchRequest(objectId: objectId, dpi: dpi),
+    );
+    return EditorCleanPatchAsset(
+      handle: value.handle,
+      objectId: value.objectId,
+      bounds: _boxFromNative(value.bounds),
+      dpi: value.dpi,
+      width: value.width,
+      height: value.height,
+      rgbaBytes: value.rgbaBytes,
+      bleedPoints: value.bleedPoints,
+    );
+  }
+
+  @override
+  Future<void> releaseCleanPatchMemory() => _session.releaseCleanPatchMemory();
 
   @override
   Future<EditorCommandResult> checkpoint({

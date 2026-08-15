@@ -147,6 +147,13 @@ class LifecycleGateway implements EditorSessionGateway {
       throw UnimplementedError();
 
   @override
+  Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi) =>
+      throw UnimplementedError();
+
+  @override
+  Future<void> releaseCleanPatchMemory() async {}
+
+  @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
       throw UnimplementedError();
 }
