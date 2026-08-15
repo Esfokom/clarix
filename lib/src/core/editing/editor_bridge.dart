@@ -32,6 +32,11 @@ abstract class NativeEditorPort {
 
   Future<void> releaseCleanPatchMemory();
 
+  Future<EditorSaveResult> save(EditorSaveRequest request) =>
+      Future<EditorSaveResult>.error(
+        UnsupportedError('native editor save is unavailable'),
+      );
+
   Future<EditorCommandResult> checkpoint({
     required int baseRevision,
     required String label,
@@ -158,6 +163,14 @@ class EditorBridgeSession {
     _ensureOpen();
     await _native.releaseCleanPatchMemory();
     _ensureOpen();
+  }
+
+  Future<EditorSaveResult> save(EditorSaveRequest request) async {
+    _ensureOpen();
+    final value = await _native.save(request);
+    _ensureOpen();
+    _validateSchema(value.schemaVersion);
+    return value;
   }
 
   Future<EditorCommandResult> checkpoint({
@@ -327,6 +340,37 @@ class _FrbNativeEditorPort implements NativeEditorPort {
 
   @override
   Future<void> releaseCleanPatchMemory() => _session.releaseCleanPatchMemory();
+
+  @override
+  Future<EditorSaveResult> save(EditorSaveRequest request) async {
+    final value = await _session.save(
+      request: native.NativeEditorSaveRequest(
+        targetPath: request.targetPath,
+        mode: switch (request.mode) {
+          EditorSaveMode.save => native.NativeEditorSaveMode.save,
+          EditorSaveMode.saveAs => native.NativeEditorSaveMode.saveAs,
+        },
+        association: switch (request.association) {
+          EditorSaveAssociation.keepOriginalAssociation =>
+            native.NativeSaveAssociation.keepOriginalAssociation,
+          EditorSaveAssociation.followNewSource =>
+            native.NativeSaveAssociation.followNewSource,
+        },
+        recoveryDirectory: request.recoveryDirectory,
+      ),
+    );
+    return EditorSaveResult(
+      schemaVersion: value.schemaVersion,
+      targetPath: value.targetPath,
+      materializedRevision: _intFromBigInt(
+        value.materializedRevision,
+        'materializedRevision',
+      ),
+      completedStages: value.completedStages,
+      warnings: value.warnings,
+      followsNewSource: value.followsNewSource,
+    );
+  }
 
   @override
   Future<EditorCommandResult> checkpoint({

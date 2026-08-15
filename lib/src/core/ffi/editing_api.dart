@@ -7,7 +7,7 @@ import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `required`, `text_style`, `viewport_priority`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
@@ -38,6 +38,10 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   Future<NativePageScene> pageScene({required NativePageSceneRequest request});
 
   Future<void> releaseCleanPatchMemory();
+
+  Future<NativeEditorSaveResult> save({
+    required NativeEditorSaveRequest request,
+  });
 
   Future<NativeCommandResult> submit({
     required NativeSubmitCommandRequest request,
@@ -366,6 +370,78 @@ class NativeEditorMetadata {
           pageCount == other.pageCount;
 }
 
+enum NativeEditorSaveMode { save, saveAs }
+
+class NativeEditorSaveRequest {
+  final String targetPath;
+  final NativeEditorSaveMode mode;
+  final NativeSaveAssociation association;
+  final String? recoveryDirectory;
+
+  const NativeEditorSaveRequest({
+    required this.targetPath,
+    required this.mode,
+    required this.association,
+    this.recoveryDirectory,
+  });
+
+  @override
+  int get hashCode =>
+      targetPath.hashCode ^
+      mode.hashCode ^
+      association.hashCode ^
+      recoveryDirectory.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeEditorSaveRequest &&
+          runtimeType == other.runtimeType &&
+          targetPath == other.targetPath &&
+          mode == other.mode &&
+          association == other.association &&
+          recoveryDirectory == other.recoveryDirectory;
+}
+
+class NativeEditorSaveResult {
+  final int schemaVersion;
+  final String targetPath;
+  final BigInt materializedRevision;
+  final List<String> completedStages;
+  final List<String> warnings;
+  final bool followsNewSource;
+
+  const NativeEditorSaveResult({
+    required this.schemaVersion,
+    required this.targetPath,
+    required this.materializedRevision,
+    required this.completedStages,
+    required this.warnings,
+    required this.followsNewSource,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      targetPath.hashCode ^
+      materializedRevision.hashCode ^
+      completedStages.hashCode ^
+      warnings.hashCode ^
+      followsNewSource.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeEditorSaveResult &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          targetPath == other.targetPath &&
+          materializedRevision == other.materializedRevision &&
+          completedStages == other.completedStages &&
+          warnings == other.warnings &&
+          followsNewSource == other.followsNewSource;
+}
+
 class NativeObjectDetailsRequest {
   final String objectId;
 
@@ -538,6 +614,8 @@ class NativePdfBox {
           right == other.right &&
           top == other.top;
 }
+
+enum NativeSaveAssociation { keepOriginalAssociation, followNewSource }
 
 class NativeSceneObject {
   final NativeSceneObjectKind kind;

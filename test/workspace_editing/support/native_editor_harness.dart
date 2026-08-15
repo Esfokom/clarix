@@ -76,6 +76,8 @@ class NativeEditorGateway implements EditorSessionGateway {
   String text;
   final EditorSceneObject object;
   final List<EditorCommandRequest> requests = <EditorCommandRequest>[];
+  final List<String> calls = <String>[];
+  Object? saveError;
   final StreamController<EditorEvent> _events =
       StreamController<EditorEvent>.broadcast();
 
@@ -110,6 +112,7 @@ class NativeEditorGateway implements EditorSessionGateway {
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) async {
+    calls.add('submit');
     requests.add(request);
     final payload = request.payload;
     if (payload.kind == EditorCommandKind.replaceTextRange) {
@@ -141,6 +144,31 @@ class NativeEditorGateway implements EditorSessionGateway {
 
   @override
   Future<void> releaseCleanPatchMemory() async {}
+
+  @override
+  Future<EditorSaveResult> save(EditorSaveRequest request) async {
+    calls.add('save');
+    final error = saveError;
+    if (error != null) throw error;
+    return EditorSaveResult(
+      targetPath: request.targetPath,
+      materializedRevision: requests.length,
+      completedStages: const <String>[
+        'FlushCommands',
+        'Snapshot',
+        'VerifySource',
+        'MaterializeTemp',
+        'ValidateTemp',
+        'FlushTemp',
+        'ReplaceOrMove',
+        'Rebase',
+        'RecordMaterializedRevision',
+      ],
+      warnings: const <String>[],
+      followsNewSource:
+          request.association == EditorSaveAssociation.followNewSource,
+    );
+  }
 
   @override
   Future<void> close() => _events.close();

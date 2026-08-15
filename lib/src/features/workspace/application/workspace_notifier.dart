@@ -8,6 +8,7 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clarix_logger.dart';
+import '../../../core/editing/editor_bridge_types.dart';
 import '../../../core/models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
@@ -19,6 +20,8 @@ import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_text_types.dart';
 import '../editing/application/editor_session_controller.dart';
+import '../editing/domain/editor_save_state.dart';
+import '../editing/domain/editor_close_choice.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
@@ -218,6 +221,23 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final DocumentTabState tab = current.session.tabs.firstWhere(
       (DocumentTabState item) => item.id == activeId,
     );
+    final EditorSessionController? native = ref.read(
+      editorSessionRegistryProvider,
+    )[activeId];
+    if (native != null && native.state.save.phase != EditorSavePhase.clean) {
+      await _saveNativeEditor(
+        current: current,
+        tab: tab,
+        controller: native,
+        request: EditorSaveRequest(
+          targetPath: tab.filePath,
+          mode: EditorSaveMode.save,
+          association: EditorSaveAssociation.followNewSource,
+          recoveryDirectory: _nativeRecoveryDirectory(tab.filePath),
+        ),
+      );
+      return;
+    }
     final DocumentMetadata? metadata = current.documentMetadata[tab.documentId];
     if (metadata == null) return;
     final progressTimer = Timer(const Duration(milliseconds: 500), () {
@@ -278,10 +298,81 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     }
   }
 
+  Future<void> _saveNativeEditor({
+    required WorkspaceFeatureState current,
+    required DocumentTabState tab,
+    required EditorSessionController controller,
+    required EditorSaveRequest request,
+  }) async {
+    state = AsyncData(
+      current.copyWith(
+        pdfSaveInProgress: true,
+        bannerMessage: 'Saving PDF edits…',
+        clearPdfFailure: true,
+      ),
+    );
+    try {
+      final result = await controller.save(request);
+      ref.invalidate(pdfDocumentRefProvider(request.targetPath));
+      final latest = _requireState();
+      var nextSession = latest.session;
+      if (result.followsNewSource) {
+        await ref
+            .read(editorSessionRegistryProvider)
+            .reopen(tabId: tab.id, sourcePath: request.targetPath);
+        if (request.targetPath != tab.filePath) {
+          nextSession = nextSession.copyWith(
+            tabs: nextSession.tabs
+                .map(
+                  (item) => item.id == tab.id
+                      ? item.copyWith(
+                          filePath: request.targetPath,
+                          title: request.targetPath
+                              .split(Platform.pathSeparator)
+                              .last,
+                        )
+                      : item,
+                )
+                .toList(growable: false),
+          );
+        }
+      }
+      state = AsyncData(
+        latest.copyWith(
+          session: nextSession,
+          pdfSaveInProgress: false,
+          clearBannerMessage: true,
+          clearPdfFailure: true,
+          dirtyDocumentIds: result.followsNewSource
+              ? (Set<String>.from(latest.dirtyDocumentIds)..remove(tab.id))
+              : latest.dirtyDocumentIds,
+        ),
+      );
+    } catch (error) {
+      final latest = _requireState();
+      state = AsyncData(
+        latest.copyWith(
+          pdfSaveInProgress: false,
+          bannerMessage:
+              'Could not save PDF edits: ${controller.state.save.errorCode ?? error}',
+        ),
+      );
+    }
+  }
+
+  String _nativeRecoveryDirectory(String sourcePath) =>
+      File(sourcePath).parent.uri.resolve('.clarix-recovery/').toFilePath();
+
   Future<bool> saveAllPdfEdits() async {
     final initial = _requireState();
     final originalActive = initial.session.activeTabId;
-    final dirtyIds = initial.dirtyDocumentIds.toList(growable: false);
+    final registry = ref.read(editorSessionRegistryProvider);
+    final dirtyIds = <String>{
+      ...initial.dirtyDocumentIds,
+      ...registry.tabIds.where(
+        (tabId) => registry[tabId]?.state.save.phase != EditorSavePhase.clean,
+      ),
+    }.toList(growable: false);
     for (final tabId in dirtyIds) {
       final current = _requireState();
       if (!current.session.tabs.any((tab) => tab.id == tabId)) continue;
@@ -289,7 +380,14 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         current.copyWith(session: current.session.copyWith(activeTabId: tabId)),
       );
       await saveActivePdfEdits();
-      if (_requireState().dirtyDocumentIds.contains(tabId)) return false;
+      final nativeController = registry[tabId];
+      final nativeStillDirty =
+          nativeController != null &&
+          nativeController.state.save.phase != EditorSavePhase.clean;
+      if (_requireState().dirtyDocumentIds.contains(tabId) ||
+          nativeStillDirty) {
+        return false;
+      }
     }
     final current = _requireState();
     if (originalActive != null &&
@@ -334,7 +432,27 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
   }
 
-  Future<void> saveActivePdfEditsAsCopy() async {
+  Future<void> rebaseActiveNativeEditor() async {
+    final current = _requireState();
+    final activeId = current.session.activeTabId;
+    if (activeId == null) return;
+    final tab = current.session.tabs.firstWhere((item) => item.id == activeId);
+    await ref
+        .read(editorSessionRegistryProvider)
+        .reopen(tabId: tab.id, sourcePath: tab.filePath);
+    ref.invalidate(pdfDocumentRefProvider(tab.filePath));
+    state = AsyncData(
+      current.copyWith(
+        bannerMessage:
+            'Loaded the changed PDF. The previous editing project remains recoverable.',
+      ),
+    );
+  }
+
+  Future<void> saveActivePdfEditsAsCopy({
+    EditorSaveAssociation association =
+        EditorSaveAssociation.keepOriginalAssociation,
+  }) async {
     final current = _requireState();
     final activeId = current.session.activeTabId;
     if (activeId == null) return;
@@ -347,6 +465,21 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       allowedExtensions: const <String>['pdf'],
     );
     if (destination == null) return;
+    final native = ref.read(editorSessionRegistryProvider)[activeId];
+    if (native != null) {
+      await _saveNativeEditor(
+        current: current,
+        tab: tab,
+        controller: native,
+        request: EditorSaveRequest(
+          targetPath: destination,
+          mode: EditorSaveMode.saveAs,
+          association: association,
+          recoveryDirectory: _nativeRecoveryDirectory(destination),
+        ),
+      );
+      return;
+    }
     await File(tab.filePath).copy(destination);
     try {
       await _pdfEditing.save(tab.id, destination);
@@ -440,10 +573,31 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         (_pdfEditing.sessionsByTabId[id]?.canRedo == true);
   }
 
-  bool get hasUnsavedPdfEdits =>
-      state.value?.dirtyDocumentIds.isNotEmpty ?? false;
-  bool hasUnsavedEditsFor(String tabId) =>
-      state.value?.dirtyDocumentIds.contains(tabId) ?? false;
+  bool get hasUnsavedPdfEdits {
+    final registry = ref.read(editorSessionRegistryProvider);
+    return (state.value?.dirtyDocumentIds.isNotEmpty ?? false) ||
+        registry.tabIds.any(
+          (tabId) => registry[tabId]?.state.save.phase != EditorSavePhase.clean,
+        );
+  }
+
+  Future<void> checkpointAllNativeForRecovery() async {
+    final registry = ref.read(editorSessionRegistryProvider);
+    for (final tabId in registry.tabIds.toList(growable: false)) {
+      final controller = registry[tabId];
+      if (controller != null &&
+          controller.state.save.phase != EditorSavePhase.clean) {
+        await controller.createCheckpoint('Recoverable application close');
+      }
+    }
+  }
+
+  bool hasUnsavedEditsFor(String tabId) {
+    final native = ref.read(editorSessionRegistryProvider)[tabId];
+    return (native != null &&
+            native.state.save.phase != EditorSavePhase.clean) ||
+        (state.value?.dirtyDocumentIds.contains(tabId) ?? false);
+  }
 
   Future<void> undoPdfEdit() => _movePdfHistory(undo: true);
   Future<void> redoPdfEdit() => _movePdfHistory(undo: false);
@@ -501,8 +655,35 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         .openGeneratedPdf(result.outputPath);
   }
 
-  Future<void> closeTab(String tabId) async {
+  Future<bool> closeTab(
+    String tabId, {
+    EditorCloseChoice? nativeDirtyChoice,
+  }) async {
     final WorkspaceFeatureState current = _requireState();
+    final native = ref.read(editorSessionRegistryProvider)[tabId];
+    if (native != null && native.state.save.phase != EditorSavePhase.clean) {
+      if (nativeDirtyChoice == null) return false;
+      final tab = current.session.tabs.firstWhere((item) => item.id == tabId);
+      switch (nativeDirtyChoice) {
+        case EditorCloseChoice.savePdf:
+          try {
+            await native.save(
+              EditorSaveRequest(
+                targetPath: tab.filePath,
+                mode: EditorSaveMode.save,
+                association: EditorSaveAssociation.followNewSource,
+                recoveryDirectory: _nativeRecoveryDirectory(tab.filePath),
+              ),
+            );
+          } catch (_) {
+            return false;
+          }
+        case EditorCloseChoice.keepRecoverableProject:
+          await native.createCheckpoint('Recoverable close');
+        case EditorCloseChoice.discardToRecovery:
+          await native.createCheckpoint('Tombstoned recovery close');
+      }
+    }
     final List<DocumentTabState> tabs = current.session.tabs
         .where((DocumentTabState tab) => tab.id != tabId)
         .toList(growable: false);
@@ -522,7 +703,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       lastOpenedAt: DateTime.now().toUtc(),
     );
     _pdfEditing.removeSession(tabId);
+    await ref.read(editorSessionRegistryProvider).close(tabId);
     await _commit(current.copyWith(session: session), persistAi: false);
+    return true;
   }
 
   Future<void> setActiveTab(String tabId) async {

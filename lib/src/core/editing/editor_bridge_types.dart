@@ -17,6 +17,42 @@ enum EditorEventKind { ready, commandCommitted, lagged, closed }
 
 enum EditorViewportPriority { background, preload, visible, activeSelection }
 
+enum EditorSaveMode { save, saveAs }
+
+enum EditorSaveAssociation { keepOriginalAssociation, followNewSource }
+
+class EditorSaveRequest {
+  const EditorSaveRequest({
+    required this.targetPath,
+    required this.mode,
+    required this.association,
+    this.recoveryDirectory,
+  });
+
+  final String targetPath;
+  final EditorSaveMode mode;
+  final EditorSaveAssociation association;
+  final String? recoveryDirectory;
+}
+
+class EditorSaveResult {
+  const EditorSaveResult({
+    this.schemaVersion = 1,
+    required this.targetPath,
+    required this.materializedRevision,
+    required this.completedStages,
+    required this.warnings,
+    required this.followsNewSource,
+  });
+
+  final int schemaVersion;
+  final String targetPath;
+  final int materializedRevision;
+  final List<String> completedStages;
+  final List<String> warnings;
+  final bool followsNewSource;
+}
+
 class EditorCleanPatchAsset {
   const EditorCleanPatchAsset({
     required this.handle,

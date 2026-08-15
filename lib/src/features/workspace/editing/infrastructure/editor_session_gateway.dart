@@ -20,6 +20,11 @@ abstract class EditorSessionGateway {
 
   Future<void> releaseCleanPatchMemory();
 
+  Future<EditorSaveResult> save(EditorSaveRequest request) =>
+      Future<EditorSaveResult>.error(
+        UnsupportedError('editor save is unavailable'),
+      );
+
   Future<void> close();
 }
 
@@ -69,6 +74,10 @@ class BridgeEditorSessionGateway implements EditorSessionGateway {
   @override
   Future<void> releaseCleanPatchMemory() =>
       _required().releaseCleanPatchMemory();
+
+  @override
+  Future<EditorSaveResult> save(EditorSaveRequest request) =>
+      _required().save(request);
 
   @override
   Future<void> close() async {

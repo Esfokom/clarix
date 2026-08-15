@@ -5,13 +5,14 @@ use std::sync::Arc;
 use clarix_editing_core::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    ObjectId, ObjectPatch, PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SessionId,
-    SourceReference, TextRun, TextStyle, Utf16Range, ViewportPriority,
+    ObjectId, ObjectPatch, PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest,
+    SaveAssociation, SaveCoordinator, SaveMode, SaveRequest, SessionId, SourceReference, TextRun,
+    TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
 use clarix_pdf_adapter::{
-    CleanPatchCache, CleanPatchRenderRequest, CleanPatchRenderer, PdfImporter, PdfOxideImporter,
-    SourceRef,
+    CleanPatchCache, CleanPatchRenderRequest, CleanPatchRenderer, IndependentPdfValidator,
+    PdfImporter, PdfOxideImporter, PdfTextMaterializer, SourceRef, WindowsAtomicReplacer,
 };
 
 use crate::frb_generated::StreamSink;
@@ -70,6 +71,36 @@ pub struct NativeCleanPatchAsset {
     pub height: u32,
     pub rgba_bytes: Vec<u8>,
     pub bleed_points: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeEditorSaveMode {
+    Save,
+    SaveAs,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeSaveAssociation {
+    KeepOriginalAssociation,
+    FollowNewSource,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeEditorSaveRequest {
+    pub target_path: String,
+    pub mode: NativeEditorSaveMode,
+    pub association: NativeSaveAssociation,
+    pub recovery_directory: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeEditorSaveResult {
+    pub schema_version: u32,
+    pub target_path: String,
+    pub materialized_revision: u64,
+    pub completed_stages: Vec<String>,
+    pub warnings: Vec<String>,
+    pub follows_new_source: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -435,6 +466,50 @@ impl NativeEditorSession {
 
     pub fn release_clean_patch_memory(&self) {
         self.clean_patches.clear();
+    }
+
+    pub fn save(&self, request: NativeEditorSaveRequest) -> Result<NativeEditorSaveResult, String> {
+        let snapshot = self.actor.snapshot().map_err(editing_error)?;
+        let target = std::path::PathBuf::from(&request.target_path);
+        let materializer = PdfTextMaterializer::new(self.source.clone());
+        let validator = IndependentPdfValidator;
+        let replacer = WindowsAtomicReplacer;
+        let report = SaveCoordinator::new(&materializer, &validator, &replacer)
+            .with_repository(self._repository.as_ref())
+            .save(SaveRequest {
+                source: SourceReference::new(self.source.fingerprint(), self.source.path()),
+                target: target.clone(),
+                mode: match request.mode {
+                    NativeEditorSaveMode::Save => SaveMode::Save,
+                    NativeEditorSaveMode::SaveAs => SaveMode::SaveAs,
+                },
+                association: match request.association {
+                    NativeSaveAssociation::KeepOriginalAssociation => {
+                        SaveAssociation::KeepOriginalAssociation
+                    }
+                    NativeSaveAssociation::FollowNewSource => SaveAssociation::FollowNewSource,
+                },
+                recovery_directory: request.recovery_directory.map(std::path::PathBuf::from),
+                snapshot: snapshot.clone(),
+            })
+            .map_err(|error| {
+                format!(
+                    "save_failed:{}:{:?}:{}",
+                    error.code, error.stage, error.message
+                )
+            })?;
+        Ok(NativeEditorSaveResult {
+            schema_version: EDITOR_SCHEMA_VERSION,
+            target_path: target.to_string_lossy().into_owned(),
+            materialized_revision: snapshot.revision.value(),
+            completed_stages: report
+                .completed_stages
+                .iter()
+                .map(|stage| format!("{stage:?}"))
+                .collect(),
+            warnings: report.validation.warnings,
+            follows_new_source: report.association == SaveAssociation::FollowNewSource,
+        })
     }
 
     pub fn checkpoint(

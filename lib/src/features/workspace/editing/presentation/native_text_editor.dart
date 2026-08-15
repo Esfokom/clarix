@@ -48,6 +48,7 @@ class _NativeTextEditorState extends State<NativeTextEditor> {
     _textController = TextEditingController.fromValue(_lastValue)
       ..addListener(_handleEditingValue);
     _focusNode = FocusNode(debugLabel: 'Clarix native PDF text editor');
+    widget.session.setCompositionCommitter(_commitComposition);
     if (widget.autofocus) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
@@ -78,6 +79,7 @@ class _NativeTextEditorState extends State<NativeTextEditor> {
 
   @override
   void dispose() {
+    widget.session.setCompositionCommitter(null);
     _textController
       ..removeListener(_handleEditingValue)
       ..dispose();
@@ -167,6 +169,13 @@ class _NativeTextEditorState extends State<NativeTextEditor> {
     _lastValue = value;
     _compositionBase = null;
     _updatingFromModel = false;
+  }
+
+  Future<void> _commitComposition() async {
+    final value = _textController.value;
+    if (!value.composing.isValid || value.composing.isCollapsed) return;
+    _textController.value = value.copyWith(composing: TextRange.empty);
+    await Future<void>.value();
   }
 }
 

@@ -73,6 +73,10 @@ class RegistryGateway implements EditorSessionGateway {
   Future<void> releaseCleanPatchMemory() async {}
 
   @override
+  Future<EditorSaveResult> save(EditorSaveRequest request) =>
+      throw UnimplementedError();
+
+  @override
   Future<EditorPageScene> requestPage(
     int pageNumber,
     int expectedRevision, {

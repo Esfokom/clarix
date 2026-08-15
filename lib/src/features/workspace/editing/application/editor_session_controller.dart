@@ -25,6 +25,8 @@ class EditorSessionController {
   final Map<int, int> _pageRequestGenerations = <int, int>{};
   EditorDocumentState _state = const EditorDocumentState();
   bool _disposed = false;
+  Future<void> Function()? _commitComposition;
+  bool _saveCancelled = false;
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
@@ -41,6 +43,7 @@ class EditorSessionController {
         sourcePath: sourcePath,
         sessionId: metadata.sessionId,
         revision: metadata.revision,
+        recoveredRevision: metadata.revision > 0 ? metadata.revision : null,
         pageCount: metadata.pageCount,
         isOpen: true,
         clearError: true,
@@ -145,6 +148,127 @@ class EditorSessionController {
   void clearError() {
     _ensureActive();
     _emit(_state.copyWith(clearError: true));
+  }
+
+  void dismissSaveFailure() {
+    _ensureActive();
+    if (_state.save.phase != EditorSavePhase.failed) return;
+    _emit(
+      _state.copyWith(
+        save: _state.save.copyWith(
+          phase: EditorSavePhase.dirty,
+          clearError: true,
+          clearStage: true,
+        ),
+        clearError: true,
+      ),
+    );
+  }
+
+  void dismissRecovery() {
+    _ensureActive();
+    _emit(_state.copyWith(clearRecovery: true));
+  }
+
+  void setCompositionCommitter(Future<void> Function()? committer) {
+    if (_disposed) return;
+    _commitComposition = committer;
+  }
+
+  Future<void> flushCommands() async {
+    _ensureActive();
+    while (_state.optimisticEdit != null ||
+        _state.queuedEdit != null ||
+        _state.pendingCommand != null) {
+      await changes.firstWhere(
+        (state) =>
+            state.optimisticEdit == null &&
+            state.queuedEdit == null &&
+            state.pendingCommand == null,
+      );
+    }
+  }
+
+  Future<EditorSaveResult> save(EditorSaveRequest request) async {
+    _ensureActive();
+    _saveCancelled = false;
+    _emit(
+      _state.copyWith(
+        save: _state.save.copyWith(
+          phase: EditorSavePhase.saving,
+          stage: 'CommitComposition',
+          clearError: true,
+        ),
+      ),
+    );
+    try {
+      await _commitComposition?.call();
+      _throwIfSaveCancelled();
+      _emit(
+        _state.copyWith(save: _state.save.copyWith(stage: 'FlushCommands')),
+      );
+      await flushCommands();
+      _throwIfSaveCancelled();
+      _emit(
+        _state.copyWith(save: _state.save.copyWith(stage: 'MaterializeTemp')),
+      );
+      final result = await _gateway.save(request);
+      if (_disposed) throw const EditorSessionClosed();
+      _emit(
+        _state.copyWith(
+          save: _state.save.copyWith(
+            phase: result.followsNewSource
+                ? EditorSavePhase.clean
+                : EditorSavePhase.dirty,
+            clearStage: true,
+            clearError: true,
+          ),
+          clearError: true,
+        ),
+      );
+      return result;
+    } on EditorSaveCancelled {
+      if (!_disposed) {
+        _emit(
+          _state.copyWith(
+            save: _state.save.copyWith(
+              phase: EditorSavePhase.dirty,
+              clearStage: true,
+              clearError: true,
+            ),
+          ),
+        );
+      }
+      rethrow;
+    } catch (error) {
+      if (!_disposed) {
+        final code = _saveErrorCode(error);
+        _emit(
+          _state.copyWith(
+            save: _state.save.copyWith(
+              phase: EditorSavePhase.failed,
+              errorCode: code,
+              clearStage: true,
+            ),
+            errorCode: code,
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  void cancelSave() {
+    _ensureActive();
+    if (_state.save.phase != EditorSavePhase.saving) return;
+    if (_state.save.stage == 'CommitComposition' ||
+        _state.save.stage == 'FlushCommands') {
+      _saveCancelled = true;
+    }
+  }
+
+  void _throwIfSaveCancelled() {
+    if (_saveCancelled) throw const EditorSaveCancelled();
   }
 
   void applyLocalDelta({
@@ -483,6 +607,15 @@ String _errorCode(Object error) {
   return separator <= 0
       ? 'editor_command_failed'
       : message.substring(0, separator);
+}
+
+String _saveErrorCode(Object error) {
+  final message = error.toString();
+  final marker = message.indexOf('save_failed:');
+  if (marker < 0) return _errorCode(error);
+  final tail = message.substring(marker + 'save_failed:'.length);
+  final separator = tail.indexOf(':');
+  return separator < 0 ? tail : tail.substring(0, separator);
 }
 
 String _replaceUtf16(String source, EditorTextRange range, String replacement) {

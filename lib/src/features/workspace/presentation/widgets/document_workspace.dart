@@ -12,11 +12,17 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:smooth_corner/smooth_corner.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/editing/editor_bridge_types.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/pdf_editing_controller.dart';
 import '../../application/workspace_providers.dart';
 import '../../editing/presentation/page_scene_host.dart';
+import '../../editing/presentation/dirty_close_dialog.dart';
+import '../../editing/presentation/recovery_banner.dart';
+import '../../editing/presentation/save_conflict_dialog.dart';
+import '../../editing/presentation/save_progress_dialog.dart';
+import '../../editing/domain/editor_save_state.dart';
 import '../../editing/presentation/page_edit_scene.dart';
 import '../../editing/presentation/pdfrx_page_surface.dart';
 import '../../domain/pdf_edit_session.dart';
@@ -43,17 +49,84 @@ class DocumentWorkspace extends ConsumerWidget {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
+    final nativeState = ref
+        .watch(editorDocumentStateProvider(activeTab.id))
+        .value;
+    final nativeController = ref.read(
+      editorSessionRegistryProvider,
+    )[activeTab.id];
     return Column(
       children: <Widget>[
         _TabStrip(state: state, activeTab: activeTab, colors: colors),
         Expanded(
-          child: _PdfViewerPane(
-            tab: activeTab,
-            documentRef: ref.watch(pdfDocumentRefProvider(activeTab.filePath)),
-            annotations:
-                state.documentMetadata[activeTab.documentId]?.annotations ??
-                const <DocumentAnnotation>[],
-            colors: colors,
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: _PdfViewerPane(
+                  tab: activeTab,
+                  documentRef: ref.watch(
+                    pdfDocumentRefProvider(activeTab.filePath),
+                  ),
+                  annotations:
+                      state
+                          .documentMetadata[activeTab.documentId]
+                          ?.annotations ??
+                      const <DocumentAnnotation>[],
+                  colors: colors,
+                ),
+              ),
+              if (nativeState?.recoveredRevision case final revision?)
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: RecoveryBanner(
+                    revision: revision,
+                    onReview: nativeController?.dismissRecovery ?? () {},
+                    onDismiss: nativeController?.dismissRecovery ?? () {},
+                  ),
+                ),
+              if (nativeState?.save.phase == EditorSavePhase.saving)
+                Center(
+                  child: SaveProgressDialog(
+                    stage: nativeState?.save.stage ?? 'FlushCommands',
+                    onCancel:
+                        nativeState?.save.stage == 'CommitComposition' ||
+                            nativeState?.save.stage == 'FlushCommands'
+                        ? nativeController?.cancelSave
+                        : null,
+                  ),
+                ),
+              if (nativeState?.save.phase == EditorSavePhase.failed)
+                Center(
+                  child: SaveConflictDialog(
+                    errorCode:
+                        nativeState?.save.errorCode ?? 'editor_save_failed',
+                    onRetry: () => unawaited(
+                      ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .saveActivePdfEdits(),
+                    ),
+                    onSaveAs: () => unawaited(() async {
+                      final followCopy = await showSaveAsAssociationDialog(
+                        context,
+                      );
+                      if (followCopy == null) return;
+                      await ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .saveActivePdfEditsAsCopy(
+                            association: followCopy
+                                ? EditorSaveAssociation.followNewSource
+                                : EditorSaveAssociation.keepOriginalAssociation,
+                          );
+                    }()),
+                    onRebase: () => unawaited(
+                      ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .rebaseActiveNativeEditor(),
+                    ),
+                    onCancel: nativeController?.dismissSaveFailure ?? () {},
+                  ),
+                ),
+            ],
           ),
         ),
       ],
@@ -186,6 +259,14 @@ class _TabStripState extends ConsumerState<_TabStrip> {
 
   Future<void> _confirmCloseTab(DocumentTabState tab) async {
     final notifier = ref.read(workspaceNotifierProvider.notifier);
+    final native = ref.read(editorSessionRegistryProvider)[tab.id];
+    if (native != null && notifier.hasUnsavedEditsFor(tab.id)) {
+      final choice = await showDirtyCloseDialog(context);
+      if (choice != null) {
+        await notifier.closeTab(tab.id, nativeDirtyChoice: choice);
+      }
+      return;
+    }
     if (!notifier.hasUnsavedEditsFor(tab.id)) {
       await notifier.closeTab(tab.id);
       return;
@@ -413,6 +494,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   Offset? _selectionAutoPanPointer;
   Timer? _selectionAutoPanTimer;
   int? _lastRepaintedEditRevision;
+  bool _nativeLifecycleSyncScheduled = false;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -520,6 +602,26 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(editorDocumentStateProvider(widget.tab.id));
+    final registeredNative = ref.read(
+      editorSessionRegistryProvider,
+    )[widget.tab.id];
+    if (!identical(_pageSceneLifecycle?.controller, registeredNative) &&
+        !_nativeLifecycleSyncScheduled) {
+      _nativeLifecycleSyncScheduled = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _nativeLifecycleSyncScheduled = false;
+        if (!mounted) return;
+        final current = ref.read(editorSessionRegistryProvider)[widget.tab.id];
+        if (identical(_pageSceneLifecycle?.controller, current)) return;
+        _pageSceneLifecycle?.dispose();
+        _pageSceneLifecycle = current == null
+            ? null
+            : (PageSceneLifecycle(surface: _pageSurface, controller: current)
+                ..start());
+        setState(() {});
+      });
+    }
     final PdfEditingController editing = ref.watch(
       pdfEditingControllerProvider,
     );

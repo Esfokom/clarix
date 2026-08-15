@@ -1,5 +1,12 @@
 enum EditorSavePhase { clean, dirty, saving, failed }
 
+class EditorSaveCancelled implements Exception {
+  const EditorSaveCancelled();
+
+  @override
+  String toString() => 'EditorSaveCancelled';
+}
+
 class EditorSaveState {
   const EditorSaveState({
     this.phase = EditorSavePhase.clean,

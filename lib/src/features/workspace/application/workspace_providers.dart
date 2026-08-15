@@ -24,6 +24,7 @@ import '../infrastructure/pdf_text_engine.dart';
 import '../infrastructure/pdf_edit_save_service.dart';
 import '../infrastructure/installed_font_catalog.dart';
 import '../editing/application/editor_session_registry.dart';
+import '../editing/domain/editor_document_state.dart';
 import '../editing/infrastructure/editor_session_gateway.dart';
 import 'ai_runtime_service.dart';
 import 'action_permission_service.dart';
@@ -193,6 +194,11 @@ final editorSessionRegistryProvider = Provider<EditorSessionRegistry>((
   ref.onDispose(() => unawaited(registry.closeAll()));
   return registry;
 });
+
+final editorDocumentStateProvider =
+    StreamProvider.family<EditorDocumentState?, String>((ref, tabId) {
+      return ref.watch(editorSessionRegistryProvider).watch(tabId);
+    });
 
 final pdfTextEngineProvider = Provider<PdfTextEngine>(
   (Ref ref) => createPdfTextEngine(),

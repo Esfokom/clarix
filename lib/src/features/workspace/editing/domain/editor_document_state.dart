@@ -54,6 +54,7 @@ class EditorDocumentState {
     this.pendingCommand,
     this.undoDepth = 0,
     this.redoDepth = 0,
+    this.recoveredRevision,
     this.save = const EditorSaveState(),
     this.errorCode,
     this.isOpen = false,
@@ -72,6 +73,7 @@ class EditorDocumentState {
   final EditorCommandKind? pendingCommand;
   final int undoDepth;
   final int redoDepth;
+  final int? recoveredRevision;
   final EditorSaveState save;
   final String? errorCode;
   final bool isOpen;
@@ -104,6 +106,7 @@ class EditorDocumentState {
     EditorCommandKind? pendingCommand,
     int? undoDepth,
     int? redoDepth,
+    int? recoveredRevision,
     EditorSaveState? save,
     String? errorCode,
     bool? isOpen,
@@ -112,6 +115,7 @@ class EditorDocumentState {
     bool clearQueued = false,
     bool clearSelection = false,
     bool clearPendingCommand = false,
+    bool clearRecovery = false,
     bool clearError = false,
   }) => EditorDocumentState(
     sourcePath: sourcePath ?? this.sourcePath,
@@ -130,6 +134,9 @@ class EditorDocumentState {
         : (pendingCommand ?? this.pendingCommand),
     undoDepth: undoDepth ?? this.undoDepth,
     redoDepth: redoDepth ?? this.redoDepth,
+    recoveredRevision: clearRecovery
+        ? null
+        : (recoveredRevision ?? this.recoveredRevision),
     save: save ?? this.save,
     errorCode: clearError ? null : (errorCode ?? this.errorCode),
     isOpen: isOpen ?? this.isOpen,

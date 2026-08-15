@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../application/workspace_providers.dart';
+import '../../editing/domain/editor_save_state.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../widgets/workspace_body.dart';
 import '../widgets/workspace_common.dart';
@@ -49,6 +50,8 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       if (choice == _CloseChoice.saveAll) {
         final saved = await notifier.saveAllPdfEdits();
         if (!saved || !mounted) return;
+      } else if (choice == _CloseChoice.discard) {
+        await notifier.checkpointAllNativeForRecovery();
       }
     } else if (!state.session.restorePreviousSession &&
         state.session.tabs.isNotEmpty) {
@@ -72,13 +75,19 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     );
     final editing = ref.watch(pdfEditingControllerProvider);
     final activeTabId = asyncState.value?.session.activeTabId;
+    final nativeState = activeTabId == null
+        ? null
+        : ref.watch(editorDocumentStateProvider(activeTabId)).value;
     final activeIsDirty =
         activeTabId != null &&
-        (editing.sessionsByTabId[activeTabId]?.isDirty ??
-            asyncState.value?.dirtyDocumentIds.contains(activeTabId) ??
-            false);
+        (nativeState == null
+            ? (editing.sessionsByTabId[activeTabId]?.isDirty ??
+                  asyncState.value?.dirtyDocumentIds.contains(activeTabId) ??
+                  false)
+            : nativeState.save.phase != EditorSavePhase.clean);
     final canSave =
         activeIsDirty &&
+        nativeState?.save.phase != EditorSavePhase.saving &&
         !(asyncState.value?.pdfSaveInProgress ?? false) &&
         (editing.sessionsByTabId[activeTabId]?.overflowingLocators.isEmpty ??
             true);
@@ -210,7 +219,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
           style: TextStyle(color: WorkspaceColors.textStrong),
         ),
         content: const Text(
-          'Choose whether to save every edited PDF before closing, or discard all drafts.',
+          'Save every edited PDF, or close while keeping durable recovery projects.',
           style: TextStyle(color: WorkspaceColors.textMuted),
         ),
         actions: <Widget>[
@@ -220,7 +229,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_CloseChoice.discard),
-            child: const Text('Discard changes'),
+            child: const Text('Keep recoverable projects'),
           ),
           FilledButton(
             key: const Key('save-all-pdf-edits'),

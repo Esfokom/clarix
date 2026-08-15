@@ -1,7 +1,8 @@
 use clarix_editing_core::CommandId;
 use clarix_pdf_oxide::editing_api::{
-    NativeCleanPatchRequest, NativeEditorCommand, NativeEditorCommandKind, NativeEditorSession,
-    NativeObjectDetailsRequest, NativeOpenEditorRequest, NativePageSceneRequest,
+    NativeCleanPatchRequest, NativeEditorCommand, NativeEditorCommandKind, NativeEditorSaveMode,
+    NativeEditorSaveRequest, NativeEditorSession, NativeObjectDetailsRequest,
+    NativeOpenEditorRequest, NativePageSceneRequest, NativeSaveAssociation,
     NativeSubmitCommandRequest, NativeViewportPriority,
 };
 
@@ -269,4 +270,49 @@ fn accepted_command_is_durable_before_native_result_returns() {
         result.committed_revision
     );
     recovered.close().unwrap();
+}
+
+#[test]
+fn native_save_as_materializes_and_validates_the_current_revision() {
+    let directory = tempfile::tempdir().unwrap();
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(
+            directory
+                .path()
+                .join("project")
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    })
+    .unwrap();
+    session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    let target = directory.path().join("saved-copy.pdf");
+    let result = session
+        .save(NativeEditorSaveRequest {
+            target_path: target.to_string_lossy().into_owned(),
+            mode: NativeEditorSaveMode::SaveAs,
+            association: NativeSaveAssociation::FollowNewSource,
+            recovery_directory: Some(
+                directory
+                    .path()
+                    .join("recovery")
+                    .to_string_lossy()
+                    .into_owned(),
+            ),
+        })
+        .unwrap();
+
+    assert!(target.exists());
+    assert_eq!(result.schema_version, 1);
+    assert_eq!(result.materialized_revision, 0);
+    assert_eq!(result.completed_stages.len(), 9);
+    assert!(result.follows_new_source);
+    session.close().unwrap();
 }

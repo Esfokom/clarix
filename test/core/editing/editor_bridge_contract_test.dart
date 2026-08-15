@@ -73,6 +73,10 @@ class FakeNativeEditorPort implements NativeEditorPort {
   Future<void> releaseCleanPatchMemory() async {}
 
   @override
+  Future<EditorSaveResult> save(EditorSaveRequest request) =>
+      throw UnimplementedError();
+
+  @override
   Future<EditorCommandResult> checkpoint({
     required int baseRevision,
     required String label,

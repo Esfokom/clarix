@@ -108,6 +108,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
 
   @protected
+  NativeEditorSaveRequest dco_decode_box_autoadd_native_editor_save_request(
+    dynamic raw,
+  );
+
+  @protected
   NativeObjectDetailsRequest
   dco_decode_box_autoadd_native_object_details_request(dynamic raw);
 
@@ -248,6 +253,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw);
 
   @protected
+  NativeEditorSaveMode dco_decode_native_editor_save_mode(dynamic raw);
+
+  @protected
+  NativeEditorSaveRequest dco_decode_native_editor_save_request(dynamic raw);
+
+  @protected
+  NativeEditorSaveResult dco_decode_native_editor_save_result(dynamic raw);
+
+  @protected
   NativeObjectDetailsRequest dco_decode_native_object_details_request(
     dynamic raw,
   );
@@ -305,6 +319,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeRagQueryResult dco_decode_native_rag_query_result(dynamic raw);
+
+  @protected
+  NativeSaveAssociation dco_decode_native_save_association(dynamic raw);
 
   @protected
   NativeSceneObject dco_decode_native_scene_object(dynamic raw);
@@ -482,6 +499,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCommandResult sse_decode_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorSaveRequest sse_decode_box_autoadd_native_editor_save_request(
     SseDeserializer deserializer,
   );
 
@@ -670,6 +692,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeEditorSaveMode sse_decode_native_editor_save_mode(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorSaveRequest sse_decode_native_editor_save_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeEditorSaveResult sse_decode_native_editor_save_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeObjectDetailsRequest sse_decode_native_object_details_request(
     SseDeserializer deserializer,
   );
@@ -753,6 +790,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeRagQueryResult sse_decode_native_rag_query_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSaveAssociation sse_decode_native_save_association(
     SseDeserializer deserializer,
   );
 
@@ -967,6 +1009,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_command_result(
     NativeCommandResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_editor_save_request(
+    NativeEditorSaveRequest self,
     SseSerializer serializer,
   );
 
@@ -1193,6 +1241,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_editor_save_mode(
+    NativeEditorSaveMode self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_save_request(
+    NativeEditorSaveRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_editor_save_result(
+    NativeEditorSaveResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_object_details_request(
     NativeObjectDetailsRequest self,
     SseSerializer serializer,
@@ -1300,6 +1366,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_rag_query_result(
     NativeRagQueryResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_save_association(
+    NativeSaveAssociation self,
     SseSerializer serializer,
   );
 

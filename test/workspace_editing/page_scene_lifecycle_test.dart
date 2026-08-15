@@ -154,6 +154,10 @@ class LifecycleGateway implements EditorSessionGateway {
   Future<void> releaseCleanPatchMemory() async {}
 
   @override
+  Future<EditorSaveResult> save(EditorSaveRequest request) =>
+      throw UnimplementedError();
+
+  @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
       throw UnimplementedError();
 }
