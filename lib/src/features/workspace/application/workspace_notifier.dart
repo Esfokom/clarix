@@ -18,6 +18,7 @@ import '../domain/conversation.dart';
 import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_text_types.dart';
+import '../editing/application/editor_session_controller.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
@@ -425,12 +426,18 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   bool get canUndoActive {
     final String? id = state.value?.session.activeTabId;
-    return id != null && _pdfEditing.sessionsByTabId[id]?.canUndo == true;
+    if (id == null) return false;
+    final native = ref.read(editorSessionRegistryProvider)[id];
+    return native?.canUndo ??
+        (_pdfEditing.sessionsByTabId[id]?.canUndo == true);
   }
 
   bool get canRedoActive {
     final String? id = state.value?.session.activeTabId;
-    return id != null && _pdfEditing.sessionsByTabId[id]?.canRedo == true;
+    if (id == null) return false;
+    final native = ref.read(editorSessionRegistryProvider)[id];
+    return native?.canRedo ??
+        (_pdfEditing.sessionsByTabId[id]?.canRedo == true);
   }
 
   bool get hasUnsavedPdfEdits =>
@@ -445,6 +452,19 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final WorkspaceFeatureState current = _requireState();
     final String? tabId = current.session.activeTabId;
     if (tabId == null) return;
+    final EditorSessionController? native = ref.read(
+      editorSessionRegistryProvider,
+    )[tabId];
+    if (native != null) {
+      if (undo ? native.canUndo : native.canRedo) {
+        if (undo) {
+          await native.undo();
+        } else {
+          await native.redo();
+        }
+      }
+      return;
+    }
     final DocumentTabState tab = current.session.tabs.firstWhere(
       (item) => item.id == tabId,
     );

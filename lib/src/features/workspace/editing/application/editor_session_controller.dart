@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import '../../../../core/editing/editor_bridge_types.dart';
 import '../domain/editor_document_state.dart';
@@ -27,6 +28,9 @@ class EditorSessionController {
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
+  bool get canUndo => _state.undoDepth > 0 && _state.pendingCommand == null;
+  bool get canRedo => _state.redoDepth > 0 && _state.pendingCommand == null;
+  bool get commandOutstanding => _state.pendingCommand != null;
 
   Future<void> open(String sourcePath) async {
     _ensureActive();
@@ -138,12 +142,20 @@ class EditorSessionController {
     );
   }
 
+  void clearError() {
+    _ensureActive();
+    _emit(_state.copyWith(clearError: true));
+  }
+
   void applyLocalDelta({
     required String objectId,
     required EditorTextRange range,
     required String replacement,
   }) {
     _ensureActive();
+    if (_state.pendingCommand != null) {
+      throw StateError('an editor command is already outstanding');
+    }
     if (!_state.objects.containsKey(objectId)) {
       throw ArgumentError.value(objectId, 'objectId', 'object is not loaded');
     }
@@ -208,6 +220,91 @@ class EditorSessionController {
     );
   }
 
+  Future<EditorCommandResult> submitCommand(EditorCommand command) async {
+    _ensureActive();
+    if (_state.optimisticEdit != null || _state.pendingCommand != null) {
+      throw StateError('an editor command is already outstanding');
+    }
+    final commandId = _commandIds();
+    final baseRevision = _state.revision;
+    _emit(_state.copyWith(pendingCommand: command.kind, clearError: true));
+    try {
+      final result = await _gateway.submit(
+        EditorCommandRequest(
+          commandId: commandId,
+          baseRevision: baseRevision,
+          payload: command,
+        ),
+      );
+      if (_disposed || result.commandId != commandId) {
+        throw const EditorProtocolViolation('command acknowledgement mismatch');
+      }
+      var undoDepth = _state.undoDepth;
+      var redoDepth = _state.redoDepth;
+      switch (command.kind) {
+        case EditorCommandKind.undo:
+          if (undoDepth > 0) undoDepth--;
+          redoDepth++;
+        case EditorCommandKind.redo:
+          if (redoDepth > 0) redoDepth--;
+          undoDepth++;
+        case EditorCommandKind.createCheckpoint:
+          break;
+        case EditorCommandKind.replaceTextRange:
+        case EditorCommandKind.setTextStyle:
+        case EditorCommandKind.moveObject:
+        case EditorCommandKind.resizeObject:
+        case EditorCommandKind.rotateObject:
+          undoDepth++;
+          redoDepth = 0;
+      }
+      _emit(
+        _state.copyWith(
+          revision: result.committedRevision,
+          scenes: _patchScenes(_state.scenes, result.objectPatches),
+          objects: _patchObjects(_state.objects, result.objectPatches),
+          save: _state.save.copyWith(
+            phase: EditorSavePhase.dirty,
+            clearError: true,
+          ),
+          undoDepth: undoDepth,
+          redoDepth: redoDepth,
+          clearPendingCommand: true,
+          clearError: true,
+        ),
+      );
+      return result;
+    } catch (error) {
+      if (!_disposed) {
+        _emit(
+          _state.copyWith(
+            errorCode: _errorCode(error),
+            clearPendingCommand: true,
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  void dispatchCommand(EditorCommand command) {
+    unawaited(submitCommand(command).then<void>((_) {}, onError: (_) {}));
+  }
+
+  Future<void> undo() async {
+    await submitCommand(const EditorCommand(kind: EditorCommandKind.undo));
+  }
+
+  Future<void> redo() async {
+    await submitCommand(const EditorCommand(kind: EditorCommandKind.redo));
+  }
+
+  Future<void> createCheckpoint(String label) async {
+    await submitCommand(
+      EditorCommand(kind: EditorCommandKind.createCheckpoint, label: label),
+    );
+  }
+
   Future<void> _submit(OptimisticTextEdit edit) async {
     try {
       final result = await _gateway.submit(
@@ -247,6 +344,8 @@ class EditorSessionController {
           clearOptimistic: true,
           clearQueued: true,
           clearError: true,
+          undoDepth: _state.undoDepth + 1,
+          redoDepth: 0,
         ),
       );
       if (queued != null) {
@@ -312,6 +411,67 @@ class EditorSessionController {
   void _ensureActive() {
     if (_disposed) throw StateError('editor session controller is closed');
   }
+}
+
+Map<String, EditorObjectState> _patchObjects(
+  Map<String, EditorObjectState> current,
+  List<EditorObjectPatch> patches,
+) {
+  final next = Map<String, EditorObjectState>.of(current);
+  for (final patch in patches) {
+    final object = next[patch.objectId];
+    if (object == null || patch.text == null) continue;
+    next[patch.objectId] = object.copyWith(
+      acceptedText: patch.text,
+      modifiedRevision: patch.modifiedRevision,
+    );
+  }
+  return next;
+}
+
+Map<int, EditorPageScene> _patchScenes(
+  Map<int, EditorPageScene> current,
+  List<EditorObjectPatch> patches,
+) {
+  final byId = <String, EditorObjectPatch>{
+    for (final patch in patches) patch.objectId: patch,
+  };
+  return <int, EditorPageScene>{
+    for (final entry in current.entries)
+      entry.key: EditorPageScene(
+        schemaVersion: entry.value.schemaVersion,
+        pageId: entry.value.pageId,
+        pageNumber: entry.value.pageNumber,
+        width: entry.value.width,
+        height: entry.value.height,
+        revision: patches.isEmpty
+            ? entry.value.revision
+            : patches
+                  .map((patch) => patch.modifiedRevision)
+                  .fold(entry.value.revision, math.max),
+        objects: entry.value.objects
+            .map((object) {
+              final patch = byId[object.objectId];
+              if (patch == null) return object;
+              return EditorSceneObject(
+                kind: object.kind,
+                objectId: object.objectId,
+                pageId: object.pageId,
+                text: patch.text ?? object.text,
+                bounds: patch.bounds ?? object.bounds,
+                transform: patch.transform ?? object.transform,
+                capability: object.capability,
+                capabilityReason: object.capabilityReason,
+                modifiedRevision: patch.modifiedRevision,
+                runs: patch.textRuns ?? object.runs,
+                layout: object.layout,
+                fontFingerprint: object.fontFingerprint,
+                fontAssetHandle: object.fontAssetHandle,
+              );
+            })
+            .toList(growable: false),
+      ),
+  };
 }
 
 String _errorCode(Object error) {

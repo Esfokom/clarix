@@ -51,6 +51,9 @@ class EditorDocumentState {
     this.optimisticEdit,
     this.queuedEdit,
     this.selection,
+    this.pendingCommand,
+    this.undoDepth = 0,
+    this.redoDepth = 0,
     this.save = const EditorSaveState(),
     this.errorCode,
     this.isOpen = false,
@@ -66,6 +69,9 @@ class EditorDocumentState {
   final OptimisticTextEdit? optimisticEdit;
   final OptimisticTextEdit? queuedEdit;
   final EditorSelection? selection;
+  final EditorCommandKind? pendingCommand;
+  final int undoDepth;
+  final int redoDepth;
   final EditorSaveState save;
   final String? errorCode;
   final bool isOpen;
@@ -95,6 +101,9 @@ class EditorDocumentState {
     OptimisticTextEdit? optimisticEdit,
     OptimisticTextEdit? queuedEdit,
     EditorSelection? selection,
+    EditorCommandKind? pendingCommand,
+    int? undoDepth,
+    int? redoDepth,
     EditorSaveState? save,
     String? errorCode,
     bool? isOpen,
@@ -102,6 +111,7 @@ class EditorDocumentState {
     bool clearOptimistic = false,
     bool clearQueued = false,
     bool clearSelection = false,
+    bool clearPendingCommand = false,
     bool clearError = false,
   }) => EditorDocumentState(
     sourcePath: sourcePath ?? this.sourcePath,
@@ -115,6 +125,11 @@ class EditorDocumentState {
         : (optimisticEdit ?? this.optimisticEdit),
     queuedEdit: clearQueued ? null : (queuedEdit ?? this.queuedEdit),
     selection: clearSelection ? null : (selection ?? this.selection),
+    pendingCommand: clearPendingCommand
+        ? null
+        : (pendingCommand ?? this.pendingCommand),
+    undoDepth: undoDepth ?? this.undoDepth,
+    redoDepth: redoDepth ?? this.redoDepth,
     save: save ?? this.save,
     errorCode: clearError ? null : (errorCode ?? this.errorCode),
     isOpen: isOpen ?? this.isOpen,

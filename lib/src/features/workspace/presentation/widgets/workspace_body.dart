@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/editing/editor_bridge_types.dart';
 import '../../application/workspace_providers.dart';
+import '../../editing/domain/editor_document_state.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../../domain/pdf_edit_intent.dart';
 import '../../domain/pdf_text_types.dart';
@@ -211,6 +213,40 @@ class _TextFormatPane extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final native = ref.read(editorSessionRegistryProvider)[activeTab.id];
+    if (native != null) {
+      final catalog = ref.watch(installedFontCatalogProvider);
+      return StreamBuilder<EditorDocumentState>(
+        stream: native.changes,
+        initialData: native.state,
+        builder: (context, snapshot) {
+          final document = snapshot.data ?? native.state;
+          final selection = document.selection;
+          EditorSceneObject? object;
+          if (selection != null) {
+            for (final scene in document.scenes.values) {
+              object = scene.objects
+                  .where(
+                    (candidate) => candidate.objectId == selection.objectId,
+                  )
+                  .firstOrNull;
+              if (object != null) break;
+            }
+          }
+          if (selection == null || object == null) {
+            return const _NoEditableTextSelection();
+          }
+          return CanonicalPdfTextFormatPanel(
+            session: native,
+            object: object,
+            selection: selection,
+            availableFamilies:
+                catalog.value?.families ??
+                <String>[?object.runs.firstOrNull?.style.fontFamily],
+          );
+        },
+      );
+    }
     final editing = ref.watch(pdfEditingControllerProvider);
     final session = editing.sessionsByTabId[activeTab.id];
     final selection = session?.selection;
@@ -224,12 +260,7 @@ class _TextFormatPane extends ConsumerWidget {
       }
     }
     if (session == null || selection == null || block == null) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: Text('Select editable PDF text to format it.'),
-        ),
-      );
+      return const _NoEditableTextSelection();
     }
     final catalog = ref.watch(installedFontCatalogProvider);
     final families =
@@ -278,6 +309,18 @@ class _TextFormatPane extends ConsumerWidget {
           editing.dispatch(intent, provenance: PdfCommandProvenance.manual),
     );
   }
+}
+
+class _NoEditableTextSelection extends StatelessWidget {
+  const _NoEditableTextSelection();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Padding(
+      padding: EdgeInsets.all(24),
+      child: Text('Select editable PDF text to format it.'),
+    ),
+  );
 }
 
 class _PaneHandle extends StatelessWidget {

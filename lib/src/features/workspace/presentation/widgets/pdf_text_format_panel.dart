@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/editing/editor_bridge_types.dart';
+import '../../editing/application/editor_session_controller.dart';
+import '../../editing/domain/editor_selection.dart';
 import '../../domain/pdf_edit_intent.dart';
 import '../../domain/pdf_text_types.dart';
 
@@ -454,3 +457,185 @@ final class _AlignmentToggle extends StatelessWidget {
     ),
   );
 }
+
+/// Phase 1 formatting surface backed by the canonical editor session.
+///
+/// The legacy panel above remains available until the feature-flag migration
+/// in Task 17. This panel never constructs legacy PDF mutation intents.
+final class CanonicalPdfTextFormatPanel extends StatefulWidget {
+  const CanonicalPdfTextFormatPanel({
+    required this.session,
+    required this.object,
+    required this.selection,
+    this.availableFamilies = const <String>[],
+    super.key,
+  });
+
+  final EditorSessionController session;
+  final EditorSceneObject object;
+  final EditorSelection selection;
+  final List<String> availableFamilies;
+
+  @override
+  State<CanonicalPdfTextFormatPanel> createState() =>
+      _CanonicalPdfTextFormatPanelState();
+}
+
+final class _CanonicalPdfTextFormatPanelState
+    extends State<CanonicalPdfTextFormatPanel> {
+  late final TextEditingController _sizeController;
+
+  EditorTextStyle get _style {
+    final offset = widget.selection.range.start;
+    return widget.object.runs
+            .where((run) => run.start <= offset && offset <= run.end)
+            .map((run) => run.style)
+            .firstOrNull ??
+        widget.object.runs.first.style;
+  }
+
+  bool get _enabled =>
+      widget.object.capability == 'editable' &&
+      !widget.session.commandOutstanding;
+
+  @override
+  void initState() {
+    super.initState();
+    _sizeController = TextEditingController(
+      text: _style.fontSize.toStringAsFixed(1),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant CanonicalPdfTextFormatPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.object != widget.object ||
+        oldWidget.selection != widget.selection) {
+      _sizeController.text = _style.fontSize.toStringAsFixed(1);
+    }
+  }
+
+  @override
+  void dispose() {
+    _sizeController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final style = _style;
+    final families = <String>{
+      ?style.fontFamily,
+      ...widget.availableFamilies,
+    }.toList(growable: false);
+    return Material(
+      color: Theme.of(context).colorScheme.surface,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: <Widget>[
+          Text('Text format', style: Theme.of(context).textTheme.titleMedium),
+          if (widget.object.capability != 'editable')
+            Text(
+              widget.object.capabilityReason ?? 'This text is read only.',
+              key: const Key('canonical-format-read-only-reason'),
+            ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            key: const Key('font-family-field'),
+            initialValue: style.fontFamily,
+            decoration: const InputDecoration(labelText: 'Font family'),
+            items: families
+                .map(
+                  (family) => DropdownMenuItem<String>(
+                    value: family,
+                    child: Text(family),
+                  ),
+                )
+                .toList(growable: false),
+            onChanged: _enabled
+                ? (family) {
+                    if (family != null) {
+                      _submit(styleWith(style, fontFamily: family));
+                    }
+                  }
+                : null,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            key: const Key('font-size-field'),
+            controller: _sizeController,
+            enabled: _enabled,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Size (pt)'),
+            onSubmitted: (value) {
+              final size = double.tryParse(value);
+              if (size != null && size > 0) {
+                _submit(styleWith(style, fontSize: size));
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            children: <Widget>[
+              FilterChip(
+                key: const Key('canonical-font-bold'),
+                label: const Text('Bold'),
+                selected: style.fontWeight >= 600,
+                onSelected: _enabled
+                    ? (_) => _submit(
+                        styleWith(
+                          style,
+                          fontWeight: style.fontWeight >= 600 ? 400 : 700,
+                        ),
+                      )
+                    : null,
+              ),
+              FilterChip(
+                key: const Key('canonical-font-italic'),
+                label: const Text('Italic'),
+                selected: style.italic,
+                onSelected: _enabled
+                    ? (_) => _submit(styleWith(style, italic: !style.italic))
+                    : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Paragraph alignment and automatic shrinking are unavailable in Phase 1.',
+            key: Key('canonical-phase-one-format-limits'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _submit(EditorTextStyle style) {
+    widget.session.dispatchCommand(
+      EditorCommand(
+        kind: EditorCommandKind.setTextStyle,
+        objectId: widget.object.objectId,
+        start: widget.selection.range.start,
+        end: widget.selection.range.end,
+        style: style,
+      ),
+    );
+  }
+}
+
+EditorTextStyle styleWith(
+  EditorTextStyle source, {
+  String? fontFamily,
+  double? fontSize,
+  int? fontWeight,
+  bool? italic,
+  List<int>? colorRgba,
+}) => EditorTextStyle(
+  fontFamily: fontFamily ?? source.fontFamily,
+  fontSize: fontSize ?? source.fontSize,
+  fontWeight: fontWeight ?? source.fontWeight,
+  italic: italic ?? source.italic,
+  colorRgba: colorRgba ?? source.colorRgba,
+);

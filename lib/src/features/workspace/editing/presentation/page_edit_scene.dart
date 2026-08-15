@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
@@ -9,6 +10,8 @@ import '../domain/editor_selection.dart';
 import 'clean_patch_layer.dart';
 import 'editor_text_painter.dart';
 import 'native_text_editor.dart';
+import 'object_transform_handles.dart';
+import 'overflow_indicator.dart';
 
 class EditorCompositionRange {
   const EditorCompositionRange({required this.objectId, required this.range});
@@ -137,7 +140,20 @@ class PageEditScene extends StatelessWidget {
                       '',
                   selection: selection,
                   scale: displaySize.width / pageSize.width,
+                  onUndo: session!.canUndo
+                      ? () => unawaited(session!.undo())
+                      : null,
+                  onRedo: session!.canRedo
+                      ? () => unawaited(session!.redo())
+                      : null,
                 ),
+              ),
+            if (activeObject != null && session != null)
+              ObjectTransformHandles(
+                session: session!,
+                object: activeObject,
+                pageSize: pageSize,
+                displaySize: displaySize,
               ),
             if (session == null)
               if (document.selection case final EditorSelection selection)
@@ -160,6 +176,23 @@ class PageEditScene extends StatelessWidget {
                       ),
                     ),
                   ),
+            if (session != null &&
+                document.errorCode == 'text_overflow' &&
+                activeObject != null)
+              Positioned(
+                left: 8,
+                right: 8,
+                bottom: 8,
+                child: Semantics(
+                  liveRegion: true,
+                  child: OverflowIndicator(
+                    message:
+                        'Text does not fit this object. Shorten it or cancel the edit.',
+                    canIncreaseBounds: false,
+                    onCancel: session!.clearError,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

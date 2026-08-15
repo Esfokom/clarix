@@ -161,6 +161,7 @@ EditorSceneObject _object(String text, String capability) => EditorSceneObject(
       start: 0,
       end: text.codeUnits.length,
       style: const EditorTextStyle(
+        fontFamily: 'Arial',
         fontSize: 18,
         fontWeight: 400,
         italic: false,

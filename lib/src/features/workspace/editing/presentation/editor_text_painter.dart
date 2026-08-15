@@ -33,6 +33,15 @@ abstract final class EditorPageGeometry {
     point.dx * displaySize.width / pageSize.width,
     (pageSize.height - point.dy) * displaySize.height / pageSize.height,
   );
+
+  static Offset pdfPointForDisplay(
+    Offset point, {
+    required Size pageSize,
+    required Size displaySize,
+  }) => Offset(
+    point.dx * pageSize.width / displaySize.width,
+    pageSize.height - point.dy * pageSize.height / displaySize.height,
+  );
 }
 
 class EditorTextObjectLayer extends StatelessWidget {
