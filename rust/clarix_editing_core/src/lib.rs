@@ -4,6 +4,7 @@ mod actor;
 mod command;
 mod error;
 mod geometry;
+mod history;
 mod ids;
 mod model;
 mod session;
@@ -11,9 +12,13 @@ mod text;
 mod tools;
 
 pub use actor::{EditorEvent, EditorSessionActor};
-pub use command::{ActorKind, CommandEnvelope, CommandResult, EditorCommand, ObjectPatch};
+pub use command::{
+    ActorKind, CommandEnvelope, CommandResult, CommandWarning, EditorCommand, ObjectPatch,
+    PreparedCommand, SelectionRebase,
+};
 pub use error::EditingError;
 pub use geometry::{AffineTransform, GeometryError, PdfBox};
+pub use history::{InverseOperation, TypingGroup};
 pub use ids::{CommandId, DocumentId, DocumentRevision, ObjectId, PageId, SessionId};
 pub use model::{
     AnnotationNode, CapabilityReason, DocumentModel, DocumentObject, EditCapability, GroupNode,
