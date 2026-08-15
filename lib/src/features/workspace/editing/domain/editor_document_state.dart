@@ -1,0 +1,132 @@
+import '../../../../core/editing/editor_bridge_types.dart';
+import 'editor_save_state.dart';
+import 'editor_selection.dart';
+
+class EditorObjectState {
+  const EditorObjectState({
+    required this.objectId,
+    required this.pageId,
+    required this.acceptedText,
+    required this.modifiedRevision,
+  });
+
+  final String objectId;
+  final String pageId;
+  final String acceptedText;
+  final int modifiedRevision;
+
+  EditorObjectState copyWith({String? acceptedText, int? modifiedRevision}) =>
+      EditorObjectState(
+        objectId: objectId,
+        pageId: pageId,
+        acceptedText: acceptedText ?? this.acceptedText,
+        modifiedRevision: modifiedRevision ?? this.modifiedRevision,
+      );
+}
+
+class OptimisticTextEdit {
+  const OptimisticTextEdit({
+    required this.commandId,
+    required this.objectId,
+    required this.range,
+    required this.replacement,
+    required this.baseRevision,
+  });
+
+  final String commandId;
+  final String objectId;
+  final EditorTextRange range;
+  final String replacement;
+  final int baseRevision;
+}
+
+class EditorDocumentState {
+  const EditorDocumentState({
+    this.sourcePath,
+    this.sessionId,
+    this.revision = 0,
+    this.pageCount = 0,
+    this.scenes = const <int, EditorPageScene>{},
+    this.objects = const <String, EditorObjectState>{},
+    this.optimisticEdit,
+    this.queuedEdit,
+    this.selection,
+    this.save = const EditorSaveState(),
+    this.errorCode,
+    this.isOpen = false,
+    this.isClosed = false,
+  });
+
+  final String? sourcePath;
+  final String? sessionId;
+  final int revision;
+  final int pageCount;
+  final Map<int, EditorPageScene> scenes;
+  final Map<String, EditorObjectState> objects;
+  final OptimisticTextEdit? optimisticEdit;
+  final OptimisticTextEdit? queuedEdit;
+  final EditorSelection? selection;
+  final EditorSaveState save;
+  final String? errorCode;
+  final bool isOpen;
+  final bool isClosed;
+
+  String? visibleText(String objectId) {
+    final object = objects[objectId];
+    if (object == null) return null;
+    final edits = <OptimisticTextEdit>[
+      if (optimisticEdit?.objectId == objectId) optimisticEdit!,
+      if (queuedEdit?.objectId == objectId) queuedEdit!,
+    ];
+    var text = object.acceptedText;
+    for (final edit in edits) {
+      text = _replaceUtf16(text, edit.range, edit.replacement);
+    }
+    return text;
+  }
+
+  EditorDocumentState copyWith({
+    String? sourcePath,
+    String? sessionId,
+    int? revision,
+    int? pageCount,
+    Map<int, EditorPageScene>? scenes,
+    Map<String, EditorObjectState>? objects,
+    OptimisticTextEdit? optimisticEdit,
+    OptimisticTextEdit? queuedEdit,
+    EditorSelection? selection,
+    EditorSaveState? save,
+    String? errorCode,
+    bool? isOpen,
+    bool? isClosed,
+    bool clearOptimistic = false,
+    bool clearQueued = false,
+    bool clearError = false,
+  }) => EditorDocumentState(
+    sourcePath: sourcePath ?? this.sourcePath,
+    sessionId: sessionId ?? this.sessionId,
+    revision: revision ?? this.revision,
+    pageCount: pageCount ?? this.pageCount,
+    scenes: Map.unmodifiable(scenes ?? this.scenes),
+    objects: Map.unmodifiable(objects ?? this.objects),
+    optimisticEdit: clearOptimistic
+        ? null
+        : (optimisticEdit ?? this.optimisticEdit),
+    queuedEdit: clearQueued ? null : (queuedEdit ?? this.queuedEdit),
+    selection: selection ?? this.selection,
+    save: save ?? this.save,
+    errorCode: clearError ? null : (errorCode ?? this.errorCode),
+    isOpen: isOpen ?? this.isOpen,
+    isClosed: isClosed ?? this.isClosed,
+  );
+}
+
+String _replaceUtf16(String source, EditorTextRange range, String replacement) {
+  final units = source.codeUnits;
+  if (range.end > units.length) return source;
+  return String.fromCharCodes(<int>[
+    ...units.take(range.start),
+    ...replacement.codeUnits,
+    ...units.skip(range.end),
+  ]);
+}

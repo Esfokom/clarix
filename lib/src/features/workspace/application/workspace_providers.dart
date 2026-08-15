@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -21,6 +22,8 @@ import '../infrastructure/pdf_native_edit_coordinator.dart';
 import '../infrastructure/pdf_text_engine.dart';
 import '../infrastructure/pdf_edit_save_service.dart';
 import '../infrastructure/installed_font_catalog.dart';
+import '../editing/application/editor_session_registry.dart';
+import '../editing/infrastructure/editor_session_gateway.dart';
 import 'ai_runtime_service.dart';
 import 'action_permission_service.dart';
 import 'ai_tool_registry.dart';
@@ -161,6 +164,20 @@ final workspaceNotifierProvider =
     AsyncNotifierProvider<WorkspaceNotifier, WorkspaceFeatureState>(
       WorkspaceNotifier.new,
     );
+
+int _editorCommandSequence = 0;
+
+final editorSessionRegistryProvider = Provider<EditorSessionRegistry>((
+  Ref ref,
+) {
+  final EditorSessionRegistry registry = EditorSessionRegistry(
+    gateways: BridgeEditorSessionGateway.new,
+    commandIds: () =>
+        '${DateTime.now().microsecondsSinceEpoch}-${_editorCommandSequence++}',
+  );
+  ref.onDispose(() => unawaited(registry.closeAll()));
+  return registry;
+});
 
 final pdfTextEngineProvider = Provider<PdfTextEngine>(
   (Ref ref) => createPdfTextEngine(),
