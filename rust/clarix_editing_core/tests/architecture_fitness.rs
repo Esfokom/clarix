@@ -66,6 +66,24 @@ fn workspace_dependency_direction_and_ffi_boundary_are_enforced() {
         );
     }
 
+    let store_dependencies = dependency_names(package("clarix_editing_store"));
+    assert!(store_dependencies
+        .iter()
+        .any(|name| name == "clarix_editing_core"));
+    for forbidden in [
+        "clarix_pdf_adapter",
+        "clarix_agent_core",
+        "clarix_pdf_oxide",
+        "flutter_rust_bridge",
+        "pdf_oxide",
+        "lopdf",
+    ] {
+        assert!(
+            !store_dependencies.iter().any(|name| name == forbidden),
+            "editing store depends on forbidden crate {forbidden}"
+        );
+    }
+
     let mut facade_cdylib_found = false;
     for workspace_package in packages {
         for target in workspace_package["targets"].as_array().unwrap() {

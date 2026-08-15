@@ -430,6 +430,24 @@ impl DocumentModel {
         Ok(())
     }
 
+    pub fn replay_objects(
+        &self,
+        objects: impl IntoIterator<Item = DocumentObject>,
+        revision: DocumentRevision,
+    ) -> Result<Self, ModelError> {
+        let mut replayed = self.clone();
+        for object in objects {
+            replayed.replace_object(object)?;
+        }
+        replayed.set_revision(revision);
+        Self::from_parts(
+            replayed.id,
+            replayed.source_fingerprint,
+            replayed.revision,
+            replayed.pages,
+        )
+    }
+
     pub(crate) fn set_revision(&mut self, revision: DocumentRevision) {
         self.revision = revision;
     }

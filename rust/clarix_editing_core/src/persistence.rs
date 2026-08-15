@@ -14,6 +14,7 @@ pub struct DurableCommit {
     pub before_objects: Vec<DocumentObject>,
     pub after_objects: Vec<DocumentObject>,
     pub inverse: InverseOperation,
+    pub resulting_model: DocumentModel,
 }
 
 impl DurableCommit {
@@ -25,6 +26,10 @@ impl DurableCommit {
             before_objects: prepared.before_objects.clone(),
             after_objects: prepared.after_objects.clone(),
             inverse: prepared.inverse.clone(),
+            resulting_model: prepared
+                .next_state
+                .snapshot()
+                .expect("a prepared command retains an open next state"),
         }
     }
 }
