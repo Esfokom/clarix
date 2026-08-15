@@ -131,6 +131,13 @@ class EditorSessionController {
     return _gateway.releaseCleanPatchMemory();
   }
 
+  void updateSelection(EditorSelection? selection) {
+    _ensureActive();
+    _emit(
+      _state.copyWith(selection: selection, clearSelection: selection == null),
+    );
+  }
+
   void applyLocalDelta({
     required String objectId,
     required EditorTextRange range,

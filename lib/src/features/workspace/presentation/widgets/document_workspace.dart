@@ -670,6 +670,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                               scene: scene,
                                               document:
                                                   lifecycle.controller.state,
+                                              session: lifecycle.controller,
                                               displaySize: pageRect.size,
                                               cleanPatches: lifecycle
                                                   .cleanPatchesFor(

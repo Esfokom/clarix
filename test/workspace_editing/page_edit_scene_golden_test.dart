@@ -74,8 +74,8 @@ void main() {
 class _TolerantGoldenComparator extends LocalFileComparator {
   _TolerantGoldenComparator(
     super.testFile, {
-    required double precisionTolerance,
-  }) : _precisionTolerance = precisionTolerance;
+    required this._precisionTolerance,
+  });
 
   final double _precisionTolerance;
 

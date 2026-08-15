@@ -101,6 +101,7 @@ class EditorDocumentState {
     bool? isClosed,
     bool clearOptimistic = false,
     bool clearQueued = false,
+    bool clearSelection = false,
     bool clearError = false,
   }) => EditorDocumentState(
     sourcePath: sourcePath ?? this.sourcePath,
@@ -113,7 +114,7 @@ class EditorDocumentState {
         ? null
         : (optimisticEdit ?? this.optimisticEdit),
     queuedEdit: clearQueued ? null : (queuedEdit ?? this.queuedEdit),
-    selection: selection ?? this.selection,
+    selection: clearSelection ? null : (selection ?? this.selection),
     save: save ?? this.save,
     errorCode: clearError ? null : (errorCode ?? this.errorCode),
     isOpen: isOpen ?? this.isOpen,
