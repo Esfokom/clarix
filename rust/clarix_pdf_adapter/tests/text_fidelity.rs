@@ -41,3 +41,10 @@ fn imported_scene_is_deterministic() {
         serde_json::to_vec(&second).unwrap()
     );
 }
+
+#[test]
+fn generated_base14_latin_is_qualified_for_phase1() {
+    let source = fixture("generated/standard-latin.pdf");
+    let page = PdfOxideImporter.inspect_page(&source, 1).unwrap();
+    assert_eq!(page.page.objects[0].capability(), EditCapability::Editable);
+}

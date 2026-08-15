@@ -22,20 +22,33 @@ abstract class NativeEditorPort {
 
   Future<EditorCommandResult> submit(EditorCommandRequest request);
 
+  Future<EditorSceneObject> objectDetails(String objectId);
+
+  Future<EditorCommandResult> checkpoint({
+    required int baseRevision,
+    required String label,
+  });
+
   Future<void> close();
 }
 
 class EditorBridge {
   const EditorBridge();
 
-  Future<EditorBridgeSession> open(String sourcePath) async {
+  Future<EditorBridgeSession> open(
+    String sourcePath, {
+    String? projectRoot,
+  }) async {
     try {
       await ClarixRustRuntime.requireInitialized();
     } catch (error) {
       throw EditorNativeUnavailable(error);
     }
     final handle = await native.NativeEditorSession.open(
-      request: native.NativeOpenEditorRequest(sourcePath: sourcePath),
+      request: native.NativeOpenEditorRequest(
+        sourcePath: sourcePath,
+        projectRoot: projectRoot,
+      ),
     );
     return EditorBridgeSession._(_FrbNativeEditorPort(handle));
   }
@@ -99,6 +112,38 @@ class EditorBridgeSession {
     _ensureOpen();
     _validateSchema(value.schemaVersion);
     _canonicalUuid(value.commandId, 'commandId');
+    if (value.previousRevision != request.baseRevision || !value.durable) {
+      throw const EditorProtocolViolation(
+        'native command acknowledgement is not durably based on the requested revision',
+      );
+    }
+    return value;
+  }
+
+  Future<EditorSceneObject> objectDetails(String objectId) async {
+    _ensureOpen();
+    final value = await _native.objectDetails(
+      _canonicalUuid(objectId, 'objectId'),
+    );
+    _ensureOpen();
+    return value;
+  }
+
+  Future<EditorCommandResult> checkpoint({
+    required int baseRevision,
+    required String label,
+  }) async {
+    _ensureOpen();
+    final value = await _native.checkpoint(
+      baseRevision: baseRevision,
+      label: label,
+    );
+    _ensureOpen();
+    if (!value.durable) {
+      throw const EditorProtocolViolation(
+        'checkpoint acknowledgement is not durable',
+      );
+    }
     return value;
   }
 
@@ -182,6 +227,7 @@ class _FrbNativeEditorPort implements NativeEditorPort {
       request: native.NativePageSceneRequest(
         pageNumber: pageNumber,
         expectedRevision: BigInt.from(expectedRevision),
+        priority: native.NativeViewportPriority.visible,
       ),
     );
     return EditorPageScene(
@@ -209,6 +255,27 @@ class _FrbNativeEditorPort implements NativeEditorPort {
     );
     return _commandResultFromNative(value);
   }
+
+  @override
+  Future<EditorSceneObject> objectDetails(String objectId) async {
+    final value = await _session.objectDetails(
+      request: native.NativeObjectDetailsRequest(objectId: objectId),
+    );
+    return _sceneObjectFromNative(value);
+  }
+
+  @override
+  Future<EditorCommandResult> checkpoint({
+    required int baseRevision,
+    required String label,
+  }) async => _commandResultFromNative(
+    await _session.checkpoint(
+      request: native.NativeCheckpointRequest(
+        baseRevision: BigInt.from(baseRevision),
+        label: label,
+      ),
+    ),
+  );
 }
 
 EditorEvent _eventFromNative(native.NativeEditorEvent value) {
@@ -216,6 +283,7 @@ EditorEvent _eventFromNative(native.NativeEditorEvent value) {
   switch (value.kind) {
     case native.NativeEditorEventKind.ready:
       return EditorEvent.ready(
+        sessionId: _canonicalUuid(value.sessionId, 'event.sessionId'),
         sequence: sequence,
         revision: _requiredBigInt(value.revision, 'event.revision'),
       );
@@ -225,6 +293,7 @@ EditorEvent _eventFromNative(native.NativeEditorEvent value) {
         throw const EditorProtocolViolation('commit event has no result');
       }
       return EditorEvent.commandCommitted(
+        sessionId: _canonicalUuid(value.sessionId, 'event.sessionId'),
         sequence: sequence,
         revision: _intFromBigInt(
           result.committedRevision,
@@ -234,6 +303,7 @@ EditorEvent _eventFromNative(native.NativeEditorEvent value) {
       );
     case native.NativeEditorEventKind.lagged:
       return EditorEvent.lagged(
+        sessionId: _canonicalUuid(value.sessionId, 'event.sessionId'),
         sequence: sequence,
         latestRevision: _requiredBigInt(
           value.latestRevision,
@@ -242,6 +312,7 @@ EditorEvent _eventFromNative(native.NativeEditorEvent value) {
       );
     case native.NativeEditorEventKind.closed:
       return EditorEvent.closed(
+        sessionId: _canonicalUuid(value.sessionId, 'event.sessionId'),
         sequence: sequence,
         revision: _requiredBigInt(value.revision, 'event.revision'),
       );
@@ -261,11 +332,23 @@ EditorSceneObject _sceneObjectFromNative(native.NativeSceneObject value) =>
       bounds: _boxFromNative(value.bounds),
       transform: _transformFromNative(value.transform),
       capability: value.capability,
+      capabilityReason: value.capabilityReason,
       modifiedRevision: _intFromBigInt(
         value.modifiedRevision,
         'object.modifiedRevision',
       ),
       runs: value.runs.map(_textRunFromNative).toList(growable: false),
+      layout: value.layout == null
+          ? null
+          : EditorTextLayoutRecipe(
+              baseline: value.layout!.baseline,
+              lineHeight: value.layout!.lineHeight,
+              characterSpacing: value.layout!.characterSpacing,
+              horizontalScale: value.layout!.horizontalScale,
+              direction: value.layout!.direction,
+            ),
+      fontFingerprint: value.fontFingerprint,
+      fontAssetHandle: value.fontAssetHandle,
     );
 
 EditorTextRun _textRunFromNative(native.NativeTextRun value) => EditorTextRun(
@@ -284,10 +367,13 @@ EditorCommandResult _commandResultFromNative(
   native.NativeCommandResult value,
 ) => EditorCommandResult(
   commandId: _canonicalUuid(value.commandId, 'commandId'),
+  previousRevision: _intFromBigInt(value.previousRevision, 'previousRevision'),
   committedRevision: _intFromBigInt(
     value.committedRevision,
     'committedRevision',
   ),
+  durable: value.durable,
+  warnings: List<String>.unmodifiable(value.warnings),
   objectPatches: value.objectPatches
       .map(
         (patch) => EditorObjectPatch(

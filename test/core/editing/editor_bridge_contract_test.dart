@@ -51,10 +51,34 @@ class FakeNativeEditorPort implements NativeEditorPort {
       EditorCommandResult(
         schemaVersion: schemaVersion,
         commandId: request.commandId,
+        previousRevision: request.baseRevision,
         committedRevision: request.baseRevision + 1,
+        durable: true,
+        warnings: const <String>[],
         objectPatches: const <EditorObjectPatch>[],
       );
+
+  @override
+  Future<EditorSceneObject> objectDetails(String objectId) async =>
+      throw UnimplementedError();
+
+  @override
+  Future<EditorCommandResult> checkpoint({
+    required int baseRevision,
+    required String label,
+  }) => submit(
+    EditorCommandRequest(
+      commandId: '00000000-0000-4000-8000-000000000004',
+      baseRevision: baseRevision,
+      payload: EditorCommand(
+        kind: EditorCommandKind.createCheckpoint,
+        label: label,
+      ),
+    ),
+  );
 }
+
+const _sessionId = '00000000-0000-4000-8000-000000000001';
 
 void main() {
   test('editor bridge rejects requests and events after close', () async {
@@ -62,11 +86,14 @@ void main() {
     final session = EditorBridgeSession.forTest(native);
     final events = <EditorEvent>[];
     final subscription = session.events.listen(events.add);
-    native.emit(const EditorEvent.ready(sequence: 1, revision: 0));
+    native.emit(
+      const EditorEvent.ready(sessionId: _sessionId, sequence: 1, revision: 0),
+    );
 
     await session.close();
     native.emit(
       const EditorEvent.commandCommitted(
+        sessionId: _sessionId,
         sequence: 2,
         revision: 1,
         commandId: 'late',
@@ -75,7 +102,7 @@ void main() {
 
     await expectLater(session.metadata(), throwsA(isA<EditorSessionClosed>()));
     expect(events, <EditorEvent>[
-      const EditorEvent.ready(sequence: 1, revision: 0),
+      const EditorEvent.ready(sessionId: _sessionId, sequence: 1, revision: 0),
     ]);
     expect(native.closeCount, 1);
     await session.close();
@@ -106,12 +133,34 @@ void main() {
         onError: (Object error) => errors.add(error),
       );
 
-      native.emit(const EditorEvent.ready(sequence: 2, revision: 0));
-      native.emit(const EditorEvent.ready(sequence: 1, revision: 0));
-      native.emit(const EditorEvent.ready(sequence: 2, revision: 0));
+      native.emit(
+        const EditorEvent.ready(
+          sessionId: _sessionId,
+          sequence: 2,
+          revision: 0,
+        ),
+      );
+      native.emit(
+        const EditorEvent.ready(
+          sessionId: _sessionId,
+          sequence: 1,
+          revision: 0,
+        ),
+      );
+      native.emit(
+        const EditorEvent.ready(
+          sessionId: _sessionId,
+          sequence: 2,
+          revision: 0,
+        ),
+      );
 
       expect(events, <EditorEvent>[
-        const EditorEvent.ready(sequence: 2, revision: 0),
+        const EditorEvent.ready(
+          sessionId: _sessionId,
+          sequence: 2,
+          revision: 0,
+        ),
       ]);
       expect(errors, hasLength(2));
       expect(errors, everyElement(isA<EditorProtocolViolation>()));

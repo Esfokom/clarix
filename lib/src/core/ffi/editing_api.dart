@@ -6,16 +6,24 @@
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `required`, `text_style`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `required`, `text_style`, `viewport_priority`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
+  Future<NativeCommandResult> checkpoint({
+    required NativeCheckpointRequest request,
+  });
+
   Future<void> close();
 
   Stream<NativeEditorEvent> events();
 
   Future<NativeEditorMetadata> metadata();
+
+  Future<NativeSceneObject> objectDetails({
+    required NativeObjectDetailsRequest request,
+  });
 
   static Future<NativeEditorSession> open({
     required NativeOpenEditorRequest request,
@@ -69,20 +77,55 @@ class NativeAffineTransform {
           f == other.f;
 }
 
+class NativeCheckpointRequest {
+  final BigInt baseRevision;
+  final String label;
+
+  const NativeCheckpointRequest({
+    required this.baseRevision,
+    required this.label,
+  });
+
+  @override
+  int get hashCode => baseRevision.hashCode ^ label.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeCheckpointRequest &&
+          runtimeType == other.runtimeType &&
+          baseRevision == other.baseRevision &&
+          label == other.label;
+}
+
 class NativeCommandResult {
   final String commandId;
+  final BigInt previousRevision;
   final BigInt committedRevision;
+  final bool durable;
+  final List<String> warnings;
+  final NativeSelectionRebase? selectionRebase;
   final List<NativeObjectPatch> objectPatches;
 
   const NativeCommandResult({
     required this.commandId,
+    required this.previousRevision,
     required this.committedRevision,
+    required this.durable,
+    required this.warnings,
+    this.selectionRebase,
     required this.objectPatches,
   });
 
   @override
   int get hashCode =>
-      commandId.hashCode ^ committedRevision.hashCode ^ objectPatches.hashCode;
+      commandId.hashCode ^
+      previousRevision.hashCode ^
+      committedRevision.hashCode ^
+      durable.hashCode ^
+      warnings.hashCode ^
+      selectionRebase.hashCode ^
+      objectPatches.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -90,7 +133,11 @@ class NativeCommandResult {
       other is NativeCommandResult &&
           runtimeType == other.runtimeType &&
           commandId == other.commandId &&
+          previousRevision == other.previousRevision &&
           committedRevision == other.committedRevision &&
+          durable == other.durable &&
+          warnings == other.warnings &&
+          selectionRebase == other.selectionRebase &&
           objectPatches == other.objectPatches;
 }
 
@@ -170,6 +217,7 @@ enum NativeEditorCommandKind {
 
 class NativeEditorEvent {
   final NativeEditorEventKind kind;
+  final String sessionId;
   final BigInt sequence;
   final BigInt? revision;
   final BigInt? latestRevision;
@@ -177,6 +225,7 @@ class NativeEditorEvent {
 
   const NativeEditorEvent({
     required this.kind,
+    required this.sessionId,
     required this.sequence,
     this.revision,
     this.latestRevision,
@@ -186,6 +235,7 @@ class NativeEditorEvent {
   @override
   int get hashCode =>
       kind.hashCode ^
+      sessionId.hashCode ^
       sequence.hashCode ^
       revision.hashCode ^
       latestRevision.hashCode ^
@@ -197,6 +247,7 @@ class NativeEditorEvent {
       other is NativeEditorEvent &&
           runtimeType == other.runtimeType &&
           kind == other.kind &&
+          sessionId == other.sessionId &&
           sequence == other.sequence &&
           revision == other.revision &&
           latestRevision == other.latestRevision &&
@@ -244,6 +295,22 @@ class NativeEditorMetadata {
           pageCount == other.pageCount;
 }
 
+class NativeObjectDetailsRequest {
+  final String objectId;
+
+  const NativeObjectDetailsRequest({required this.objectId});
+
+  @override
+  int get hashCode => objectId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeObjectDetailsRequest &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId;
+}
+
 class NativeObjectPatch {
   final String objectId;
   final String pageId;
@@ -289,18 +356,20 @@ class NativeObjectPatch {
 
 class NativeOpenEditorRequest {
   final String sourcePath;
+  final String? projectRoot;
 
-  const NativeOpenEditorRequest({required this.sourcePath});
+  const NativeOpenEditorRequest({required this.sourcePath, this.projectRoot});
 
   @override
-  int get hashCode => sourcePath.hashCode;
+  int get hashCode => sourcePath.hashCode ^ projectRoot.hashCode;
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is NativeOpenEditorRequest &&
           runtimeType == other.runtimeType &&
-          sourcePath == other.sourcePath;
+          sourcePath == other.sourcePath &&
+          projectRoot == other.projectRoot;
 }
 
 class NativePageScene {
@@ -349,14 +418,17 @@ class NativePageScene {
 class NativePageSceneRequest {
   final int pageNumber;
   final BigInt expectedRevision;
+  final NativeViewportPriority priority;
 
   const NativePageSceneRequest({
     required this.pageNumber,
     required this.expectedRevision,
+    required this.priority,
   });
 
   @override
-  int get hashCode => pageNumber.hashCode ^ expectedRevision.hashCode;
+  int get hashCode =>
+      pageNumber.hashCode ^ expectedRevision.hashCode ^ priority.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -364,7 +436,8 @@ class NativePageSceneRequest {
       other is NativePageSceneRequest &&
           runtimeType == other.runtimeType &&
           pageNumber == other.pageNumber &&
-          expectedRevision == other.expectedRevision;
+          expectedRevision == other.expectedRevision &&
+          priority == other.priority;
 }
 
 class NativePdfBox {
@@ -403,8 +476,12 @@ class NativeSceneObject {
   final NativePdfBox bounds;
   final NativeAffineTransform transform;
   final String capability;
+  final String? capabilityReason;
   final BigInt modifiedRevision;
   final List<NativeTextRun> runs;
+  final NativeTextLayoutRecipe? layout;
+  final String? fontFingerprint;
+  final String? fontAssetHandle;
 
   const NativeSceneObject({
     required this.kind,
@@ -414,8 +491,12 @@ class NativeSceneObject {
     required this.bounds,
     required this.transform,
     required this.capability,
+    this.capabilityReason,
     required this.modifiedRevision,
     required this.runs,
+    this.layout,
+    this.fontFingerprint,
+    this.fontAssetHandle,
   });
 
   @override
@@ -427,8 +508,12 @@ class NativeSceneObject {
       bounds.hashCode ^
       transform.hashCode ^
       capability.hashCode ^
+      capabilityReason.hashCode ^
       modifiedRevision.hashCode ^
-      runs.hashCode;
+      runs.hashCode ^
+      layout.hashCode ^
+      fontFingerprint.hashCode ^
+      fontAssetHandle.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -442,11 +527,46 @@ class NativeSceneObject {
           bounds == other.bounds &&
           transform == other.transform &&
           capability == other.capability &&
+          capabilityReason == other.capabilityReason &&
           modifiedRevision == other.modifiedRevision &&
-          runs == other.runs;
+          runs == other.runs &&
+          layout == other.layout &&
+          fontFingerprint == other.fontFingerprint &&
+          fontAssetHandle == other.fontAssetHandle;
 }
 
 enum NativeSceneObjectKind { text, unsupported }
+
+class NativeSelectionRebase {
+  final String objectId;
+  final int start;
+  final int end;
+  final int insertedUtf16Length;
+
+  const NativeSelectionRebase({
+    required this.objectId,
+    required this.start,
+    required this.end,
+    required this.insertedUtf16Length,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      start.hashCode ^
+      end.hashCode ^
+      insertedUtf16Length.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeSelectionRebase &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          start == other.start &&
+          end == other.end &&
+          insertedUtf16Length == other.insertedUtf16Length;
+}
 
 class NativeSubmitCommandRequest {
   final int schemaVersion;
@@ -477,6 +597,41 @@ class NativeSubmitCommandRequest {
           commandId == other.commandId &&
           baseRevision == other.baseRevision &&
           payload == other.payload;
+}
+
+class NativeTextLayoutRecipe {
+  final double baseline;
+  final double lineHeight;
+  final double characterSpacing;
+  final double horizontalScale;
+  final String direction;
+
+  const NativeTextLayoutRecipe({
+    required this.baseline,
+    required this.lineHeight,
+    required this.characterSpacing,
+    required this.horizontalScale,
+    required this.direction,
+  });
+
+  @override
+  int get hashCode =>
+      baseline.hashCode ^
+      lineHeight.hashCode ^
+      characterSpacing.hashCode ^
+      horizontalScale.hashCode ^
+      direction.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeTextLayoutRecipe &&
+          runtimeType == other.runtimeType &&
+          baseline == other.baseline &&
+          lineHeight == other.lineHeight &&
+          characterSpacing == other.characterSpacing &&
+          horizontalScale == other.horizontalScale &&
+          direction == other.direction;
 }
 
 class NativeTextRun {
@@ -537,3 +692,5 @@ class NativeTextStyle {
           italic == other.italic &&
           colorRgba == other.colorRgba;
 }
+
+enum NativeViewportPriority { background, preload, visible, activeSelection }

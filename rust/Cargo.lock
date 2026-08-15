@@ -762,6 +762,7 @@ version = "0.1.0"
 dependencies = [
  "clarix_agent_core",
  "clarix_editing_core",
+ "clarix_editing_store",
  "clarix_pdf_adapter",
  "fastembed",
  "flutter_rust_bridge",
@@ -771,6 +772,7 @@ dependencies = [
  "pdf_oxide",
  "serde",
  "serde_json",
+ "tempfile",
  "usearch",
 ]
 

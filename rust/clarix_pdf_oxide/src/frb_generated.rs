@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1698049259;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -619717711;
 
 // Section: executor
 
@@ -48,6 +48,60 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__editing_api__NativeEditorSession_checkpoint_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_checkpoint",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_request =
+                <crate::editing_api::NativeCheckpointRequest>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::editing_api::NativeEditorSession::checkpoint(
+                        &*api_that_guard,
+                        api_request,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__editing_api__NativeEditorSession_close_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -198,6 +252,60 @@ fn wire__crate__editing_api__NativeEditorSession_metadata_impl(
                     let api_that_guard = api_that_guard.unwrap();
                     let output_ok =
                         crate::editing_api::NativeEditorSession::metadata(&*api_that_guard)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__editing_api__NativeEditorSession_object_details_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_object_details",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_request =
+                <crate::editing_api::NativeObjectDetailsRequest>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::editing_api::NativeEditorSession::object_details(
+                        &*api_that_guard,
+                        api_request,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -649,11 +757,11 @@ fn wire__crate__api__local_rag_index_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_index(api__request))?;
+                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_index(api_request))?;
                     Ok(output_ok)
                 })())
             }
@@ -682,11 +790,11 @@ fn wire__crate__api__local_rag_query_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__request = <crate::api::NativeRagQueryRequest>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::NativeRagQueryRequest>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_query(api__request))?;
+                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_query(api_request))?;
                     Ok(output_ok)
                 })())
             }
@@ -715,14 +823,14 @@ fn wire__crate__api__local_rag_status_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__storage_directory = <String>::sse_decode(&mut deserializer);
-            let api__document_fingerprint = <String>::sse_decode(&mut deserializer);
+            let api_storage_directory = <String>::sse_decode(&mut deserializer);
+            let api_document_fingerprint = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_status(
-                        api__storage_directory,
-                        api__document_fingerprint,
+                        api_storage_directory,
+                        api_document_fingerprint,
                     ))?;
                     Ok(output_ok)
                 })())
@@ -752,12 +860,12 @@ fn wire__crate__api__local_rag_validate_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
-                        Result::<_, ()>::Ok(crate::api::local_rag_validate(api__request))?;
+                        Result::<_, ()>::Ok(crate::api::local_rag_validate(api_request))?;
                     Ok(output_ok)
                 })())
             }
@@ -1129,16 +1237,37 @@ impl SseDecode for crate::editing_api::NativeAffineTransform {
     }
 }
 
+impl SseDecode for crate::editing_api::NativeCheckpointRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_baseRevision = <u64>::sse_decode(deserializer);
+        let mut var_label = <String>::sse_decode(deserializer);
+        return crate::editing_api::NativeCheckpointRequest {
+            base_revision: var_baseRevision,
+            label: var_label,
+        };
+    }
+}
+
 impl SseDecode for crate::editing_api::NativeCommandResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_commandId = <String>::sse_decode(deserializer);
+        let mut var_previousRevision = <u64>::sse_decode(deserializer);
         let mut var_committedRevision = <u64>::sse_decode(deserializer);
+        let mut var_durable = <bool>::sse_decode(deserializer);
+        let mut var_warnings = <Vec<String>>::sse_decode(deserializer);
+        let mut var_selectionRebase =
+            <Option<crate::editing_api::NativeSelectionRebase>>::sse_decode(deserializer);
         let mut var_objectPatches =
             <Vec<crate::editing_api::NativeObjectPatch>>::sse_decode(deserializer);
         return crate::editing_api::NativeCommandResult {
             command_id: var_commandId,
+            previous_revision: var_previousRevision,
             committed_revision: var_committedRevision,
+            durable: var_durable,
+            warnings: var_warnings,
+            selection_rebase: var_selectionRebase,
             object_patches: var_objectPatches,
         };
     }
@@ -1199,6 +1328,7 @@ impl SseDecode for crate::editing_api::NativeEditorEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_kind = <crate::editing_api::NativeEditorEventKind>::sse_decode(deserializer);
+        let mut var_sessionId = <String>::sse_decode(deserializer);
         let mut var_sequence = <u64>::sse_decode(deserializer);
         let mut var_revision = <Option<u64>>::sse_decode(deserializer);
         let mut var_latestRevision = <Option<u64>>::sse_decode(deserializer);
@@ -1206,6 +1336,7 @@ impl SseDecode for crate::editing_api::NativeEditorEvent {
             <Option<crate::editing_api::NativeCommandResult>>::sse_decode(deserializer);
         return crate::editing_api::NativeEditorEvent {
             kind: var_kind,
+            session_id: var_sessionId,
             sequence: var_sequence,
             revision: var_revision,
             latest_revision: var_latestRevision,
@@ -1248,6 +1379,16 @@ impl SseDecode for crate::editing_api::NativeEditorMetadata {
     }
 }
 
+impl SseDecode for crate::editing_api::NativeObjectDetailsRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_objectId = <String>::sse_decode(deserializer);
+        return crate::editing_api::NativeObjectDetailsRequest {
+            object_id: var_objectId,
+        };
+    }
+}
+
 impl SseDecode for crate::editing_api::NativeObjectPatch {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1276,8 +1417,10 @@ impl SseDecode for crate::editing_api::NativeOpenEditorRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_sourcePath = <String>::sse_decode(deserializer);
+        let mut var_projectRoot = <Option<String>>::sse_decode(deserializer);
         return crate::editing_api::NativeOpenEditorRequest {
             source_path: var_sourcePath,
+            project_root: var_projectRoot,
         };
     }
 }
@@ -1310,9 +1453,12 @@ impl SseDecode for crate::editing_api::NativePageSceneRequest {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_pageNumber = <u32>::sse_decode(deserializer);
         let mut var_expectedRevision = <u64>::sse_decode(deserializer);
+        let mut var_priority =
+            <crate::editing_api::NativeViewportPriority>::sse_decode(deserializer);
         return crate::editing_api::NativePageSceneRequest {
             page_number: var_pageNumber,
             expected_revision: var_expectedRevision,
+            priority: var_priority,
         };
     }
 }
@@ -1544,8 +1690,13 @@ impl SseDecode for crate::editing_api::NativeSceneObject {
         let mut var_transform =
             <crate::editing_api::NativeAffineTransform>::sse_decode(deserializer);
         let mut var_capability = <String>::sse_decode(deserializer);
+        let mut var_capabilityReason = <Option<String>>::sse_decode(deserializer);
         let mut var_modifiedRevision = <u64>::sse_decode(deserializer);
         let mut var_runs = <Vec<crate::editing_api::NativeTextRun>>::sse_decode(deserializer);
+        let mut var_layout =
+            <Option<crate::editing_api::NativeTextLayoutRecipe>>::sse_decode(deserializer);
+        let mut var_fontFingerprint = <Option<String>>::sse_decode(deserializer);
+        let mut var_fontAssetHandle = <Option<String>>::sse_decode(deserializer);
         return crate::editing_api::NativeSceneObject {
             kind: var_kind,
             object_id: var_objectId,
@@ -1554,8 +1705,12 @@ impl SseDecode for crate::editing_api::NativeSceneObject {
             bounds: var_bounds,
             transform: var_transform,
             capability: var_capability,
+            capability_reason: var_capabilityReason,
             modified_revision: var_modifiedRevision,
             runs: var_runs,
+            layout: var_layout,
+            font_fingerprint: var_fontFingerprint,
+            font_asset_handle: var_fontAssetHandle,
         };
     }
 }
@@ -1572,6 +1727,22 @@ impl SseDecode for crate::editing_api::NativeSceneObjectKind {
     }
 }
 
+impl SseDecode for crate::editing_api::NativeSelectionRebase {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_objectId = <String>::sse_decode(deserializer);
+        let mut var_start = <u32>::sse_decode(deserializer);
+        let mut var_end = <u32>::sse_decode(deserializer);
+        let mut var_insertedUtf16Length = <u32>::sse_decode(deserializer);
+        return crate::editing_api::NativeSelectionRebase {
+            object_id: var_objectId,
+            start: var_start,
+            end: var_end,
+            inserted_utf16_length: var_insertedUtf16Length,
+        };
+    }
+}
+
 impl SseDecode for crate::editing_api::NativeSubmitCommandRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1584,6 +1755,24 @@ impl SseDecode for crate::editing_api::NativeSubmitCommandRequest {
             command_id: var_commandId,
             base_revision: var_baseRevision,
             payload: var_payload,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativeTextLayoutRecipe {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_baseline = <f64>::sse_decode(deserializer);
+        let mut var_lineHeight = <f64>::sse_decode(deserializer);
+        let mut var_characterSpacing = <f64>::sse_decode(deserializer);
+        let mut var_horizontalScale = <f64>::sse_decode(deserializer);
+        let mut var_direction = <String>::sse_decode(deserializer);
+        return crate::editing_api::NativeTextLayoutRecipe {
+            baseline: var_baseline,
+            line_height: var_lineHeight,
+            character_spacing: var_characterSpacing,
+            horizontal_scale: var_horizontalScale,
+            direction: var_direction,
         };
     }
 }
@@ -1616,6 +1805,20 @@ impl SseDecode for crate::editing_api::NativeTextStyle {
             font_weight: var_fontWeight,
             italic: var_italic,
             color_rgba: var_colorRgba,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativeViewportPriority {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::editing_api::NativeViewportPriority::Background,
+            1 => crate::editing_api::NativeViewportPriority::Preload,
+            2 => crate::editing_api::NativeViewportPriority::Visible,
+            3 => crate::editing_api::NativeViewportPriority::ActiveSelection,
+            _ => unreachable!("Invalid variant for NativeViewportPriority: {}", inner),
         };
     }
 }
@@ -1673,6 +1876,32 @@ impl SseDecode for Option<crate::editing_api::NativePdfBox> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::editing_api::NativePdfBox>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::editing_api::NativeSelectionRebase> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::editing_api::NativeSelectionRebase>::sse_decode(
+                deserializer,
+            ));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::editing_api::NativeTextLayoutRecipe> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::editing_api::NativeTextLayoutRecipe>::sse_decode(
+                deserializer,
+            ));
         } else {
             return None;
         }
@@ -1817,54 +2046,66 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__editing_api__NativeEditorSession_close_impl(
+        1 => wire__crate__editing_api__NativeEditorSession_checkpoint_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        2 => wire__crate__editing_api__NativeEditorSession_events_impl(
+        2 => wire__crate__editing_api__NativeEditorSession_close_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__editing_api__NativeEditorSession_metadata_impl(
+        3 => wire__crate__editing_api__NativeEditorSession_events_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__editing_api__NativeEditorSession_open_impl(
+        4 => wire__crate__editing_api__NativeEditorSession_metadata_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
+        5 => wire__crate__editing_api__NativeEditorSession_object_details_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+        6 => wire__crate__editing_api__NativeEditorSession_open_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        7 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
-        8 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
-        10 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
-        12 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        7 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        8 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        9 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
+        10 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
+        11 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
+        13 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -1942,11 +2183,36 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeAffineTransform
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeCheckpointRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.base_revision.into_into_dart().into_dart(),
+            self.label.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeCheckpointRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeCheckpointRequest>
+    for crate::editing_api::NativeCheckpointRequest
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeCheckpointRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeCommandResult {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.command_id.into_into_dart().into_dart(),
+            self.previous_revision.into_into_dart().into_dart(),
             self.committed_revision.into_into_dart().into_dart(),
+            self.durable.into_into_dart().into_dart(),
+            self.warnings.into_into_dart().into_dart(),
+            self.selection_rebase.into_into_dart().into_dart(),
             self.object_patches.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -2026,6 +2292,7 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeEditorEvent {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.kind.into_into_dart().into_dart(),
+            self.session_id.into_into_dart().into_dart(),
             self.sequence.into_into_dart().into_dart(),
             self.revision.into_into_dart().into_dart(),
             self.latest_revision.into_into_dart().into_dart(),
@@ -2094,6 +2361,23 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeEditorMetadata>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeObjectDetailsRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [self.object_id.into_into_dart().into_dart()].into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeObjectDetailsRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeObjectDetailsRequest>
+    for crate::editing_api::NativeObjectDetailsRequest
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeObjectDetailsRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeObjectPatch {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2122,7 +2406,11 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeObjectPatch>
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeOpenEditorRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [self.source_path.into_into_dart().into_dart()].into_dart()
+        [
+            self.source_path.into_into_dart().into_dart(),
+            self.project_root.into_into_dart().into_dart(),
+        ]
+        .into_dart()
     }
 }
 impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
@@ -2168,6 +2456,7 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePageSceneReques
         [
             self.page_number.into_into_dart().into_dart(),
             self.expected_revision.into_into_dart().into_dart(),
+            self.priority.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2501,8 +2790,12 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeSceneObject {
             self.bounds.into_into_dart().into_dart(),
             self.transform.into_into_dart().into_dart(),
             self.capability.into_into_dart().into_dart(),
+            self.capability_reason.into_into_dart().into_dart(),
             self.modified_revision.into_into_dart().into_dart(),
             self.runs.into_into_dart().into_dart(),
+            self.layout.into_into_dart().into_dart(),
+            self.font_fingerprint.into_into_dart().into_dart(),
+            self.font_asset_handle.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -2540,6 +2833,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeSceneObjectKind
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeSelectionRebase {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.object_id.into_into_dart().into_dart(),
+            self.start.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
+            self.inserted_utf16_length.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeSelectionRebase
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeSelectionRebase>
+    for crate::editing_api::NativeSelectionRebase
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeSelectionRebase {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeSubmitCommandRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -2559,6 +2875,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeSubmitCommandRe
     for crate::editing_api::NativeSubmitCommandRequest
 {
     fn into_into_dart(self) -> crate::editing_api::NativeSubmitCommandRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeTextLayoutRecipe {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.baseline.into_into_dart().into_dart(),
+            self.line_height.into_into_dart().into_dart(),
+            self.character_spacing.into_into_dart().into_dart(),
+            self.horizontal_scale.into_into_dart().into_dart(),
+            self.direction.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeTextLayoutRecipe
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeTextLayoutRecipe>
+    for crate::editing_api::NativeTextLayoutRecipe
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeTextLayoutRecipe {
         self
     }
 }
@@ -2605,6 +2945,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeTextStyle>
     for crate::editing_api::NativeTextStyle
 {
     fn into_into_dart(self) -> crate::editing_api::NativeTextStyle {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeViewportPriority {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::Background => 0.into_dart(),
+            Self::Preload => 1.into_dart(),
+            Self::Visible => 2.into_dart(),
+            Self::ActiveSelection => 3.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeViewportPriority
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeViewportPriority>
+    for crate::editing_api::NativeViewportPriority
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeViewportPriority {
         self
     }
 }
@@ -2883,11 +3246,26 @@ impl SseEncode for crate::editing_api::NativeAffineTransform {
     }
 }
 
+impl SseEncode for crate::editing_api::NativeCheckpointRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.base_revision, serializer);
+        <String>::sse_encode(self.label, serializer);
+    }
+}
+
 impl SseEncode for crate::editing_api::NativeCommandResult {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.command_id, serializer);
+        <u64>::sse_encode(self.previous_revision, serializer);
         <u64>::sse_encode(self.committed_revision, serializer);
+        <bool>::sse_encode(self.durable, serializer);
+        <Vec<String>>::sse_encode(self.warnings, serializer);
+        <Option<crate::editing_api::NativeSelectionRebase>>::sse_encode(
+            self.selection_rebase,
+            serializer,
+        );
         <Vec<crate::editing_api::NativeObjectPatch>>::sse_encode(self.object_patches, serializer);
     }
 }
@@ -2936,6 +3314,7 @@ impl SseEncode for crate::editing_api::NativeEditorEvent {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::editing_api::NativeEditorEventKind>::sse_encode(self.kind, serializer);
+        <String>::sse_encode(self.session_id, serializer);
         <u64>::sse_encode(self.sequence, serializer);
         <Option<u64>>::sse_encode(self.revision, serializer);
         <Option<u64>>::sse_encode(self.latest_revision, serializer);
@@ -2973,6 +3352,13 @@ impl SseEncode for crate::editing_api::NativeEditorMetadata {
     }
 }
 
+impl SseEncode for crate::editing_api::NativeObjectDetailsRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.object_id, serializer);
+    }
+}
+
 impl SseEncode for crate::editing_api::NativeObjectPatch {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -2990,6 +3376,7 @@ impl SseEncode for crate::editing_api::NativeOpenEditorRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.source_path, serializer);
+        <Option<String>>::sse_encode(self.project_root, serializer);
     }
 }
 
@@ -3011,6 +3398,7 @@ impl SseEncode for crate::editing_api::NativePageSceneRequest {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.page_number, serializer);
         <u64>::sse_encode(self.expected_revision, serializer);
+        <crate::editing_api::NativeViewportPriority>::sse_encode(self.priority, serializer);
     }
 }
 
@@ -3160,8 +3548,12 @@ impl SseEncode for crate::editing_api::NativeSceneObject {
         <crate::editing_api::NativePdfBox>::sse_encode(self.bounds, serializer);
         <crate::editing_api::NativeAffineTransform>::sse_encode(self.transform, serializer);
         <String>::sse_encode(self.capability, serializer);
+        <Option<String>>::sse_encode(self.capability_reason, serializer);
         <u64>::sse_encode(self.modified_revision, serializer);
         <Vec<crate::editing_api::NativeTextRun>>::sse_encode(self.runs, serializer);
+        <Option<crate::editing_api::NativeTextLayoutRecipe>>::sse_encode(self.layout, serializer);
+        <Option<String>>::sse_encode(self.font_fingerprint, serializer);
+        <Option<String>>::sse_encode(self.font_asset_handle, serializer);
     }
 }
 
@@ -3181,6 +3573,16 @@ impl SseEncode for crate::editing_api::NativeSceneObjectKind {
     }
 }
 
+impl SseEncode for crate::editing_api::NativeSelectionRebase {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.object_id, serializer);
+        <u32>::sse_encode(self.start, serializer);
+        <u32>::sse_encode(self.end, serializer);
+        <u32>::sse_encode(self.inserted_utf16_length, serializer);
+    }
+}
+
 impl SseEncode for crate::editing_api::NativeSubmitCommandRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3188,6 +3590,17 @@ impl SseEncode for crate::editing_api::NativeSubmitCommandRequest {
         <String>::sse_encode(self.command_id, serializer);
         <u64>::sse_encode(self.base_revision, serializer);
         <crate::editing_api::NativeEditorCommand>::sse_encode(self.payload, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativeTextLayoutRecipe {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <f64>::sse_encode(self.baseline, serializer);
+        <f64>::sse_encode(self.line_height, serializer);
+        <f64>::sse_encode(self.character_spacing, serializer);
+        <f64>::sse_encode(self.horizontal_scale, serializer);
+        <String>::sse_encode(self.direction, serializer);
     }
 }
 
@@ -3208,6 +3621,24 @@ impl SseEncode for crate::editing_api::NativeTextStyle {
         <u16>::sse_encode(self.font_weight, serializer);
         <bool>::sse_encode(self.italic, serializer);
         <Vec<u8>>::sse_encode(self.color_rgba, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativeViewportPriority {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::editing_api::NativeViewportPriority::Background => 0,
+                crate::editing_api::NativeViewportPriority::Preload => 1,
+                crate::editing_api::NativeViewportPriority::Visible => 2,
+                crate::editing_api::NativeViewportPriority::ActiveSelection => 3,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 
@@ -3257,6 +3688,26 @@ impl SseEncode for Option<crate::editing_api::NativePdfBox> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::editing_api::NativePdfBox>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::editing_api::NativeSelectionRebase> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::editing_api::NativeSelectionRebase>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::editing_api::NativeTextLayoutRecipe> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::editing_api::NativeTextLayoutRecipe>::sse_encode(value, serializer);
         }
     }
 }

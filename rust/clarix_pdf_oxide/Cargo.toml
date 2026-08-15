@@ -15,6 +15,7 @@ rag = ["dep:fastembed", "dep:usearch"]
 
 [dependencies]
 clarix_editing_core = { path = "../clarix_editing_core" }
+clarix_editing_store = { path = "../clarix_editing_store" }
 clarix_pdf_adapter = { path = "../clarix_pdf_adapter" }
 clarix_agent_core = { path = "../clarix_agent_core" }
 flutter_rust_bridge.workspace = true
@@ -26,3 +27,6 @@ image = { version = "0.25", default-features = false, features = ["jpeg", "png"]
 ocr-rs = { version = "=2.3.2", optional = true }
 fastembed = { version = "5.17", default-features = false, features = ["ort-download-binaries-native-tls", "hf-hub-native-tls"], optional = true }
 usearch = { version = "2.26", optional = true }
+
+[dev-dependencies]
+tempfile = "3"

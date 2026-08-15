@@ -97,7 +97,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
+    dynamic raw,
+  );
+
+  @protected
   NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
+
+  @protected
+  NativeObjectDetailsRequest
+  dco_decode_box_autoadd_native_object_details_request(dynamic raw);
 
   @protected
   NativeOpenEditorRequest dco_decode_box_autoadd_native_open_editor_request(
@@ -133,8 +142,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSelectionRebase dco_decode_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  );
+
+  @protected
   NativeSubmitCommandRequest
   dco_decode_box_autoadd_native_submit_command_request(dynamic raw);
+
+  @protected
+  NativeTextLayoutRecipe dco_decode_box_autoadd_native_text_layout_recipe(
+    dynamic raw,
+  );
 
   @protected
   NativeTextStyle dco_decode_box_autoadd_native_text_style(dynamic raw);
@@ -199,6 +218,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeAffineTransform dco_decode_native_affine_transform(dynamic raw);
 
   @protected
+  NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw);
+
+  @protected
   NativeCommandResult dco_decode_native_command_result(dynamic raw);
 
   @protected
@@ -215,6 +237,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw);
+
+  @protected
+  NativeObjectDetailsRequest dco_decode_native_object_details_request(
+    dynamic raw,
+  );
 
   @protected
   NativeObjectPatch dco_decode_native_object_patch(dynamic raw);
@@ -277,15 +304,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw);
 
   @protected
+  NativeSelectionRebase dco_decode_native_selection_rebase(dynamic raw);
+
+  @protected
   NativeSubmitCommandRequest dco_decode_native_submit_command_request(
     dynamic raw,
   );
+
+  @protected
+  NativeTextLayoutRecipe dco_decode_native_text_layout_recipe(dynamic raw);
 
   @protected
   NativeTextRun dco_decode_native_text_run(dynamic raw);
 
   @protected
   NativeTextStyle dco_decode_native_text_style(dynamic raw);
+
+  @protected
+  NativeViewportPriority dco_decode_native_viewport_priority(dynamic raw);
 
   @protected
   String? dco_decode_opt_String(dynamic raw);
@@ -305,6 +341,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw);
+
+  @protected
+  NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  );
+
+  @protected
+  NativeTextLayoutRecipe? dco_decode_opt_box_autoadd_native_text_layout_recipe(
+    dynamic raw,
+  );
 
   @protected
   NativeTextStyle? dco_decode_opt_box_autoadd_native_text_style(dynamic raw);
@@ -416,7 +462,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeCommandResult sse_decode_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeObjectDetailsRequest
+  sse_decode_box_autoadd_native_object_details_request(
     SseDeserializer deserializer,
   );
 
@@ -456,8 +513,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSelectionRebase sse_decode_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeSubmitCommandRequest
   sse_decode_box_autoadd_native_submit_command_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeTextLayoutRecipe sse_decode_box_autoadd_native_text_layout_recipe(
     SseDeserializer deserializer,
   );
 
@@ -544,6 +611,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeCheckpointRequest sse_decode_native_checkpoint_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeCommandResult sse_decode_native_command_result(
     SseDeserializer deserializer,
   );
@@ -570,6 +642,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeEditorMetadata sse_decode_native_editor_metadata(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeObjectDetailsRequest sse_decode_native_object_details_request(
     SseDeserializer deserializer,
   );
 
@@ -666,7 +743,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSelectionRebase sse_decode_native_selection_rebase(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeSubmitCommandRequest sse_decode_native_submit_command_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeTextLayoutRecipe sse_decode_native_text_layout_recipe(
     SseDeserializer deserializer,
   );
 
@@ -675,6 +762,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer);
+
+  @protected
+  NativeViewportPriority sse_decode_native_viewport_priority(
+    SseDeserializer deserializer,
+  );
 
   @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
@@ -694,6 +786,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSelectionRebase? sse_decode_opt_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeTextLayoutRecipe? sse_decode_opt_box_autoadd_native_text_layout_recipe(
     SseDeserializer deserializer,
   );
 
@@ -827,8 +929,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_checkpoint_request(
+    NativeCheckpointRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_command_result(
     NativeCommandResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_object_details_request(
+    NativeObjectDetailsRequest self,
     SseSerializer serializer,
   );
 
@@ -875,8 +989,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_selection_rebase(
+    NativeSelectionRebase self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_submit_command_request(
     NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_text_layout_recipe(
+    NativeTextLayoutRecipe self,
     SseSerializer serializer,
   );
 
@@ -983,6 +1109,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_checkpoint_request(
+    NativeCheckpointRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_command_result(
     NativeCommandResult self,
     SseSerializer serializer,
@@ -1015,6 +1147,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_editor_metadata(
     NativeEditorMetadata self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_object_details_request(
+    NativeObjectDetailsRequest self,
     SseSerializer serializer,
   );
 
@@ -1136,8 +1274,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_selection_rebase(
+    NativeSelectionRebase self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_submit_command_request(
     NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_text_layout_recipe(
+    NativeTextLayoutRecipe self,
     SseSerializer serializer,
   );
 
@@ -1147,6 +1297,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_text_style(
     NativeTextStyle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_viewport_priority(
+    NativeViewportPriority self,
     SseSerializer serializer,
   );
 
@@ -1171,6 +1327,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_native_pdf_box(
     NativePdfBox? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_selection_rebase(
+    NativeSelectionRebase? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_text_layout_recipe(
+    NativeTextLayoutRecipe? self,
     SseSerializer serializer,
   );
 

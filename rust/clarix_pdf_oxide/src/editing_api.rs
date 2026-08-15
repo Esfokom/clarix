@@ -5,8 +5,10 @@ use std::sync::Arc;
 use clarix_editing_core::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    ObjectId, ObjectPatch, PdfBox, SessionId, TextRun, TextStyle, Utf16Range,
+    ObjectId, ObjectPatch, PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SessionId,
+    SourceReference, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
+use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
 use clarix_pdf_adapter::{PdfImporter, PdfOxideImporter, SourceRef};
 
 use crate::frb_generated::StreamSink;
@@ -16,6 +18,7 @@ const EDITOR_SCHEMA_VERSION: u32 = 1;
 #[derive(Debug, Clone)]
 pub struct NativeOpenEditorRequest {
     pub source_path: String,
+    pub project_root: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +35,20 @@ pub struct NativeEditorMetadata {
 pub struct NativePageSceneRequest {
     pub page_number: u32,
     pub expected_revision: u64,
+    pub priority: NativeViewportPriority,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeViewportPriority {
+    Background,
+    Preload,
+    Visible,
+    ActiveSelection,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeObjectDetailsRequest {
+    pub object_id: String,
 }
 
 #[derive(Debug, Clone)]
@@ -60,8 +77,21 @@ pub struct NativeSceneObject {
     pub bounds: NativePdfBox,
     pub transform: NativeAffineTransform,
     pub capability: String,
+    pub capability_reason: Option<String>,
     pub modified_revision: u64,
     pub runs: Vec<NativeTextRun>,
+    pub layout: Option<NativeTextLayoutRecipe>,
+    pub font_fingerprint: Option<String>,
+    pub font_asset_handle: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeTextLayoutRecipe {
+    pub baseline: f64,
+    pub line_height: f64,
+    pub character_spacing: f64,
+    pub horizontal_scale: f64,
+    pub direction: String,
 }
 
 #[derive(Debug, Clone)]
@@ -137,8 +167,26 @@ pub struct NativeEditorCommand {
 #[derive(Debug, Clone)]
 pub struct NativeCommandResult {
     pub command_id: String,
+    pub previous_revision: u64,
     pub committed_revision: u64,
+    pub durable: bool,
+    pub warnings: Vec<String>,
+    pub selection_rebase: Option<NativeSelectionRebase>,
     pub object_patches: Vec<NativeObjectPatch>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeSelectionRebase {
+    pub object_id: String,
+    pub start: u32,
+    pub end: u32,
+    pub inserted_utf16_length: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeCheckpointRequest {
+    pub base_revision: u64,
+    pub label: String,
 }
 
 #[derive(Debug, Clone)]
@@ -163,6 +211,7 @@ pub enum NativeEditorEventKind {
 #[derive(Debug, Clone)]
 pub struct NativeEditorEvent {
     pub kind: NativeEditorEventKind,
+    pub session_id: String,
     pub sequence: u64,
     pub revision: Option<u64>,
     pub latest_revision: Option<u64>,
@@ -171,7 +220,8 @@ pub struct NativeEditorEvent {
 
 pub struct NativeEditorSession {
     actor: EditorSessionActor,
-    importer: PdfOxideImporter,
+    page_service: PageSceneService,
+    _repository: Arc<SqliteProjectRepository>,
     source: SourceRef,
     document_id: DocumentId,
     page_count: u32,
@@ -186,10 +236,44 @@ impl NativeEditorSession {
         let document_id = DocumentId::from_source_key(source.fingerprint());
         let model = DocumentModel::new(document_id, source.fingerprint().to_owned(), Vec::new())
             .map_err(|error| format!("invalid_document: {error}"))?;
+        let project_root = request
+            .project_root
+            .map(std::path::PathBuf::from)
+            .or_else(|| std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from))
+            .ok_or_else(|| "project_location_unavailable: LOCALAPPDATA is not set".to_owned())?;
+        let repository = Arc::new(
+            SqliteProjectRepository::open(
+                ProjectLocation::under(&project_root, document_id),
+                ProjectSeed {
+                    model: model.clone(),
+                    undo_cursor: 0,
+                    materialized_revision: None,
+                },
+            )
+            .map_err(|error| format!("sidecar_open_failed: {error}"))?,
+        );
         let session_id = SessionId::new();
+        let actor = EditorSessionActor::spawn_recovered(
+            session_id,
+            repository.clone(),
+            RecoveryRequest {
+                document_id,
+                source_fingerprint: source.fingerprint().to_owned(),
+            },
+        )
+        .map_err(editing_error)?;
+        let page_service = PageSceneService::new(
+            document_id,
+            SourceReference::new(source.fingerprint(), source.path()),
+            inspection.page_count,
+            2,
+            Arc::new(importer),
+        )
+        .map_err(|error| format!("{}: {error}", error.code()))?;
         Ok(Self {
-            actor: EditorSessionActor::spawn_with_session(session_id, model),
-            importer,
+            actor,
+            page_service,
+            _repository: repository,
             source,
             document_id,
             page_count: inspection.page_count,
@@ -220,9 +304,13 @@ impl NativeEditorSession {
         }
         if snapshot.page(request.page_number).is_none() {
             let imported = self
-                .importer
-                .inspect_page(&self.source, request.page_number)
-                .map_err(adapter_error)?;
+                .page_service
+                .request(PageSceneRequest {
+                    page_number: request.page_number,
+                    expected_revision,
+                    priority: viewport_priority(request.priority),
+                })
+                .map_err(|error| format!("{}: {error}", error.code()))?;
             self.actor
                 .hydrate_page(imported.page, expected_revision)
                 .map_err(editing_error)?;
@@ -255,11 +343,41 @@ impl NativeEditorSession {
         let command_id = CommandId::from_str(&request.command_id)
             .map_err(|error| format!("invalid_command_id: {error}"))?;
         let payload = editor_command(request.payload)?;
-        self.actor
+        let result = self
+            .actor
             .submit(CommandEnvelope::user(
                 command_id,
                 DocumentRevision::from_value(request.base_revision),
                 payload,
+            ))
+            .map_err(editing_error)?;
+        self.page_service.set_revision(result.committed_revision);
+        Ok(native_command_result(result))
+    }
+
+    pub fn object_details(
+        &self,
+        request: NativeObjectDetailsRequest,
+    ) -> Result<NativeSceneObject, String> {
+        let object_id = parse_object_id(&request.object_id)?;
+        let snapshot = self.actor.snapshot().map_err(editing_error)?;
+        snapshot
+            .object(object_id)
+            .map(native_scene_object)
+            .ok_or_else(|| format!("object_not_found: {object_id}"))
+    }
+
+    pub fn checkpoint(
+        &self,
+        request: NativeCheckpointRequest,
+    ) -> Result<NativeCommandResult, String> {
+        self.actor
+            .submit(CommandEnvelope::user(
+                CommandId::new(),
+                DocumentRevision::from_value(request.base_revision),
+                EditorCommand::CreateCheckpoint {
+                    label: request.label,
+                },
             ))
             .map(native_command_result)
             .map_err(editing_error)
@@ -268,12 +386,13 @@ impl NativeEditorSession {
     pub fn events(&self, sink: StreamSink<NativeEditorEvent>) -> Result<(), String> {
         let events = self.actor.subscribe().map_err(editing_error)?;
         let event_sequence = Arc::clone(&self.event_sequence);
+        let session_id = self.actor.session_id().to_string();
         std::thread::Builder::new()
             .name(format!("clarix-editor-events-{}", self.actor.session_id()))
             .spawn(move || {
                 for event in events {
                     let sequence = event_sequence.fetch_add(1, Ordering::AcqRel) + 1;
-                    let native = native_event(event, sequence);
+                    let native = native_event(event, &session_id, sequence);
                     if sink.add(native).is_err() {
                         break;
                     }
@@ -390,8 +509,18 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
             bounds: native_box(object.bounds()),
             transform: native_transform(object.transform()),
             capability: format!("{:?}", object.capability()).to_ascii_lowercase(),
+            capability_reason: block.capability_reason().map(|reason| reason.code.clone()),
             modified_revision: object.modified_revision().value(),
             runs: block.runs.iter().map(native_text_run).collect(),
+            layout: Some(NativeTextLayoutRecipe {
+                baseline: block.layout.baseline,
+                line_height: block.layout.line_height,
+                character_spacing: block.layout.character_spacing,
+                horizontal_scale: block.layout.horizontal_scale,
+                direction: format!("{:?}", block.layout.direction).to_ascii_lowercase(),
+            }),
+            font_fingerprint: block.font().map(|font| font.bytes_sha256.clone()),
+            font_asset_handle: block.font().and_then(|font| font.asset_id.clone()),
         },
         _ => NativeSceneObject {
             kind: NativeSceneObjectKind::Unsupported,
@@ -401,8 +530,12 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
             bounds: native_box(object.bounds()),
             transform: native_transform(object.transform()),
             capability: format!("{:?}", object.capability()).to_ascii_lowercase(),
+            capability_reason: None,
             modified_revision: object.modified_revision().value(),
             runs: Vec::new(),
+            layout: None,
+            font_fingerprint: None,
+            font_asset_handle: None,
         },
     }
 }
@@ -410,7 +543,20 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
 fn native_command_result(result: CommandResult) -> NativeCommandResult {
     NativeCommandResult {
         command_id: result.command_id.to_string(),
+        previous_revision: result.previous_revision.value(),
         committed_revision: result.committed_revision.value(),
+        durable: result.durable,
+        warnings: result
+            .warnings
+            .into_iter()
+            .map(|warning| format!("{}: {}", warning.code, warning.message))
+            .collect(),
+        selection_rebase: result.selection_rebase.map(|rebase| NativeSelectionRebase {
+            object_id: rebase.object_id.to_string(),
+            start: rebase.replaced_range.start,
+            end: rebase.replaced_range.end,
+            inserted_utf16_length: rebase.inserted_utf16_length,
+        }),
         object_patches: result
             .object_patches
             .into_iter()
@@ -467,10 +613,11 @@ fn native_transform(transform: AffineTransform) -> NativeAffineTransform {
     }
 }
 
-fn native_event(event: EditorEvent, sequence: u64) -> NativeEditorEvent {
+fn native_event(event: EditorEvent, session_id: &str, sequence: u64) -> NativeEditorEvent {
     match event {
         EditorEvent::Ready { revision } => NativeEditorEvent {
             kind: NativeEditorEventKind::Ready,
+            session_id: session_id.into(),
             sequence,
             revision: Some(revision.value()),
             latest_revision: None,
@@ -478,6 +625,7 @@ fn native_event(event: EditorEvent, sequence: u64) -> NativeEditorEvent {
         },
         EditorEvent::CommandCommitted { result } => NativeEditorEvent {
             kind: NativeEditorEventKind::CommandCommitted,
+            session_id: session_id.into(),
             sequence,
             revision: Some(result.committed_revision.value()),
             latest_revision: None,
@@ -485,6 +633,7 @@ fn native_event(event: EditorEvent, sequence: u64) -> NativeEditorEvent {
         },
         EditorEvent::Lagged { latest_revision } => NativeEditorEvent {
             kind: NativeEditorEventKind::Lagged,
+            session_id: session_id.into(),
             sequence,
             revision: None,
             latest_revision: Some(latest_revision.value()),
@@ -492,11 +641,21 @@ fn native_event(event: EditorEvent, sequence: u64) -> NativeEditorEvent {
         },
         EditorEvent::Closed { revision } => NativeEditorEvent {
             kind: NativeEditorEventKind::Closed,
+            session_id: session_id.into(),
             sequence,
             revision: Some(revision.value()),
             latest_revision: None,
             result: None,
         },
+    }
+}
+
+fn viewport_priority(priority: NativeViewportPriority) -> ViewportPriority {
+    match priority {
+        NativeViewportPriority::Background => ViewportPriority::Background,
+        NativeViewportPriority::Preload => ViewportPriority::Preload,
+        NativeViewportPriority::Visible => ViewportPriority::Visible,
+        NativeViewportPriority::ActiveSelection => ViewportPriority::ActiveSelection,
     }
 }
 

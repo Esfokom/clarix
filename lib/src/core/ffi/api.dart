@@ -7,7 +7,7 @@ import 'frb_generated.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `rag_disabled_response`
+// These functions are ignored because they are not marked as `pub`: `rag_backend`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PdfIndexEvent`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
@@ -15,15 +15,15 @@ Future<NativePdfComposeResponse> composePdfs({
   required NativePdfComposeRequest request,
 }) => RustLib.instance.api.crateApiComposePdfs(request: request);
 
+Future<NativeRagIndexResponse> localRagIndex({
+  required NativeRagIndexRequest request,
+}) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
+
 Future<NativePdfAnnotations> readPdfAnnotations({required String path}) =>
     RustLib.instance.api.crateApiReadPdfAnnotations(path: path);
 
 Future<void> savePdfAnnotations({required NativePdfSaveRequest request}) =>
     RustLib.instance.api.crateApiSavePdfAnnotations(request: request);
-
-Future<NativeRagIndexResponse> localRagIndex({
-  required NativeRagIndexRequest request,
-}) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
 
 Future<NativeRagIndexResponse> localRagValidate({
   required NativeRagIndexRequest request,

@@ -1,7 +1,7 @@
 use clarix_editing_core::{
-    AffineTransform, CapabilityReason, DocumentObject, EditCapability, ObjectId, PageId,
-    PageImportRequest, PageImportSource, PageNode, PdfBox, SourceBinding, TextBlock,
-    TextLayoutRecipe, TextStyle, WritingDirection,
+    AffineTransform, CapabilityReason, DocumentObject, EditCapability, FontRef, FontSource,
+    ObjectId, PageId, PageImportRequest, PageImportSource, PageNode, PdfBox, SourceBinding,
+    SourceGlyph, TextBlock, TextLayoutRecipe, TextStyle, WritingDirection,
 };
 use pdf_oxide::PdfDocument;
 use sha2::{Digest, Sha256};
@@ -70,6 +70,7 @@ impl PdfImporter for PdfOxideImporter {
         let spans = document
             .extract_spans(page_index)
             .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?;
+        let simple_source = simple_text_stream(source, page_number, spans.len());
         let mut objects = Vec::new();
 
         for (occurrence, span) in spans
@@ -93,11 +94,12 @@ impl PdfImporter for PdfOxideImporter {
                 normalized(span.bbox.height),
             );
             let object_id = ObjectId::from_source_key(&object_key);
+            let qualified = simple_source && qualifies_base14_ascii(&span);
             let binding = SourceBinding {
                 adapter_id: ADAPTER_ID.into(),
                 source_revision: source.fingerprint().into(),
                 source_key: object_key,
-                confidence: 0.5,
+                confidence: if qualified { 1.0 } else { 0.5 },
             };
             let angle = f64::from(span.rotation_degrees).to_radians();
             let transform = AffineTransform::new(
@@ -109,17 +111,15 @@ impl PdfImporter for PdfOxideImporter {
                 0.0,
             )
             .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?;
+            let font_name = span.font_name.clone();
             let mut block = TextBlock::plain(object_id, page_id, span.text, bounds)
                 .with_source_binding(binding)
                 .with_transform(transform)
-                .with_capability(
-                    EditCapability::ReadOnly,
-                    Some(CapabilityReason {
-                        code: "font_encoding_incomplete".into(),
-                        message: "the font lacks a verified reversible glyph encoding and exact source operator locator"
-                            .into(),
-                    }),
-                );
+                .with_capability(if qualified { EditCapability::Editable } else { EditCapability::ReadOnly }, if qualified { None } else { Some(CapabilityReason {
+                    code: "font_encoding_incomplete".into(),
+                    message: "the font lacks a verified reversible glyph encoding and exact source operator locator"
+                        .into(),
+                }) });
             block.runs[0].style = TextStyle {
                 font_family: Some(span.font_name),
                 font_size: f64::from(span.font_size),
@@ -146,6 +146,20 @@ impl PdfImporter for PdfOxideImporter {
                 },
                 ..TextLayoutRecipe::default()
             };
+            if qualified {
+                let layout = block.layout.clone();
+                block = block.with_text_contract(
+                    FontRef {
+                        postscript_name: font_name.clone(),
+                        bytes_sha256: hex_digest(font_name.as_bytes()),
+                        asset_id: Some(format!("pdf-base14:{font_name}")),
+                        source: FontSource::ApprovedFallback,
+                        embeddable: true,
+                    },
+                    layout,
+                    win_ansi_ascii_glyphs(),
+                );
+            }
             objects.push(DocumentObject::text(block));
         }
 
@@ -201,4 +215,62 @@ fn hex_digest(bytes: &[u8]) -> String {
 
 fn color_channel(value: f32) -> u8 {
     (value.clamp(0.0, 1.0) * 255.0).round() as u8
+}
+
+fn qualifies_base14_ascii(span: &pdf_oxide::layout::TextSpan) -> bool {
+    const BASE14: [&str; 12] = [
+        "Courier",
+        "Courier-Bold",
+        "Courier-Oblique",
+        "Courier-BoldOblique",
+        "Helvetica",
+        "Helvetica-Bold",
+        "Helvetica-Oblique",
+        "Helvetica-BoldOblique",
+        "Times-Roman",
+        "Times-Bold",
+        "Times-Italic",
+        "Times-BoldItalic",
+    ];
+    BASE14.contains(&span.font_name.as_str()) && span.text.is_ascii() && span.wmode == 0
+}
+
+fn simple_text_stream(source: &SourceRef, page_number: u32, expected_spans: usize) -> bool {
+    let Ok(document) = lopdf::Document::load(source.path()) else {
+        return false;
+    };
+    let pages = document.get_pages();
+    let Some(page_id) = pages.get(&page_number).copied() else {
+        return false;
+    };
+    if document.get_page_contents(page_id).len() != 1 {
+        return false;
+    }
+    let Ok(bytes) = document.get_page_content(page_id) else {
+        return false;
+    };
+    let Ok(content) = lopdf::content::Content::decode(&bytes) else {
+        return false;
+    };
+    let text_operations = content
+        .operations
+        .iter()
+        .filter(|operation| matches!(operation.operator.as_str(), "Tj" | "TJ" | "'" | "\""))
+        .count();
+    text_operations == expected_spans
+        && !content
+            .operations
+            .iter()
+            .any(|operation| operation.operator == "Do")
+}
+
+fn win_ansi_ascii_glyphs() -> Vec<SourceGlyph> {
+    (32_u32..=126)
+        .map(|code| SourceGlyph {
+            utf16_start: code - 32,
+            utf16_end: code - 31,
+            character_code: code,
+            glyph_id: code,
+        })
+        .collect()
 }

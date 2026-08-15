@@ -66,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1698049259;
+  int get rustContentHash => -619717711;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -78,6 +78,11 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({
+    required NativeEditorSession that,
+    required NativeCheckpointRequest request,
+  });
+
   Future<void> crateEditingApiNativeEditorSessionClose({
     required NativeEditorSession that,
   });
@@ -88,6 +93,11 @@ abstract class RustLibApi extends BaseApi {
 
   Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({
     required NativeEditorSession that,
+  });
+
+  Future<NativeSceneObject> crateEditingApiNativeEditorSessionObjectDetails({
+    required NativeEditorSession that,
+    required NativeObjectDetailsRequest request,
   });
 
   Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({
@@ -183,6 +193,44 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({
+    required NativeEditorSession that,
+    required NativeCheckpointRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_checkpoint_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_command_result,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCheckpointConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionCheckpointConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_checkpoint",
+        argNames: ["that", "request"],
+      );
+
+  @override
   Future<void> crateEditingApiNativeEditorSessionClose({
     required NativeEditorSession that,
   }) {
@@ -197,7 +245,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 2,
             port: port_,
           );
         },
@@ -236,7 +284,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 2,
+              funcId: 3,
               port: port_,
             );
           },
@@ -274,7 +322,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 4,
             port: port_,
           );
         },
@@ -296,6 +344,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<NativeSceneObject> crateEditingApiNativeEditorSessionObjectDetails({
+    required NativeEditorSession that,
+    required NativeObjectDetailsRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_object_details_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_scene_object,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionObjectDetailsConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionObjectDetailsConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_object_details",
+        argNames: ["that", "request"],
+      );
+
+  @override
   Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({
     required NativeOpenEditorRequest request,
   }) {
@@ -310,7 +399,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 4,
+            funcId: 6,
             port: port_,
           );
         },
@@ -349,7 +438,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 7,
             port: port_,
           );
         },
@@ -390,7 +479,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 8,
             port: port_,
           );
         },
@@ -433,7 +522,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 7,
+              funcId: 9,
               port: port_,
             );
           },
@@ -471,7 +560,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 10,
             port: port_,
           );
         },
@@ -504,7 +593,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 11,
             port: port_,
           );
         },
@@ -543,7 +632,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 12,
             port: port_,
           );
         },
@@ -581,7 +670,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 13,
             port: port_,
           );
         },
@@ -617,7 +706,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 12,
+            funcId: 14,
             port: port_,
           );
         },
@@ -647,7 +736,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 15,
             port: port_,
           );
         },
@@ -677,7 +766,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 16,
             port: port_,
           );
         },
@@ -709,7 +798,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 17,
             port: port_,
           );
         },
@@ -741,7 +830,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 18,
             port: port_,
           );
         },
@@ -773,7 +862,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 19,
             port: port_,
           );
         },
@@ -805,7 +894,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 20,
             port: port_,
           );
         },
@@ -950,11 +1039,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_checkpoint_request(raw);
+  }
+
+  @protected
   NativeCommandResult dco_decode_box_autoadd_native_command_result(
     dynamic raw,
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_native_command_result(raw);
+  }
+
+  @protected
+  NativeObjectDetailsRequest
+  dco_decode_box_autoadd_native_object_details_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_object_details_request(raw);
   }
 
   @protected
@@ -1012,10 +1116,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeSelectionRebase dco_decode_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_selection_rebase(raw);
+  }
+
+  @protected
   NativeSubmitCommandRequest
   dco_decode_box_autoadd_native_submit_command_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_native_submit_command_request(raw);
+  }
+
+  @protected
+  NativeTextLayoutRecipe dco_decode_box_autoadd_native_text_layout_recipe(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_text_layout_recipe(raw);
   }
 
   @protected
@@ -1153,15 +1273,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeCheckpointRequest(
+      baseRevision: dco_decode_u_64(arr[0]),
+      label: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   NativeCommandResult dco_decode_native_command_result(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 3)
-      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return NativeCommandResult(
       commandId: dco_decode_String(arr[0]),
-      committedRevision: dco_decode_u_64(arr[1]),
-      objectPatches: dco_decode_list_native_object_patch(arr[2]),
+      previousRevision: dco_decode_u_64(arr[1]),
+      committedRevision: dco_decode_u_64(arr[2]),
+      durable: dco_decode_bool(arr[3]),
+      warnings: dco_decode_list_String(arr[4]),
+      selectionRebase: dco_decode_opt_box_autoadd_native_selection_rebase(
+        arr[5],
+      ),
+      objectPatches: dco_decode_list_native_object_patch(arr[6]),
     );
   }
 
@@ -1197,14 +1335,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeEditorEvent dco_decode_native_editor_event(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 5)
-      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
     return NativeEditorEvent(
       kind: dco_decode_native_editor_event_kind(arr[0]),
-      sequence: dco_decode_u_64(arr[1]),
-      revision: dco_decode_opt_box_autoadd_u_64(arr[2]),
-      latestRevision: dco_decode_opt_box_autoadd_u_64(arr[3]),
-      result: dco_decode_opt_box_autoadd_native_command_result(arr[4]),
+      sessionId: dco_decode_String(arr[1]),
+      sequence: dco_decode_u_64(arr[2]),
+      revision: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      latestRevision: dco_decode_opt_box_autoadd_u_64(arr[4]),
+      result: dco_decode_opt_box_autoadd_native_command_result(arr[5]),
     );
   }
 
@@ -1231,6 +1370,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeObjectDetailsRequest dco_decode_native_object_details_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return NativeObjectDetailsRequest(objectId: dco_decode_String(arr[0]));
+  }
+
+  @protected
   NativeObjectPatch dco_decode_native_object_patch(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1251,9 +1401,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeOpenEditorRequest dco_decode_native_open_editor_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 1)
-      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
-    return NativeOpenEditorRequest(sourcePath: dco_decode_String(arr[0]));
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeOpenEditorRequest(
+      sourcePath: dco_decode_String(arr[0]),
+      projectRoot: dco_decode_opt_String(arr[1]),
+    );
   }
 
   @protected
@@ -1277,11 +1430,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativePageSceneRequest dco_decode_native_page_scene_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return NativePageSceneRequest(
       pageNumber: dco_decode_u_32(arr[0]),
       expectedRevision: dco_decode_u_64(arr[1]),
+      priority: dco_decode_native_viewport_priority(arr[2]),
     );
   }
 
@@ -1481,8 +1635,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeSceneObject dco_decode_native_scene_object(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 9)
-      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
     return NativeSceneObject(
       kind: dco_decode_native_scene_object_kind(arr[0]),
       objectId: dco_decode_String(arr[1]),
@@ -1491,8 +1645,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       bounds: dco_decode_native_pdf_box(arr[4]),
       transform: dco_decode_native_affine_transform(arr[5]),
       capability: dco_decode_String(arr[6]),
-      modifiedRevision: dco_decode_u_64(arr[7]),
-      runs: dco_decode_list_native_text_run(arr[8]),
+      capabilityReason: dco_decode_opt_String(arr[7]),
+      modifiedRevision: dco_decode_u_64(arr[8]),
+      runs: dco_decode_list_native_text_run(arr[9]),
+      layout: dco_decode_opt_box_autoadd_native_text_layout_recipe(arr[10]),
+      fontFingerprint: dco_decode_opt_String(arr[11]),
+      fontAssetHandle: dco_decode_opt_String(arr[12]),
     );
   }
 
@@ -1500,6 +1658,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return NativeSceneObjectKind.values[raw as int];
+  }
+
+  @protected
+  NativeSelectionRebase dco_decode_native_selection_rebase(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeSelectionRebase(
+      objectId: dco_decode_String(arr[0]),
+      start: dco_decode_u_32(arr[1]),
+      end: dco_decode_u_32(arr[2]),
+      insertedUtf16Length: dco_decode_u_32(arr[3]),
+    );
   }
 
   @protected
@@ -1515,6 +1687,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       commandId: dco_decode_String(arr[1]),
       baseRevision: dco_decode_u_64(arr[2]),
       payload: dco_decode_native_editor_command(arr[3]),
+    );
+  }
+
+  @protected
+  NativeTextLayoutRecipe dco_decode_native_text_layout_recipe(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeTextLayoutRecipe(
+      baseline: dco_decode_f_64(arr[0]),
+      lineHeight: dco_decode_f_64(arr[1]),
+      characterSpacing: dco_decode_f_64(arr[2]),
+      horizontalScale: dco_decode_f_64(arr[3]),
+      direction: dco_decode_String(arr[4]),
     );
   }
 
@@ -1544,6 +1731,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       italic: dco_decode_bool(arr[3]),
       colorRgba: dco_decode_list_prim_u_8_strict(arr[4]),
     );
+  }
+
+  @protected
+  NativeViewportPriority dco_decode_native_viewport_priority(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeViewportPriority.values[raw as int];
   }
 
   @protected
@@ -1582,6 +1775,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_native_pdf_box(raw);
+  }
+
+  @protected
+  NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_selection_rebase(raw);
+  }
+
+  @protected
+  NativeTextLayoutRecipe? dco_decode_opt_box_autoadd_native_text_layout_recipe(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_text_layout_recipe(raw);
   }
 
   @protected
@@ -1822,11 +2035,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_checkpoint_request(deserializer));
+  }
+
+  @protected
   NativeCommandResult sse_decode_box_autoadd_native_command_result(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_native_command_result(deserializer));
+  }
+
+  @protected
+  NativeObjectDetailsRequest
+  sse_decode_box_autoadd_native_object_details_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_object_details_request(deserializer));
   }
 
   @protected
@@ -1886,12 +2116,28 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeSelectionRebase sse_decode_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_selection_rebase(deserializer));
+  }
+
+  @protected
   NativeSubmitCommandRequest
   sse_decode_box_autoadd_native_submit_command_request(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_native_submit_command_request(deserializer));
+  }
+
+  @protected
+  NativeTextLayoutRecipe sse_decode_box_autoadd_native_text_layout_recipe(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_text_layout_recipe(deserializer));
   }
 
   @protected
@@ -2113,16 +2359,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeCheckpointRequest sse_decode_native_checkpoint_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return NativeCheckpointRequest(
+      baseRevision: var_baseRevision,
+      label: var_label,
+    );
+  }
+
+  @protected
   NativeCommandResult sse_decode_native_command_result(
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_commandId = sse_decode_String(deserializer);
+    var var_previousRevision = sse_decode_u_64(deserializer);
     var var_committedRevision = sse_decode_u_64(deserializer);
+    var var_durable = sse_decode_bool(deserializer);
+    var var_warnings = sse_decode_list_String(deserializer);
+    var var_selectionRebase =
+        sse_decode_opt_box_autoadd_native_selection_rebase(deserializer);
     var var_objectPatches = sse_decode_list_native_object_patch(deserializer);
     return NativeCommandResult(
       commandId: var_commandId,
+      previousRevision: var_previousRevision,
       committedRevision: var_committedRevision,
+      durable: var_durable,
+      warnings: var_warnings,
+      selectionRebase: var_selectionRebase,
       objectPatches: var_objectPatches,
     );
   }
@@ -2177,6 +2445,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_kind = sse_decode_native_editor_event_kind(deserializer);
+    var var_sessionId = sse_decode_String(deserializer);
     var var_sequence = sse_decode_u_64(deserializer);
     var var_revision = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_latestRevision = sse_decode_opt_box_autoadd_u_64(deserializer);
@@ -2185,6 +2454,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     return NativeEditorEvent(
       kind: var_kind,
+      sessionId: var_sessionId,
       sequence: var_sequence,
       revision: var_revision,
       latestRevision: var_latestRevision,
@@ -2223,6 +2493,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeObjectDetailsRequest sse_decode_native_object_details_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    return NativeObjectDetailsRequest(objectId: var_objectId);
+  }
+
+  @protected
   NativeObjectPatch sse_decode_native_object_patch(
     SseDeserializer deserializer,
   ) {
@@ -2253,7 +2532,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_sourcePath = sse_decode_String(deserializer);
-    return NativeOpenEditorRequest(sourcePath: var_sourcePath);
+    var var_projectRoot = sse_decode_opt_String(deserializer);
+    return NativeOpenEditorRequest(
+      sourcePath: var_sourcePath,
+      projectRoot: var_projectRoot,
+    );
   }
 
   @protected
@@ -2284,9 +2567,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_pageNumber = sse_decode_u_32(deserializer);
     var var_expectedRevision = sse_decode_u_64(deserializer);
+    var var_priority = sse_decode_native_viewport_priority(deserializer);
     return NativePageSceneRequest(
       pageNumber: var_pageNumber,
       expectedRevision: var_expectedRevision,
+      priority: var_priority,
     );
   }
 
@@ -2517,8 +2802,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_bounds = sse_decode_native_pdf_box(deserializer);
     var var_transform = sse_decode_native_affine_transform(deserializer);
     var var_capability = sse_decode_String(deserializer);
+    var var_capabilityReason = sse_decode_opt_String(deserializer);
     var var_modifiedRevision = sse_decode_u_64(deserializer);
     var var_runs = sse_decode_list_native_text_run(deserializer);
+    var var_layout = sse_decode_opt_box_autoadd_native_text_layout_recipe(
+      deserializer,
+    );
+    var var_fontFingerprint = sse_decode_opt_String(deserializer);
+    var var_fontAssetHandle = sse_decode_opt_String(deserializer);
     return NativeSceneObject(
       kind: var_kind,
       objectId: var_objectId,
@@ -2527,8 +2818,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       bounds: var_bounds,
       transform: var_transform,
       capability: var_capability,
+      capabilityReason: var_capabilityReason,
       modifiedRevision: var_modifiedRevision,
       runs: var_runs,
+      layout: var_layout,
+      fontFingerprint: var_fontFingerprint,
+      fontAssetHandle: var_fontAssetHandle,
     );
   }
 
@@ -2539,6 +2834,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_i_32(deserializer);
     return NativeSceneObjectKind.values[inner];
+  }
+
+  @protected
+  NativeSelectionRebase sse_decode_native_selection_rebase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_insertedUtf16Length = sse_decode_u_32(deserializer);
+    return NativeSelectionRebase(
+      objectId: var_objectId,
+      start: var_start,
+      end: var_end,
+      insertedUtf16Length: var_insertedUtf16Length,
+    );
   }
 
   @protected
@@ -2555,6 +2867,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       commandId: var_commandId,
       baseRevision: var_baseRevision,
       payload: var_payload,
+    );
+  }
+
+  @protected
+  NativeTextLayoutRecipe sse_decode_native_text_layout_recipe(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_baseline = sse_decode_f_64(deserializer);
+    var var_lineHeight = sse_decode_f_64(deserializer);
+    var var_characterSpacing = sse_decode_f_64(deserializer);
+    var var_horizontalScale = sse_decode_f_64(deserializer);
+    var var_direction = sse_decode_String(deserializer);
+    return NativeTextLayoutRecipe(
+      baseline: var_baseline,
+      lineHeight: var_lineHeight,
+      characterSpacing: var_characterSpacing,
+      horizontalScale: var_horizontalScale,
+      direction: var_direction,
     );
   }
 
@@ -2582,6 +2913,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       italic: var_italic,
       colorRgba: var_colorRgba,
     );
+  }
+
+  @protected
+  NativeViewportPriority sse_decode_native_viewport_priority(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeViewportPriority.values[inner];
   }
 
   @protected
@@ -2640,6 +2980,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_native_pdf_box(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeSelectionRebase? sse_decode_opt_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_selection_rebase(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeTextLayoutRecipe? sse_decode_opt_box_autoadd_native_text_layout_recipe(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_text_layout_recipe(deserializer));
     } else {
       return null;
     }
@@ -2932,12 +3298,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_native_checkpoint_request(
+    NativeCheckpointRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_checkpoint_request(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_native_command_result(
     NativeCommandResult self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_command_result(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_object_details_request(
+    NativeObjectDetailsRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_object_details_request(self, serializer);
   }
 
   @protected
@@ -3004,12 +3388,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_native_selection_rebase(
+    NativeSelectionRebase self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_selection_rebase(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_native_submit_command_request(
     NativeSubmitCommandRequest self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_submit_command_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_text_layout_recipe(
+    NativeTextLayoutRecipe self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_text_layout_recipe(self, serializer);
   }
 
   @protected
@@ -3213,13 +3615,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_checkpoint_request(
+    NativeCheckpointRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.label, serializer);
+  }
+
+  @protected
   void sse_encode_native_command_result(
     NativeCommandResult self,
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.previousRevision, serializer);
     sse_encode_u_64(self.committedRevision, serializer);
+    sse_encode_bool(self.durable, serializer);
+    sse_encode_list_String(self.warnings, serializer);
+    sse_encode_opt_box_autoadd_native_selection_rebase(
+      self.selectionRebase,
+      serializer,
+    );
     sse_encode_list_native_object_patch(self.objectPatches, serializer);
   }
 
@@ -3262,6 +3681,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_editor_event_kind(self.kind, serializer);
+    sse_encode_String(self.sessionId, serializer);
     sse_encode_u_64(self.sequence, serializer);
     sse_encode_opt_box_autoadd_u_64(self.revision, serializer);
     sse_encode_opt_box_autoadd_u_64(self.latestRevision, serializer);
@@ -3292,6 +3712,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_object_details_request(
+    NativeObjectDetailsRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+  }
+
+  @protected
   void sse_encode_native_object_patch(
     NativeObjectPatch self,
     SseSerializer serializer,
@@ -3316,6 +3745,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.sourcePath, serializer);
+    sse_encode_opt_String(self.projectRoot, serializer);
   }
 
   @protected
@@ -3341,6 +3771,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.pageNumber, serializer);
     sse_encode_u_64(self.expectedRevision, serializer);
+    sse_encode_native_viewport_priority(self.priority, serializer);
   }
 
   @protected
@@ -3517,8 +3948,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_native_pdf_box(self.bounds, serializer);
     sse_encode_native_affine_transform(self.transform, serializer);
     sse_encode_String(self.capability, serializer);
+    sse_encode_opt_String(self.capabilityReason, serializer);
     sse_encode_u_64(self.modifiedRevision, serializer);
     sse_encode_list_native_text_run(self.runs, serializer);
+    sse_encode_opt_box_autoadd_native_text_layout_recipe(
+      self.layout,
+      serializer,
+    );
+    sse_encode_opt_String(self.fontFingerprint, serializer);
+    sse_encode_opt_String(self.fontAssetHandle, serializer);
   }
 
   @protected
@@ -3531,6 +3969,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_selection_rebase(
+    NativeSelectionRebase self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_u_32(self.insertedUtf16Length, serializer);
+  }
+
+  @protected
   void sse_encode_native_submit_command_request(
     NativeSubmitCommandRequest self,
     SseSerializer serializer,
@@ -3540,6 +3990,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.commandId, serializer);
     sse_encode_u_64(self.baseRevision, serializer);
     sse_encode_native_editor_command(self.payload, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_layout_recipe(
+    NativeTextLayoutRecipe self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.baseline, serializer);
+    sse_encode_f_64(self.lineHeight, serializer);
+    sse_encode_f_64(self.characterSpacing, serializer);
+    sse_encode_f_64(self.horizontalScale, serializer);
+    sse_encode_String(self.direction, serializer);
   }
 
   @protected
@@ -3564,6 +4027,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_16(self.fontWeight, serializer);
     sse_encode_bool(self.italic, serializer);
     sse_encode_list_prim_u_8_strict(self.colorRgba, serializer);
+  }
+
+  @protected
+  void sse_encode_native_viewport_priority(
+    NativeViewportPriority self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected
@@ -3622,6 +4094,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_native_pdf_box(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_selection_rebase(
+    NativeSelectionRebase? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_selection_rebase(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_text_layout_recipe(
+    NativeTextLayoutRecipe? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_text_layout_recipe(self, serializer);
     }
   }
 
@@ -3770,6 +4268,13 @@ class NativeEditorSessionImpl extends RustOpaque
         .rust_arc_decrement_strong_count_NativeEditorSessionPtr,
   );
 
+  Future<NativeCommandResult> checkpoint({
+    required NativeCheckpointRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionCheckpoint(
+    that: this,
+    request: request,
+  );
+
   Future<void> close() =>
       RustLib.instance.api.crateEditingApiNativeEditorSessionClose(that: this);
 
@@ -3778,6 +4283,13 @@ class NativeEditorSessionImpl extends RustOpaque
 
   Future<NativeEditorMetadata> metadata() => RustLib.instance.api
       .crateEditingApiNativeEditorSessionMetadata(that: this);
+
+  Future<NativeSceneObject> objectDetails({
+    required NativeObjectDetailsRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionObjectDetails(
+    that: this,
+    request: request,
+  );
 
   Future<NativePageScene> pageScene({
     required NativePageSceneRequest request,

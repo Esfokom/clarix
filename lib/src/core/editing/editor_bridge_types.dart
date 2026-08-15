@@ -82,8 +82,12 @@ class EditorSceneObject {
     required this.bounds,
     required this.transform,
     required this.capability,
+    this.capabilityReason,
     required this.modifiedRevision,
     required this.runs,
+    this.layout,
+    this.fontFingerprint,
+    this.fontAssetHandle,
   });
 
   final EditorSceneObjectKind kind;
@@ -93,8 +97,28 @@ class EditorSceneObject {
   final EditorPdfBox bounds;
   final EditorAffineTransform transform;
   final String capability;
+  final String? capabilityReason;
   final int modifiedRevision;
   final List<EditorTextRun> runs;
+  final EditorTextLayoutRecipe? layout;
+  final String? fontFingerprint;
+  final String? fontAssetHandle;
+}
+
+class EditorTextLayoutRecipe {
+  const EditorTextLayoutRecipe({
+    required this.baseline,
+    required this.lineHeight,
+    required this.characterSpacing,
+    required this.horizontalScale,
+    required this.direction,
+  });
+
+  final double baseline;
+  final double lineHeight;
+  final double characterSpacing;
+  final double horizontalScale;
+  final String direction;
 }
 
 class EditorSessionMetadata {
@@ -203,58 +227,80 @@ class EditorCommandResult {
   const EditorCommandResult({
     this.schemaVersion = 1,
     required this.commandId,
+    required this.previousRevision,
     required this.committedRevision,
+    required this.durable,
+    required this.warnings,
     required this.objectPatches,
   });
 
   final int schemaVersion;
   final String commandId;
+  final int previousRevision;
   final int committedRevision;
+  final bool durable;
+  final List<String> warnings;
   final List<EditorObjectPatch> objectPatches;
 }
 
 class EditorEvent {
   const EditorEvent._({
     required this.kind,
+    required this.sessionId,
     required this.sequence,
     this.revision,
     this.latestRevision,
     this.commandId,
   });
 
-  const EditorEvent.ready({required int sequence, required int revision})
-    : this._(
-        kind: EditorEventKind.ready,
-        sequence: sequence,
-        revision: revision,
-      );
+  const EditorEvent.ready({
+    required String sessionId,
+    required int sequence,
+    required int revision,
+  }) : this._(
+         kind: EditorEventKind.ready,
+         sessionId: sessionId,
+         sequence: sequence,
+         revision: revision,
+       );
 
   const EditorEvent.commandCommitted({
+    required String sessionId,
     required int sequence,
     required int revision,
     required String commandId,
   }) : this._(
          kind: EditorEventKind.commandCommitted,
+         sessionId: sessionId,
          sequence: sequence,
          revision: revision,
          commandId: commandId,
        );
 
-  const EditorEvent.lagged({required int sequence, required int latestRevision})
-    : this._(
-        kind: EditorEventKind.lagged,
-        sequence: sequence,
-        latestRevision: latestRevision,
-      );
+  const EditorEvent.lagged({
+    required String sessionId,
+    required int sequence,
+    required int latestRevision,
+  }) : this._(
+         kind: EditorEventKind.lagged,
+         sessionId: sessionId,
+         sequence: sequence,
+         latestRevision: latestRevision,
+       );
 
-  const EditorEvent.closed({required int sequence, required int revision})
-    : this._(
-        kind: EditorEventKind.closed,
-        sequence: sequence,
-        revision: revision,
-      );
+  const EditorEvent.closed({
+    required String sessionId,
+    required int sequence,
+    required int revision,
+  }) : this._(
+         kind: EditorEventKind.closed,
+         sessionId: sessionId,
+         sequence: sequence,
+         revision: revision,
+       );
 
   final EditorEventKind kind;
+  final String sessionId;
   final int sequence;
   final int? revision;
   final int? latestRevision;
