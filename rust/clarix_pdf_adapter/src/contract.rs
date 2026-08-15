@@ -216,6 +216,10 @@ pub enum PdfAdapterError {
     Io(String),
     #[error("adapter failure: {0}")]
     Adapter(String),
+    #[error("clean patch is unsafe: {0}")]
+    UnsafeCleanPatch(String),
+    #[error("operation was cancelled")]
+    Cancelled,
 }
 
 impl PdfAdapterError {
@@ -227,6 +231,8 @@ impl PdfAdapterError {
             Self::Unsupported(_) => "unsupported",
             Self::Io(_) => "io_error",
             Self::Adapter(_) => "adapter_error",
+            Self::UnsafeCleanPatch(_) => "unsafe_clean_patch",
+            Self::Cancelled => "cancelled",
         }
     }
 }

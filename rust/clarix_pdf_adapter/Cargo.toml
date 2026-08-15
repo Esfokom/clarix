@@ -25,3 +25,7 @@ path = "src/lib.rs"
 [[bench]]
 name = "page_inspection"
 harness = false
+
+[[bench]]
+name = "clean_patch"
+harness = false

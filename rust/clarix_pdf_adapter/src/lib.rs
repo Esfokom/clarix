@@ -1,9 +1,14 @@
 pub const PDF_ADAPTER_SCHEMA_VERSION: u32 = 1;
 
+mod clean_patch;
 mod contract;
 mod pdf_oxide_importer;
 mod qualification;
 
+pub use clean_patch::{
+    CleanPatch, CleanPatchBackend, CleanPatchCache, CleanPatchKey, CleanPatchRenderRequest,
+    CleanPatchRenderer, DEFAULT_CLEAN_PATCH_BUDGET_BYTES,
+};
 pub use contract::{
     CapabilityReport, CapabilityStatus, CleanPatchRequest, DocumentImport, DocumentSnapshot,
     PageImport, PdfAdapterError, PdfImporter, PdfMaterializer, PdfPreviewRenderer, PdfValidator,
