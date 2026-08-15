@@ -6,6 +6,7 @@ mod materializer;
 mod pdf_oxide_importer;
 mod qualification;
 mod validator;
+mod windows_replace;
 
 pub use clean_patch::{
     CleanPatch, CleanPatchBackend, CleanPatchCache, CleanPatchKey, CleanPatchRenderRequest,
@@ -20,3 +21,4 @@ pub use materializer::PdfTextMaterializer;
 pub use pdf_oxide_importer::PdfOxideImporter;
 pub use qualification::QualificationCaseResult;
 pub use validator::{DetailedValidationReport, IndependentPdfValidator, ValidationFailure};
+pub use windows_replace::{map_windows_replace_error, WindowsAtomicReplacer};

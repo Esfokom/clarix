@@ -41,7 +41,9 @@ pub use ports::{
     MaterializationPort, MaterializationReport, PageImportRequest, PageImportSource, RasterAsset,
     SourceReference, ValidationExpectation, ValidationPort, ValidationReport,
 };
-pub use save::{SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage};
+pub use save::{
+    SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage,
+};
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontRef, FontSource, OverflowPolicy, ParagraphStyle, SourceGlyph,

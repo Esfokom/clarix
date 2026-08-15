@@ -331,6 +331,18 @@ impl DocumentModel {
         Self::from_parts(id, source_fingerprint, DocumentRevision::INITIAL, pages)
     }
 
+    pub fn rebase_source(&mut self, source_fingerprint: impl Into<String>) {
+        let source_fingerprint = source_fingerprint.into();
+        self.source_fingerprint.clone_from(&source_fingerprint);
+        for page in &mut self.pages {
+            for object in &mut page.objects {
+                if let Some(binding) = &mut object.base_mut().source_binding {
+                    binding.source_revision.clone_from(&source_fingerprint);
+                }
+            }
+        }
+    }
+
     fn from_parts(
         id: DocumentId,
         source_fingerprint: String,

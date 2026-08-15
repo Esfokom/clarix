@@ -1,15 +1,13 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Mutex,
-};
+use std::{path::Path, sync::Mutex};
 
 use clarix_editing_core::{
     AtomicReplaceRequest, AtomicReplacementPort, DocumentId, DocumentModel, DocumentRevision,
     DurableCommit, EditorSessionState, MaterializationPort, MaterializationReport, ObjectId,
     PageId, PageNode, PdfBox, ProjectRepository, RecoveredProject, RecoveryRequest,
-    SaveCoordinator, SaveError, SaveMode, SaveRequest, SaveStage, SessionId, SourceReference,
-    TextBlock, ValidationExpectation, ValidationPort, ValidationReport,
+    SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveRequest, SaveStage, SessionId,
+    SourceReference, TextBlock, ValidationExpectation, ValidationPort, ValidationReport,
 };
+use sha2::{Digest, Sha256};
 
 struct RecordingRepository {
     commits: Mutex<Vec<DurableCommit>>,
@@ -62,10 +60,15 @@ struct RecordingMaterializer {
 }
 
 impl MaterializationPort for RecordingMaterializer {
-    fn materialize(&self, _: &DocumentModel, _: &Path) -> Result<MaterializationReport, SaveError> {
+    fn materialize(
+        &self,
+        _: &DocumentModel,
+        target: &Path,
+    ) -> Result<MaterializationReport, SaveError> {
         self.calls.lock().unwrap().push(SaveStage::MaterializeTemp);
+        std::fs::write(target, b"a").unwrap();
         Ok(MaterializationReport {
-            output_sha256: "a".repeat(64),
+            output_sha256: format!("{:x}", Sha256::digest(b"a")),
             bytes_written: 1,
             warnings: Vec::new(),
         })
@@ -83,8 +86,9 @@ impl ValidationPort for RecordingMaterializer {
 }
 
 impl AtomicReplacementPort for RecordingMaterializer {
-    fn replace(&self, _: AtomicReplaceRequest) -> Result<(), SaveError> {
+    fn replace(&self, request: AtomicReplaceRequest) -> Result<(), SaveError> {
         self.calls.lock().unwrap().push(SaveStage::ReplaceOrMove);
+        std::fs::rename(request.working, request.target).unwrap();
         Ok(())
     }
 }
@@ -139,29 +143,31 @@ fn durable_commit_contains_inverse_before_actor_publication() {
 #[test]
 fn save_coordinator_materializes_validates_and_replaces_in_order() {
     let adapter = RecordingMaterializer::default();
-    let source = SourceReference::new("source", PathBuf::from("source.pdf"));
-    let model = DocumentModel::new(
-        DocumentId::from_source_key("save"),
-        "source".into(),
-        Vec::new(),
-    )
-    .unwrap();
+    let directory = tempfile::tempdir().unwrap();
+    let source_path = directory.path().join("source.pdf");
+    std::fs::write(&source_path, b"source").unwrap();
+    let fingerprint = format!("{:x}", Sha256::digest(b"source"));
+    let source = SourceReference::new(fingerprint.clone(), source_path);
+    let model =
+        DocumentModel::new(DocumentId::from_source_key("save"), fingerprint, Vec::new()).unwrap();
     let report = SaveCoordinator::new(&adapter, &adapter, &adapter)
         .save(SaveRequest {
             source,
-            target: PathBuf::from("target.pdf"),
+            target: directory.path().join("target.pdf"),
             mode: SaveMode::SaveAs,
+            association: SaveAssociation::KeepOriginalAssociation,
+            recovery_directory: None,
             snapshot: model,
         })
         .unwrap();
 
     assert_eq!(
-        report.completed_stages,
+        *adapter.calls.lock().unwrap(),
         vec![
             SaveStage::MaterializeTemp,
             SaveStage::ValidateTemp,
             SaveStage::ReplaceOrMove
         ]
     );
-    assert_eq!(*adapter.calls.lock().unwrap(), report.completed_stages);
+    assert_eq!(report.completed_stages, SaveStage::ALL);
 }
