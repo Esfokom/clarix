@@ -1,6 +1,7 @@
 use clarix_editing_core::{
-    CapabilityReason, DocumentObject, EditCapability, ObjectId, PageId, PageNode, PdfBox,
-    SourceBinding, TextBlock,
+    AffineTransform, CapabilityReason, DocumentObject, EditCapability, ObjectId, PageId,
+    PageImportRequest, PageImportSource, PageNode, PdfBox, SourceBinding, TextBlock,
+    TextLayoutRecipe, TextStyle, WritingDirection,
 };
 use pdf_oxide::PdfDocument;
 use sha2::{Digest, Sha256};
@@ -96,30 +97,81 @@ impl PdfImporter for PdfOxideImporter {
                 adapter_id: ADAPTER_ID.into(),
                 source_revision: source.fingerprint().into(),
                 source_key: object_key,
-                confidence: 1.0,
+                confidence: 0.5,
             };
-            objects.push(DocumentObject::text(
-                TextBlock::plain(object_id, page_id, span.text, bounds)
-                    .with_source_binding(binding)
-                    .with_capability(
-                        EditCapability::ReadOnly,
-                        Some(CapabilityReason {
-                            code: "phase0_text_fidelity_unqualified".into(),
-                            message: "font and materialization fidelity are not yet qualified"
-                                .into(),
-                        }),
-                    ),
-            ));
+            let angle = f64::from(span.rotation_degrees).to_radians();
+            let transform = AffineTransform::new(
+                angle.cos(),
+                angle.sin(),
+                -angle.sin(),
+                angle.cos(),
+                0.0,
+                0.0,
+            )
+            .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?;
+            let mut block = TextBlock::plain(object_id, page_id, span.text, bounds)
+                .with_source_binding(binding)
+                .with_transform(transform)
+                .with_capability(
+                    EditCapability::ReadOnly,
+                    Some(CapabilityReason {
+                        code: "font_encoding_incomplete".into(),
+                        message: "the font lacks a verified reversible glyph encoding and exact source operator locator"
+                            .into(),
+                    }),
+                );
+            block.runs[0].style = TextStyle {
+                font_family: Some(span.font_name),
+                font_size: f64::from(span.font_size),
+                font_weight: span.font_weight.to_pdf_value(),
+                italic: span.is_italic,
+                color_rgba: [
+                    color_channel(span.color.r),
+                    color_channel(span.color.g),
+                    color_channel(span.color.b),
+                    255,
+                ],
+            };
+            block.layout = TextLayoutRecipe {
+                baseline: bounds.bottom + f64::from(span.font_size) * f64::from(span.text_rise),
+                line_height: f64::from(span.bbox.height.max(span.font_size)),
+                character_spacing: f64::from(span.char_spacing),
+                horizontal_scale: f64::from(span.horizontal_scaling / 100.0),
+                direction: if span.wmode == 1 {
+                    WritingDirection::TopToBottom
+                } else if span.rtl_draw_logical {
+                    WritingDirection::RightToLeft
+                } else {
+                    WritingDirection::LeftToRight
+                },
+                ..TextLayoutRecipe::default()
+            };
+            objects.push(DocumentObject::text(block));
         }
 
         Ok(PageImport {
             page: PageNode::new(page_id, page_number, width, height, objects),
             report: CapabilityReport::read_only(self.adapter_id()),
             warnings: vec![
-                "Phase 0 imports text and geometry only; font, image, vector, and form fidelity are unqualified."
+                "Text style and layout are preserved where exposed, but editing remains disabled until font encoding and source operators are reversible."
                     .into(),
             ],
         })
+    }
+}
+
+impl PageImportSource for PdfOxideImporter {
+    fn import_page(
+        &self,
+        request: PageImportRequest,
+    ) -> Result<clarix_editing_core::ImportedPage, String> {
+        let source = SourceRef::new(request.source.fingerprint, request.source.path);
+        self.inspect_page(&source, request.page_number)
+            .map(|imported| clarix_editing_core::ImportedPage {
+                page: imported.page,
+                warnings: imported.warnings,
+            })
+            .map_err(|error| format!("{}: {error}", error.code()))
     }
 }
 
@@ -145,4 +197,8 @@ fn hex_digest(bytes: &[u8]) -> String {
         .iter()
         .map(|byte| format!("{byte:02x}"))
         .collect()
+}
+
+fn color_channel(value: f32) -> u8 {
+    (value.clamp(0.0, 1.0) * 255.0).round() as u8
 }

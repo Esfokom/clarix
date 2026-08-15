@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
   "cases": [
-    {"id":"standard-latin","path":"generated/standard-latin.pdf","sha256":"80b4be3d0ef3c9fceda57e475d418d7ab9c4c9f748918115dc4ca3648ec0868c","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text"]},
-    {"id":"rotated-text","path":"generated/rotated-text.pdf","sha256":"ceef9a779486159284236d3b19498b22cee603e8c590bc968c98a10008682a8e","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text"]},
-    {"id":"multi-run-text","path":"generated/multi-run-text.pdf","sha256":"2f59ea5c722b8473299f0e2bb3fd3d14d539c6904e0bd6bcade854783f396d1c","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text"]},
-    {"id":"mixed-page","path":"generated/mixed-page.pdf","sha256":"eb883fc2b94ddddb591f3f7fe2a904e558587639d29e1e903007d14d58a928b2","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text","image","vector"]},
+    {"id":"standard-latin","path":"generated/standard-latin.pdf","sha256":"80b4be3d0ef3c9fceda57e475d418d7ab9c4c9f748918115dc4ca3648ec0868c","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text"],"phase1":{"capability":"read_only","capabilityReason":"font_encoding_incomplete","materializationEligible":false}},
+    {"id":"rotated-text","path":"generated/rotated-text.pdf","sha256":"ceef9a779486159284236d3b19498b22cee603e8c590bc968c98a10008682a8e","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text"],"phase1":{"capability":"read_only","capabilityReason":"font_encoding_incomplete","materializationEligible":false}},
+    {"id":"multi-run-text","path":"generated/multi-run-text.pdf","sha256":"2f59ea5c722b8473299f0e2bb3fd3d14d539c6904e0bd6bcade854783f396d1c","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text"],"phase1":{"capability":"read_only","capabilityReason":"font_encoding_incomplete","materializationEligible":false}},
+    {"id":"mixed-page","path":"generated/mixed-page.pdf","sha256":"eb883fc2b94ddddb591f3f7fe2a904e558587639d29e1e903007d14d58a928b2","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["text","image","vector"],"phase1":{"capability":"read_only","capabilityReason":"font_encoding_incomplete","materializationEligible":false}},
     {"id":"form-xobject","path":"generated/form-xobject.pdf","sha256":"e8a58e113558b46e68319a0a5a491f0ea827523ba756e21db6383bbdf82caf13","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["form"]},
     {"id":"scanned-page","path":"generated/scanned-page.pdf","sha256":"d2dfb8a493d91940d092b9ca23d2fc8c80e2e3e9c0d07c6fbdedbb10b3532bb5","license":"generated-by-clarix-tests","expectedPages":1,"requiredKinds":["image"]},
-    {"id":"embedded-truetype","path":"local/embedded-truetype.pdf","license":"user-supplied-private-corpus","expectedPages":1,"requiredKinds":["text"],"requiredForExit":true},
-    {"id":"subset-font","path":"local/subset-font.pdf","license":"user-supplied-private-corpus","expectedPages":1,"requiredKinds":["text"],"requiredForExit":true},
+    {"id":"embedded-truetype","path":"local/embedded-truetype.pdf","license":"user-supplied-private-corpus","expectedPages":1,"requiredKinds":["text"],"requiredForExit":true,"phase1":{"capability":"read_only","capabilityReason":"font_encoding_incomplete","materializationEligible":false}},
+    {"id":"subset-font","path":"local/subset-font.pdf","license":"user-supplied-private-corpus","expectedPages":1,"requiredKinds":["text"],"requiredForExit":true,"phase1":{"capability":"read_only","capabilityReason":"font_encoding_incomplete","materializationEligible":false}},
     {"id":"malformed-input","path":"generated/malformed.pdf","sha256":"a406a075d6d211fd813a7e3b3eb748abdabcd9fde84114121b0df0b55521e8af","license":"generated-by-clarix-tests","expectedError":"invalid_pdf"}
   ]
 }

@@ -7,6 +7,7 @@ mod geometry;
 mod history;
 mod ids;
 mod model;
+mod page_service;
 mod persistence;
 mod ports;
 mod save;
@@ -26,6 +27,10 @@ pub use ids::{CommandId, DocumentId, DocumentRevision, ObjectId, PageId, Session
 pub use model::{
     AnnotationNode, CapabilityReason, DocumentModel, DocumentObject, EditCapability, GroupNode,
     ImageNode, ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
+};
+pub use page_service::{
+    PageImportState, PageScene, PageSceneError, PageSceneRequest, PageSceneService,
+    ViewportPriority,
 };
 pub use persistence::{
     CheckpointKind, DurableCommit, DurableSnapshot, MaterializationRecord, PersistenceError,

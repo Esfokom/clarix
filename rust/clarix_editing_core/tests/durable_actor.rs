@@ -3,9 +3,8 @@ use std::sync::{Arc, Mutex};
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
     DurableCommit, DurableSnapshot, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    MaterializationRecord, ObjectId, PageId, PageNode, PdfBox, PersistenceError,
-    ProjectCheckpoint, ProjectRepository, RecoveredProject, RecoveryRequest, SessionId, TextBlock,
-    Utf16Range,
+    MaterializationRecord, ObjectId, PageId, PageNode, PdfBox, PersistenceError, ProjectCheckpoint,
+    ProjectRepository, RecoveredProject, RecoveryRequest, SessionId, TextBlock, Utf16Range,
 };
 
 fn fixture_model(text: &str) -> (DocumentModel, ObjectId) {
@@ -59,7 +58,9 @@ impl ProjectRepository for MemoryRepository {
 
     fn append(&self, commit: &DurableCommit) -> Result<(), PersistenceError> {
         if self.fail_append {
-            return Err(PersistenceError::Transaction("injected append failure".into()));
+            return Err(PersistenceError::Transaction(
+                "injected append failure".into(),
+            ));
         }
         *self.appends.lock().unwrap() += 1;
         self.recovered.lock().unwrap().model = commit.resulting_model.clone();
@@ -106,8 +107,14 @@ fn repository_failure_does_not_publish_or_emit_commit() {
     let error = actor.submit(replacement(object_id)).unwrap_err();
 
     assert!(matches!(error, EditingError::SidecarCommitFailed(_)));
-    assert_eq!(actor.snapshot().unwrap().revision, DocumentRevision::INITIAL);
-    assert_eq!(events.try_recv(), Err(crossbeam_channel::TryRecvError::Empty));
+    assert_eq!(
+        actor.snapshot().unwrap().revision,
+        DocumentRevision::INITIAL
+    );
+    assert_eq!(
+        events.try_recv(),
+        Err(crossbeam_channel::TryRecvError::Empty)
+    );
     actor.close().unwrap();
 }
 

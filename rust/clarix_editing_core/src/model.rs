@@ -101,6 +101,11 @@ impl TextBlock {
         self
     }
 
+    pub fn with_transform(mut self, transform: AffineTransform) -> Self {
+        self.base.transform = transform;
+        self
+    }
+
     pub fn with_text_contract(
         mut self,
         font: FontRef,
