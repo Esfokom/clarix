@@ -7,6 +7,9 @@ mod geometry;
 mod history;
 mod ids;
 mod model;
+mod persistence;
+mod ports;
+mod save;
 mod session;
 mod text;
 mod tools;
@@ -24,6 +27,16 @@ pub use model::{
     AnnotationNode, CapabilityReason, DocumentModel, DocumentObject, EditCapability, GroupNode,
     ImageNode, ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
 };
+pub use persistence::{
+    CheckpointKind, DurableCommit, DurableSnapshot, MaterializationRecord, PersistenceError,
+    ProjectCheckpoint, ProjectRepository, RecoveredProject, RecoveryRequest,
+};
+pub use ports::{
+    AtomicReplaceRequest, AtomicReplacementPort, CleanPatchRequest, CleanPatchSource, ImportedPage,
+    MaterializationPort, MaterializationReport, PageImportRequest, PageImportSource, RasterAsset,
+    SourceReference, ValidationExpectation, ValidationPort, ValidationReport,
+};
+pub use save::{SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage};
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontRef, FontSource, OverflowPolicy, ParagraphStyle, SourceGlyph,

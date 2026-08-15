@@ -40,7 +40,12 @@ fn workspace_dependency_direction_and_ffi_boundary_are_enforced() {
         "flutter_rust_bridge",
         "pdf_oxide",
         "lopdf",
+        "rusqlite",
+        "libsqlite3-sys",
+        "windows",
+        "windows-sys",
         "clarix_pdf_adapter",
+        "clarix_editing_store",
         "clarix_agent_core",
         "clarix_pdf_oxide",
     ] {
