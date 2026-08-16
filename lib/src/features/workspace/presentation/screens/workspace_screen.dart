@@ -73,27 +73,20 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     final AsyncValue<WorkspaceFeatureState> asyncState = ref.watch(
       workspaceNotifierProvider,
     );
-    final rollout = ref.watch(editingRolloutProvider);
-    final editing = rollout.policy.constructsLegacyEditor
-        ? ref.watch(legacyPdfEditingControllerProvider)
-        : null;
     final activeTabId = asyncState.value?.session.activeTabId;
     final nativeState = activeTabId == null
         ? null
         : ref.watch(editorDocumentStateProvider(activeTabId)).value;
     final activeIsDirty =
         activeTabId != null &&
-        (nativeState == null
-            ? (editing?.sessionsByTabId[activeTabId]?.isDirty ??
-                  asyncState.value?.dirtyDocumentIds.contains(activeTabId) ??
-                  false)
-            : nativeState.save.phase != EditorSavePhase.clean);
+        (nativeState?.save.phase != EditorSavePhase.clean ||
+            (nativeState == null &&
+                (asyncState.value?.dirtyDocumentIds.contains(activeTabId) ??
+                    false)));
     final canSave =
         activeIsDirty &&
         nativeState?.save.phase != EditorSavePhase.saving &&
-        !(asyncState.value?.pdfSaveInProgress ?? false) &&
-        (editing?.sessionsByTabId[activeTabId]?.overflowingLocators.isEmpty ??
-            true);
+        !(asyncState.value?.pdfSaveInProgress ?? false);
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{

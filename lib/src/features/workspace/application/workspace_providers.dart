@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -19,9 +18,6 @@ import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
-import '../infrastructure/pdf_native_edit_coordinator.dart';
-import '../infrastructure/pdf_text_engine.dart';
-import '../infrastructure/pdf_edit_save_service.dart';
 import '../infrastructure/installed_font_catalog.dart';
 import '../editing/application/editor_session_registry.dart';
 import '../editing/domain/editor_document_state.dart';
@@ -29,73 +25,8 @@ import '../editing/infrastructure/editor_session_gateway.dart';
 import 'ai_runtime_service.dart';
 import 'action_permission_service.dart';
 import 'ai_tool_registry.dart';
-import 'pdf_editing_controller.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
-
-enum EditingRollout {
-  legacy,
-  compareScenes,
-  clarixRustEditingV1;
-
-  static const String _configuredValue = String.fromEnvironment(
-    'CLARIX_EDITING_ROLLOUT',
-    defaultValue: 'clarixRustEditingV1',
-  );
-
-  static EditingRollout get configured => values.firstWhere(
-    (value) => value.name == _configuredValue,
-    orElse: () => clarixRustEditingV1,
-  );
-
-  EditingRolloutPolicy get policy => switch (this) {
-    legacy => const EditingRolloutPolicy(
-      opensRustSession: false,
-      constructsLegacyEditor: true,
-      rustGesturesEnabled: false,
-    ),
-    compareScenes => const EditingRolloutPolicy(
-      opensRustSession: true,
-      constructsLegacyEditor: true,
-      rustGesturesEnabled: false,
-    ),
-    clarixRustEditingV1 => const EditingRolloutPolicy(
-      opensRustSession: true,
-      constructsLegacyEditor: false,
-      rustGesturesEnabled: true,
-    ),
-  };
-}
-
-class EditingRolloutPolicy {
-  const EditingRolloutPolicy({
-    required this.opensRustSession,
-    required this.constructsLegacyEditor,
-    required this.rustGesturesEnabled,
-  });
-
-  final bool opensRustSession;
-  final bool constructsLegacyEditor;
-  final bool rustGesturesEnabled;
-
-  @override
-  bool operator ==(Object other) =>
-      other is EditingRolloutPolicy &&
-      opensRustSession == other.opensRustSession &&
-      constructsLegacyEditor == other.constructsLegacyEditor &&
-      rustGesturesEnabled == other.rustGesturesEnabled;
-
-  @override
-  int get hashCode => Object.hash(
-    opensRustSession,
-    constructsLegacyEditor,
-    rustGesturesEnabled,
-  );
-}
-
-final editingRolloutProvider = Provider<EditingRollout>(
-  (Ref ref) => EditingRollout.configured,
-);
 
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
@@ -202,7 +133,6 @@ final actionPermissionServiceProvider = Provider<ActionPermissionService>(
 
 final aiToolRegistryProvider = Provider<AiToolRegistry>((Ref ref) {
   return AiToolRegistry(
-    editing: ref.watch(pdfEditingControllerProvider),
     permissions: ref.watch(actionPermissionServiceProvider),
     pathForDocument: (documentId) {
       final workspace = ref.read(workspaceNotifierProvider).value;
@@ -247,56 +177,6 @@ final editorDocumentStateProvider =
       return ref.watch(editorSessionRegistryProvider).watch(tabId);
     });
 
-final pdfTextEngineProvider = Provider<PdfTextEngine>(
-  (Ref ref) => createPdfTextEngine(),
-);
-
-final pdfNativeEditCoordinatorProvider = Provider<PdfNativeEditCoordinator>(
-  (Ref ref) =>
-      PdfNativeEditCoordinator(mutator: ref.watch(pdfTextEngineProvider)),
-);
-
 final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(
   (Ref ref) => InstalledFontCatalog.scan(),
 );
-
-final pdfEditSaveServiceProvider = Provider<PdfEditSaveService>((Ref ref) {
-  final PdfTextEngine engine = ref.watch(pdfTextEngineProvider);
-  return PdfEditSaveService(
-    writeDraft: (File working, draft) async {
-      final PdfDocument document = await PdfDocument.openFile(working.path);
-      late final List<int> bytes;
-      try {
-        bytes = await engine.applyDraft(document: document, draft: draft);
-      } finally {
-        await document.dispose();
-      }
-      await working.writeAsBytes(bytes, flush: true);
-    },
-    validate: (File working) async {
-      final PdfDocument document = await PdfDocument.openFile(working.path);
-      try {
-        for (final PdfPage page in document.pages) {
-          await page.loadText();
-        }
-      } finally {
-        await document.dispose();
-      }
-    },
-  );
-});
-
-final legacyPdfEditingControllerProvider =
-    ChangeNotifierProvider<PdfEditingController>(
-      (Ref ref) => PdfEditingController(
-        engine: ref.watch(pdfTextEngineProvider),
-        saveService: ref.watch(pdfEditSaveServiceProvider),
-        nativeCoordinator: ref.watch(pdfNativeEditCoordinatorProvider),
-      ),
-    );
-
-final pdfEditingControllerProvider = Provider<PdfEditingController?>((Ref ref) {
-  final rollout = ref.watch(editingRolloutProvider);
-  if (!rollout.policy.constructsLegacyEditor) return null;
-  return ref.watch(legacyPdfEditingControllerProvider);
-});

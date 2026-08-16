@@ -7,9 +7,6 @@ import '../../../../core/editing/editor_bridge_types.dart';
 import '../../application/workspace_providers.dart';
 import '../../editing/domain/editor_document_state.dart';
 import '../../domain/workspace_feature_state.dart';
-import '../../domain/pdf_edit_intent.dart';
-import '../../domain/pdf_text_types.dart';
-import '../../infrastructure/installed_font_catalog.dart';
 import 'ai_side_pane.dart';
 import 'document_workspace.dart';
 import 'quickstart_surface.dart';
@@ -247,70 +244,7 @@ class _TextFormatPane extends ConsumerWidget {
         },
       );
     }
-    final rollout = ref.watch(editingRolloutProvider);
-    final editing = rollout.policy.constructsLegacyEditor
-        ? ref.watch(legacyPdfEditingControllerProvider)
-        : null;
-    final session = editing?.sessionsByTabId[activeTab.id];
-    final selection = session?.selection;
-    PdfTextBlock? block;
-    if (selection != null && session != null) {
-      for (final candidate in session.blocks) {
-        if (candidate.locator == selection.locator) {
-          block = candidate;
-          break;
-        }
-      }
-    }
-    if (session == null || selection == null || block == null) {
-      return const _NoEditableTextSelection();
-    }
-    final catalog = ref.watch(installedFontCatalogProvider);
-    final families =
-        catalog.value?.families ??
-        <String>{...block.runs.map((run) => run.style.fontFamily)}.toList();
-    String? substitutionMessage;
-    final installed = catalog.value;
-    if (installed != null && block.text.isNotEmpty) {
-      final style = block.styleAt(
-        selection.range.start.clamp(0, block.text.length),
-      );
-      try {
-        final match = installed.match(
-          FontMatchRequest(
-            family: style.fontFamily,
-            weight: style.fontWeight,
-            italic: style.italic,
-            text: block.text,
-          ),
-        );
-        if (match.requiresSubstitution) {
-          substitutionMessage =
-              '${style.fontFamily} is not installed. Save will embed the closest compatible face: ${match.font.family} ${match.font.face}.';
-        }
-      } on FontMatchUnavailable catch (error) {
-        substitutionMessage = error.message;
-      }
-    }
-    return PdfTextFormatPanel(
-      documentId: session.documentId,
-      documentRevision: session.revision,
-      block: block,
-      selection: selection,
-      availableFamilies: families,
-      caseMatching: session.caseMatching,
-      substitutionMessage: substitutionMessage,
-      onCaseMatchingChanged: (enabled) => editing!.dispatch(
-        SetPdfCaseMatchingIntent(
-          documentId: session.documentId,
-          documentRevision: session.revision,
-          enabled: enabled,
-        ),
-        provenance: PdfCommandProvenance.manual,
-      ),
-      onIntent: (intent) =>
-          editing!.dispatch(intent, provenance: PdfCommandProvenance.manual),
-    );
+    return const _NoEditableTextSelection();
   }
 }
 

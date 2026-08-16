@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:ui';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clarix_logger.dart';
@@ -16,9 +15,6 @@ import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
 import '../domain/ai_provider.dart';
 import '../domain/conversation.dart';
-import '../domain/pdf_edit_intent.dart';
-import '../domain/pdf_edit_session.dart';
-import '../domain/pdf_text_types.dart';
 import '../editing/application/editor_session_controller.dart';
 import '../editing/domain/editor_save_state.dart';
 import '../editing/domain/editor_close_choice.dart';
@@ -29,12 +25,9 @@ import '../infrastructure/provider_profile_store.dart';
 import '../infrastructure/openai_compatible_provider.dart';
 import 'ai_runtime_service.dart';
 import 'conversation_context.dart';
-import 'pdf_editing_controller.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
-  PdfEditingController? get _pdfEditing =>
-      ref.read(pdfEditingControllerProvider);
   final Map<String, DocumentMetadata> _savedPdfMetadata =
       <String, DocumentMetadata>{};
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
@@ -65,7 +58,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     );
     final Map<String, DocumentMetadata> documentMetadata =
         await _loadDocumentMetadata(restoredSession);
-    _registerPdfEditingSessions(restoredSession, documentMetadata);
     AiWorkspaceState restoredAi = storedAi.copyWith(chatBusy: false);
     final AiProviderProfile? selectedProfile =
         _profileById(providerProfiles, defaultProfileId) ??
@@ -202,7 +194,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       recentFiles: recentFiles.take(12).toList(growable: false),
       lastOpenedAt: DateTime.now().toUtc(),
     );
-    _registerPdfEditingSessions(session, metadata);
     await _commit(
       current.copyWith(session: session, documentMetadata: metadata),
       persistAi: false,
@@ -253,18 +244,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       }
     });
     try {
-      final legacy = _pdfEditing;
-      final PdfEditingSession? editing = legacy?.sessionsByTabId[tab.id];
-      final bool hasTextChanges = editing?.isDirty ?? false;
-      if (hasTextChanges) {
-        await legacy!.save(tab.id, tab.filePath);
-      } else {
-        await _pdfExtraction.savePdfAnnotations(
-          path: tab.filePath,
-          bookmarks: metadata.bookmarks,
-          annotations: metadata.annotations,
-        );
-      }
+      await _pdfExtraction.savePdfAnnotations(
+        path: tab.filePath,
+        bookmarks: metadata.bookmarks,
+        annotations: metadata.annotations,
+      );
       ref.invalidate(pdfDocumentRefProvider(tab.filePath));
       state = AsyncData(
         current.copyWith(
@@ -275,18 +259,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
             ..remove(tab.id),
         ),
       );
-      if (legacy?.sessionsByTabId.containsKey(tab.id) ?? false) {
-        legacy!.markSaved(tab.id);
-      }
       _savedPdfMetadata[tab.id] = metadata;
-    } on PdfEditFailure catch (error) {
-      state = AsyncData(
-        current.copyWith(
-          bannerMessage: presentPdfFailure(error).message,
-          pdfFailure: presentPdfFailure(error),
-          pdfSaveInProgress: false,
-        ),
-      );
     } catch (error) {
       state = AsyncData(
         current.copyWith(
@@ -407,21 +380,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final activeId = current.session.activeTabId;
     if (activeId == null) return;
     final tab = current.session.tabs.firstWhere((item) => item.id == activeId);
-    final revision = sha256
-        .convert(await File(tab.filePath).readAsBytes())
-        .toString();
-    final metadata = current.documentMetadata[tab.documentId];
-    var session = PdfEditingSession.empty(
-      tab.documentId,
-      sourceRevision: revision,
-    );
-    if (metadata != null) {
-      session = session.withMetadata(
-        bookmarks: _bookmarkSnapshots(metadata.bookmarks),
-        highlights: _highlightSnapshots(metadata.annotations),
-      );
-    }
-    _pdfEditing?.replaceSession(tab.id, session);
     ref.invalidate(pdfDocumentRefProvider(tab.filePath));
     state = AsyncData(
       current.copyWith(
@@ -481,51 +439,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       );
       return;
     }
-    final legacy = _pdfEditing;
-    if (legacy == null) return;
-    await File(tab.filePath).copy(destination);
-    try {
-      await legacy.save(tab.id, destination);
-      final nextTabs = current.session.tabs
-          .map(
-            (item) => item.id == tab.id
-                ? item.copyWith(
-                    filePath: destination,
-                    title: destination.split(Platform.pathSeparator).last,
-                  )
-                : item,
-          )
-          .toList(growable: false);
-      ref.invalidate(pdfDocumentRefProvider(tab.filePath));
-      ref.invalidate(pdfDocumentRefProvider(destination));
-      await _commit(
-        current.copyWith(
-          session: current.session.copyWith(tabs: nextTabs),
-          clearBannerMessage: true,
-          clearPdfFailure: true,
-          dirtyDocumentIds: Set<String>.from(current.dirtyDocumentIds)
-            ..remove(tab.id),
-        ),
-        persistAi: false,
-      );
-    } catch (error) {
-      try {
-        await File(destination).delete();
-      } on FileSystemException {
-        // Leave an inaccessible partial copy alone and preserve the draft.
-      }
-      final latest = _requireState();
-      state = AsyncData(
-        error is PdfEditFailure
-            ? latest.copyWith(
-                bannerMessage: presentPdfFailure(error).message,
-                pdfFailure: presentPdfFailure(error),
-              )
-            : latest.copyWith(
-                bannerMessage: 'Could not save a PDF copy: $error',
-              ),
-      );
-    }
+    // Save As is an editing operation. With no native session there is no
+    // editable project to materialize.
   }
 
   void recoverPdfFailure(PdfRecoveryAction action) {
@@ -536,12 +451,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       case PdfRecoveryAction.saveCopy:
         unawaited(saveActivePdfEditsAsCopy());
       case PdfRecoveryAction.selectBlock:
-        final current = state.value;
-        final tabId = current?.session.activeTabId;
-        final locator = current?.pdfFailure?.locator;
-        if (tabId != null && locator != null) {
-          _pdfEditing?.selectBlock(tabId, locator);
-        }
+        break;
     }
   }
 
@@ -549,14 +459,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final current = state.value;
     if (current == null) return;
     state = AsyncData(
-      error is PdfEditFailure
-          ? current.copyWith(
-              bannerMessage: presentPdfFailure(error).message,
-              pdfFailure: presentPdfFailure(error),
-            )
-          : current.copyWith(
-              bannerMessage: 'Could not edit PDF content: $error',
-            ),
+      current.copyWith(bannerMessage: 'Could not edit PDF content: $error'),
     );
   }
 
@@ -564,16 +467,14 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final String? id = state.value?.session.activeTabId;
     if (id == null) return false;
     final native = ref.read(editorSessionRegistryProvider)[id];
-    return native?.canUndo ??
-        (_pdfEditing?.sessionsByTabId[id]?.canUndo == true);
+    return native?.canUndo ?? false;
   }
 
   bool get canRedoActive {
     final String? id = state.value?.session.activeTabId;
     if (id == null) return false;
     final native = ref.read(editorSessionRegistryProvider)[id];
-    return native?.canRedo ??
-        (_pdfEditing?.sessionsByTabId[id]?.canRedo == true);
+    return native?.canRedo ?? false;
   }
 
   bool get hasUnsavedPdfEdits {
@@ -622,36 +523,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       }
       return;
     }
-    final DocumentTabState tab = current.session.tabs.firstWhere(
-      (item) => item.id == tabId,
-    );
-    final legacy = _pdfEditing;
-    if (legacy == null) return;
-    final PdfEditingSession? editing = legacy.sessionsByTabId[tabId];
-    if (editing == null || (undo ? !editing.canUndo : !editing.canRedo)) return;
-    if (undo) {
-      await legacy.undo(tabId);
-    } else {
-      await legacy.redo(tabId);
-    }
-    final DocumentMetadata existing = current.documentMetadata[tab.documentId]!;
-    final DocumentMetadata previous = _metadataFromSession(
-      existing,
-      legacy.sessionFor(tabId),
-    );
-    await (await _metadataStore).write(previous);
-    final Map<String, DocumentMetadata> metadata =
-        Map<String, DocumentMetadata>.from(current.documentMetadata)
-          ..[tab.documentId] = previous;
-    final PdfEditingSession next = legacy.sessionFor(tabId);
-    state = AsyncData(
-      current.copyWith(
-        documentMetadata: metadata,
-        dirtyDocumentIds: next.isDirty
-            ? (Set<String>.from(current.dirtyDocumentIds)..add(tabId))
-            : (Set<String>.from(current.dirtyDocumentIds)..remove(tabId)),
-      ),
-    );
   }
 
   Future<void> openUtilityResult(UtilityResult result) {
@@ -707,7 +578,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       clearActiveTabId: tabs.isEmpty,
       lastOpenedAt: DateTime.now().toUtc(),
     );
-    _pdfEditing?.removeSession(tabId);
     await ref.read(editorSessionRegistryProvider).close(tabId);
     await _commit(current.copyWith(session: session), persistAi: false);
     return true;
@@ -1532,25 +1402,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     WorkspaceFeatureState current,
     DocumentMetadata document,
   ) async {
-    final String? tabId = current.session.tabs
-        .where((tab) => tab.documentId == document.identity.fingerprint)
-        .map((tab) => tab.id)
-        .firstOrNull;
-    final legacy = _pdfEditing;
-    if (tabId != null && legacy != null) {
-      _ensurePdfEditingSession(tabId, document.identity.fingerprint, current);
-      final PdfEditingSession editing = legacy.sessionFor(tabId);
-      final PdfEditResult result = await legacy.dispatch(
-        ChangePdfMetadataIntent(
-          documentId: editing.documentId,
-          documentRevision: editing.revision,
-          bookmarks: _bookmarkSnapshots(document.bookmarks),
-          highlights: _highlightSnapshots(document.annotations),
-        ),
-        provenance: PdfCommandProvenance.manual,
-      );
-      if (!result.isSuccess) throw result.failure!;
-    }
     await (await _metadataStore).write(document);
     final Map<String, DocumentMetadata> metadata =
         Map<String, DocumentMetadata>.from(current.documentMetadata)
@@ -1565,49 +1416,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         dirtyDocumentIds: activeTabId == null
             ? current.dirtyDocumentIds
             : _dirtyIdsFor(current, activeTabId, document),
-      ),
-    );
-  }
-
-  void _registerPdfEditingSessions(
-    WorkspaceSession session,
-    Map<String, DocumentMetadata> metadata,
-  ) {
-    final legacy = _pdfEditing;
-    if (legacy == null) return;
-    for (final tab in session.tabs) {
-      if (legacy.sessionsByTabId.containsKey(tab.id)) continue;
-      final document = metadata[tab.documentId];
-      if (document == null) continue;
-      legacy.registerSession(
-        tab.id,
-        PdfEditingSession.empty(
-          tab.documentId,
-          sourceRevision: tab.documentId,
-        ).withMetadata(
-          bookmarks: _bookmarkSnapshots(document.bookmarks),
-          highlights: _highlightSnapshots(document.annotations),
-        ),
-      );
-    }
-  }
-
-  void _ensurePdfEditingSession(
-    String tabId,
-    String documentId,
-    WorkspaceFeatureState current,
-  ) {
-    final legacy = _pdfEditing;
-    if (legacy == null || legacy.sessionsByTabId.containsKey(tabId)) return;
-    final document = current.documentMetadata[documentId];
-    legacy.registerSession(
-      tabId,
-      PdfEditingSession.empty(
-        documentId,
-        sourceRevision: documentId,
-      ).withMetadata(
-        bookmarks: _bookmarkSnapshots(document?.bookmarks ?? const []),
-        highlights: _highlightSnapshots(document?.annotations ?? const []),
       ),
     );
   }
@@ -1931,117 +1739,3 @@ class _AiReplyData {
   final String text;
   final List<CitationSnippet> citations;
 }
-
-List<PdfBookmarkSnapshot> _bookmarkSnapshots(
-  List<DocumentBookmark> bookmarks,
-) => bookmarks
-    .map(
-      (bookmark) => PdfBookmarkSnapshot(
-        id: bookmark.id,
-        label: bookmark.label,
-        pageNumber: bookmark.pageNumber,
-        createdAt: bookmark.createdAt,
-      ),
-    )
-    .toList(growable: false);
-
-List<PdfHighlightSnapshot> _highlightSnapshots(
-  List<DocumentAnnotation> annotations,
-) => annotations
-    .map(
-      (annotation) => PdfHighlightSnapshot(
-        id: annotation.id,
-        pageNumber: annotation.pageNumber,
-        bounds: annotation.pageRects
-            .map((rect) => PdfBox(rect.left, rect.top, rect.right, rect.bottom))
-            .toList(growable: false),
-        selectedText: annotation.selectedText,
-        note: annotation.note,
-        colorValue: annotation.colorValue,
-        createdAt: annotation.createdAt,
-        modifiedAt: annotation.modifiedAt,
-      ),
-    )
-    .toList(growable: false);
-
-DocumentMetadata _metadataFromSession(
-  DocumentMetadata document,
-  PdfEditingSession session,
-) {
-  final existingAnnotations = <String, DocumentAnnotation>{
-    for (final annotation in document.annotations) annotation.id: annotation,
-  };
-  return document.copyWith(
-    bookmarks: session.bookmarks
-        .map(
-          (bookmark) => DocumentBookmark(
-            id: bookmark.id,
-            pageNumber: bookmark.pageNumber,
-            label: bookmark.label,
-            createdAt: bookmark.createdAt,
-          ),
-        )
-        .toList(growable: false),
-    annotations: session.highlights
-        .map((highlight) {
-          final existing = existingAnnotations[highlight.id];
-          return DocumentAnnotation(
-            id: highlight.id,
-            kind:
-                existing?.kind ??
-                (highlight.bounds.isEmpty
-                    ? AnnotationKind.note
-                    : AnnotationKind.highlight),
-            pageNumber: highlight.pageNumber,
-            pageRects: highlight.bounds
-                .map(
-                  (box) =>
-                      Rect.fromLTRB(box.left, box.bottom, box.right, box.top),
-                )
-                .toList(growable: false),
-            selectedText: highlight.selectedText,
-            note: highlight.note,
-            colorValue: highlight.colorValue,
-            createdAt: highlight.createdAt,
-            modifiedAt: highlight.modifiedAt,
-          );
-        })
-        .toList(growable: false),
-  );
-}
-
-PdfFailurePresentation presentPdfFailure(PdfEditFailure failure) =>
-    switch (failure) {
-      PdfExternalRevisionFailure() => PdfFailurePresentation(
-        message: 'The PDF changed outside Clarix.',
-        actions: const <PdfRecoveryAction>[
-          PdfRecoveryAction.reload,
-          PdfRecoveryAction.saveCopy,
-        ],
-      ),
-      PdfTextOverflowFailure(:final locator) => PdfFailurePresentation(
-        message: 'Text does not fit its box. Resize it or shorten the text.',
-        actions: const <PdfRecoveryAction>[PdfRecoveryAction.selectBlock],
-        locator: locator,
-      ),
-      PdfStaleLocatorFailure() ||
-      PdfAmbiguousLocatorFailure() => PdfFailurePresentation(
-        message: 'The text object changed. Rediscover page text and retry.',
-        actions: const <PdfRecoveryAction>[PdfRecoveryAction.rediscover],
-      ),
-      PdfAtomicReplacementFailure() => PdfFailurePresentation(
-        message: '${failure.message} Your draft is still available in Clarix.',
-        actions: const <PdfRecoveryAction>[PdfRecoveryAction.saveCopy],
-      ),
-      PdfFontUnavailableFailure() ||
-      PdfReadOnlyTextBlockFailure() ||
-      PdfUnsupportedTextOperationFailure() ||
-      PdfValidationFailure() => PdfFailurePresentation(
-        message: failure.message,
-        actions: const <PdfRecoveryAction>[],
-      ),
-      _ => PdfFailurePresentation(
-        message: failure.message,
-        actions: const <PdfRecoveryAction>[],
-      ),
-    };
