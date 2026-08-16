@@ -51,6 +51,12 @@ void main() {
       );
       expect(controller.state.scenes[137], isNotNull);
 
+      for (var page = 1; page <= 20; page += 1) {
+        await controller.refreshPage(page, force: true);
+      }
+      expect(controller.state.scenes.length, lessThanOrEqualTo(8));
+      expect(controller.state.scenes[20], isNotNull);
+
       lifecycle.dispose();
       surface.dispose();
       await tester.runAsync(controller.close);

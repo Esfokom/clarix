@@ -13,12 +13,27 @@ class EditorSessionController {
   factory EditorSessionController({
     required EditorSessionGateway gateway,
     required EditorCommandIdFactory commandIds,
-  }) => EditorSessionController._(gateway, commandIds);
+    int maxResidentScenes = 8,
+  }) {
+    if (maxResidentScenes < 1) {
+      throw ArgumentError.value(
+        maxResidentScenes,
+        'maxResidentScenes',
+        'must be positive',
+      );
+    }
+    return EditorSessionController._(gateway, commandIds, maxResidentScenes);
+  }
 
-  EditorSessionController._(this._gateway, this._commandIds);
+  EditorSessionController._(
+    this._gateway,
+    this._commandIds,
+    this._maxResidentScenes,
+  );
 
   final EditorSessionGateway _gateway;
   final EditorCommandIdFactory _commandIds;
+  final int _maxResidentScenes;
   final StreamController<EditorDocumentState> _changes =
       StreamController<EditorDocumentState>.broadcast(sync: true);
   StreamSubscription<EditorEvent>? _events;
@@ -80,8 +95,32 @@ class EditorSessionController {
       return;
     }
     final scenes = Map<int, EditorPageScene>.of(_state.scenes)
+      ..remove(pageNumber)
       ..[pageNumber] = scene;
     final objects = Map<String, EditorObjectState>.of(_state.objects);
+    final protectedObjects = <String>{
+      if (_state.selection case final selection?) selection.objectId,
+      if (_state.optimisticEdit case final edit?) edit.objectId,
+      if (_state.queuedEdit case final edit?) edit.objectId,
+    };
+    while (scenes.length > _maxResidentScenes) {
+      final candidates = scenes.keys.where(
+        (candidate) =>
+            candidate != pageNumber &&
+            !scenes[candidate]!.objects.any(
+              (object) => protectedObjects.contains(object.objectId),
+            ),
+      );
+      if (candidates.isEmpty) break;
+      final coldPage = candidates.first;
+      final coldScene = scenes.remove(coldPage)!;
+      _pageRequestGenerations.remove(coldPage);
+      for (final object in coldScene.objects) {
+        if (!protectedObjects.contains(object.objectId)) {
+          objects.remove(object.objectId);
+        }
+      }
+    }
     for (final object in scene.objects) {
       if (object.text == null) continue;
       objects[object.objectId] = EditorObjectState(

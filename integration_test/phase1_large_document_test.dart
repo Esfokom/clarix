@@ -24,13 +24,18 @@ void main() {
     final residentSamples = <int>[];
     final memorySamples = <int>[];
 
-    for (var page = 1; page <= 1_000; page += 1) {
-      final stopwatch = Stopwatch()..start();
-      await controller.refreshPage(page);
-      samples.add(stopwatch.elapsedMicroseconds);
-      if (page % 50 == 0) {
-        residentSamples.add(controller.state.scenes.length);
-        memorySamples.add(ProcessInfo.currentRss);
+    for (final pages in <Iterable<int>>[
+      Iterable<int>.generate(1_000, (index) => index + 1),
+      Iterable<int>.generate(1_000, (index) => 1_000 - index),
+    ]) {
+      for (final page in pages) {
+        final stopwatch = Stopwatch()..start();
+        await controller.refreshPage(page, force: true);
+        samples.add(stopwatch.elapsedMicroseconds);
+        if (page % 50 == 0) {
+          residentSamples.add(controller.state.scenes.length);
+          memorySamples.add(ProcessInfo.currentRss);
+        }
       }
     }
 
@@ -39,12 +44,14 @@ void main() {
     final firstTail = memorySamples[memorySamples.length ~/ 2];
     final finalMemory = memorySamples.last;
     expect(gateway.requestedPages.toSet().length, 1_000);
-    expect(controller.state.scenes.length, lessThanOrEqualTo(1_000));
-    expect(residentSamples.last, 1_000);
+    expect(gateway.requestedPages.length, 2_001);
+    expect(controller.state.scenes.length, lessThanOrEqualTo(8));
+    expect(residentSamples.every((sample) => sample <= 8), isTrue);
 
     binding.reportData ??= <String, dynamic>{};
     binding.reportData!['phase1LargeDocument'] = <String, Object>{
       'pageCount': 1_000,
+      'sceneRequests': gateway.requestedPages.length,
       'p95SceneRequestMicros': p95,
       'residentSceneCount': residentSamples.last,
       'patchBytes': 0,
