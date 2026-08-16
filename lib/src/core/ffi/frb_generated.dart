@@ -1377,6 +1377,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<NativeTextCharacterBox> dco_decode_list_native_text_character_box(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_text_character_box)
+        .toList();
+  }
+
+  @protected
   List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_native_text_run).toList();
@@ -1600,16 +1610,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeObjectPatch dco_decode_native_object_patch(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 7)
-      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return NativeObjectPatch(
       objectId: dco_decode_String(arr[0]),
       pageId: dco_decode_String(arr[1]),
       modifiedRevision: dco_decode_u_64(arr[2]),
       text: dco_decode_opt_String(arr[3]),
       textRuns: dco_decode_opt_list_native_text_run(arr[4]),
-      bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[5]),
-      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[6]),
+      characterBoxes: dco_decode_opt_list_native_text_character_box(arr[5]),
+      bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[6]),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
     );
   }
 
@@ -1857,8 +1868,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeSceneObject dco_decode_native_scene_object(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 13)
-      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    if (arr.length != 14)
+      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
     return NativeSceneObject(
       kind: dco_decode_native_scene_object_kind(arr[0]),
       objectId: dco_decode_String(arr[1]),
@@ -1870,9 +1881,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       capabilityReason: dco_decode_opt_String(arr[7]),
       modifiedRevision: dco_decode_u_64(arr[8]),
       runs: dco_decode_list_native_text_run(arr[9]),
-      layout: dco_decode_opt_box_autoadd_native_text_layout_recipe(arr[10]),
-      fontFingerprint: dco_decode_opt_String(arr[11]),
-      fontAssetHandle: dco_decode_opt_String(arr[12]),
+      characterBoxes: dco_decode_list_native_text_character_box(arr[10]),
+      layout: dco_decode_opt_box_autoadd_native_text_layout_recipe(arr[11]),
+      fontFingerprint: dco_decode_opt_String(arr[12]),
+      fontAssetHandle: dco_decode_opt_String(arr[13]),
     );
   }
 
@@ -1909,6 +1921,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       commandId: dco_decode_String(arr[1]),
       baseRevision: dco_decode_u_64(arr[2]),
       payload: dco_decode_native_editor_command(arr[3]),
+    );
+  }
+
+  @protected
+  NativeTextCharacterBox dco_decode_native_text_character_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeTextCharacterBox(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+      bounds: dco_decode_native_pdf_box(arr[2]),
     );
   }
 
@@ -2035,6 +2060,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  List<NativeTextCharacterBox>? dco_decode_opt_list_native_text_character_box(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_native_text_character_box(raw);
   }
 
   @protected
@@ -2527,6 +2560,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<NativeTextCharacterBox> sse_decode_list_native_text_character_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeTextCharacterBox>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_text_character_box(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<NativeTextRun> sse_decode_list_native_text_run(
     SseDeserializer deserializer,
   ) {
@@ -2831,6 +2878,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_modifiedRevision = sse_decode_u_64(deserializer);
     var var_text = sse_decode_opt_String(deserializer);
     var var_textRuns = sse_decode_opt_list_native_text_run(deserializer);
+    var var_characterBoxes = sse_decode_opt_list_native_text_character_box(
+      deserializer,
+    );
     var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
     var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
       deserializer,
@@ -2841,6 +2891,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       modifiedRevision: var_modifiedRevision,
       text: var_text,
       textRuns: var_textRuns,
+      characterBoxes: var_characterBoxes,
       bounds: var_bounds,
       transform: var_transform,
     );
@@ -3134,6 +3185,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_capabilityReason = sse_decode_opt_String(deserializer);
     var var_modifiedRevision = sse_decode_u_64(deserializer);
     var var_runs = sse_decode_list_native_text_run(deserializer);
+    var var_characterBoxes = sse_decode_list_native_text_character_box(
+      deserializer,
+    );
     var var_layout = sse_decode_opt_box_autoadd_native_text_layout_recipe(
       deserializer,
     );
@@ -3150,6 +3204,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       capabilityReason: var_capabilityReason,
       modifiedRevision: var_modifiedRevision,
       runs: var_runs,
+      characterBoxes: var_characterBoxes,
       layout: var_layout,
       fontFingerprint: var_fontFingerprint,
       fontAssetHandle: var_fontAssetHandle,
@@ -3196,6 +3251,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       commandId: var_commandId,
       baseRevision: var_baseRevision,
       payload: var_payload,
+    );
+  }
+
+  @protected
+  NativeTextCharacterBox sse_decode_native_text_character_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    return NativeTextCharacterBox(
+      start: var_start,
+      end: var_end,
+      bounds: var_bounds,
     );
   }
 
@@ -3370,6 +3440,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  List<NativeTextCharacterBox>? sse_decode_opt_list_native_text_character_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_native_text_character_box(deserializer));
     } else {
       return null;
     }
@@ -3894,6 +3977,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_native_text_character_box(
+    List<NativeTextCharacterBox> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_text_character_box(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_native_text_run(
     List<NativeTextRun> self,
     SseSerializer serializer,
@@ -4139,6 +4234,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.modifiedRevision, serializer);
     sse_encode_opt_String(self.text, serializer);
     sse_encode_opt_list_native_text_run(self.textRuns, serializer);
+    sse_encode_opt_list_native_text_character_box(
+      self.characterBoxes,
+      serializer,
+    );
     sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
     sse_encode_opt_box_autoadd_native_affine_transform(
       self.transform,
@@ -4368,6 +4467,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_String(self.capabilityReason, serializer);
     sse_encode_u_64(self.modifiedRevision, serializer);
     sse_encode_list_native_text_run(self.runs, serializer);
+    sse_encode_list_native_text_character_box(self.characterBoxes, serializer);
     sse_encode_opt_box_autoadd_native_text_layout_recipe(
       self.layout,
       serializer,
@@ -4407,6 +4507,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.commandId, serializer);
     sse_encode_u_64(self.baseRevision, serializer);
     sse_encode_native_editor_command(self.payload, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_character_box(
+    NativeTextCharacterBox self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
   }
 
   @protected
@@ -4570,6 +4681,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_native_text_character_box(
+    List<NativeTextCharacterBox>? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_native_text_character_box(self, serializer);
     }
   }
 

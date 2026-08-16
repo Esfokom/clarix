@@ -135,6 +135,18 @@ class EditorTextRun {
   final EditorTextStyle style;
 }
 
+class EditorTextCharacterBox {
+  const EditorTextCharacterBox({
+    required this.start,
+    required this.end,
+    required this.bounds,
+  });
+
+  final int start;
+  final int end;
+  final EditorPdfBox bounds;
+}
+
 class EditorSceneObject {
   const EditorSceneObject({
     required this.kind,
@@ -147,6 +159,7 @@ class EditorSceneObject {
     this.capabilityReason,
     required this.modifiedRevision,
     required this.runs,
+    this.characterBoxes = const <EditorTextCharacterBox>[],
     this.layout,
     this.fontFingerprint,
     this.fontAssetHandle,
@@ -162,6 +175,7 @@ class EditorSceneObject {
   final String? capabilityReason;
   final int modifiedRevision;
   final List<EditorTextRun> runs;
+  final List<EditorTextCharacterBox> characterBoxes;
   final EditorTextLayoutRecipe? layout;
   final String? fontFingerprint;
   final String? fontAssetHandle;
@@ -272,6 +286,7 @@ class EditorObjectPatch {
     required this.modifiedRevision,
     this.text,
     this.textRuns,
+    this.characterBoxes,
     this.bounds,
     this.transform,
   });
@@ -281,6 +296,7 @@ class EditorObjectPatch {
   final int modifiedRevision;
   final String? text;
   final List<EditorTextRun>? textRuns;
+  final List<EditorTextCharacterBox>? characterBoxes;
   final EditorPdfBox? bounds;
   final EditorAffineTransform? transform;
 }

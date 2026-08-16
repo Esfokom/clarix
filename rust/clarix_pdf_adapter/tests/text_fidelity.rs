@@ -48,3 +48,28 @@ fn generated_base14_latin_is_qualified_for_phase1() {
     let page = PdfOxideImporter.inspect_page(&source, 1).unwrap();
     assert_eq!(page.page.objects[0].capability(), EditCapability::Editable);
 }
+
+#[test]
+fn importer_publishes_complete_legal_character_boxes() {
+    let source = fixture("generated/standard-latin.pdf");
+    let page = PdfOxideImporter.inspect_page(&source, 1).unwrap();
+    let object = &page.page.objects[0];
+    let bounds = object.bounds();
+    let DocumentObject::Text(text) = object else {
+        panic!("fixture must contain text")
+    };
+
+    assert!(!text.character_boxes.is_empty());
+    assert_eq!(text.character_boxes[0].range.start, 0);
+    assert_eq!(
+        text.character_boxes.last().unwrap().range.end,
+        text.text.encode_utf16().count() as u32
+    );
+    for pair in text.character_boxes.windows(2) {
+        assert_eq!(pair[0].range.end, pair[1].range.start);
+    }
+    for character in &text.character_boxes {
+        assert!(character.bounds.left >= bounds.left);
+        assert!(character.bounds.right <= bounds.right);
+    }
+}

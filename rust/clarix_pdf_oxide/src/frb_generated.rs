@@ -1316,6 +1316,20 @@ impl SseDecode for Vec<crate::editing_api::NativeSceneObject> {
     }
 }
 
+impl SseDecode for Vec<crate::editing_api::NativeTextCharacterBox> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::editing_api::NativeTextCharacterBox>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::editing_api::NativeTextRun> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1644,6 +1658,8 @@ impl SseDecode for crate::editing_api::NativeObjectPatch {
         let mut var_text = <Option<String>>::sse_decode(deserializer);
         let mut var_textRuns =
             <Option<Vec<crate::editing_api::NativeTextRun>>>::sse_decode(deserializer);
+        let mut var_characterBoxes =
+            <Option<Vec<crate::editing_api::NativeTextCharacterBox>>>::sse_decode(deserializer);
         let mut var_bounds = <Option<crate::editing_api::NativePdfBox>>::sse_decode(deserializer);
         let mut var_transform =
             <Option<crate::editing_api::NativeAffineTransform>>::sse_decode(deserializer);
@@ -1653,6 +1669,7 @@ impl SseDecode for crate::editing_api::NativeObjectPatch {
             modified_revision: var_modifiedRevision,
             text: var_text,
             text_runs: var_textRuns,
+            character_boxes: var_characterBoxes,
             bounds: var_bounds,
             transform: var_transform,
         };
@@ -1951,6 +1968,8 @@ impl SseDecode for crate::editing_api::NativeSceneObject {
         let mut var_capabilityReason = <Option<String>>::sse_decode(deserializer);
         let mut var_modifiedRevision = <u64>::sse_decode(deserializer);
         let mut var_runs = <Vec<crate::editing_api::NativeTextRun>>::sse_decode(deserializer);
+        let mut var_characterBoxes =
+            <Vec<crate::editing_api::NativeTextCharacterBox>>::sse_decode(deserializer);
         let mut var_layout =
             <Option<crate::editing_api::NativeTextLayoutRecipe>>::sse_decode(deserializer);
         let mut var_fontFingerprint = <Option<String>>::sse_decode(deserializer);
@@ -1966,6 +1985,7 @@ impl SseDecode for crate::editing_api::NativeSceneObject {
             capability_reason: var_capabilityReason,
             modified_revision: var_modifiedRevision,
             runs: var_runs,
+            character_boxes: var_characterBoxes,
             layout: var_layout,
             font_fingerprint: var_fontFingerprint,
             font_asset_handle: var_fontAssetHandle,
@@ -2013,6 +2033,20 @@ impl SseDecode for crate::editing_api::NativeSubmitCommandRequest {
             command_id: var_commandId,
             base_revision: var_baseRevision,
             payload: var_payload,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativeTextCharacterBox {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_start = <u32>::sse_decode(deserializer);
+        let mut var_end = <u32>::sse_decode(deserializer);
+        let mut var_bounds = <crate::editing_api::NativePdfBox>::sse_decode(deserializer);
+        return crate::editing_api::NativeTextCharacterBox {
+            start: var_start,
+            end: var_end,
+            bounds: var_bounds,
         };
     }
 }
@@ -2195,6 +2229,19 @@ impl SseDecode for Option<u64> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<u64>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<Vec<crate::editing_api::NativeTextCharacterBox>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(
+                <Vec<crate::editing_api::NativeTextCharacterBox>>::sse_decode(deserializer),
+            );
         } else {
             return None;
         }
@@ -2779,6 +2826,7 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeObjectPatch {
             self.modified_revision.into_into_dart().into_dart(),
             self.text.into_into_dart().into_dart(),
             self.text_runs.into_into_dart().into_dart(),
+            self.character_boxes.into_into_dart().into_dart(),
             self.bounds.into_into_dart().into_dart(),
             self.transform.into_into_dart().into_dart(),
         ]
@@ -3207,6 +3255,7 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeSceneObject {
             self.capability_reason.into_into_dart().into_dart(),
             self.modified_revision.into_into_dart().into_dart(),
             self.runs.into_into_dart().into_dart(),
+            self.character_boxes.into_into_dart().into_dart(),
             self.layout.into_into_dart().into_dart(),
             self.font_fingerprint.into_into_dart().into_dart(),
             self.font_asset_handle.into_into_dart().into_dart(),
@@ -3289,6 +3338,28 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeSubmitCommandRe
     for crate::editing_api::NativeSubmitCommandRequest
 {
     fn into_into_dart(self) -> crate::editing_api::NativeSubmitCommandRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeTextCharacterBox {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.start.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
+            self.bounds.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeTextCharacterBox
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeTextCharacterBox>
+    for crate::editing_api::NativeTextCharacterBox
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeTextCharacterBox {
         self
     }
 }
@@ -3598,6 +3669,16 @@ impl SseEncode for Vec<crate::editing_api::NativeSceneObject> {
     }
 }
 
+impl SseEncode for Vec<crate::editing_api::NativeTextCharacterBox> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::editing_api::NativeTextCharacterBox>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::editing_api::NativeTextRun> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3841,6 +3922,10 @@ impl SseEncode for crate::editing_api::NativeObjectPatch {
         <u64>::sse_encode(self.modified_revision, serializer);
         <Option<String>>::sse_encode(self.text, serializer);
         <Option<Vec<crate::editing_api::NativeTextRun>>>::sse_encode(self.text_runs, serializer);
+        <Option<Vec<crate::editing_api::NativeTextCharacterBox>>>::sse_encode(
+            self.character_boxes,
+            serializer,
+        );
         <Option<crate::editing_api::NativePdfBox>>::sse_encode(self.bounds, serializer);
         <Option<crate::editing_api::NativeAffineTransform>>::sse_encode(self.transform, serializer);
     }
@@ -4041,6 +4126,10 @@ impl SseEncode for crate::editing_api::NativeSceneObject {
         <Option<String>>::sse_encode(self.capability_reason, serializer);
         <u64>::sse_encode(self.modified_revision, serializer);
         <Vec<crate::editing_api::NativeTextRun>>::sse_encode(self.runs, serializer);
+        <Vec<crate::editing_api::NativeTextCharacterBox>>::sse_encode(
+            self.character_boxes,
+            serializer,
+        );
         <Option<crate::editing_api::NativeTextLayoutRecipe>>::sse_encode(self.layout, serializer);
         <Option<String>>::sse_encode(self.font_fingerprint, serializer);
         <Option<String>>::sse_encode(self.font_asset_handle, serializer);
@@ -4080,6 +4169,15 @@ impl SseEncode for crate::editing_api::NativeSubmitCommandRequest {
         <String>::sse_encode(self.command_id, serializer);
         <u64>::sse_encode(self.base_revision, serializer);
         <crate::editing_api::NativeEditorCommand>::sse_encode(self.payload, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativeTextCharacterBox {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.start, serializer);
+        <u32>::sse_encode(self.end, serializer);
+        <crate::editing_api::NativePdfBox>::sse_encode(self.bounds, serializer);
     }
 }
 
@@ -4228,6 +4326,16 @@ impl SseEncode for Option<u64> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <u64>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<Vec<crate::editing_api::NativeTextCharacterBox>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <Vec<crate::editing_api::NativeTextCharacterBox>>::sse_encode(value, serializer);
         }
     }
 }

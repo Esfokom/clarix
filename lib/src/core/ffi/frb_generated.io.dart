@@ -208,6 +208,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw);
 
   @protected
+  List<NativeTextCharacterBox> dco_decode_list_native_text_character_box(
+    dynamic raw,
+  );
+
+  @protected
   List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw);
 
   @protected
@@ -338,6 +343,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeTextCharacterBox dco_decode_native_text_character_box(dynamic raw);
+
+  @protected
   NativeTextLayoutRecipe dco_decode_native_text_layout_recipe(dynamic raw);
 
   @protected
@@ -386,6 +394,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
+
+  @protected
+  List<NativeTextCharacterBox>? dco_decode_opt_list_native_text_character_box(
+    dynamic raw,
+  );
 
   @protected
   List<NativeTextRun>? dco_decode_opt_list_native_text_run(dynamic raw);
@@ -623,6 +636,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeTextCharacterBox> sse_decode_list_native_text_character_box(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<NativeTextRun> sse_decode_list_native_text_run(
     SseDeserializer deserializer,
   );
@@ -819,6 +837,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeTextCharacterBox sse_decode_native_text_character_box(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeTextLayoutRecipe sse_decode_native_text_layout_recipe(
     SseDeserializer deserializer,
   );
@@ -875,6 +898,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
+
+  @protected
+  List<NativeTextCharacterBox>? sse_decode_opt_list_native_text_character_box(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<NativeTextRun>? sse_decode_opt_list_native_text_run(
@@ -1151,6 +1179,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_native_text_character_box(
+    List<NativeTextCharacterBox> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_native_text_run(
     List<NativeTextRun> self,
     SseSerializer serializer,
@@ -1400,6 +1434,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_text_character_box(
+    NativeTextCharacterBox self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_text_layout_recipe(
     NativeTextLayoutRecipe self,
     SseSerializer serializer,
@@ -1467,6 +1507,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_list_native_text_character_box(
+    List<NativeTextCharacterBox>? self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_opt_list_native_text_run(

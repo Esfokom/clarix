@@ -90,6 +90,7 @@ pub struct ObjectPatch {
     pub modified_revision: DocumentRevision,
     pub text: Option<String>,
     pub text_runs: Option<Vec<crate::TextRun>>,
+    pub character_boxes: Option<Vec<crate::TextCharacterBox>>,
     pub bounds: Option<PdfBox>,
     pub transform: Option<AffineTransform>,
 }

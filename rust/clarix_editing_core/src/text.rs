@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::ObjectId;
+use crate::{ObjectId, PdfBox};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Utf16Range {
@@ -241,6 +241,12 @@ pub struct SourceGlyph {
     pub utf16_end: u32,
     pub character_code: u32,
     pub glyph_id: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct TextCharacterBox {
+    pub range: Utf16Range,
+    pub bounds: PdfBox,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

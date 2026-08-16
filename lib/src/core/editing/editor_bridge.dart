@@ -446,6 +446,15 @@ EditorSceneObject _sceneObjectFromNative(native.NativeSceneObject value) =>
         'object.modifiedRevision',
       ),
       runs: value.runs.map(_textRunFromNative).toList(growable: false),
+      characterBoxes: value.characterBoxes
+          .map(
+            (character) => EditorTextCharacterBox(
+              start: character.start,
+              end: character.end,
+              bounds: _boxFromNative(character.bounds),
+            ),
+          )
+          .toList(growable: false),
       layout: value.layout == null
           ? null
           : EditorTextLayoutRecipe(
@@ -494,6 +503,15 @@ EditorCommandResult _commandResultFromNative(
           text: patch.text,
           textRuns: patch.textRuns
               ?.map(_textRunFromNative)
+              .toList(growable: false),
+          characterBoxes: patch.characterBoxes
+              ?.map(
+                (character) => EditorTextCharacterBox(
+                  start: character.start,
+                  end: character.end,
+                  bounds: _boxFromNative(character.bounds),
+                ),
+              )
               .toList(growable: false),
           bounds: patch.bounds == null ? null : _boxFromNative(patch.bounds!),
           transform: patch.transform == null

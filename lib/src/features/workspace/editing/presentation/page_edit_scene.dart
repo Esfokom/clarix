@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
@@ -8,6 +7,7 @@ import '../application/editor_session_controller.dart';
 import '../domain/editor_document_state.dart';
 import '../domain/editor_selection.dart';
 import 'clean_patch_layer.dart';
+import 'editor_hit_test.dart';
 import 'editor_text_painter.dart';
 import 'native_text_editor.dart';
 import 'object_transform_handles.dart';
@@ -47,6 +47,11 @@ class PageEditScene extends StatelessWidget {
         .where((object) => object.capability == 'editable')
         .where((object) => cleanPatches.containsKey(object.objectId))
         .toList(growable: false);
+    final hitTestIndex = EditorHitTestIndex(
+      pageSize: pageSize,
+      displaySize: displaySize,
+      objects: interactive.map(EditorObjectHitGeometry.fromObject),
+    );
     final selection = document.selection;
     final activeObject = session == null || selection == null
         ? null
@@ -101,24 +106,23 @@ class PageEditScene extends StatelessWidget {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTapDown: (details) {
-                        final text =
-                            document.visibleText(object.objectId) ??
-                            object.text ??
-                            '';
-                        final width = math.max(1.0, details.localPosition.dx);
-                        final boxWidth = EditorPageGeometry.rectForBox(
+                        final objectRect = EditorPageGeometry.rectForBox(
                           object.bounds,
                           pageSize: pageSize,
                           displaySize: displaySize,
-                        ).width;
-                        final offset =
-                            (text.codeUnits.length * width / boxWidth)
-                                .round()
-                                .clamp(0, text.codeUnits.length);
+                        );
+                        final hit = hitTestIndex.hitTest(
+                          details.localPosition + objectRect.topLeft,
+                        );
+                        if (hit == null) return;
                         session!.updateSelection(
                           EditorSelection(
-                            objectId: object.objectId,
-                            range: EditorTextRange(start: offset, end: offset),
+                            objectId: hit.objectId,
+                            range: EditorTextRange(
+                              start: hit.utf16Offset,
+                              end: hit.utf16Offset,
+                            ),
+                            affinity: hit.affinity,
                           ),
                         );
                       },
@@ -238,14 +242,8 @@ class _EditorChromePainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
     canvas.drawRect(bounds, outline);
-    final textLength = math.max(1, object.text?.codeUnits.length ?? 1);
-    final caretFraction = selection.range.end.clamp(0, textLength) / textLength;
-    final caretX = bounds.left + bounds.width * caretFraction;
-    canvas.drawLine(
-      Offset(caretX, bounds.top),
-      Offset(caretX, bounds.bottom),
-      outline..strokeWidth = 1.5,
-    );
+    final caret = _caretSegment(object, selection.range.end);
+    canvas.drawLine(caret.$1, caret.$2, outline..strokeWidth = 1.5);
     if (composition?.objectId == object.objectId) {
       canvas.drawLine(
         Offset(bounds.left, bounds.bottom - 1),
@@ -263,4 +261,57 @@ class _EditorChromePainter extends CustomPainter {
       composition?.range.start != oldDelegate.composition?.range.start ||
       composition?.range.end != oldDelegate.composition?.range.end ||
       displaySize != oldDelegate.displaySize;
+
+  (Offset, Offset) _caretSegment(EditorSceneObject object, int utf16Offset) {
+    EditorTextCharacterBox? character;
+    var useLeadingEdge = true;
+    for (final candidate in object.characterBoxes) {
+      if (candidate.start == utf16Offset) {
+        character = candidate;
+        break;
+      }
+    }
+    if (character == null) {
+      for (final candidate in object.characterBoxes.reversed) {
+        if (candidate.end == utf16Offset) {
+          character = candidate;
+          useLeadingEdge = false;
+          break;
+        }
+      }
+    }
+    final box = character?.bounds ?? object.bounds;
+    final direction = object.layout?.direction;
+    final (pdfStart, pdfEnd) = switch (direction) {
+      'righttoleft' => (
+        Offset(useLeadingEdge ? box.right : box.left, box.bottom),
+        Offset(useLeadingEdge ? box.right : box.left, box.top),
+      ),
+      'toptobottom' => (
+        Offset(box.left, useLeadingEdge ? box.top : box.bottom),
+        Offset(box.right, useLeadingEdge ? box.top : box.bottom),
+      ),
+      _ => (
+        Offset(useLeadingEdge ? box.left : box.right, box.bottom),
+        Offset(useLeadingEdge ? box.left : box.right, box.top),
+      ),
+    };
+    return (
+      EditorPageGeometry.pointForPdf(
+        _transformPoint(pdfStart, object.transform),
+        pageSize: pageSize,
+        displaySize: displaySize,
+      ),
+      EditorPageGeometry.pointForPdf(
+        _transformPoint(pdfEnd, object.transform),
+        pageSize: pageSize,
+        displaySize: displaySize,
+      ),
+    );
+  }
 }
+
+Offset _transformPoint(Offset point, EditorAffineTransform transform) => Offset(
+  transform.a * point.dx + transform.c * point.dy + transform.e,
+  transform.b * point.dx + transform.d * point.dy + transform.f,
+);

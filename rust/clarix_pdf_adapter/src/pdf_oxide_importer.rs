@@ -1,10 +1,12 @@
 use clarix_editing_core::{
     AffineTransform, CapabilityReason, DocumentObject, EditCapability, FontRef, FontSource,
     ObjectId, PageId, PageImportRequest, PageImportSource, PageNode, PdfBox, SourceBinding,
-    SourceGlyph, TextBlock, TextLayoutRecipe, TextStyle, WritingDirection,
+    SourceGlyph, TextBlock, TextCharacterBox, TextLayoutRecipe, TextStyle, Utf16Range,
+    WritingDirection,
 };
 use pdf_oxide::PdfDocument;
 use sha2::{Digest, Sha256};
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     contract::sha256_hex, CapabilityReport, DocumentImport, PageImport, PdfAdapterError,
@@ -78,6 +80,7 @@ impl PdfImporter for PdfOxideImporter {
             .filter(|span| !span.text.is_empty())
             .enumerate()
         {
+            let character_boxes = character_boxes(&span)?;
             let bounds = PdfBox::new(
                 f64::from(span.bbox.x),
                 f64::from(span.bbox.y),
@@ -115,6 +118,7 @@ impl PdfImporter for PdfOxideImporter {
             let mut block = TextBlock::plain(object_id, page_id, span.text, bounds)
                 .with_source_binding(binding)
                 .with_transform(transform)
+                .with_character_boxes(character_boxes)
                 .with_capability(if qualified { EditCapability::Editable } else { EditCapability::ReadOnly }, if qualified { None } else { Some(CapabilityReason {
                     code: "font_encoding_incomplete".into(),
                     message: "the font lacks a verified reversible glyph encoding and exact source operator locator"
@@ -172,6 +176,55 @@ impl PdfImporter for PdfOxideImporter {
             ],
         })
     }
+}
+
+fn character_boxes(
+    span: &pdf_oxide::layout::TextSpan,
+) -> Result<Vec<TextCharacterBox>, PdfAdapterError> {
+    let characters = span.to_chars();
+    let mut character_index = 0;
+    let mut utf16_start = 0_u32;
+    let mut output = Vec::new();
+    for grapheme in span.text.graphemes(true) {
+        let character_count = grapheme.chars().count();
+        let end = character_index + character_count;
+        let glyphs = characters.get(character_index..end).ok_or_else(|| {
+            PdfAdapterError::Adapter("character geometry does not match extracted text".into())
+        })?;
+        let left = glyphs
+            .iter()
+            .map(|glyph| f64::from(glyph.bbox.x))
+            .fold(f64::INFINITY, f64::min);
+        let bottom = glyphs
+            .iter()
+            .map(|glyph| f64::from(glyph.bbox.y))
+            .fold(f64::INFINITY, f64::min);
+        let right = glyphs
+            .iter()
+            .map(|glyph| f64::from(glyph.bbox.x + glyph.bbox.width))
+            .fold(f64::NEG_INFINITY, f64::max);
+        let top = glyphs
+            .iter()
+            .map(|glyph| f64::from(glyph.bbox.y + glyph.bbox.height))
+            .fold(f64::NEG_INFINITY, f64::max);
+        let utf16_end = utf16_start
+            .checked_add(grapheme.encode_utf16().count() as u32)
+            .ok_or_else(|| PdfAdapterError::Adapter("text geometry exceeds UTF-16 range".into()))?;
+        output.push(TextCharacterBox {
+            range: Utf16Range::new(utf16_start, utf16_end)
+                .map_err(|error| PdfAdapterError::Adapter(error.to_string()))?,
+            bounds: PdfBox::new(left, bottom, right, top)
+                .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?,
+        });
+        utf16_start = utf16_end;
+        character_index = end;
+    }
+    if character_index != characters.len() {
+        return Err(PdfAdapterError::Adapter(
+            "character geometry has trailing glyphs".into(),
+        ));
+    }
+    Ok(output)
 }
 
 impl PageImportSource for PdfOxideImporter {

@@ -1,12 +1,13 @@
 use std::collections::HashSet;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::history::{can_coalesce, HistoryEntry};
 use crate::text::utf16_range_to_byte_range;
 use crate::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentModel, DocumentObject,
     DocumentRevision, EditCapability, EditingError, EditorCommand, InverseOperation, ObjectId,
-    ObjectPatch, PageNode, PreparedCommand, RecoveredCommand, SelectionRebase, SessionId, TextRun,
-    Utf16Range,
+    ObjectPatch, PageNode, PdfBox, PreparedCommand, RecoveredCommand, SelectionRebase, SessionId,
+    TextCharacterBox, TextRun, Utf16Range, WritingDirection,
 };
 
 #[derive(Debug, Clone)]
@@ -307,6 +308,7 @@ impl EditorSessionState {
             return Err(EditingError::ReadOnly(object_id));
         }
         let mut after = before.clone();
+        let object_bounds = after.bounds();
         match command {
             EditorCommand::ReplaceTextRange {
                 range, replacement, ..
@@ -317,6 +319,8 @@ impl EditorSessionState {
                 let byte_range = utf16_range_to_byte_range(&block.text, *range)
                     .map_err(|_| EditingError::InvalidTextBoundary)?;
                 block.text.replace_range(byte_range, replacement);
+                block.character_boxes =
+                    reflow_character_boxes(&block.text, object_bounds, block.layout.direction);
                 let full_range = Utf16Range::new(0, block.text.encode_utf16().count() as u32)
                     .map_err(|_| EditingError::InvalidTextBoundary)?;
                 let style = block
@@ -354,7 +358,13 @@ impl EditorSessionState {
                 block.layout.paragraph = style.clone();
             }
             EditorCommand::MoveObject { transform, .. } => after.set_transform(*transform),
-            EditorCommand::ResizeObject { bounds, .. } => after.set_bounds(*bounds),
+            EditorCommand::ResizeObject { bounds, .. } => {
+                after.set_bounds(*bounds);
+                if let DocumentObject::Text(block) = &mut after {
+                    block.character_boxes =
+                        reflow_character_boxes(&block.text, *bounds, block.layout.direction);
+                }
+            }
             EditorCommand::RotateObject {
                 radians,
                 center_x,
@@ -503,6 +513,55 @@ fn command_object_id(command: &EditorCommand) -> Option<ObjectId> {
     }
 }
 
+fn reflow_character_boxes(
+    text: &str,
+    bounds: PdfBox,
+    direction: WritingDirection,
+) -> Vec<TextCharacterBox> {
+    let graphemes = text.graphemes(true).collect::<Vec<_>>();
+    let count = graphemes.len();
+    let mut utf16_start = 0_u32;
+
+    graphemes
+        .into_iter()
+        .enumerate()
+        .map(|(index, grapheme)| {
+            let utf16_end = utf16_start + grapheme.encode_utf16().count() as u32;
+            let fraction_start = index as f64 / count as f64;
+            let fraction_end = (index + 1) as f64 / count as f64;
+            let character_bounds = match direction {
+                WritingDirection::LeftToRight => PdfBox {
+                    left: bounds.left + (bounds.right - bounds.left) * fraction_start,
+                    bottom: bounds.bottom,
+                    right: bounds.left + (bounds.right - bounds.left) * fraction_end,
+                    top: bounds.top,
+                },
+                WritingDirection::RightToLeft => PdfBox {
+                    left: bounds.right - (bounds.right - bounds.left) * fraction_end,
+                    bottom: bounds.bottom,
+                    right: bounds.right - (bounds.right - bounds.left) * fraction_start,
+                    top: bounds.top,
+                },
+                WritingDirection::TopToBottom => PdfBox {
+                    left: bounds.left,
+                    bottom: bounds.top - (bounds.top - bounds.bottom) * fraction_end,
+                    right: bounds.right,
+                    top: bounds.top - (bounds.top - bounds.bottom) * fraction_start,
+                },
+            };
+            let character = TextCharacterBox {
+                range: Utf16Range {
+                    start: utf16_start,
+                    end: utf16_end,
+                },
+                bounds: character_bounds,
+            };
+            utf16_start = utf16_end;
+            character
+        })
+        .collect()
+}
+
 fn split_text_runs(runs: &[TextRun], range: Utf16Range, style: crate::TextStyle) -> Vec<TextRun> {
     let mut output = Vec::new();
     for run in runs {
@@ -539,12 +598,14 @@ fn object_patch(
     after: &DocumentObject,
     revision: DocumentRevision,
 ) -> ObjectPatch {
-    let (text, text_runs) = match (before, after) {
+    let (text, text_runs, character_boxes) = match (before, after) {
         (DocumentObject::Text(before), DocumentObject::Text(after)) => (
             (before.text != after.text).then(|| after.text.clone()),
             (before.runs != after.runs).then(|| after.runs.clone()),
+            (before.character_boxes != after.character_boxes)
+                .then(|| after.character_boxes.clone()),
         ),
-        _ => (None, None),
+        _ => (None, None, None),
     };
     ObjectPatch {
         object_id: after.id(),
@@ -552,6 +613,7 @@ fn object_patch(
         modified_revision: revision,
         text,
         text_runs,
+        character_boxes,
         bounds: (before.bounds() != after.bounds()).then(|| after.bounds()),
         transform: (before.transform() != after.transform()).then(|| after.transform()),
     }

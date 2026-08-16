@@ -48,7 +48,7 @@ pub use save::{
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontRef, FontSource, OverflowPolicy, ParagraphStyle, SourceGlyph,
-    TextAffinity, TextAlignment, TextAnchor, TextLayoutRecipe, TextRangeError, TextRun, TextStyle,
-    Utf16Range, WritingDirection,
+    TextAffinity, TextAlignment, TextAnchor, TextCharacterBox, TextLayoutRecipe, TextRangeError,
+    TextRun, TextStyle, Utf16Range, WritingDirection,
 };
 pub use tools::{EditingToolGateway, ObjectSummary, ToolObservation, ToolRequest, ToolRisk};

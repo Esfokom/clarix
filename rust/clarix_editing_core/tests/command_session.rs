@@ -1,7 +1,7 @@
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
     EditorCommand, EditorSessionState, ObjectId, PageId, PageNode, PdfBox, SessionId, TextBlock,
-    Utf16Range,
+    TextCharacterBox, Utf16Range,
 };
 
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
@@ -146,4 +146,134 @@ fn failed_command_is_atomic_and_does_not_consume_its_id() {
         "duplicate_command"
     );
     assert_eq!(session.revision().value(), 1);
+}
+
+#[test]
+fn replacement_reflows_legal_character_boxes_and_undo_restores_source_geometry() {
+    let page_id = PageId::from_source_key("geometry-command/page");
+    let object_id = ObjectId::from_source_key("geometry-command/object");
+    let original_boxes = vec![
+        TextCharacterBox {
+            range: Utf16Range::new(0, 1).unwrap(),
+            bounds: PdfBox::new(0.0, 0.0, 40.0, 20.0).unwrap(),
+        },
+        TextCharacterBox {
+            range: Utf16Range::new(1, 2).unwrap(),
+            bounds: PdfBox::new(40.0, 0.0, 100.0, 20.0).unwrap(),
+        },
+    ];
+    let block = TextBlock::plain(
+        object_id,
+        page_id,
+        "AB",
+        PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
+    )
+    .with_character_boxes(original_boxes.clone());
+    let model = DocumentModel::new(
+        DocumentId::from_source_key("geometry-command"),
+        "sha256:geometry-command".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            100.0,
+            20.0,
+            vec![DocumentObject::text(block)],
+        )],
+    )
+    .unwrap();
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    let result = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(1, 2).unwrap(),
+                replacement: "👩🏽‍💻".into(),
+            },
+        ))
+        .unwrap();
+    assert_eq!(
+        result.object_patches[0]
+            .character_boxes
+            .as_ref()
+            .unwrap()
+            .last()
+            .unwrap()
+            .range
+            .end,
+        8
+    );
+
+    let edited = session.snapshot().unwrap();
+    let DocumentObject::Text(edited) = edited.object(object_id).unwrap() else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(edited.character_boxes.len(), 2);
+    assert_eq!(edited.character_boxes.last().unwrap().range.end, 8);
+    let encoded = serde_json::to_string(&session.snapshot().unwrap()).unwrap();
+    serde_json::from_str::<DocumentModel>(&encoded).unwrap();
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    let restored = session.snapshot().unwrap();
+    let DocumentObject::Text(restored) = restored.object(object_id).unwrap() else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(restored.character_boxes, original_boxes);
+}
+
+#[test]
+fn resizing_text_reflows_and_publishes_character_geometry() {
+    let page_id = PageId::from_source_key("resize-geometry/page");
+    let object_id = ObjectId::from_source_key("resize-geometry/object");
+    let block = TextBlock::plain(
+        object_id,
+        page_id,
+        "AB",
+        PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
+    )
+    .with_character_boxes(vec![
+        TextCharacterBox {
+            range: Utf16Range::new(0, 1).unwrap(),
+            bounds: PdfBox::new(0.0, 0.0, 40.0, 20.0).unwrap(),
+        },
+        TextCharacterBox {
+            range: Utf16Range::new(1, 2).unwrap(),
+            bounds: PdfBox::new(40.0, 0.0, 100.0, 20.0).unwrap(),
+        },
+    ]);
+    let model = DocumentModel::new(
+        DocumentId::from_source_key("resize-geometry"),
+        "sha256:resize-geometry".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            200.0,
+            40.0,
+            vec![DocumentObject::text(block)],
+        )],
+    )
+    .unwrap();
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+
+    let result = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ResizeObject {
+                object_id,
+                bounds: PdfBox::new(0.0, 0.0, 200.0, 40.0).unwrap(),
+            },
+        ))
+        .unwrap();
+
+    let boxes = result.object_patches[0].character_boxes.as_ref().unwrap();
+    assert_eq!(boxes[0].bounds.right, 100.0);
+    assert_eq!(boxes[1].bounds.right, 200.0);
 }

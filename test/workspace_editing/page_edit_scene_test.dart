@@ -143,6 +143,56 @@ void main() {
     },
   );
 
+  test('hit testing follows nonuniform imported character geometry', () {
+    final object = EditorSceneObject(
+      kind: EditorSceneObjectKind.text,
+      objectId: 'geometry-object',
+      pageId: 'page-1',
+      text: 'AB',
+      bounds: const EditorPdfBox(left: 0, bottom: 40, right: 100, top: 60),
+      transform: const EditorAffineTransform(
+        a: 1,
+        b: 0,
+        c: 0,
+        d: 1,
+        e: 0,
+        f: 0,
+      ),
+      capability: 'editable',
+      modifiedRevision: 0,
+      runs: const <EditorTextRun>[],
+      characterBoxes: const <EditorTextCharacterBox>[
+        EditorTextCharacterBox(
+          start: 0,
+          end: 1,
+          bounds: EditorPdfBox(left: 0, bottom: 40, right: 90, top: 60),
+        ),
+        EditorTextCharacterBox(
+          start: 1,
+          end: 2,
+          bounds: EditorPdfBox(left: 90, bottom: 40, right: 100, top: 60),
+        ),
+      ],
+      layout: const EditorTextLayoutRecipe(
+        baseline: 50,
+        lineHeight: 20,
+        characterSpacing: 0,
+        horizontalScale: 1,
+        direction: 'lefttoright',
+      ),
+    );
+    final index = EditorHitTestIndex(
+      pageSize: const Size(100, 100),
+      displaySize: const Size(100, 100),
+      objects: <EditorObjectHitGeometry>[
+        EditorObjectHitGeometry.fromObject(object),
+      ],
+    );
+
+    expect(index.hitTest(const Offset(80, 50))?.utf16Offset, 1);
+    expect(index.hitTest(const Offset(98, 50))?.utf16Offset, 2);
+  });
+
   testWidgets('higher-DPI patch replaces pixels without changing geometry', (
     tester,
   ) async {

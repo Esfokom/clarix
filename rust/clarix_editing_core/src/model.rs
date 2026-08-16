@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{
     validate_utf16_range, AffineTransform, DocumentId, DocumentRevision, FontRef, ObjectId, PageId,
-    PdfBox, SourceGlyph, TextLayoutRecipe, TextRun, TextStyle, Utf16Range,
+    PdfBox, SourceGlyph, TextAnchor, TextLayoutRecipe, TextRun, TextStyle, Utf16Range,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +75,8 @@ pub struct TextBlock {
     pub font: Option<FontRef>,
     pub layout: TextLayoutRecipe,
     pub source_glyphs: Vec<SourceGlyph>,
+    #[serde(default)]
+    pub character_boxes: Vec<crate::TextCharacterBox>,
     pub capability_reason: Option<CapabilityReason>,
 }
 
@@ -92,6 +94,7 @@ impl TextBlock {
             font: None,
             layout: TextLayoutRecipe::default(),
             source_glyphs: Vec::new(),
+            character_boxes: Vec::new(),
             capability_reason: None,
         }
     }
@@ -115,6 +118,11 @@ impl TextBlock {
         self.font = Some(font);
         self.layout = layout;
         self.source_glyphs = source_glyphs;
+        self
+    }
+
+    pub fn with_character_boxes(mut self, character_boxes: Vec<crate::TextCharacterBox>) -> Self {
+        self.character_boxes = character_boxes;
         self
     }
 
@@ -520,6 +528,8 @@ pub enum ModelError {
     InvalidTextLayout(ObjectId),
     #[error("text object {0} has invalid or incomplete runs")]
     InvalidTextRuns(ObjectId),
+    #[error("text object {0} has invalid or incomplete character geometry")]
+    InvalidCharacterGeometry(ObjectId),
     #[error("non-editable text object {0} has no capability reason")]
     MissingCapabilityReason(ObjectId),
 }
@@ -544,12 +554,42 @@ fn validate_text_block(block: &TextBlock) -> Result<(), ModelError> {
     if expected_start != text_length || block.runs.is_empty() {
         return Err(ModelError::InvalidTextRuns(id));
     }
+    if !block.character_boxes.is_empty() {
+        let mut expected_start = 0;
+        for character in &block.character_boxes {
+            if character.range.start != expected_start
+                || character.range.is_empty()
+                || validate_utf16_range(&block.text, character.range).is_err()
+                || TextAnchor::new(
+                    id,
+                    &block.text,
+                    character.range.start,
+                    crate::TextAffinity::Downstream,
+                )
+                .is_err()
+                || TextAnchor::new(
+                    id,
+                    &block.text,
+                    character.range.end,
+                    crate::TextAffinity::Upstream,
+                )
+                .is_err()
+            {
+                return Err(ModelError::InvalidCharacterGeometry(id));
+            }
+            expected_start = character.range.end;
+        }
+        if expected_start != text_length {
+            return Err(ModelError::InvalidCharacterGeometry(id));
+        }
+    }
     if block.base.source_binding.is_some() && block.base.capability == EditCapability::Editable {
         let complete = block
             .font
             .as_ref()
             .is_some_and(|font| font.is_valid() && font.embeddable)
-            && !block.source_glyphs.is_empty();
+            && !block.source_glyphs.is_empty()
+            && (block.text.is_empty() || !block.character_boxes.is_empty());
         if !complete {
             return Err(ModelError::IncompleteEditableText(id));
         }

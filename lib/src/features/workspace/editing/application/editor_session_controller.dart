@@ -588,6 +588,7 @@ Map<int, EditorPageScene> _patchScenes(
                 capabilityReason: object.capabilityReason,
                 modifiedRevision: patch.modifiedRevision,
                 runs: patch.textRuns ?? object.runs,
+                characterBoxes: patch.characterBoxes ?? object.characterBoxes,
                 layout: object.layout,
                 fontFingerprint: object.fontFingerprint,
                 fontAssetHandle: object.fontAssetHandle,

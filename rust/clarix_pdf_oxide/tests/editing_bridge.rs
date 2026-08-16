@@ -103,6 +103,9 @@ fn native_editor_session_opens_edits_and_closes() {
             priority: NativeViewportPriority::Visible,
         })
         .unwrap();
+    assert!(!scene.objects[0].character_boxes.is_empty());
+    assert_eq!(scene.objects[0].character_boxes[0].start, 0);
+    assert!(scene.objects[0].character_boxes[0].end > 0);
     let object_id = scene.objects[0].object_id.clone();
     let patch = session
         .clean_patch(NativeCleanPatchRequest {

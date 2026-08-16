@@ -132,9 +132,17 @@ pub struct NativeSceneObject {
     pub capability_reason: Option<String>,
     pub modified_revision: u64,
     pub runs: Vec<NativeTextRun>,
+    pub character_boxes: Vec<NativeTextCharacterBox>,
     pub layout: Option<NativeTextLayoutRecipe>,
     pub font_fingerprint: Option<String>,
     pub font_asset_handle: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeTextCharacterBox {
+    pub start: u32,
+    pub end: u32,
+    pub bounds: NativePdfBox,
 }
 
 #[derive(Debug, Clone)]
@@ -248,6 +256,7 @@ pub struct NativeObjectPatch {
     pub modified_revision: u64,
     pub text: Option<String>,
     pub text_runs: Option<Vec<NativeTextRun>>,
+    pub character_boxes: Option<Vec<NativeTextCharacterBox>>,
     pub bounds: Option<NativePdfBox>,
     pub transform: Option<NativeAffineTransform>,
 }
@@ -665,6 +674,15 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
             capability_reason: block.capability_reason().map(|reason| reason.code.clone()),
             modified_revision: object.modified_revision().value(),
             runs: block.runs.iter().map(native_text_run).collect(),
+            character_boxes: block
+                .character_boxes
+                .iter()
+                .map(|character| NativeTextCharacterBox {
+                    start: character.range.start,
+                    end: character.range.end,
+                    bounds: native_box(character.bounds),
+                })
+                .collect(),
             layout: Some(NativeTextLayoutRecipe {
                 baseline: block.layout.baseline,
                 line_height: block.layout.line_height,
@@ -686,6 +704,7 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
             capability_reason: None,
             modified_revision: object.modified_revision().value(),
             runs: Vec::new(),
+            character_boxes: Vec::new(),
             layout: None,
             font_fingerprint: None,
             font_asset_handle: None,
@@ -727,6 +746,16 @@ fn native_object_patch(patch: ObjectPatch) -> NativeObjectPatch {
         text_runs: patch
             .text_runs
             .map(|runs| runs.iter().map(native_text_run).collect()),
+        character_boxes: patch.character_boxes.map(|characters| {
+            characters
+                .into_iter()
+                .map(|character| NativeTextCharacterBox {
+                    start: character.range.start,
+                    end: character.range.end,
+                    bounds: native_box(character.bounds),
+                })
+                .collect()
+        }),
         bounds: patch.bounds.map(native_box),
         transform: patch.transform.map(native_transform),
     }

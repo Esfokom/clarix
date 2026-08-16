@@ -110,6 +110,7 @@ class Phase1RecoveryProbe {
           capabilityReason: object.capabilityReason,
           modifiedRevision: revision,
           runs: object.runs,
+          characterBoxes: object.characterBoxes,
           layout: object.layout,
           fontFingerprint: object.fontFingerprint,
           fontAssetHandle: object.fontAssetHandle,

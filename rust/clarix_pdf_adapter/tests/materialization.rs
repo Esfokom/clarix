@@ -69,6 +69,7 @@ fn qualified_snapshot() -> DocumentModel {
         },
         source_glyphs,
     )
+    .with_character_boxes(original.character_boxes.clone())
     .with_capability(EditCapability::Editable, None);
     qualified.runs = original.runs.clone();
     let mut page = imported.page;

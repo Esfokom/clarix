@@ -21,6 +21,95 @@ class EditorGlyphAnchor {
 class EditorObjectHitGeometry {
   const EditorObjectHitGeometry({required this.object, required this.anchors});
 
+  factory EditorObjectHitGeometry.fromObject(EditorSceneObject object) {
+    final direction = object.layout?.direction;
+    final anchors = <EditorGlyphAnchor>[];
+    for (final character in object.characterBoxes) {
+      final bounds = character.bounds;
+      switch (direction) {
+        case 'righttoleft':
+          anchors
+            ..add(
+              EditorGlyphAnchor(
+                bounds: EditorPdfBox(
+                  left: bounds.right,
+                  bottom: bounds.bottom,
+                  right: bounds.right,
+                  top: bounds.top,
+                ),
+                utf16Offset: character.start,
+              ),
+            )
+            ..add(
+              EditorGlyphAnchor(
+                bounds: EditorPdfBox(
+                  left: bounds.left,
+                  bottom: bounds.bottom,
+                  right: bounds.left,
+                  top: bounds.top,
+                ),
+                utf16Offset: character.end,
+                affinity: EditorSelectionAffinity.upstream,
+              ),
+            );
+        case 'toptobottom':
+          anchors
+            ..add(
+              EditorGlyphAnchor(
+                bounds: EditorPdfBox(
+                  left: bounds.left,
+                  bottom: bounds.top,
+                  right: bounds.right,
+                  top: bounds.top,
+                ),
+                utf16Offset: character.start,
+              ),
+            )
+            ..add(
+              EditorGlyphAnchor(
+                bounds: EditorPdfBox(
+                  left: bounds.left,
+                  bottom: bounds.bottom,
+                  right: bounds.right,
+                  top: bounds.bottom,
+                ),
+                utf16Offset: character.end,
+                affinity: EditorSelectionAffinity.upstream,
+              ),
+            );
+        default:
+          anchors
+            ..add(
+              EditorGlyphAnchor(
+                bounds: EditorPdfBox(
+                  left: bounds.left,
+                  bottom: bounds.bottom,
+                  right: bounds.left,
+                  top: bounds.top,
+                ),
+                utf16Offset: character.start,
+              ),
+            )
+            ..add(
+              EditorGlyphAnchor(
+                bounds: EditorPdfBox(
+                  left: bounds.right,
+                  bottom: bounds.bottom,
+                  right: bounds.right,
+                  top: bounds.top,
+                ),
+                utf16Offset: character.end,
+                affinity: EditorSelectionAffinity.upstream,
+              ),
+            );
+      }
+    }
+    return EditorObjectHitGeometry(
+      object: object,
+      anchors: List<EditorGlyphAnchor>.unmodifiable(anchors),
+    );
+  }
+
   final EditorSceneObject object;
   final List<EditorGlyphAnchor> anchors;
 }

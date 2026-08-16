@@ -7,7 +7,7 @@ import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `required`, `text_style`, `viewport_priority`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
@@ -464,6 +464,7 @@ class NativeObjectPatch {
   final BigInt modifiedRevision;
   final String? text;
   final List<NativeTextRun>? textRuns;
+  final List<NativeTextCharacterBox>? characterBoxes;
   final NativePdfBox? bounds;
   final NativeAffineTransform? transform;
 
@@ -473,6 +474,7 @@ class NativeObjectPatch {
     required this.modifiedRevision,
     this.text,
     this.textRuns,
+    this.characterBoxes,
     this.bounds,
     this.transform,
   });
@@ -484,6 +486,7 @@ class NativeObjectPatch {
       modifiedRevision.hashCode ^
       text.hashCode ^
       textRuns.hashCode ^
+      characterBoxes.hashCode ^
       bounds.hashCode ^
       transform.hashCode;
 
@@ -497,6 +500,7 @@ class NativeObjectPatch {
           modifiedRevision == other.modifiedRevision &&
           text == other.text &&
           textRuns == other.textRuns &&
+          characterBoxes == other.characterBoxes &&
           bounds == other.bounds &&
           transform == other.transform;
 }
@@ -628,6 +632,7 @@ class NativeSceneObject {
   final String? capabilityReason;
   final BigInt modifiedRevision;
   final List<NativeTextRun> runs;
+  final List<NativeTextCharacterBox> characterBoxes;
   final NativeTextLayoutRecipe? layout;
   final String? fontFingerprint;
   final String? fontAssetHandle;
@@ -643,6 +648,7 @@ class NativeSceneObject {
     this.capabilityReason,
     required this.modifiedRevision,
     required this.runs,
+    required this.characterBoxes,
     this.layout,
     this.fontFingerprint,
     this.fontAssetHandle,
@@ -660,6 +666,7 @@ class NativeSceneObject {
       capabilityReason.hashCode ^
       modifiedRevision.hashCode ^
       runs.hashCode ^
+      characterBoxes.hashCode ^
       layout.hashCode ^
       fontFingerprint.hashCode ^
       fontAssetHandle.hashCode;
@@ -679,6 +686,7 @@ class NativeSceneObject {
           capabilityReason == other.capabilityReason &&
           modifiedRevision == other.modifiedRevision &&
           runs == other.runs &&
+          characterBoxes == other.characterBoxes &&
           layout == other.layout &&
           fontFingerprint == other.fontFingerprint &&
           fontAssetHandle == other.fontAssetHandle;
@@ -746,6 +754,30 @@ class NativeSubmitCommandRequest {
           commandId == other.commandId &&
           baseRevision == other.baseRevision &&
           payload == other.payload;
+}
+
+class NativeTextCharacterBox {
+  final int start;
+  final int end;
+  final NativePdfBox bounds;
+
+  const NativeTextCharacterBox({
+    required this.start,
+    required this.end,
+    required this.bounds,
+  });
+
+  @override
+  int get hashCode => start.hashCode ^ end.hashCode ^ bounds.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeTextCharacterBox &&
+          runtimeType == other.runtimeType &&
+          start == other.start &&
+          end == other.end &&
+          bounds == other.bounds;
 }
 
 class NativeTextLayoutRecipe {
