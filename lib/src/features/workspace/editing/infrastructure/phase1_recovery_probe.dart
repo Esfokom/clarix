@@ -10,18 +10,22 @@ import 'editor_session_gateway.dart';
 
 enum Phase1RecoveryProbeMode { acceptThenWait, verify }
 
+enum Phase1RecoveryKillWindow { acceptedCommand, walCheckpoint }
+
 class Phase1RecoveryProbeInvocation {
   const Phase1RecoveryProbeInvocation({
     required this.mode,
     required this.fixturePath,
     required this.seed,
     required this.markerPath,
+    this.killWindow = Phase1RecoveryKillWindow.acceptedCommand,
   });
 
   final Phase1RecoveryProbeMode mode;
   final String fixturePath;
   final int seed;
   final String markerPath;
+  final Phase1RecoveryKillWindow killWindow;
 
   static Phase1RecoveryProbeInvocation? tryParse(List<String> arguments) {
     final accept = arguments.contains('--phase1-recovery-probe');
@@ -47,7 +51,21 @@ class Phase1RecoveryProbeInvocation {
         arguments,
         accept ? '--accepted-marker' : '--recovered-marker',
       ),
+      killWindow: _killWindow(arguments),
     );
+  }
+
+  static Phase1RecoveryKillWindow _killWindow(List<String> arguments) {
+    if (!arguments.contains('--kill-window')) {
+      return Phase1RecoveryKillWindow.acceptedCommand;
+    }
+    return switch (_value(arguments, '--kill-window')) {
+      'accepted-command' => Phase1RecoveryKillWindow.acceptedCommand,
+      'wal-checkpoint' => Phase1RecoveryKillWindow.walCheckpoint,
+      final value => throw FormatException(
+        'unsupported recovery probe kill window: $value',
+      ),
+    };
   }
 
   static String _value(List<String> arguments, String name) {
@@ -119,6 +137,11 @@ class Phase1RecoveryProbe {
     }
 
     await _writeMarker(invocation.markerPath, revision, object);
+    if (invocation.mode == Phase1RecoveryProbeMode.acceptThenWait &&
+        invocation.killWindow == Phase1RecoveryKillWindow.walCheckpoint) {
+      await gateway.close();
+      return;
+    }
     if (invocation.mode == Phase1RecoveryProbeMode.acceptThenWait &&
         waitForTermination) {
       await Completer<void>().future;

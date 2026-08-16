@@ -138,3 +138,44 @@ fn interruption_after_commit_recovers_the_complete_new_revision() {
     };
     assert_eq!(block.text, "After");
 }
+
+#[test]
+fn interruption_during_wal_checkpoint_recovers_the_last_durable_revision() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, object_id) = fixture();
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = SqliteProjectRepository::open(
+        location.clone(),
+        ProjectSeed {
+            model: model.clone(),
+            undo_cursor: 0,
+            materialized_revision: None,
+        },
+    )
+    .unwrap();
+    repository.append(&commit(&model, object_id)).unwrap();
+    repository.inject_once(FaultPoint::DuringWalCheckpoint);
+    assert!(repository.close().is_err());
+    drop(repository);
+
+    let reopened = SqliteProjectRepository::open(
+        location,
+        ProjectSeed {
+            model: model.clone(),
+            undo_cursor: 0,
+            materialized_revision: None,
+        },
+    )
+    .unwrap();
+    let recovered = reopened
+        .recover(RecoveryRequest {
+            document_id: model.id,
+            source_fingerprint: model.source_fingerprint,
+        })
+        .unwrap();
+    assert_eq!(recovered.model.revision.value(), 1);
+    let DocumentObject::Text(block) = recovered.model.object(object_id).unwrap() else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(block.text, "After");
+}

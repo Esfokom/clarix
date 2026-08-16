@@ -12,6 +12,9 @@ use unicode_normalization::UnicodeNormalization;
 
 use crate::{schema, FaultPoint, ProjectLocation, ProjectSeed, StoreError, StoreTable};
 
+const WAL_CHECKPOINT_MARKER_ENV: &str = "CLARIX_PHASE1_WAL_CHECKPOINT_MARKER";
+const WAL_CHECKPOINT_PAUSE_MS_ENV: &str = "CLARIX_PHASE1_WAL_CHECKPOINT_PAUSE_MS";
+
 pub struct SqliteProjectRepository {
     connection: Mutex<Connection>,
     fault: Mutex<Option<FaultPoint>>,
@@ -86,6 +89,32 @@ impl SqliteProjectRepository {
         } else {
             false
         }
+    }
+
+    fn checkpoint_wal(&self, connection: &Connection) -> Result<(), PersistenceError> {
+        connection
+            .execute_batch("PRAGMA wal_checkpoint(PASSIVE);")
+            .map_err(map_persistence)?;
+        if self.take_fault(FaultPoint::DuringWalCheckpoint) {
+            return Err(PersistenceError::Transaction(
+                "injected failure during WAL checkpoint".into(),
+            ));
+        }
+        if let Some(marker) = std::env::var_os(WAL_CHECKPOINT_MARKER_ENV) {
+            std::fs::write(marker, b"passive_checkpoint_complete\n").map_err(|error| {
+                PersistenceError::Unavailable(format!(
+                    "WAL checkpoint probe marker could not be written: {error}"
+                ))
+            })?;
+            let pause_ms = std::env::var(WAL_CHECKPOINT_PAUSE_MS_ENV)
+                .ok()
+                .and_then(|value| value.parse::<u64>().ok())
+                .unwrap_or(30_000);
+            std::thread::sleep(std::time::Duration::from_millis(pause_ms));
+        }
+        connection
+            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
+            .map_err(map_persistence)
     }
 }
 
@@ -306,9 +335,7 @@ impl ProjectRepository for SqliteProjectRepository {
             .connection
             .lock()
             .map_err(|_| PersistenceError::Unavailable("repository lock poisoned".into()))?;
-        connection
-            .execute_batch("PRAGMA wal_checkpoint(TRUNCATE);")
-            .map_err(map_persistence)
+        self.checkpoint_wal(&connection)
     }
 }
 

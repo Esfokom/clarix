@@ -21,6 +21,20 @@ void main() {
     ])!;
     expect(accepted.mode, Phase1RecoveryProbeMode.acceptThenWait);
     expect(accepted.seed, 2);
+    expect(accepted.killWindow, Phase1RecoveryKillWindow.acceptedCommand);
+
+    final checkpoint = Phase1RecoveryProbeInvocation.tryParse(const <String>[
+      '--phase1-recovery-probe',
+      '--fixture',
+      'source.pdf',
+      '--seed',
+      '3',
+      '--accepted-marker',
+      'accepted.json',
+      '--kill-window',
+      'wal-checkpoint',
+    ])!;
+    expect(checkpoint.killWindow, Phase1RecoveryKillWindow.walCheckpoint);
 
     final verified = Phase1RecoveryProbeInvocation.tryParse(const <String>[
       '--phase1-recovery-verify',
@@ -69,6 +83,30 @@ void main() {
     );
     expect(gateway.closed, isTrue);
   });
+
+  test(
+    'enters close after publishing the WAL checkpoint kill marker',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('clarix-probe-');
+      addTearDown(() => directory.delete(recursive: true));
+      final marker = '${directory.path}${Platform.pathSeparator}accepted.json';
+      final gateway = _FakeGateway();
+
+      await Phase1RecoveryProbe(gateway).run(
+        Phase1RecoveryProbeInvocation(
+          mode: Phase1RecoveryProbeMode.acceptThenWait,
+          fixturePath: 'source.pdf',
+          seed: 0,
+          markerPath: marker,
+          killWindow: Phase1RecoveryKillWindow.walCheckpoint,
+        ),
+        waitForTermination: false,
+      );
+
+      expect(await File(marker).exists(), isTrue);
+      expect(gateway.closed, isTrue);
+    },
+  );
 }
 
 class _FakeGateway implements EditorSessionGateway {

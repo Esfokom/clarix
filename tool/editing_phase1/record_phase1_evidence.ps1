@@ -13,8 +13,10 @@ $processor = Get-CimInstance Win32_Processor | Select-Object -First 1
 $buildEvidence = [ordered]@{ status = "pending_user_execution"; exitCode = $null; dllPath = $null; dllSha256 = $null; timestampUtc = $null }
 $saveFaultEvidencePath = Join-Path $repoRoot "docs/testing/editing-phase1-save-faults.json"
 $externalReaderEvidencePath = Join-Path $repoRoot "docs/testing/editing-phase1-external-reader.json"
+$killRecoveryEvidencePath = Join-Path $repoRoot "docs/testing/editing-phase1-kill-recovery.json"
 $saveFaultEvidence = if (Test-Path $saveFaultEvidencePath) { Get-Content $saveFaultEvidencePath -Raw | ConvertFrom-Json } else { $null }
 $externalReaderEvidence = if (Test-Path $externalReaderEvidencePath) { Get-Content $externalReaderEvidencePath -Raw | ConvertFrom-Json } else { $null }
+$killRecoveryEvidence = if (Test-Path $killRecoveryEvidencePath) { Get-Content $killRecoveryEvidencePath -Raw | ConvertFrom-Json } else { $null }
 
 if ($UserBuildExitCode) {
     $buildEvidence.status = if ([int]$UserBuildExitCode -eq 0) { "passed" } else { "failed" }
@@ -40,7 +42,16 @@ $report = [ordered]@{
     nonBuildGate = [ordered]@{ status = "pending_execution" }
     profileEditing = [ordered]@{ status = "pending_profile_execution" }
     profileLargeDocument = [ordered]@{ status = "pending_profile_execution" }
-    forcedKillRecovery = [ordered]@{ status = "pending_executable"; requiredSeeds = 100 }
+    forcedKillRecovery = if ($killRecoveryEvidence) {
+        [ordered]@{
+            status = if ($killRecoveryEvidence.passed) { "passed" } else { "failed" }
+            evidencePath = "docs/testing/editing-phase1-kill-recovery.json"
+            seeds = [int]$killRecoveryEvidence.seeds
+            walCheckpointTerminations = [int]$killRecoveryEvidence.walCheckpointTerminations
+        }
+    } else {
+        [ordered]@{ status = "pending_executable"; requiredSeeds = 100; requiresWalCheckpointTermination = $true }
+    }
     saveFaultMatrix = if ($saveFaultEvidence) {
         [ordered]@{
             status = $saveFaultEvidence.status

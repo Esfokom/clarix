@@ -16,6 +16,7 @@ pub enum FaultPoint {
     AfterModelUpdate,
     BeforeCommit,
     AfterCommit,
+    DuringWalCheckpoint,
 }
 
 #[derive(Debug, Clone)]
