@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": "2026-08-16T16:26:20.0101346Z",
+  "gitCommit": "e63bd416caedf60cb67e89805ce3786a4349cd15",
+  "status": "passed",
+  "stages": [
+    {
+      "stage": "FlushCommands",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "Snapshot",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "VerifySource",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "MaterializeTemp",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "ValidateTemp",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "FlushTemp",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "ReplaceOrMove",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "Rebase",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    },
+    {
+      "stage": "RecordMaterializedRevision",
+      "status": "passed",
+      "originalHashChecked": true,
+      "workingFileLeakChecked": true,
+      "backupHashChecked": true,
+      "installedOutputHashChecked": true,
+      "sidecarMutationChecked": true
+    }
+  ]
+}
