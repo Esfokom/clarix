@@ -3,8 +3,10 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use clarix_editing_core::{
     AtomicReplaceRequest, AtomicReplacementPort, DocumentId, DocumentModel, MaterializationPort,
-    MaterializationReport, SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveRequest,
-    SaveStage, SourceReference, ValidationExpectation, ValidationPort, ValidationReport,
+    MaterializationRecord, MaterializationReport, PersistenceError, ProjectCheckpoint,
+    ProjectRepository, RecoveredProject, RecoveryRequest, SaveAssociation, SaveCoordinator,
+    SaveError, SaveMode, SaveRequest, SaveStage, SaveStageGate, SourceReference,
+    ValidationExpectation, ValidationPort, ValidationReport,
 };
 use sha2::{Digest, Sha256};
 
@@ -199,4 +201,146 @@ fn pre_install_faults_preserve_original_and_remove_working_files() {
             .collect::<Vec<_>>();
         assert!(leaked.is_empty(), "{stage:?}: {leaked:?}");
     }
+}
+
+struct MatrixHarness {
+    fail_at: SaveStage,
+    sidecar_records: AtomicUsize,
+}
+
+impl SaveStageGate for MatrixHarness {
+    fn enter(&self, stage: SaveStage) -> Result<(), SaveError> {
+        if stage == self.fail_at {
+            Err(SaveError::new(stage, "injected", format!("{stage:?}")))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl MaterializationPort for MatrixHarness {
+    fn materialize(
+        &self,
+        _: &DocumentModel,
+        target: &Path,
+    ) -> Result<MaterializationReport, SaveError> {
+        std::fs::write(target, b"replacement").unwrap();
+        Ok(MaterializationReport {
+            output_sha256: hash(b"replacement"),
+            bytes_written: 11,
+            warnings: Vec::new(),
+        })
+    }
+}
+
+impl ValidationPort for MatrixHarness {
+    fn validate(&self, _: &Path, _: &ValidationExpectation) -> Result<ValidationReport, SaveError> {
+        Ok(ValidationReport {
+            valid: true,
+            warnings: Vec::new(),
+        })
+    }
+}
+
+impl AtomicReplacementPort for MatrixHarness {
+    fn replace(&self, request: AtomicReplaceRequest) -> Result<(), SaveError> {
+        if let Some(backup) = request.backup {
+            std::fs::rename(&request.target, backup).unwrap();
+        }
+        std::fs::rename(request.working, request.target).unwrap();
+        Ok(())
+    }
+}
+
+impl ProjectRepository for MatrixHarness {
+    fn recover(&self, _: RecoveryRequest) -> Result<RecoveredProject, PersistenceError> {
+        unreachable!("the save matrix does not recover")
+    }
+
+    fn append(&self, _: &clarix_editing_core::DurableCommit) -> Result<(), PersistenceError> {
+        Ok(())
+    }
+
+    fn write_snapshot(
+        &self,
+        _: &clarix_editing_core::DurableSnapshot,
+    ) -> Result<(), PersistenceError> {
+        Ok(())
+    }
+
+    fn checkpoint(&self, _: &ProjectCheckpoint) -> Result<(), PersistenceError> {
+        Ok(())
+    }
+
+    fn record_materialization(&self, _: MaterializationRecord) -> Result<(), PersistenceError> {
+        self.sidecar_records.fetch_add(1, Ordering::AcqRel);
+        Ok(())
+    }
+
+    fn close(&self) -> Result<(), PersistenceError> {
+        Ok(())
+    }
+}
+
+#[test]
+fn every_save_stage_fault_has_a_hash_proven_recovery_state() {
+    for stage in SaveStage::ALL {
+        let directory = tempfile::tempdir().unwrap();
+        let source_path = directory.path().join("document.pdf");
+        std::fs::write(&source_path, b"source").unwrap();
+        let source_hash = hash(b"source");
+        let replacement_hash = hash(b"replacement");
+        let model = DocumentModel::new(
+            DocumentId::from_source_key(&format!("save-matrix-{stage:?}")),
+            source_hash.clone(),
+            Vec::new(),
+        )
+        .unwrap();
+        let harness = MatrixHarness {
+            fail_at: stage,
+            sidecar_records: AtomicUsize::new(0),
+        };
+
+        let error = SaveCoordinator::new(&harness, &harness, &harness)
+            .with_repository(&harness)
+            .with_stage_gate(&harness)
+            .save(SaveRequest {
+                source: SourceReference::new(source_hash.clone(), source_path.clone()),
+                target: source_path.clone(),
+                mode: SaveMode::Save,
+                association: SaveAssociation::FollowNewSource,
+                recovery_directory: None,
+                snapshot: model,
+            })
+            .unwrap_err();
+
+        assert_eq!(error.stage, stage);
+        let target_hash = hash(&std::fs::read(&source_path).unwrap());
+        let backup = directory.path().join(".document.pdf.clarix-backup.pdf");
+        if matches!(
+            stage,
+            SaveStage::Rebase | SaveStage::RecordMaterializedRevision
+        ) {
+            assert_eq!(target_hash, replacement_hash, "{stage:?}");
+            assert_eq!(
+                hash(&std::fs::read(&backup).unwrap()),
+                source_hash,
+                "{stage:?}"
+            );
+        } else {
+            assert_eq!(target_hash, source_hash, "{stage:?}");
+            assert!(!backup.exists(), "{stage:?}");
+        }
+        let working_files = std::fs::read_dir(directory.path())
+            .unwrap()
+            .map(|entry| entry.unwrap().path())
+            .filter(|path| path.to_string_lossy().contains("clarix-working"))
+            .collect::<Vec<_>>();
+        assert!(working_files.is_empty(), "{stage:?}: {working_files:?}");
+        assert_eq!(harness.sidecar_records.load(Ordering::Acquire), 0);
+    }
+}
+
+fn hash(bytes: &[u8]) -> String {
+    format!("{:x}", Sha256::digest(bytes))
 }

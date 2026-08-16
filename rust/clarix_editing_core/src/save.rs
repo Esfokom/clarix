@@ -73,6 +73,11 @@ pub struct SaveCoordinator<'a> {
     validator: &'a dyn ValidationPort,
     replacer: &'a dyn AtomicReplacementPort,
     repository: Option<&'a dyn ProjectRepository>,
+    stage_gate: Option<&'a dyn SaveStageGate>,
+}
+
+pub trait SaveStageGate: Send + Sync {
+    fn enter(&self, stage: SaveStage) -> Result<(), SaveError>;
 }
 
 impl<'a> SaveCoordinator<'a> {
@@ -86,6 +91,7 @@ impl<'a> SaveCoordinator<'a> {
             validator,
             replacer,
             repository: None,
+            stage_gate: None,
         }
     }
 
@@ -94,7 +100,15 @@ impl<'a> SaveCoordinator<'a> {
         self
     }
 
+    pub fn with_stage_gate(mut self, stage_gate: &'a dyn SaveStageGate) -> Self {
+        self.stage_gate = Some(stage_gate);
+        self
+    }
+
     pub fn save(&self, request: SaveRequest) -> Result<SaveReport, SaveError> {
+        self.enter(SaveStage::FlushCommands)?;
+        self.enter(SaveStage::Snapshot)?;
+        self.enter(SaveStage::VerifySource)?;
         let actual_fingerprint = fingerprint_file(&request.source.path).map_err(|message| {
             SaveError::new(SaveStage::VerifySource, "source_unavailable", message)
         })?;
@@ -108,6 +122,7 @@ impl<'a> SaveCoordinator<'a> {
             ));
         }
         let working = working_path(&request.target);
+        self.enter(SaveStage::MaterializeTemp)?;
         let materialization = self
             .materializer
             .materialize(&request.snapshot, &working)
@@ -120,6 +135,7 @@ impl<'a> SaveCoordinator<'a> {
             revision: request.snapshot.revision,
             page_count: request.snapshot.pages.len() as u32,
         };
+        self.enter_with_working_cleanup(SaveStage::ValidateTemp, &working)?;
         let validation = self
             .validator
             .validate(&working, &expectation)
@@ -135,11 +151,13 @@ impl<'a> SaveCoordinator<'a> {
                 "the materialized PDF did not satisfy its save expectation",
             ));
         }
+        self.enter_with_working_cleanup(SaveStage::FlushTemp, &working)?;
         flush_file(&working).map_err(|message| {
             let _ = std::fs::remove_file(&working);
             SaveError::new(SaveStage::FlushTemp, "flush_failed", message)
         })?;
         let backup = (request.mode == SaveMode::Save).then(|| backup_path(&request.target));
+        self.enter_with_working_cleanup(SaveStage::ReplaceOrMove, &working)?;
         self.replacer
             .replace(AtomicReplaceRequest {
                 working: working.clone(),
@@ -161,6 +179,7 @@ impl<'a> SaveCoordinator<'a> {
                 "the installed output hash differs from the validated temporary file",
             ));
         }
+        self.enter(SaveStage::Rebase)?;
         let association = if request.mode == SaveMode::Save {
             SaveAssociation::FollowNewSource
         } else {
@@ -172,6 +191,7 @@ impl<'a> SaveCoordinator<'a> {
             model.rebase_source(installed_fingerprint.clone());
             rebased_model = Some(model);
         }
+        self.enter(SaveStage::RecordMaterializedRevision)?;
         if let Some(repository) = self.repository {
             repository
                 .record_materialization(MaterializationRecord {
@@ -206,6 +226,22 @@ impl<'a> SaveCoordinator<'a> {
             validation,
             association,
             rebased_model,
+        })
+    }
+
+    fn enter(&self, stage: SaveStage) -> Result<(), SaveError> {
+        self.stage_gate.map_or(Ok(()), |gate| {
+            gate.enter(stage).map_err(|error| error.at_stage(stage))
+        })
+    }
+
+    fn enter_with_working_cleanup(
+        &self,
+        stage: SaveStage,
+        working: &std::path::Path,
+    ) -> Result<(), SaveError> {
+        self.enter(stage).inspect_err(|_| {
+            let _ = std::fs::remove_file(working);
         })
     }
 }

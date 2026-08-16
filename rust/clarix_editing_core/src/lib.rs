@@ -44,6 +44,7 @@ pub use ports::{
 };
 pub use save::{
     SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage,
+    SaveStageGate,
 };
 pub use session::EditorSessionState;
 pub use text::{
