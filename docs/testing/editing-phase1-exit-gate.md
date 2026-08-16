@@ -63,9 +63,7 @@ two workers per document.
 
 ```powershell
 & tool/editing_phase1/run_phase1_checks.ps1
-cargo bench -p clarix_editing_core --bench page_scene_latency --manifest-path rust/Cargo.toml
-cargo bench -p clarix_editing_store --bench sidecar_latency --manifest-path rust/Cargo.toml
-cargo bench -p clarix_pdf_adapter --bench clean_patch --bench save_latency --manifest-path rust/Cargo.toml
+& tool/editing_phase1/run_phase1_benchmarks.ps1
 flutter drive --profile --driver test_driver/phase1_editing_test.dart --target integration_test/phase1_editing_test.dart
 flutter drive --profile --driver test_driver/phase1_large_document_test.dart --target integration_test/phase1_large_document_test.dart
 & tool/editing_phase1/kill_recovery_probe.ps1 -ExecutablePath <profile-exe> -FixturePath <fixture> -SeedCount 100 -WalCheckpointInterval 10
@@ -107,6 +105,12 @@ user-owned command:
 ```powershell
 cargo build --release -p clarix_pdf_oxide --manifest-path rust/Cargo.toml --target x86_64-pc-windows-msvc
 ```
+
+The check and benchmark runners use separate non-incremental Cargo targets
+under `build/editing_phase1/` and clean them in `finally`, including after a
+failure. Criterion samples are written into the canonical report before its
+temporary benchmark target is reclaimed. The user-owned release DLL under
+`rust/target/x86_64-pc-windows-msvc/release` is never cleaned by these runners.
 
 The canonical JSON keeps the full non-build sweep attributed to its original
 evidence commit. The later `07ca201` fallback delta is recorded separately with

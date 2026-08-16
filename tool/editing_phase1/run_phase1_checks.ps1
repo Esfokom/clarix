@@ -1,5 +1,15 @@
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$gateCargoTarget = Join-Path $repoRoot "build/editing_phase1/cargo-gate-target"
+$previousCargoTarget = $env:CARGO_TARGET_DIR
+$previousCargoIncremental = $env:CARGO_INCREMENTAL
+$previousDevDebug = $env:CARGO_PROFILE_DEV_DEBUG
+$previousTestDebug = $env:CARGO_PROFILE_TEST_DEBUG
+
+$env:CARGO_TARGET_DIR = $gateCargoTarget
+$env:CARGO_INCREMENTAL = "0"
+$env:CARGO_PROFILE_DEV_DEBUG = "0"
+$env:CARGO_PROFILE_TEST_DEBUG = "0"
 
 function Invoke-GateStep {
     param([string]$Label, [scriptblock]$Command)
@@ -31,5 +41,18 @@ try {
     Write-Host "This script intentionally does not execute cargo build."
 }
 finally {
-    Pop-Location
+    try {
+        if (Test-Path $gateCargoTarget) {
+            Write-Host "==> Cleaning isolated Cargo gate target"
+            cargo clean --manifest-path rust/Cargo.toml --target-dir $gateCargoTarget
+            if ($LASTEXITCODE -ne 0) { throw "Failed to clean isolated Cargo gate target." }
+        }
+    }
+    finally {
+        if ($null -eq $previousCargoTarget) { Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue } else { $env:CARGO_TARGET_DIR = $previousCargoTarget }
+        if ($null -eq $previousCargoIncremental) { Remove-Item Env:CARGO_INCREMENTAL -ErrorAction SilentlyContinue } else { $env:CARGO_INCREMENTAL = $previousCargoIncremental }
+        if ($null -eq $previousDevDebug) { Remove-Item Env:CARGO_PROFILE_DEV_DEBUG -ErrorAction SilentlyContinue } else { $env:CARGO_PROFILE_DEV_DEBUG = $previousDevDebug }
+        if ($null -eq $previousTestDebug) { Remove-Item Env:CARGO_PROFILE_TEST_DEBUG -ErrorAction SilentlyContinue } else { $env:CARGO_PROFILE_TEST_DEBUG = $previousTestDebug }
+        Pop-Location
+    }
 }
