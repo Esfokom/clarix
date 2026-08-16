@@ -64,12 +64,19 @@ two workers per document.
 ```powershell
 & tool/editing_phase1/run_phase1_checks.ps1
 & tool/editing_phase1/run_phase1_benchmarks.ps1
-flutter drive --profile --driver test_driver/phase1_editing_test.dart --target integration_test/phase1_editing_test.dart
-flutter drive --profile --driver test_driver/phase1_large_document_test.dart --target integration_test/phase1_large_document_test.dart
+flutter drive -d windows --profile --driver test_driver/phase1_editing_test.dart --target integration_test/phase1_editing_test.dart
+flutter drive -d windows --profile --driver test_driver/phase1_large_document_test.dart --target integration_test/phase1_large_document_test.dart
 & tool/editing_phase1/kill_recovery_probe.ps1 -ExecutablePath <profile-exe> -FixturePath <fixture> -SeedCount 100 -WalCheckpointInterval 10
 & tool/editing_phase1/save_fault_probe.ps1
 & tool/editing_phase1/external_reader_probe.ps1 -SavedPdf <saved-pdf> -ExpectedText <new-text> -OldText <old-text> -ReaderName <name-and-version> -ReaderEvidencePath <reader-evidence.json>
 & tool/editing_phase1/record_phase1_evidence.ps1 -NonBuildGatePassed -OutputPath docs/testing/editing-phase1-results.json
+```
+
+After the user-owned DLL exists, the two drives, forced-kill run, optional
+reader evidence, and build/evidence recording can instead be executed with:
+
+```powershell
+& tool/editing_phase1/run_phase1_runtime_gate.ps1 -UserBuildDllPath rust/target/x86_64-pc-windows-msvc/release/clarix_pdf_oxide.dll
 ```
 
 The two profile targets use `BridgeEditorSessionGateway`, the packaged Rust

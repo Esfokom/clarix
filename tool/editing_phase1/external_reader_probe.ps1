@@ -13,6 +13,13 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $resolvedPdf = (Resolve-Path $SavedPdf).Path
 $resolvedOutput = Join-Path $repoRoot $OutputPath
+$readerCargoTarget = Join-Path $repoRoot "build/editing_phase1/cargo-reader-target"
+$previousCargoTarget = $env:CARGO_TARGET_DIR
+$previousCargoIncremental = $env:CARGO_INCREMENTAL
+$previousTestDebug = $env:CARGO_PROFILE_TEST_DEBUG
+$env:CARGO_TARGET_DIR = $readerCargoTarget
+$env:CARGO_INCREMENTAL = "0"
+$env:CARGO_PROFILE_TEST_DEBUG = "0"
 $savedPdfHash = (Get-FileHash $resolvedPdf -Algorithm SHA256).Hash.ToLowerInvariant()
 $sha256 = [System.Security.Cryptography.SHA256]::Create()
 $expectedHash = [Convert]::ToHexString($sha256.ComputeHash([Text.Encoding]::UTF8.GetBytes($ExpectedText))).ToLowerInvariant()
@@ -94,5 +101,11 @@ finally {
     Remove-Item Env:CLARIX_PHASE1_SAVED_PDF -ErrorAction SilentlyContinue
     Remove-Item Env:CLARIX_PHASE1_EXPECTED_TEXT -ErrorAction SilentlyContinue
     Remove-Item Env:CLARIX_PHASE1_OLD_TEXT -ErrorAction SilentlyContinue
+    if (Test-Path $readerCargoTarget) {
+        cargo clean --manifest-path (Join-Path $repoRoot "rust/Cargo.toml") --target-dir $readerCargoTarget
+    }
+    if ($null -eq $previousCargoTarget) { Remove-Item Env:CARGO_TARGET_DIR -ErrorAction SilentlyContinue } else { $env:CARGO_TARGET_DIR = $previousCargoTarget }
+    if ($null -eq $previousCargoIncremental) { Remove-Item Env:CARGO_INCREMENTAL -ErrorAction SilentlyContinue } else { $env:CARGO_INCREMENTAL = $previousCargoIncremental }
+    if ($null -eq $previousTestDebug) { Remove-Item Env:CARGO_PROFILE_TEST_DEBUG -ErrorAction SilentlyContinue } else { $env:CARGO_PROFILE_TEST_DEBUG = $previousTestDebug }
     Pop-Location
 }
