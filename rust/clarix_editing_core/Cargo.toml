@@ -24,3 +24,7 @@ path = "src/lib.rs"
 [[bench]]
 name = "command_latency"
 harness = false
+
+[[bench]]
+name = "page_scene_latency"
+harness = false

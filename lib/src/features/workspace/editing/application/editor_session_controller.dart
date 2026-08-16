@@ -495,7 +495,7 @@ class EditorSessionController {
       ),
     );
     try {
-      final result = await _gateway.approveFontFallback(
+      final result = await _fontFallbackGateway.approveFontFallback(
         commandId: commandId,
         baseRevision: baseRevision,
         proposalToken: proposalToken,
@@ -609,7 +609,7 @@ class EditorSessionController {
       if (errorCode == 'font_fallback_required') {
         final epoch = ++_fontFallbackEpoch;
         try {
-          final proposal = await _gateway.proposeFontFallback(
+          final proposal = await _fontFallbackGateway.proposeFontFallback(
             baseRevision: edit.baseRevision,
             objectId: edit.objectId,
             start: edit.range.start,
@@ -672,6 +672,14 @@ class EditorSessionController {
 
   void _ensureActive() {
     if (_disposed) throw StateError('editor session controller is closed');
+  }
+
+  EditorFontFallbackGateway get _fontFallbackGateway {
+    final gateway = _gateway;
+    if (gateway is! EditorFontFallbackGateway) {
+      throw UnsupportedError('font fallback is unavailable for this session');
+    }
+    return gateway as EditorFontFallbackGateway;
   }
 }
 

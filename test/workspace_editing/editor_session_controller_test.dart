@@ -219,7 +219,8 @@ EditorSessionController _controller(FakeEditorSessionGateway gateway) {
   );
 }
 
-class FakeEditorSessionGateway implements EditorSessionGateway {
+class FakeEditorSessionGateway
+    implements EditorSessionGateway, EditorFontFallbackGateway {
   FakeEditorSessionGateway({this.order}) {
     _events = StreamController<EditorEvent>.broadcast(
       sync: true,

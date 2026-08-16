@@ -1,10 +1,11 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use clarix_pdf_adapter::{
-    CleanPatchBackend, CleanPatchRenderRequest, CleanPatchRenderer, PdfImporter, PdfOxideImporter,
+    CleanPatchCache, CleanPatchRenderRequest, CleanPatchRenderer, PdfImporter, PdfOxideImporter,
     SourceRef,
 };
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, BatchSize, Criterion};
 
 fn clean_patch(c: &mut Criterion) {
     let source = SourceRef::from_path(
@@ -21,10 +22,20 @@ fn clean_patch(c: &mut Criterion) {
         bounds: object.bounds(),
         dpi: 144,
     };
-    c.bench_function("clean_patch/standard_latin/144dpi", |b| {
+    c.bench_function("clean_patch/cold/standard_latin/144dpi", |b| {
+        b.iter_batched(
+            || CleanPatchCache::for_document(Arc::new(CleanPatchRenderer)),
+            |cache| cache.get_or_render(black_box(request.clone())).unwrap(),
+            BatchSize::SmallInput,
+        )
+    });
+
+    let warm_cache = CleanPatchCache::for_document(Arc::new(CleanPatchRenderer));
+    warm_cache.get_or_render(request.clone()).unwrap();
+    c.bench_function("clean_patch/warm/standard_latin/144dpi", |b| {
         b.iter(|| {
-            CleanPatchRenderer
-                .render(black_box(request.clone()))
+            warm_cache
+                .get_or_render(black_box(request.clone()))
                 .unwrap()
         })
     });

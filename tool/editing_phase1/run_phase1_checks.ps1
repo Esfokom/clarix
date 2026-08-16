@@ -24,7 +24,7 @@ try {
     Invoke-GateStep "Generated bindings are clean" { git diff --exit-code -- rust/clarix_pdf_oxide/src/frb_generated.rs lib/src/core/ffi }
     Invoke-GateStep "Core editing tests" { flutter test test/core/editing test/workspace_editing }
     Invoke-GateStep "Legacy migration tests" { flutter test test/workspace_pdf }
-    Invoke-GateStep "Editing analysis" { flutter analyze lib/src/core/editing lib/src/core/ffi lib/src/features/workspace/editing lib/src/features/workspace }
+    Invoke-GateStep "Editing analysis" { flutter analyze lib/src/core/editing lib/src/core/ffi lib/src/features/workspace/editing lib/src/features/workspace integration_test test_driver }
 
     Write-Host "==> Pending user-owned release evidence"
     Write-Host "cargo build --release -p clarix_pdf_oxide --manifest-path rust/Cargo.toml --target x86_64-pc-windows-msvc"

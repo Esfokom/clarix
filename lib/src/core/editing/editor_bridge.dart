@@ -23,24 +23,6 @@ abstract class NativeEditorPort {
 
   Future<EditorCommandResult> submit(EditorCommandRequest request);
 
-  Future<EditorFontFallbackProposal> proposeFontFallback({
-    required int baseRevision,
-    required String objectId,
-    required int start,
-    required int end,
-    required String replacement,
-  }) => Future<EditorFontFallbackProposal>.error(
-    UnsupportedError('native font fallback proposals are unavailable'),
-  );
-
-  Future<EditorCommandResult> approveFontFallback({
-    required String commandId,
-    required int baseRevision,
-    required String proposalToken,
-  }) => Future<EditorCommandResult>.error(
-    UnsupportedError('native font fallback approval is unavailable'),
-  );
-
   Future<EditorSceneObject> objectDetails(String objectId);
 
   Future<EditorCleanPatchAsset> cleanPatch({
@@ -61,6 +43,22 @@ abstract class NativeEditorPort {
   });
 
   Future<void> close();
+}
+
+abstract interface class NativeFontFallbackPort {
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  });
+
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  });
 }
 
 class EditorBridge {
@@ -161,7 +159,12 @@ class EditorBridgeSession {
     required String replacement,
   }) async {
     _ensureOpen();
-    final value = await _native.proposeFontFallback(
+    final fallback = _native;
+    if (fallback is! NativeFontFallbackPort) {
+      throw UnsupportedError('native font fallback proposals are unavailable');
+    }
+    final fontFallback = fallback as NativeFontFallbackPort;
+    final value = await fontFallback.proposeFontFallback(
       baseRevision: baseRevision,
       objectId: _canonicalUuid(objectId, 'objectId'),
       start: start,
@@ -179,7 +182,12 @@ class EditorBridgeSession {
     required String proposalToken,
   }) async {
     _ensureOpen();
-    final value = await _native.approveFontFallback(
+    final fallback = _native;
+    if (fallback is! NativeFontFallbackPort) {
+      throw UnsupportedError('native font fallback approval is unavailable');
+    }
+    final fontFallback = fallback as NativeFontFallbackPort;
+    final value = await fontFallback.approveFontFallback(
       commandId: _canonicalUuid(commandId, 'commandId'),
       baseRevision: baseRevision,
       proposalToken: _canonicalUuid(proposalToken, 'proposalToken'),
@@ -299,7 +307,7 @@ class EditorBridgeSession {
   }
 }
 
-class _FrbNativeEditorPort implements NativeEditorPort {
+class _FrbNativeEditorPort implements NativeEditorPort, NativeFontFallbackPort {
   _FrbNativeEditorPort(this._session);
 
   final native.NativeEditorSession _session;
