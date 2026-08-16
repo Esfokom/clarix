@@ -86,4 +86,52 @@ void main() {
     await expectLater(PdfDocument.openFile(file.path), throwsA(anything));
     expect(await file.readAsBytes(), before);
   });
+
+  test(
+    'Phase 1 supplied saved PDF is searchable selectable and excludes old text',
+    () async {
+      final path = Platform.environment['CLARIX_PHASE1_SAVED_PDF']!;
+      final expected = Platform.environment['CLARIX_PHASE1_EXPECTED_TEXT']!;
+      final old = Platform.environment['CLARIX_PHASE1_OLD_TEXT'];
+      final file = File(path);
+      final document = await PdfDocument.openFile(file.path);
+      final pageNumbers = List<int>.generate(
+        document.pages.length,
+        (index) => index + 1,
+      );
+      final extracted = StringBuffer();
+      for (final page in document.pages) {
+        extracted.writeln((await page.loadText())?.fullText ?? '');
+      }
+      final blocks = await const PdfiumTextEngine().inspectPages(
+        document: document,
+        sourceRevision: await sha256File(file),
+        pageNumbers: pageNumbers,
+      );
+      await document.dispose();
+
+      expect(extracted.toString(), contains(expected));
+      final matches = blocks.where((block) => block.text.contains(expected));
+      expect(matches, isNotEmpty);
+      expect(
+        matches.every(
+          (block) =>
+              block.bounds.width > 0 &&
+              block.bounds.height > 0 &&
+              block.bounds.left.isFinite &&
+              block.bounds.bottom.isFinite,
+        ),
+        isTrue,
+      );
+      if (old != null && old.isNotEmpty) {
+        expect(extracted.toString(), isNot(contains(old)));
+        expect(blocks.any((block) => block.text.contains(old)), isFalse);
+      }
+    },
+    skip:
+        Platform.environment['CLARIX_PHASE1_SAVED_PDF'] == null ||
+            Platform.environment['CLARIX_PHASE1_EXPECTED_TEXT'] == null
+        ? 'requires supplied Phase 1 saved-PDF evidence'
+        : false,
+  );
 }
