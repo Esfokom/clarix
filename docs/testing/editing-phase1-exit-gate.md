@@ -45,12 +45,13 @@ two workers per document.
 | Page service | 1,000 pages visited exactly once, maximum two workers, empty in-flight queue | Harness implemented |
 | Patch cache | cold/warm behavior, decoded bytes within budget, coldest non-visible eviction | Harness implemented |
 | Save loop | repeated materialize/independent-validate cycles and no temp/backup leak | Harness implemented |
+| Approved font fallback | explicit one-time approval, durable project asset recovery, embedded searchable output, and local font-state restoration | Passed on `07ca201`; focused Rust/Flutter verification |
 | Profile editing | 1,000 edits, IME, undo/redo, focus/page/zoom/scroll identity, frame timings | Pending profile execution |
 | Large document | 2,001 scene requests, bounded residency, scene latency and RSS warm-tail/final sampling | Harness implemented; pending profile execution |
 | Crash recovery | at least 100 seeded terminations including WAL checkpoint timing | Harness implemented with deterministic passive-checkpoint/truncate midpoint; pending executable and run |
 | Save faults | every save stage; hashes for source/temp/backup/output/sidecar before and after | Passed; see `editing-phase1-save-faults.json` |
 | External readers | actual supplied PDF through Rust and pdfrx/PDFium; named reader search/select evidence | Actual-file harness implemented; pending saved output and reader automation |
-| Generated bindings | regeneration produces no diff | Pending gate run |
+| Generated bindings | regeneration produces no diff | Full gate passed on the recorded evidence commit; fallback DTOs regenerated on `07ca201` and passed focused compile/Clippy/analyze |
 | User release DLL | user-owned release command exits zero and DLL hash is recorded | Pending user execution |
 
 ## Reproducible commands
@@ -71,6 +72,11 @@ user-owned command:
 ```powershell
 cargo build --release -p clarix_pdf_oxide --manifest-path rust/Cargo.toml --target x86_64-pc-windows-msvc
 ```
+
+The canonical JSON keeps the full non-build sweep attributed to its original
+evidence commit. The later `07ca201` fallback delta is recorded separately with
+its focused verification scope; no release build or runtime/profile result is
+inferred from those focused checks.
 
 ## Final migration rule
 

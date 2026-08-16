@@ -21,6 +21,21 @@
       "flutter_analysis"
     ]
   },
+  "postGateDelta": {
+    "status": "passed_focused_verification",
+    "gitCommit": "07ca201",
+    "scope": [
+      "installed_font_catalog_tests",
+      "fallback_materialization_and_25_cycle_validation_tests",
+      "native_editor_bridge_and_recovery_tests",
+      "pdf_adapter_clippy_all_targets",
+      "pdf_oxide_clippy_all_targets_no_default_features",
+      "generated_bindings_regenerated",
+      "font_fallback_controller_and_dialog_tests",
+      "focused_flutter_analysis"
+    ],
+    "notes": "The full non-build gate remains attributed to gitCommit above. This focused delta verifies approved fallback proposal, durable project asset recovery, generated transport, explicit UI approval, local PDF font-state restoration, and searchable embedded output without invoking cargo build."
+  },
   "profileEditing": {
     "status": "pending_profile_execution"
   },
