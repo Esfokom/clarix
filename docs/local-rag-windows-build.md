@@ -27,6 +27,10 @@ can take many minutes because Cargo compiles the FastEmbed/ORT dependency
 graph, but later builds are incremental. Verify the resulting bundle contains
 `clarix.exe` and `clarix_pdf_oxide.dll` in the same directory.
 
+Windows packaging first checks the qualified editing build at
+`rust/target/x86_64-pc-windows-msvc/release/clarix_pdf_oxide.dll`, then falls
+back to the helper script's `rust/target/release/clarix_pdf_oxide.dll`.
+
 The Flutter runtime opens the DLL adjacent to its executable on Windows. If
 the bundled DLL is missing or cannot load, Clarix still launches and uses
 lexical local retrieval; no PDF text is sent to a provider.

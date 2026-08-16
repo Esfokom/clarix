@@ -58,12 +58,15 @@ add_subdirectory("runner")
 # lexical retrieval until the optional DLL has been prepared. Run
 # `tool\build_local_rag.ps1` once before a RAG-enabled run or package build;
 # this install step then copies the prebuilt library beside clarix.exe.
-set(CLARIX_RUST_CRATE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/clarix_pdf_oxide")
-set(CLARIX_RUST_MANIFEST "${CLARIX_RUST_CRATE_DIR}/Cargo.toml")
-set(CLARIX_RUST_RELEASE_DIR "${CLARIX_RUST_CRATE_DIR}/target/release")
+set(CLARIX_RUST_RELEASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/target/x86_64-pc-windows-msvc/release")
+set(CLARIX_RUST_FALLBACK_RELEASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../rust/target/release")
 set(CLARIX_RUST_DLL "${CLARIX_RUST_RELEASE_DIR}/clarix_pdf_oxide.dll")
+if(NOT EXISTS "${CLARIX_RUST_DLL}" AND EXISTS "${CLARIX_RUST_FALLBACK_RELEASE_DIR}/clarix_pdf_oxide.dll")
+  set(CLARIX_RUST_RELEASE_DIR "${CLARIX_RUST_FALLBACK_RELEASE_DIR}")
+  set(CLARIX_RUST_DLL "${CLARIX_RUST_RELEASE_DIR}/clarix_pdf_oxide.dll")
+endif()
 if(NOT EXISTS "${CLARIX_RUST_DLL}")
-  message(STATUS "Clarix local RAG DLL is not prebuilt; Windows launch will use lexical retrieval. Run tool\\build_local_rag.ps1 to enable semantic retrieval.")
+  message(STATUS "Clarix Rust DLL is not prebuilt; native PDF editing and semantic retrieval are unavailable until the user-owned release build runs.")
 endif()
 
 
