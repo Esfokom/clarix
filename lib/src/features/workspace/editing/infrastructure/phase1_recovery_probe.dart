@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 
+import '../../../../core/editing/editor_command_id.dart';
 import '../../../../core/editing/editor_bridge_types.dart';
 import 'editor_session_gateway.dart';
 
@@ -76,7 +77,7 @@ class Phase1RecoveryProbe {
         final replacement = 'clarix-phase1-${invocation.seed}-$index';
         final result = await gateway.submit(
           EditorCommandRequest(
-            commandId: 'phase1-${invocation.seed}-$revision-$index',
+            commandId: newEditorCommandId(),
             baseRevision: revision,
             payload: EditorCommand(
               kind: EditorCommandKind.replaceTextRange,

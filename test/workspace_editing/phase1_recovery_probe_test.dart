@@ -57,6 +57,16 @@ void main() {
       record['textSha256'],
       sha256.convert(utf8.encode('clarix-phase1-2-2')).toString(),
     );
+    expect(
+      gateway.commandIds,
+      everyElement(
+        matches(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+          ),
+        ),
+      ),
+    );
     expect(gateway.closed, isTrue);
   });
 }
@@ -67,6 +77,7 @@ class _FakeGateway implements EditorSessionGateway {
   var revision = 0;
   var text = 'A';
   var closed = false;
+  final List<String> commandIds = <String>[];
 
   @override
   Stream<EditorEvent> get events => _events.stream;
@@ -99,6 +110,7 @@ class _FakeGateway implements EditorSessionGateway {
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) async {
+    commandIds.add(request.commandId);
     text = request.payload.replacement!;
     revision += 1;
     return EditorCommandResult(
