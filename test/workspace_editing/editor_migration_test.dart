@@ -21,6 +21,7 @@ void main() {
 
   test('workspace wiring has no legacy editing fallback', () {
     const roots = <String>[
+      'integration_test',
       'lib/src/features/workspace/application',
       'lib/src/features/workspace/presentation',
       'lib/src/features/workspace/editing',
