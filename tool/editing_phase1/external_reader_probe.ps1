@@ -79,6 +79,7 @@ try {
     [ordered]@{
         schemaVersion = 1
         capturedAtUtc = [DateTime]::UtcNow.ToString("o")
+        gitCommit = (git -C $repoRoot rev-parse HEAD).Trim()
         savedPdfSha256 = $savedPdfHash
         expectedTextSha256 = $expectedHash
         oldTextSha256 = $oldHash

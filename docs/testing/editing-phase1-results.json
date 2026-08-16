@@ -1,7 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "capturedAtUtc": "2026-08-16T21:17:58.1082275Z",
   "gitCommit": "0b364879e4a0e2e6806bfc9450895e611b36efaf",
+  "worktreeCleanAtCapture": true,
+  "overallStatus": "pending_required_evidence",
   "os": "Microsoft Windows NT 10.0.26200.0",
   "cpu": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
   "logicalProcessors": 8,
@@ -10,6 +12,7 @@
   "corpusManifestSha256": "006d2079c041698945587d2ffef9b4ea4a097931038149a917e066f60edf5d9e",
   "nonBuildGate": {
     "status": "passed",
+    "gitCommit": "1ebea9bb6677dd79e281a674e3207789330e16a8",
     "scope": [
       "rust_format",
       "rust_clippy",
@@ -34,7 +37,7 @@
       "font_fallback_controller_and_dialog_tests",
       "focused_flutter_analysis"
     ],
-    "notes": "The full non-build gate remains attributed to gitCommit above. This focused delta verifies approved fallback proposal, durable project asset recovery, generated transport, explicit UI approval, local PDF font-state restoration, and searchable embedded output without invoking cargo build."
+    "notes": "The full non-build gate remains attributed to nonBuildGate.gitCommit. This focused delta verifies approved fallback proposal, durable project asset recovery, generated transport, explicit UI approval, local PDF font-state restoration, and searchable embedded output without invoking cargo build."
   },
   "profileEditing": {
     "status": "pending_profile_execution"
@@ -61,6 +64,7 @@
   "performance": {
     "criterion": {
       "status": "incomplete",
+      "gitCommit": "0b364879e4a0e2e6806bfc9450895e611b36efaf",
       "metrics": {
         "inMemoryActorP95Micros": 3428.956,
         "sqliteDurableP95Micros": 8597.85,

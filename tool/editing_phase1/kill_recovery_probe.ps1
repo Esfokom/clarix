@@ -100,6 +100,7 @@ try {
     [ordered]@{
         schemaVersion = 2
         capturedAtUtc = [DateTime]::UtcNow.ToString("o")
+        gitCommit = (git -C $repoRoot rev-parse HEAD).Trim()
         fixtureSha256 = (Get-FileHash $resolvedFixture -Algorithm SHA256).Hash.ToLowerInvariant()
         seeds = $SeedCount
         walCheckpointInterval = $WalCheckpointInterval

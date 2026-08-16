@@ -11,6 +11,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $resolvedOutput = Join-Path $repoRoot $OutputPath
 $existingReport = if (Test-Path $resolvedOutput) { Get-Content $resolvedOutput -Raw | ConvertFrom-Json } else { $null }
+$currentCommit = (git -C $repoRoot rev-parse HEAD).Trim()
+$worktreeCleanAtCapture = @((git -C $repoRoot status --porcelain)).Count -eq 0
 if (-not $CriterionRoot) {
     $CriterionRoot = Join-Path $repoRoot "rust/target/criterion"
 }
@@ -65,6 +67,7 @@ $criterionReport = if ($capturedCriterionCount -gt 0) {
         -and [double]$capturedCriterion.unindexedPageSceneP95Micros -le 250000
     [ordered]@{
         status = if (-not $criterionComplete) { "incomplete" } elseif ($criterionPassed) { "passed" } else { "failed_threshold" }
+        gitCommit = $currentCommit
         metrics = $capturedCriterion
     }
 } elseif ($existingReport -and $existingReport.performance -and $existingReport.performance.criterion) {
@@ -109,40 +112,71 @@ $profileLargeDocumentPassed = $profileLargeDocumentEvidence -and $profileLargeDo
     -and [int]$profileLargeDocumentEvidence.phase1LargeDocument.residentSceneCount -le 8
 
 if ($UserBuildExitCode) {
-    $buildEvidence.status = if ([int]$UserBuildExitCode -eq 0) { "passed" } else { "failed" }
-    $buildEvidence.exitCode = [int]$UserBuildExitCode
-    $buildEvidence.timestampUtc = $UserBuildTimestampUtc
-    if ($UserBuildDllPath -and (Test-Path $UserBuildDllPath)) {
+    $dllExists = $UserBuildDllPath -and (Test-Path $UserBuildDllPath)
+    $buildEvidence = [ordered]@{
+        status = if ([int]$UserBuildExitCode -ne 0) { "failed" } elseif ($dllExists) { "passed" } else { "failed_missing_artifact" }
+        gitCommit = $currentCommit
+        exitCode = [int]$UserBuildExitCode
+        dllPath = $null
+        dllSha256 = $null
+        timestampUtc = $UserBuildTimestampUtc
+    }
+    if ($dllExists) {
         $resolvedDll = (Resolve-Path $UserBuildDllPath).Path
         $buildEvidence.dllPath = $resolvedDll
         $buildEvidence.dllSha256 = (Get-FileHash $resolvedDll -Algorithm SHA256).Hash.ToLowerInvariant()
     }
 }
 
+$nonBuildEvidence = if ($NonBuildGatePassed) {
+    [ordered]@{
+        status = "passed"
+        gitCommit = $currentCommit
+        scope = @("rust_format", "rust_clippy", "rust_tests", "benchmark_compilation", "generated_bindings", "flutter_editing_tests", "flutter_compatibility_tests", "flutter_analysis")
+    }
+} elseif ($existingReport -and $existingReport.nonBuildGate) {
+    $existingReport.nonBuildGate
+} else {
+    [ordered]@{ status = "pending_execution" }
+}
+$nonBuildIsCurrent = $nonBuildEvidence.status -eq "passed" `
+    -and $nonBuildEvidence.gitCommit -eq $currentCommit
+$killRecoveryPassed = $killRecoveryEvidence -and $killRecoveryEvidence.passed `
+    -and [int]$killRecoveryEvidence.seeds -ge 100 `
+    -and [int]$killRecoveryEvidence.walCheckpointTerminations -gt 0
+$externalReaderPassed = $externalReaderEvidence `
+    -and $externalReaderEvidence.rustSearchExtractGeometry -eq "passed" `
+    -and $externalReaderEvidence.pdfrxPdfiumSearchExtractGeometry -eq "passed" `
+    -and (@("passed", "skipped_unavailable") -contains $externalReaderEvidence.externalReader.status)
+$overallPassed = $worktreeCleanAtCapture `
+    -and $nonBuildIsCurrent `
+    -and $profileEditingPassed `
+    -and $profileLargeDocumentPassed `
+    -and $killRecoveryPassed `
+    -and $saveFaultEvidence.status -eq "passed" `
+    -and $externalReaderPassed `
+    -and $criterionReport.status -eq "passed" `
+    -and $buildEvidence.status -eq "passed" `
+    -and $buildEvidence.gitCommit -eq $currentCommit
+
 $report = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     capturedAtUtc = [DateTime]::UtcNow.ToString("o")
-    gitCommit = (git -C $repoRoot rev-parse HEAD).Trim()
+    gitCommit = $currentCommit
+    worktreeCleanAtCapture = $worktreeCleanAtCapture
+    overallStatus = if ($overallPassed) { "passed" } else { "pending_required_evidence" }
     os = [System.Environment]::OSVersion.VersionString
     cpu = $processor.Name.Trim()
     logicalProcessors = [int]$computer.NumberOfLogicalProcessors
     memoryBytes = [uint64]$computer.TotalPhysicalMemory
     rustc = ((rustc --version) -join "`n").Trim()
     corpusManifestSha256 = (Get-FileHash (Join-Path $repoRoot "test_fixtures/editing_corpus/manifest.json") -Algorithm SHA256).Hash.ToLowerInvariant()
-    nonBuildGate = if ($NonBuildGatePassed) {
-        [ordered]@{
-            status = "passed"
-            scope = @("rust_format", "rust_clippy", "rust_tests", "benchmark_compilation", "generated_bindings", "flutter_editing_tests", "flutter_compatibility_tests", "flutter_analysis")
-        }
-    } elseif ($existingReport -and $existingReport.nonBuildGate) {
-        $existingReport.nonBuildGate
-    } else {
-        [ordered]@{ status = "pending_execution" }
-    }
+    nonBuildGate = $nonBuildEvidence
     postGateDelta = if ($existingReport -and $existingReport.postGateDelta) { $existingReport.postGateDelta } else { $null }
     profileEditing = if ($profileEditingEvidence -and $profileEditingEvidence.phase1Editing) {
         [ordered]@{
             status = if ($profileEditingPassed) { "passed" } else { "failed_threshold" }
+            gitCommit = $currentCommit
             evidencePath = "build/editing_phase1/phase1-editing-profile.json"
             metrics = $profileEditingEvidence.phase1Editing
         }
@@ -152,6 +186,7 @@ $report = [ordered]@{
     profileLargeDocument = if ($profileLargeDocumentEvidence -and $profileLargeDocumentEvidence.phase1LargeDocument) {
         [ordered]@{
             status = if ($profileLargeDocumentPassed) { "passed" } else { "failed_threshold" }
+            gitCommit = $currentCommit
             evidencePath = "build/editing_phase1/phase1-large-document-profile.json"
             metrics = $profileLargeDocumentEvidence.phase1LargeDocument
         }
@@ -161,6 +196,7 @@ $report = [ordered]@{
     forcedKillRecovery = if ($killRecoveryEvidence) {
         [ordered]@{
             status = if ($killRecoveryEvidence.passed) { "passed" } else { "failed" }
+            gitCommit = $killRecoveryEvidence.gitCommit
             evidencePath = "docs/testing/editing-phase1-kill-recovery.json"
             seeds = [int]$killRecoveryEvidence.seeds
             walCheckpointTerminations = [int]$killRecoveryEvidence.walCheckpointTerminations
@@ -171,6 +207,7 @@ $report = [ordered]@{
     saveFaultMatrix = if ($saveFaultEvidence) {
         [ordered]@{
             status = $saveFaultEvidence.status
+            gitCommit = $saveFaultEvidence.gitCommit
             evidencePath = "docs/testing/editing-phase1-save-faults.json"
             stages = $saveFaultEvidence.stages.Count
         }
@@ -182,6 +219,7 @@ $report = [ordered]@{
             status = if ($externalReaderEvidence.rustSearchExtractGeometry -eq "passed" `
                 -and $externalReaderEvidence.pdfrxPdfiumSearchExtractGeometry -eq "passed" `
                 -and (@("passed", "skipped_unavailable") -contains $externalReaderEvidence.externalReader.status)) { "passed" } else { "failed_or_incomplete" }
+            gitCommit = $externalReaderEvidence.gitCommit
             rust = $externalReaderEvidence.rustSearchExtractGeometry
             pdfrxPdfium = $externalReaderEvidence.pdfrxPdfiumSearchExtractGeometry
             oldTextAbsent = $externalReaderEvidence.oldTextAbsent

@@ -117,6 +117,12 @@ evidence commit. The later `07ca201` fallback delta is recorded separately with
 its focused verification scope; no release build or runtime/profile result is
 inferred from those focused checks.
 
+Every preserved gate carries its own `gitCommit`. `overallStatus` can become
+`passed` only when the full non-build sweep and user-owned DLL belong to the
+current clean commit and every runtime, Criterion, crash, save, and reader
+result passes. Recording newer partial evidence never reattributes an older
+gate to the newer commit.
+
 ## Final migration rule
 
 Only after every required evidence item is `passed` may the three legacy
