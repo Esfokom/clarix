@@ -3,6 +3,7 @@ pub const PDF_ADAPTER_SCHEMA_VERSION: u32 = 1;
 mod clean_patch;
 mod contract;
 mod materializer;
+mod installed_font;
 mod pdf_oxide_importer;
 mod qualification;
 mod validator;
@@ -18,6 +19,7 @@ pub use contract::{
     RasterAsset, SaveExpectation, SaveReport, SourceRef, ValidationReport,
 };
 pub use materializer::PdfTextMaterializer;
+pub use installed_font::{InstalledFontCatalog, InstalledFontFace, InstalledFontRequest};
 pub use pdf_oxide_importer::PdfOxideImporter;
 pub use qualification::QualificationCaseResult;
 pub use validator::{DetailedValidationReport, IndependentPdfValidator, ValidationFailure};
