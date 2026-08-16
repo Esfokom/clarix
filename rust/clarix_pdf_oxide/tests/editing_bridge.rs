@@ -1,9 +1,10 @@
 use clarix_editing_core::CommandId;
 use clarix_pdf_oxide::editing_api::{
-    NativeCleanPatchRequest, NativeEditorCommand, NativeEditorCommandKind, NativeEditorSaveMode,
-    NativeEditorSaveRequest, NativeEditorSession, NativeObjectDetailsRequest,
-    NativeOpenEditorRequest, NativePageSceneRequest, NativeSaveAssociation,
-    NativeSubmitCommandRequest, NativeViewportPriority,
+    NativeApproveFontFallbackRequest, NativeCleanPatchRequest, NativeEditorCommand,
+    NativeEditorCommandKind, NativeEditorSaveMode, NativeEditorSaveRequest, NativeEditorSession,
+    NativeFontFallbackProposalRequest, NativeObjectDetailsRequest, NativeOpenEditorRequest,
+    NativePageSceneRequest, NativeSaveAssociation, NativeSubmitCommandRequest,
+    NativeViewportPriority,
 };
 
 fn fixture_path() -> String {
@@ -294,6 +295,86 @@ fn native_submit_rejects_missing_glyphs_and_overflow_before_durability() {
 }
 
 #[test]
+fn native_font_fallback_requires_a_bound_one_time_approval() {
+    let project_root = tempfile::tempdir().unwrap();
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(project_root.path().to_string_lossy().into_owned()),
+    })
+    .unwrap();
+    let scene = session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    let object_id = scene.objects[0].object_id.clone();
+    let proposal = session
+        .propose_font_fallback(NativeFontFallbackProposalRequest {
+            schema_version: 1,
+            base_revision: 0,
+            object_id: object_id.clone(),
+            start: 0,
+            end: 1,
+            replacement: "€".into(),
+        })
+        .unwrap();
+    assert!(proposal.embedding_allowed);
+    assert_eq!(proposal.affected_characters, "€");
+
+    let committed = session
+        .approve_font_fallback(NativeApproveFontFallbackRequest {
+            schema_version: 1,
+            command_id: CommandId::new().to_string(),
+            base_revision: 0,
+            proposal_token: proposal.token.clone(),
+        })
+        .unwrap();
+    assert!(committed.durable);
+    assert_eq!(committed.committed_revision, 1);
+    assert_ne!(
+        committed.object_patches[0].font_fingerprint,
+        scene.objects[0].font_fingerprint
+    );
+    let asset = committed.object_patches[0]
+        .font_asset_handle
+        .as_ref()
+        .expect("approved fallback must be copied into project assets")
+        .clone();
+    assert!(Path::new(&asset).starts_with(project_root.path()));
+    assert!(Path::new(&asset).is_file());
+    assert!(session
+        .approve_font_fallback(NativeApproveFontFallbackRequest {
+            schema_version: 1,
+            command_id: CommandId::new().to_string(),
+            base_revision: 1,
+            proposal_token: proposal.token,
+        })
+        .unwrap_err()
+        .starts_with("font_fallback_proposal_invalid:"));
+    let updated = session
+        .object_details(NativeObjectDetailsRequest { object_id })
+        .unwrap();
+    assert_ne!(updated.font_fingerprint, scene.objects[0].font_fingerprint);
+    session.close().unwrap();
+
+    let recovered = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(project_root.path().to_string_lossy().into_owned()),
+    })
+    .unwrap();
+    assert_eq!(recovered.metadata().unwrap().revision, 1);
+    let restored = recovered
+        .object_details(NativeObjectDetailsRequest {
+            object_id: updated.object_id,
+        })
+        .unwrap();
+    assert_eq!(restored.font_asset_handle.as_deref(), Some(asset.as_str()));
+    recovered.close().unwrap();
+}
+
+#[test]
 fn native_editor_session_rejects_schema_and_identifier_mismatches() {
     let session = NativeEditorSession::open(NativeOpenEditorRequest {
         source_path: fixture_path(),
@@ -456,3 +537,4 @@ fn native_save_as_materializes_and_validates_the_current_revision() {
     assert!(result.follows_new_source);
     session.close().unwrap();
 }
+use std::path::Path;

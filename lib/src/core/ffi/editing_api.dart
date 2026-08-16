@@ -6,11 +6,16 @@
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `required`, `text_style`, `viewport_priority`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `replace_utf16`, `required`, `text_style`, `viewport_priority`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PendingFontFallback`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
+  Future<NativeCommandResult> approveFontFallback({
+    required NativeApproveFontFallbackRequest request,
+  });
+
   Future<NativeCommandResult> checkpoint({
     required NativeCheckpointRequest request,
   });
@@ -36,6 +41,10 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   );
 
   Future<NativePageScene> pageScene({required NativePageSceneRequest request});
+
+  Future<NativeFontFallbackProposal> proposeFontFallback({
+    required NativeFontFallbackProposalRequest request,
+  });
 
   Future<void> releaseCleanPatchMemory();
 
@@ -85,6 +94,37 @@ class NativeAffineTransform {
           d == other.d &&
           e == other.e &&
           f == other.f;
+}
+
+class NativeApproveFontFallbackRequest {
+  final int schemaVersion;
+  final String commandId;
+  final BigInt baseRevision;
+  final String proposalToken;
+
+  const NativeApproveFontFallbackRequest({
+    required this.schemaVersion,
+    required this.commandId,
+    required this.baseRevision,
+    required this.proposalToken,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      commandId.hashCode ^
+      baseRevision.hashCode ^
+      proposalToken.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeApproveFontFallbackRequest &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          commandId == other.commandId &&
+          baseRevision == other.baseRevision &&
+          proposalToken == other.proposalToken;
 }
 
 class NativeCheckpointRequest {
@@ -442,6 +482,80 @@ class NativeEditorSaveResult {
           followsNewSource == other.followsNewSource;
 }
 
+class NativeFontFallbackProposal {
+  final String token;
+  final String fontName;
+  final String source;
+  final bool embeddingAllowed;
+  final String affectedCharacters;
+
+  const NativeFontFallbackProposal({
+    required this.token,
+    required this.fontName,
+    required this.source,
+    required this.embeddingAllowed,
+    required this.affectedCharacters,
+  });
+
+  @override
+  int get hashCode =>
+      token.hashCode ^
+      fontName.hashCode ^
+      source.hashCode ^
+      embeddingAllowed.hashCode ^
+      affectedCharacters.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeFontFallbackProposal &&
+          runtimeType == other.runtimeType &&
+          token == other.token &&
+          fontName == other.fontName &&
+          source == other.source &&
+          embeddingAllowed == other.embeddingAllowed &&
+          affectedCharacters == other.affectedCharacters;
+}
+
+class NativeFontFallbackProposalRequest {
+  final int schemaVersion;
+  final BigInt baseRevision;
+  final String objectId;
+  final int start;
+  final int end;
+  final String replacement;
+
+  const NativeFontFallbackProposalRequest({
+    required this.schemaVersion,
+    required this.baseRevision,
+    required this.objectId,
+    required this.start,
+    required this.end,
+    required this.replacement,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      baseRevision.hashCode ^
+      objectId.hashCode ^
+      start.hashCode ^
+      end.hashCode ^
+      replacement.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeFontFallbackProposalRequest &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          baseRevision == other.baseRevision &&
+          objectId == other.objectId &&
+          start == other.start &&
+          end == other.end &&
+          replacement == other.replacement;
+}
+
 class NativeObjectDetailsRequest {
   final String objectId;
 
@@ -467,6 +581,8 @@ class NativeObjectPatch {
   final List<NativeTextCharacterBox>? characterBoxes;
   final NativePdfBox? bounds;
   final NativeAffineTransform? transform;
+  final String? fontFingerprint;
+  final String? fontAssetHandle;
 
   const NativeObjectPatch({
     required this.objectId,
@@ -477,6 +593,8 @@ class NativeObjectPatch {
     this.characterBoxes,
     this.bounds,
     this.transform,
+    this.fontFingerprint,
+    this.fontAssetHandle,
   });
 
   @override
@@ -488,7 +606,9 @@ class NativeObjectPatch {
       textRuns.hashCode ^
       characterBoxes.hashCode ^
       bounds.hashCode ^
-      transform.hashCode;
+      transform.hashCode ^
+      fontFingerprint.hashCode ^
+      fontAssetHandle.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -502,7 +622,9 @@ class NativeObjectPatch {
           textRuns == other.textRuns &&
           characterBoxes == other.characterBoxes &&
           bounds == other.bounds &&
-          transform == other.transform;
+          transform == other.transform &&
+          fontFingerprint == other.fontFingerprint &&
+          fontAssetHandle == other.fontAssetHandle;
 }
 
 class NativeOpenEditorRequest {

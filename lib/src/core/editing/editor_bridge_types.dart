@@ -75,6 +75,24 @@ class EditorCleanPatchAsset {
   final double bleedPoints;
 }
 
+class EditorFontFallbackProposal {
+  const EditorFontFallbackProposal({
+    required this.token,
+    required this.objectId,
+    required this.fontName,
+    required this.source,
+    required this.embeddingAllowed,
+    required this.affectedCharacters,
+  });
+
+  final String token;
+  final String objectId;
+  final String fontName;
+  final String source;
+  final bool embeddingAllowed;
+  final String affectedCharacters;
+}
+
 class EditorPdfBox {
   const EditorPdfBox({
     required this.left,
@@ -289,6 +307,8 @@ class EditorObjectPatch {
     this.characterBoxes,
     this.bounds,
     this.transform,
+    this.fontFingerprint,
+    this.fontAssetHandle,
   });
 
   final String objectId;
@@ -299,6 +319,8 @@ class EditorObjectPatch {
   final List<EditorTextCharacterBox>? characterBoxes;
   final EditorPdfBox? bounds;
   final EditorAffineTransform? transform;
+  final String? fontFingerprint;
+  final String? fontAssetHandle;
 }
 
 class EditorCommandResult {

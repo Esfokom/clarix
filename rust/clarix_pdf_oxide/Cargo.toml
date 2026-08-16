@@ -23,6 +23,7 @@ lopdf.workspace = true
 pdf_oxide.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"], optional = true }
 ocr-rs = { version = "=2.3.2", optional = true }
 fastembed = { version = "5.17", default-features = false, features = ["ort-download-binaries-native-tls", "hf-hub-native-tls"], optional = true }

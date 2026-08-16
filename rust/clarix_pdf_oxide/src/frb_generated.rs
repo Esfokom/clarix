@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 666761624;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1487823811;
 
 // Section: executor
 
@@ -48,6 +48,61 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__editing_api__NativeEditorSession_approve_font_fallback_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_approve_font_fallback",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_request = <crate::editing_api::NativeApproveFontFallbackRequest>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::editing_api::NativeEditorSession::approve_font_fallback(
+                        &*api_that_guard,
+                        api_request,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__editing_api__NativeEditorSession_checkpoint_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -445,6 +500,61 @@ fn wire__crate__editing_api__NativeEditorSession_page_scene_impl(
                     }
                     let api_that_guard = api_that_guard.unwrap();
                     let output_ok = crate::editing_api::NativeEditorSession::page_scene(
+                        &*api_that_guard,
+                        api_request,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_propose_font_fallback",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_request = <crate::editing_api::NativeFontFallbackProposalRequest>::sse_decode(
+                &mut deserializer,
+            );
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::editing_api::NativeEditorSession::propose_font_fallback(
                         &*api_that_guard,
                         api_request,
                     )?;
@@ -1412,6 +1522,22 @@ impl SseDecode for crate::editing_api::NativeAffineTransform {
     }
 }
 
+impl SseDecode for crate::editing_api::NativeApproveFontFallbackRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_schemaVersion = <u32>::sse_decode(deserializer);
+        let mut var_commandId = <String>::sse_decode(deserializer);
+        let mut var_baseRevision = <u64>::sse_decode(deserializer);
+        let mut var_proposalToken = <String>::sse_decode(deserializer);
+        return crate::editing_api::NativeApproveFontFallbackRequest {
+            schema_version: var_schemaVersion,
+            command_id: var_commandId,
+            base_revision: var_baseRevision,
+            proposal_token: var_proposalToken,
+        };
+    }
+}
+
 impl SseDecode for crate::editing_api::NativeCheckpointRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1639,6 +1765,44 @@ impl SseDecode for crate::editing_api::NativeEditorSaveResult {
     }
 }
 
+impl SseDecode for crate::editing_api::NativeFontFallbackProposal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_token = <String>::sse_decode(deserializer);
+        let mut var_fontName = <String>::sse_decode(deserializer);
+        let mut var_source = <String>::sse_decode(deserializer);
+        let mut var_embeddingAllowed = <bool>::sse_decode(deserializer);
+        let mut var_affectedCharacters = <String>::sse_decode(deserializer);
+        return crate::editing_api::NativeFontFallbackProposal {
+            token: var_token,
+            font_name: var_fontName,
+            source: var_source,
+            embedding_allowed: var_embeddingAllowed,
+            affected_characters: var_affectedCharacters,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativeFontFallbackProposalRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_schemaVersion = <u32>::sse_decode(deserializer);
+        let mut var_baseRevision = <u64>::sse_decode(deserializer);
+        let mut var_objectId = <String>::sse_decode(deserializer);
+        let mut var_start = <u32>::sse_decode(deserializer);
+        let mut var_end = <u32>::sse_decode(deserializer);
+        let mut var_replacement = <String>::sse_decode(deserializer);
+        return crate::editing_api::NativeFontFallbackProposalRequest {
+            schema_version: var_schemaVersion,
+            base_revision: var_baseRevision,
+            object_id: var_objectId,
+            start: var_start,
+            end: var_end,
+            replacement: var_replacement,
+        };
+    }
+}
+
 impl SseDecode for crate::editing_api::NativeObjectDetailsRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -1663,6 +1827,8 @@ impl SseDecode for crate::editing_api::NativeObjectPatch {
         let mut var_bounds = <Option<crate::editing_api::NativePdfBox>>::sse_decode(deserializer);
         let mut var_transform =
             <Option<crate::editing_api::NativeAffineTransform>>::sse_decode(deserializer);
+        let mut var_fontFingerprint = <Option<String>>::sse_decode(deserializer);
+        let mut var_fontAssetHandle = <Option<String>>::sse_decode(deserializer);
         return crate::editing_api::NativeObjectPatch {
             object_id: var_objectId,
             page_id: var_pageId,
@@ -1672,6 +1838,8 @@ impl SseDecode for crate::editing_api::NativeObjectPatch {
             character_boxes: var_characterBoxes,
             bounds: var_bounds,
             transform: var_transform,
+            font_fingerprint: var_fontFingerprint,
+            font_asset_handle: var_fontAssetHandle,
         };
     }
 }
@@ -2351,84 +2519,96 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__editing_api__NativeEditorSession_checkpoint_impl(
+        1 => wire__crate__editing_api__NativeEditorSession_approve_font_fallback_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        2 => wire__crate__editing_api__NativeEditorSession_clean_patch_impl(
+        2 => wire__crate__editing_api__NativeEditorSession_checkpoint_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__editing_api__NativeEditorSession_close_impl(
+        3 => wire__crate__editing_api__NativeEditorSession_clean_patch_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__editing_api__NativeEditorSession_events_impl(
+        4 => wire__crate__editing_api__NativeEditorSession_close_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => wire__crate__editing_api__NativeEditorSession_metadata_impl(
+        5 => wire__crate__editing_api__NativeEditorSession_events_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        6 => wire__crate__editing_api__NativeEditorSession_object_details_impl(
+        6 => wire__crate__editing_api__NativeEditorSession_metadata_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        7 => wire__crate__editing_api__NativeEditorSession_open_impl(
+        7 => wire__crate__editing_api__NativeEditorSession_object_details_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        8 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
+        8 => wire__crate__editing_api__NativeEditorSession_open_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        9 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
+        9 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        10 => wire__crate__editing_api__NativeEditorSession_save_impl(
+        10 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        11 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+        11 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        12 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
-        13 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
-        15 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
-        16 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
-        17 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        12 => wire__crate__editing_api__NativeEditorSession_save_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        13 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        14 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
+        17 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
+        19 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
+        20 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
+        22 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
+        23 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
+        24 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -2502,6 +2682,29 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeAffineTransform
     for crate::editing_api::NativeAffineTransform
 {
     fn into_into_dart(self) -> crate::editing_api::NativeAffineTransform {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeApproveFontFallbackRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.schema_version.into_into_dart().into_dart(),
+            self.command_id.into_into_dart().into_dart(),
+            self.base_revision.into_into_dart().into_dart(),
+            self.proposal_token.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeApproveFontFallbackRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeApproveFontFallbackRequest>
+    for crate::editing_api::NativeApproveFontFallbackRequest
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeApproveFontFallbackRequest {
         self
     }
 }
@@ -2801,6 +3004,55 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeEditorSaveResul
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeFontFallbackProposal {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.token.into_into_dart().into_dart(),
+            self.font_name.into_into_dart().into_dart(),
+            self.source.into_into_dart().into_dart(),
+            self.embedding_allowed.into_into_dart().into_dart(),
+            self.affected_characters.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeFontFallbackProposal
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeFontFallbackProposal>
+    for crate::editing_api::NativeFontFallbackProposal
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeFontFallbackProposal {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeFontFallbackProposalRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.schema_version.into_into_dart().into_dart(),
+            self.base_revision.into_into_dart().into_dart(),
+            self.object_id.into_into_dart().into_dart(),
+            self.start.into_into_dart().into_dart(),
+            self.end.into_into_dart().into_dart(),
+            self.replacement.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeFontFallbackProposalRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeFontFallbackProposalRequest>
+    for crate::editing_api::NativeFontFallbackProposalRequest
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeFontFallbackProposalRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeObjectDetailsRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [self.object_id.into_into_dart().into_dart()].into_dart()
@@ -2829,6 +3081,8 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeObjectPatch {
             self.character_boxes.into_into_dart().into_dart(),
             self.bounds.into_into_dart().into_dart(),
             self.transform.into_into_dart().into_dart(),
+            self.font_fingerprint.into_into_dart().into_dart(),
+            self.font_asset_handle.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -3741,6 +3995,16 @@ impl SseEncode for crate::editing_api::NativeAffineTransform {
     }
 }
 
+impl SseEncode for crate::editing_api::NativeApproveFontFallbackRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.schema_version, serializer);
+        <String>::sse_encode(self.command_id, serializer);
+        <u64>::sse_encode(self.base_revision, serializer);
+        <String>::sse_encode(self.proposal_token, serializer);
+    }
+}
+
 impl SseEncode for crate::editing_api::NativeCheckpointRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3907,6 +4171,29 @@ impl SseEncode for crate::editing_api::NativeEditorSaveResult {
     }
 }
 
+impl SseEncode for crate::editing_api::NativeFontFallbackProposal {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.token, serializer);
+        <String>::sse_encode(self.font_name, serializer);
+        <String>::sse_encode(self.source, serializer);
+        <bool>::sse_encode(self.embedding_allowed, serializer);
+        <String>::sse_encode(self.affected_characters, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativeFontFallbackProposalRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.schema_version, serializer);
+        <u64>::sse_encode(self.base_revision, serializer);
+        <String>::sse_encode(self.object_id, serializer);
+        <u32>::sse_encode(self.start, serializer);
+        <u32>::sse_encode(self.end, serializer);
+        <String>::sse_encode(self.replacement, serializer);
+    }
+}
+
 impl SseEncode for crate::editing_api::NativeObjectDetailsRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -3928,6 +4215,8 @@ impl SseEncode for crate::editing_api::NativeObjectPatch {
         );
         <Option<crate::editing_api::NativePdfBox>>::sse_encode(self.bounds, serializer);
         <Option<crate::editing_api::NativeAffineTransform>>::sse_encode(self.transform, serializer);
+        <Option<String>>::sse_encode(self.font_fingerprint, serializer);
+        <Option<String>>::sse_encode(self.font_asset_handle, serializer);
     }
 }
 

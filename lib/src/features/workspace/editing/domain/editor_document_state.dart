@@ -50,6 +50,7 @@ class EditorDocumentState {
     this.objects = const <String, EditorObjectState>{},
     this.optimisticEdit,
     this.queuedEdit,
+    this.fontFallbackProposal,
     this.selection,
     this.pendingCommand,
     this.undoDepth = 0,
@@ -69,6 +70,7 @@ class EditorDocumentState {
   final Map<String, EditorObjectState> objects;
   final OptimisticTextEdit? optimisticEdit;
   final OptimisticTextEdit? queuedEdit;
+  final EditorFontFallbackProposal? fontFallbackProposal;
   final EditorSelection? selection;
   final EditorCommandKind? pendingCommand;
   final int undoDepth;
@@ -102,6 +104,7 @@ class EditorDocumentState {
     Map<String, EditorObjectState>? objects,
     OptimisticTextEdit? optimisticEdit,
     OptimisticTextEdit? queuedEdit,
+    EditorFontFallbackProposal? fontFallbackProposal,
     EditorSelection? selection,
     EditorCommandKind? pendingCommand,
     int? undoDepth,
@@ -113,6 +116,7 @@ class EditorDocumentState {
     bool? isClosed,
     bool clearOptimistic = false,
     bool clearQueued = false,
+    bool clearFontFallbackProposal = false,
     bool clearSelection = false,
     bool clearPendingCommand = false,
     bool clearRecovery = false,
@@ -128,6 +132,9 @@ class EditorDocumentState {
         ? null
         : (optimisticEdit ?? this.optimisticEdit),
     queuedEdit: clearQueued ? null : (queuedEdit ?? this.queuedEdit),
+    fontFallbackProposal: clearFontFallbackProposal
+        ? null
+        : (fontFallbackProposal ?? this.fontFallbackProposal),
     selection: clearSelection ? null : (selection ?? this.selection),
     pendingCommand: clearPendingCommand
         ? null

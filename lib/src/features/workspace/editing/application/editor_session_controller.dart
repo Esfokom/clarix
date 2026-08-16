@@ -42,6 +42,7 @@ class EditorSessionController {
   bool _disposed = false;
   Future<void> Function()? _commitComposition;
   bool _saveCancelled = false;
+  int _fontFallbackEpoch = 0;
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
@@ -316,6 +317,10 @@ class EditorSessionController {
     required String replacement,
   }) {
     _ensureActive();
+    _fontFallbackEpoch++;
+    if (_state.fontFallbackProposal != null) {
+      _emit(_state.copyWith(clearFontFallbackProposal: true));
+    }
     if (_state.pendingCommand != null) {
       throw StateError('an editor command is already outstanding');
     }
@@ -468,6 +473,72 @@ class EditorSessionController {
     );
   }
 
+  void rejectFontFallback() {
+    _ensureActive();
+    _fontFallbackEpoch++;
+    _emit(_state.copyWith(clearFontFallbackProposal: true, clearError: true));
+  }
+
+  Future<void> approveFontFallback(String proposalToken) async {
+    _ensureActive();
+    final proposal = _state.fontFallbackProposal;
+    if (proposal == null || proposal.token != proposalToken) {
+      throw StateError('font fallback proposal is no longer pending');
+    }
+    final commandId = _commandIds();
+    final baseRevision = _state.revision;
+    final epoch = ++_fontFallbackEpoch;
+    _emit(
+      _state.copyWith(
+        pendingCommand: EditorCommandKind.replaceTextRange,
+        clearError: true,
+      ),
+    );
+    try {
+      final result = await _gateway.approveFontFallback(
+        commandId: commandId,
+        baseRevision: baseRevision,
+        proposalToken: proposalToken,
+      );
+      if (_disposed ||
+          epoch != _fontFallbackEpoch ||
+          result.commandId != commandId ||
+          result.previousRevision != baseRevision ||
+          !result.durable) {
+        throw const EditorProtocolViolation(
+          'font fallback acknowledgement mismatch',
+        );
+      }
+      _emit(
+        _state.copyWith(
+          revision: result.committedRevision,
+          scenes: _patchScenes(_state.scenes, result.objectPatches),
+          objects: _patchObjects(_state.objects, result.objectPatches),
+          save: _state.save.copyWith(
+            phase: EditorSavePhase.dirty,
+            clearError: true,
+          ),
+          undoDepth: _state.undoDepth + 1,
+          redoDepth: 0,
+          clearPendingCommand: true,
+          clearFontFallbackProposal: true,
+          clearError: true,
+        ),
+      );
+    } catch (error) {
+      if (!_disposed) {
+        _emit(
+          _state.copyWith(
+            errorCode: _errorCode(error),
+            clearPendingCommand: true,
+            clearFontFallbackProposal: true,
+          ),
+        );
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _submit(OptimisticTextEdit edit) async {
     try {
       final result = await _gateway.submit(
@@ -535,6 +606,34 @@ class EditorSessionController {
           clearQueued: true,
         ),
       );
+      if (errorCode == 'font_fallback_required') {
+        final epoch = ++_fontFallbackEpoch;
+        try {
+          final proposal = await _gateway.proposeFontFallback(
+            baseRevision: edit.baseRevision,
+            objectId: edit.objectId,
+            start: edit.range.start,
+            end: edit.range.end,
+            replacement: edit.replacement,
+          );
+          if (!_disposed &&
+              epoch == _fontFallbackEpoch &&
+              _state.revision == edit.baseRevision) {
+            _emit(
+              _state.copyWith(fontFallbackProposal: proposal, clearError: true),
+            );
+          }
+        } catch (proposalError) {
+          if (!_disposed && epoch == _fontFallbackEpoch) {
+            _emit(
+              _state.copyWith(
+                errorCode: _errorCode(proposalError),
+                clearFontFallbackProposal: true,
+              ),
+            );
+          }
+        }
+      }
       if (errorCode == 'revision_conflict' && stalePage != null) {
         final pageNumber = _state.scenes.entries
             .where((entry) => entry.value.pageId == stalePage)
@@ -629,8 +728,10 @@ Map<int, EditorPageScene> _patchScenes(
                 runs: patch.textRuns ?? object.runs,
                 characterBoxes: patch.characterBoxes ?? object.characterBoxes,
                 layout: object.layout,
-                fontFingerprint: object.fontFingerprint,
-                fontAssetHandle: object.fontAssetHandle,
+                fontFingerprint:
+                    patch.fontFingerprint ?? object.fontFingerprint,
+                fontAssetHandle:
+                    patch.fontAssetHandle ?? object.fontAssetHandle,
               );
             })
             .toList(growable: false),

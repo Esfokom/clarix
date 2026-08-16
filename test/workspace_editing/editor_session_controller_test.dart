@@ -104,7 +104,7 @@ void main() {
     },
   );
 
-  for (final code in <String>['font_fallback_required', 'text_overflow']) {
+  for (final code in <String>['text_overflow']) {
     test(
       '$code rolls back optimistic text without refreshing the page',
       () async {
@@ -129,6 +129,38 @@ void main() {
       },
     );
   }
+
+  test(
+    'font fallback remains inert until its one-time proposal is approved',
+    () async {
+      final gateway = FakeEditorSessionGateway();
+      final controller = _controller(gateway);
+      await controller.open('fixture.pdf');
+
+      controller.applyLocalDelta(
+        objectId: objectId,
+        range: const EditorTextRange(start: 0, end: 6),
+        replacement: '€',
+      );
+      gateway.rejectSubmit(
+        Exception('font_fallback_required: approval required'),
+      );
+      await pumpEventQueue();
+
+      expect(controller.state.revision, 0);
+      expect(controller.state.visibleText(objectId), 'Before');
+      expect(controller.state.fontFallbackProposal?.token, 'proposal-1');
+      expect(gateway.proposedReplacement, '€');
+
+      await controller.approveFontFallback('proposal-1');
+
+      expect(controller.state.revision, 1);
+      expect(controller.state.visibleText(objectId), '€');
+      expect(controller.state.fontFallbackProposal, isNull);
+      expect(gateway.approvedProposalToken, 'proposal-1');
+      await controller.close();
+    },
+  );
 
   test('discards a result for a different command id', () async {
     final gateway = FakeEditorSessionGateway();
@@ -201,6 +233,8 @@ class FakeEditorSessionGateway implements EditorSessionGateway {
   final List<Completer<EditorCommandResult>> _completers =
       <Completer<EditorCommandResult>>[];
   int pageRequests = 0;
+  String? proposedReplacement;
+  String? approvedProposalToken;
 
   int get pendingSubmitCount => pending.length;
 
@@ -240,6 +274,49 @@ class FakeEditorSessionGateway implements EditorSessionGateway {
         pending.removeAt(index);
       }
     });
+  }
+
+  @override
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  }) async {
+    proposedReplacement = replacement;
+    return EditorFontFallbackProposal(
+      token: 'proposal-1',
+      objectId: objectId,
+      fontName: 'Arial',
+      source: 'installed',
+      embeddingAllowed: true,
+      affectedCharacters: '€',
+    );
+  }
+
+  @override
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  }) async {
+    approvedProposalToken = proposalToken;
+    return EditorCommandResult(
+      commandId: commandId,
+      previousRevision: baseRevision,
+      committedRevision: baseRevision + 1,
+      durable: true,
+      warnings: const <String>[],
+      objectPatches: <EditorObjectPatch>[
+        EditorObjectPatch(
+          objectId: objectId,
+          pageId: 'page-1',
+          modifiedRevision: baseRevision + 1,
+          text: proposedReplacement,
+        ),
+      ],
+    );
   }
 
   void completeSubmit({

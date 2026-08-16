@@ -23,6 +23,24 @@ abstract class NativeEditorPort {
 
   Future<EditorCommandResult> submit(EditorCommandRequest request);
 
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  }) => Future<EditorFontFallbackProposal>.error(
+    UnsupportedError('native font fallback proposals are unavailable'),
+  );
+
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  }) => Future<EditorCommandResult>.error(
+    UnsupportedError('native font fallback approval is unavailable'),
+  );
+
   Future<EditorSceneObject> objectDetails(String objectId);
 
   Future<EditorCleanPatchAsset> cleanPatch({
@@ -130,6 +148,49 @@ class EditorBridgeSession {
     if (value.previousRevision != request.baseRevision || !value.durable) {
       throw const EditorProtocolViolation(
         'native command acknowledgement is not durably based on the requested revision',
+      );
+    }
+    return value;
+  }
+
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  }) async {
+    _ensureOpen();
+    final value = await _native.proposeFontFallback(
+      baseRevision: baseRevision,
+      objectId: _canonicalUuid(objectId, 'objectId'),
+      start: start,
+      end: end,
+      replacement: replacement,
+    );
+    _ensureOpen();
+    _canonicalUuid(value.token, 'proposalToken');
+    return value;
+  }
+
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  }) async {
+    _ensureOpen();
+    final value = await _native.approveFontFallback(
+      commandId: _canonicalUuid(commandId, 'commandId'),
+      baseRevision: baseRevision,
+      proposalToken: _canonicalUuid(proposalToken, 'proposalToken'),
+    );
+    _ensureOpen();
+    _validateSchema(value.schemaVersion);
+    if (value.commandId != commandId ||
+        value.previousRevision != baseRevision ||
+        !value.durable) {
+      throw const EditorProtocolViolation(
+        'font fallback acknowledgement is not durably based on the requested revision',
       );
     }
     return value;
@@ -309,6 +370,50 @@ class _FrbNativeEditorPort implements NativeEditorPort {
     );
     return _commandResultFromNative(value);
   }
+
+  @override
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  }) async {
+    final value = await _session.proposeFontFallback(
+      request: native.NativeFontFallbackProposalRequest(
+        schemaVersion: _editorSchemaVersion,
+        baseRevision: BigInt.from(baseRevision),
+        objectId: objectId,
+        start: start,
+        end: end,
+        replacement: replacement,
+      ),
+    );
+    return EditorFontFallbackProposal(
+      token: value.token,
+      objectId: objectId,
+      fontName: value.fontName,
+      source: value.source,
+      embeddingAllowed: value.embeddingAllowed,
+      affectedCharacters: value.affectedCharacters,
+    );
+  }
+
+  @override
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  }) async => _commandResultFromNative(
+    await _session.approveFontFallback(
+      request: native.NativeApproveFontFallbackRequest(
+        schemaVersion: _editorSchemaVersion,
+        commandId: commandId,
+        baseRevision: BigInt.from(baseRevision),
+        proposalToken: proposalToken,
+      ),
+    ),
+  );
 
   @override
   Future<EditorSceneObject> objectDetails(String objectId) async {
@@ -517,6 +622,8 @@ EditorCommandResult _commandResultFromNative(
           transform: patch.transform == null
               ? null
               : _transformFromNative(patch.transform!),
+          fontFingerprint: patch.fontFingerprint,
+          fontAssetHandle: patch.fontAssetHandle,
         ),
       )
       .toList(growable: false),

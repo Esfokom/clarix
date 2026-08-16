@@ -66,7 +66,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 666761624;
+  int get rustContentHash => 1487823811;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -78,6 +78,12 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 }
 
 abstract class RustLibApi extends BaseApi {
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionApproveFontFallback({
+    required NativeEditorSession that,
+    required NativeApproveFontFallbackRequest request,
+  });
+
   Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({
     required NativeEditorSession that,
     required NativeCheckpointRequest request,
@@ -112,6 +118,12 @@ abstract class RustLibApi extends BaseApi {
   Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({
     required NativeEditorSession that,
     required NativePageSceneRequest request,
+  });
+
+  Future<NativeFontFallbackProposal>
+  crateEditingApiNativeEditorSessionProposeFontFallback({
+    required NativeEditorSession that,
+    required NativeFontFallbackProposalRequest request,
   });
 
   Future<void> crateEditingApiNativeEditorSessionReleaseCleanPatchMemory({
@@ -207,6 +219,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   });
 
   @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionApproveFontFallback({
+    required NativeEditorSession that,
+    required NativeApproveFontFallbackRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_approve_font_fallback_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 1,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_command_result,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionApproveFontFallbackConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionApproveFontFallbackConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_approve_font_fallback",
+        argNames: ["that", "request"],
+      );
+
+  @override
   Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({
     required NativeEditorSession that,
     required NativeCheckpointRequest request,
@@ -223,7 +279,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 1,
+            funcId: 2,
             port: port_,
           );
         },
@@ -264,7 +320,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 2,
+            funcId: 3,
             port: port_,
           );
         },
@@ -300,7 +356,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 3,
+            funcId: 4,
             port: port_,
           );
         },
@@ -339,7 +395,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 4,
+              funcId: 5,
               port: port_,
             );
           },
@@ -377,7 +433,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 5,
+            funcId: 6,
             port: port_,
           );
         },
@@ -418,7 +474,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 6,
+            funcId: 7,
             port: port_,
           );
         },
@@ -454,7 +510,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 7,
+            funcId: 8,
             port: port_,
           );
         },
@@ -493,7 +549,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 8,
+            funcId: 9,
             port: port_,
           );
         },
@@ -515,6 +571,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<NativeFontFallbackProposal>
+  crateEditingApiNativeEditorSessionProposeFontFallback({
+    required NativeEditorSession that,
+    required NativeFontFallbackProposalRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_font_fallback_proposal_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_font_fallback_proposal,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionProposeFontFallbackConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionProposeFontFallbackConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_propose_font_fallback",
+        argNames: ["that", "request"],
+      );
+
+  @override
   Future<void> crateEditingApiNativeEditorSessionReleaseCleanPatchMemory({
     required NativeEditorSession that,
   }) {
@@ -529,7 +629,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 9,
+            funcId: 11,
             port: port_,
           );
         },
@@ -572,7 +672,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 10,
+            funcId: 12,
             port: port_,
           );
         },
@@ -613,7 +713,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 11,
+            funcId: 13,
             port: port_,
           );
         },
@@ -656,7 +756,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 12,
+              funcId: 14,
               port: port_,
             );
           },
@@ -694,7 +794,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 13,
+            funcId: 15,
             port: port_,
           );
         },
@@ -727,7 +827,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 14,
+            funcId: 16,
             port: port_,
           );
         },
@@ -766,7 +866,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 15,
+            funcId: 17,
             port: port_,
           );
         },
@@ -804,7 +904,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 16,
+            funcId: 18,
             port: port_,
           );
         },
@@ -840,7 +940,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 17,
+            funcId: 19,
             port: port_,
           );
         },
@@ -870,7 +970,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 20,
             port: port_,
           );
         },
@@ -900,7 +1000,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 21,
             port: port_,
           );
         },
@@ -932,7 +1032,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 22,
             port: port_,
           );
         },
@@ -964,7 +1064,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 23,
             port: port_,
           );
         },
@@ -996,7 +1096,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1028,7 +1128,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1173,6 +1273,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeApproveFontFallbackRequest
+  dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_approve_font_fallback_request(raw);
+  }
+
+  @protected
   NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
     dynamic raw,
   ) {
@@ -1202,6 +1309,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_native_editor_save_request(raw);
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_font_fallback_proposal_request(raw);
   }
 
   @protected
@@ -1433,6 +1547,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeApproveFontFallbackRequest
+  dco_decode_native_approve_font_fallback_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeApproveFontFallbackRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      baseRevision: dco_decode_u_64(arr[2]),
+      proposalToken: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
   NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -1596,6 +1725,40 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeFontFallbackProposal dco_decode_native_font_fallback_proposal(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeFontFallbackProposal(
+      token: dco_decode_String(arr[0]),
+      fontName: dco_decode_String(arr[1]),
+      source: dco_decode_String(arr[2]),
+      embeddingAllowed: dco_decode_bool(arr[3]),
+      affectedCharacters: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  dco_decode_native_font_fallback_proposal_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeFontFallbackProposalRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      baseRevision: dco_decode_u_64(arr[1]),
+      objectId: dco_decode_String(arr[2]),
+      start: dco_decode_u_32(arr[3]),
+      end: dco_decode_u_32(arr[4]),
+      replacement: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
   NativeObjectDetailsRequest dco_decode_native_object_details_request(
     dynamic raw,
   ) {
@@ -1610,8 +1773,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeObjectPatch dco_decode_native_object_patch(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return NativeObjectPatch(
       objectId: dco_decode_String(arr[0]),
       pageId: dco_decode_String(arr[1]),
@@ -1621,6 +1784,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       characterBoxes: dco_decode_opt_list_native_text_character_box(arr[5]),
       bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[6]),
       transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
+      fontFingerprint: dco_decode_opt_String(arr[8]),
+      fontAssetHandle: dco_decode_opt_String(arr[9]),
     );
   }
 
@@ -2290,6 +2455,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeApproveFontFallbackRequest
+  sse_decode_box_autoadd_native_approve_font_fallback_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_approve_font_fallback_request(deserializer));
+  }
+
+  @protected
   NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(
     SseDeserializer deserializer,
   ) {
@@ -2319,6 +2493,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_native_editor_save_request(deserializer));
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  sse_decode_box_autoadd_native_font_fallback_proposal_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_font_fallback_proposal_request(deserializer));
   }
 
   @protected
@@ -2644,6 +2827,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeApproveFontFallbackRequest
+  sse_decode_native_approve_font_fallback_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_proposalToken = sse_decode_String(deserializer);
+    return NativeApproveFontFallbackRequest(
+      schemaVersion: var_schemaVersion,
+      commandId: var_commandId,
+      baseRevision: var_baseRevision,
+      proposalToken: var_proposalToken,
+    );
+  }
+
+  @protected
   NativeCheckpointRequest sse_decode_native_checkpoint_request(
     SseDeserializer deserializer,
   ) {
@@ -2860,6 +3061,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeFontFallbackProposal sse_decode_native_font_fallback_proposal(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_token = sse_decode_String(deserializer);
+    var var_fontName = sse_decode_String(deserializer);
+    var var_source = sse_decode_String(deserializer);
+    var var_embeddingAllowed = sse_decode_bool(deserializer);
+    var var_affectedCharacters = sse_decode_String(deserializer);
+    return NativeFontFallbackProposal(
+      token: var_token,
+      fontName: var_fontName,
+      source: var_source,
+      embeddingAllowed: var_embeddingAllowed,
+      affectedCharacters: var_affectedCharacters,
+    );
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  sse_decode_native_font_fallback_proposal_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_replacement = sse_decode_String(deserializer);
+    return NativeFontFallbackProposalRequest(
+      schemaVersion: var_schemaVersion,
+      baseRevision: var_baseRevision,
+      objectId: var_objectId,
+      start: var_start,
+      end: var_end,
+      replacement: var_replacement,
+    );
+  }
+
+  @protected
   NativeObjectDetailsRequest sse_decode_native_object_details_request(
     SseDeserializer deserializer,
   ) {
@@ -2885,6 +3127,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
       deserializer,
     );
+    var var_fontFingerprint = sse_decode_opt_String(deserializer);
+    var var_fontAssetHandle = sse_decode_opt_String(deserializer);
     return NativeObjectPatch(
       objectId: var_objectId,
       pageId: var_pageId,
@@ -2894,6 +3138,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       characterBoxes: var_characterBoxes,
       bounds: var_bounds,
       transform: var_transform,
+      fontFingerprint: var_fontFingerprint,
+      fontAssetHandle: var_fontAssetHandle,
     );
   }
 
@@ -3710,6 +3956,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_native_approve_font_fallback_request(
+    NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_approve_font_fallback_request(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_native_checkpoint_request(
     NativeCheckpointRequest self,
     SseSerializer serializer,
@@ -3743,6 +3998,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_editor_save_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_font_fallback_proposal_request(
+    NativeFontFallbackProposalRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_font_fallback_proposal_request(self, serializer);
   }
 
   @protected
@@ -4057,6 +4321,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_approve_font_fallback_request(
+    NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.proposalToken, serializer);
+  }
+
+  @protected
   void sse_encode_native_checkpoint_request(
     NativeCheckpointRequest self,
     SseSerializer serializer,
@@ -4215,6 +4491,33 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_font_fallback_proposal(
+    NativeFontFallbackProposal self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.token, serializer);
+    sse_encode_String(self.fontName, serializer);
+    sse_encode_String(self.source, serializer);
+    sse_encode_bool(self.embeddingAllowed, serializer);
+    sse_encode_String(self.affectedCharacters, serializer);
+  }
+
+  @protected
+  void sse_encode_native_font_fallback_proposal_request(
+    NativeFontFallbackProposalRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_String(self.replacement, serializer);
+  }
+
+  @protected
   void sse_encode_native_object_details_request(
     NativeObjectDetailsRequest self,
     SseSerializer serializer,
@@ -4243,6 +4546,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       self.transform,
       serializer,
     );
+    sse_encode_opt_String(self.fontFingerprint, serializer);
+    sse_encode_opt_String(self.fontAssetHandle, serializer);
   }
 
   @protected
@@ -4809,6 +5114,14 @@ class NativeEditorSessionImpl extends RustOpaque
         .rust_arc_decrement_strong_count_NativeEditorSessionPtr,
   );
 
+  Future<NativeCommandResult> approveFontFallback({
+    required NativeApproveFontFallbackRequest request,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionApproveFontFallback(
+        that: this,
+        request: request,
+      );
+
   Future<NativeCommandResult> checkpoint({
     required NativeCheckpointRequest request,
   }) => RustLib.instance.api.crateEditingApiNativeEditorSessionCheckpoint(
@@ -4845,6 +5158,14 @@ class NativeEditorSessionImpl extends RustOpaque
     that: this,
     request: request,
   );
+
+  Future<NativeFontFallbackProposal> proposeFontFallback({
+    required NativeFontFallbackProposalRequest request,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionProposeFontFallback(
+        that: this,
+        request: request,
+      );
 
   Future<void> releaseCleanPatchMemory() => RustLib.instance.api
       .crateEditingApiNativeEditorSessionReleaseCleanPatchMemory(that: this);

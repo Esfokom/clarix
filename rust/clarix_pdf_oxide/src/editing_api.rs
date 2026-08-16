@@ -1,19 +1,25 @@
+use std::collections::HashMap;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use clarix_editing_core::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    ObjectId, ObjectPatch, PageIndexTask, PageSceneRequest, PageSceneService, PdfBox,
-    RecoveryRequest, SaveAssociation, SaveCoordinator, SaveMode, SaveRequest, SessionId,
-    SourceReference, TextRun, TextStyle, Utf16Range, ViewportPriority,
+    FontFallbackApproval, FontRef, FontSource, ObjectId, ObjectPatch, PageIndexTask,
+    PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SaveAssociation, SaveCoordinator,
+    SaveMode, SaveRequest, SessionId, SourceReference, TextRun, TextStyle, Utf16Range,
+    ViewportPriority,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
 use clarix_pdf_adapter::{
     CleanPatchCache, CleanPatchRenderRequest, CleanPatchRenderer, IndependentPdfValidator,
-    PdfImporter, PdfOxideImporter, PdfTextMaterializer, SourceRef, WindowsAtomicReplacer,
+    InstalledFontCatalog, InstalledFontRequest, PdfImporter, PdfOxideImporter, PdfTextMaterializer,
+    SourceRef, WindowsAtomicReplacer,
 };
+use sha2::{Digest, Sha256};
 
 use crate::frb_generated::StreamSink;
 
@@ -71,6 +77,33 @@ pub struct NativeCleanPatchAsset {
     pub height: u32,
     pub rgba_bytes: Vec<u8>,
     pub bleed_points: f64,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeFontFallbackProposalRequest {
+    pub schema_version: u32,
+    pub base_revision: u64,
+    pub object_id: String,
+    pub start: u32,
+    pub end: u32,
+    pub replacement: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeFontFallbackProposal {
+    pub token: String,
+    pub font_name: String,
+    pub source: String,
+    pub embedding_allowed: bool,
+    pub affected_characters: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeApproveFontFallbackRequest {
+    pub schema_version: u32,
+    pub command_id: String,
+    pub base_revision: u64,
+    pub proposal_token: String,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -259,6 +292,8 @@ pub struct NativeObjectPatch {
     pub character_boxes: Option<Vec<NativeTextCharacterBox>>,
     pub bounds: Option<NativePdfBox>,
     pub transform: Option<NativeAffineTransform>,
+    pub font_fingerprint: Option<String>,
+    pub font_asset_handle: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -289,6 +324,17 @@ pub struct NativeEditorSession {
     document_id: DocumentId,
     page_count: u32,
     event_sequence: Arc<AtomicU64>,
+    fallback_proposals: Mutex<HashMap<String, PendingFontFallback>>,
+    fallback_assets: PathBuf,
+}
+
+#[derive(Debug, Clone)]
+struct PendingFontFallback {
+    base_revision: DocumentRevision,
+    object_id: ObjectId,
+    range: Utf16Range,
+    replacement: String,
+    approval: FontFallbackApproval,
 }
 
 impl NativeEditorSession {
@@ -304,9 +350,11 @@ impl NativeEditorSession {
             .map(std::path::PathBuf::from)
             .or_else(|| std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from))
             .ok_or_else(|| "project_location_unavailable: LOCALAPPDATA is not set".to_owned())?;
+        let project_location = ProjectLocation::under(&project_root, document_id);
+        let fallback_assets = project_location.assets.clone();
         let repository = Arc::new(
             SqliteProjectRepository::open(
-                ProjectLocation::under(&project_root, document_id),
+                project_location,
                 ProjectSeed {
                     model: model.clone(),
                     undo_cursor: 0,
@@ -345,6 +393,8 @@ impl NativeEditorSession {
             document_id,
             page_count: inspection.page_count,
             event_sequence: Arc::new(AtomicU64::new(0)),
+            fallback_proposals: Mutex::new(HashMap::new()),
+            fallback_assets,
         })
     }
 
@@ -418,6 +468,160 @@ impl NativeEditorSession {
                 payload,
             ))
             .map_err(editing_error)?;
+        self.fallback_proposals
+            .lock()
+            .map_err(|_| "font_fallback_unavailable: proposal lock poisoned".to_owned())?
+            .clear();
+        self.page_service.set_revision(result.committed_revision);
+        Ok(native_command_result(result))
+    }
+
+    pub fn propose_font_fallback(
+        &self,
+        request: NativeFontFallbackProposalRequest,
+    ) -> Result<NativeFontFallbackProposal, String> {
+        if request.schema_version != EDITOR_SCHEMA_VERSION {
+            return Err(format!(
+                "schema_mismatch: expected {EDITOR_SCHEMA_VERSION}, got {}",
+                request.schema_version
+            ));
+        }
+        let expected_revision = DocumentRevision::from_value(request.base_revision);
+        let snapshot = self.actor.snapshot().map_err(editing_error)?;
+        if snapshot.revision != expected_revision {
+            return Err(editing_error(EditingError::RevisionConflict {
+                expected: expected_revision,
+                actual: snapshot.revision,
+            }));
+        }
+        let object_id = parse_object_id(&request.object_id)?;
+        let object = snapshot
+            .object(object_id)
+            .ok_or_else(|| format!("object_not_found: {object_id}"))?;
+        let DocumentObject::Text(block) = object else {
+            return Err(format!("wrong_object_kind: {object_id}"));
+        };
+        let range = Utf16Range::new(request.start, request.end)
+            .map_err(|error| format!("invalid_text_boundary: {error}"))?;
+        let candidate = replace_utf16(&block.text, range, &request.replacement)?;
+        let mut affected_characters = String::new();
+        for character in candidate.chars().filter(|character| {
+            !block
+                .source_glyphs
+                .iter()
+                .any(|glyph| glyph.character_code == *character as u32)
+        }) {
+            if !affected_characters.contains(character) {
+                affected_characters.push(character);
+            }
+        }
+        if affected_characters.is_empty() {
+            return Err("font_fallback_unavailable: replacement needs no fallback".into());
+        }
+        let style = block.runs.first().map(|run| &run.style);
+        let preferred_family = style
+            .and_then(|style| style.font_family.clone())
+            .or_else(|| block.font().map(|font| font.postscript_name.clone()))
+            .unwrap_or_default();
+        let face = InstalledFontCatalog::windows()
+            .propose(&InstalledFontRequest {
+                preferred_family,
+                weight: style.map_or(400, |style| style.font_weight),
+                italic: style.is_some_and(|style| style.italic),
+                text: candidate,
+            })
+            .ok_or_else(|| {
+                "font_fallback_unavailable: no embeddable installed TrueType font covers the replacement"
+                    .to_owned()
+            })?;
+        let token = CommandId::new().to_string();
+        let font_name = face.family.clone();
+        let approval = FontFallbackApproval {
+            proposal_token: token.clone(),
+            font: FontRef {
+                postscript_name: face.postscript_name,
+                bytes_sha256: face.bytes_sha256,
+                asset_id: Some(face.path.to_string_lossy().into_owned()),
+                source: FontSource::ApprovedFallback,
+                embeddable: true,
+            },
+            glyphs: face.glyphs,
+        };
+        let pending = PendingFontFallback {
+            base_revision: expected_revision,
+            object_id,
+            range,
+            replacement: request.replacement,
+            approval,
+        };
+        let mut proposals = self
+            .fallback_proposals
+            .lock()
+            .map_err(|_| "font_fallback_unavailable: proposal lock poisoned".to_owned())?;
+        proposals.retain(|_, proposal| {
+            proposal.base_revision == expected_revision && proposal.object_id != object_id
+        });
+        proposals.insert(token.clone(), pending);
+        Ok(NativeFontFallbackProposal {
+            token,
+            font_name,
+            source: "installed".into(),
+            embedding_allowed: true,
+            affected_characters,
+        })
+    }
+
+    pub fn approve_font_fallback(
+        &self,
+        request: NativeApproveFontFallbackRequest,
+    ) -> Result<NativeCommandResult, String> {
+        if request.schema_version != EDITOR_SCHEMA_VERSION {
+            return Err(format!(
+                "schema_mismatch: expected {EDITOR_SCHEMA_VERSION}, got {}",
+                request.schema_version
+            ));
+        }
+        let command_id = CommandId::from_str(&request.command_id)
+            .map_err(|error| format!("invalid_command_id: {error}"))?;
+        let mut pending = self
+            .fallback_proposals
+            .lock()
+            .map_err(|_| "font_fallback_proposal_invalid: proposal lock poisoned".to_owned())?
+            .get(&request.proposal_token)
+            .cloned()
+            .ok_or_else(|| {
+                "font_fallback_proposal_invalid: proposal is unknown or already used".to_owned()
+            })?;
+        let source_asset = pending.approval.font.asset_id.as_deref().ok_or_else(|| {
+            "font_fallback_asset_invalid: proposal has no source font asset".to_owned()
+        })?;
+        let durable_asset = persist_fallback_asset(
+            Path::new(source_asset),
+            &self.fallback_assets,
+            &pending.approval.font.bytes_sha256,
+        )?;
+        pending.approval.font.asset_id = Some(durable_asset.to_string_lossy().into_owned());
+        let base_revision = DocumentRevision::from_value(request.base_revision);
+        if pending.base_revision != base_revision {
+            return Err("font_fallback_proposal_invalid: proposal revision is stale".into());
+        }
+        let result = self
+            .actor
+            .submit(CommandEnvelope::user(
+                command_id,
+                base_revision,
+                EditorCommand::ReplaceTextRangeWithFontFallback {
+                    object_id: pending.object_id,
+                    range: pending.range,
+                    replacement: pending.replacement,
+                    approval: Box::new(pending.approval),
+                },
+            ))
+            .map_err(editing_error)?;
+        self.fallback_proposals
+            .lock()
+            .map_err(|_| "font_fallback_proposal_invalid: proposal lock poisoned".to_owned())?
+            .remove(&request.proposal_token);
         self.page_service.set_revision(result.committed_revision);
         Ok(native_command_result(result))
     }
@@ -623,6 +827,73 @@ fn required<T>(value: Option<T>, field: &str) -> Result<T, String> {
     value.ok_or_else(|| format!("invalid_command: missing {field}"))
 }
 
+fn replace_utf16(text: &str, range: Utf16Range, replacement: &str) -> Result<String, String> {
+    clarix_editing_core::validate_utf16_range(text, range)
+        .map_err(|error| format!("invalid_text_boundary: {error}"))?;
+    let mut utf16_offset = 0_u32;
+    let mut start = None;
+    let mut end = None;
+    for (byte_offset, character) in text.char_indices() {
+        if utf16_offset == range.start {
+            start = Some(byte_offset);
+        }
+        if utf16_offset == range.end {
+            end = Some(byte_offset);
+            break;
+        }
+        utf16_offset += character.len_utf16() as u32;
+    }
+    if utf16_offset == range.start {
+        start.get_or_insert(text.len());
+    }
+    if utf16_offset == range.end {
+        end.get_or_insert(text.len());
+    }
+    let mut output = text.to_owned();
+    output.replace_range(
+        start.expect("validated UTF-16 start")..end.expect("validated UTF-16 end"),
+        replacement,
+    );
+    Ok(output)
+}
+
+fn persist_fallback_asset(
+    source: &Path,
+    assets: &Path,
+    expected_sha256: &str,
+) -> Result<PathBuf, String> {
+    let bytes =
+        std::fs::read(source).map_err(|error| format!("font_fallback_asset_invalid: {error}"))?;
+    let actual_sha256 = format!("{:x}", Sha256::digest(&bytes));
+    if actual_sha256 != expected_sha256.to_ascii_lowercase() {
+        return Err(
+            "font_fallback_asset_invalid: installed font changed after proposal".to_owned(),
+        );
+    }
+    let destination = assets.join(format!("font-{actual_sha256}.ttf"));
+    if destination.exists() {
+        let existing = std::fs::read(&destination)
+            .map_err(|error| format!("font_fallback_asset_invalid: {error}"))?;
+        if format!("{:x}", Sha256::digest(&existing)) != actual_sha256 {
+            return Err(
+                "font_fallback_asset_invalid: content-addressed asset is corrupt".to_owned(),
+            );
+        }
+        return Ok(destination);
+    }
+    let mut output = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&destination)
+        .map_err(|error| format!("font_fallback_asset_invalid: {error}"))?;
+    if let Err(error) = output.write_all(&bytes).and_then(|()| output.sync_all()) {
+        drop(output);
+        let _ = std::fs::remove_file(&destination);
+        return Err(format!("font_fallback_asset_invalid: {error}"));
+    }
+    Ok(destination)
+}
+
 fn parse_object_id(value: &str) -> Result<ObjectId, String> {
     ObjectId::from_str(value).map_err(|error| format!("invalid_object_id: {error}"))
 }
@@ -738,6 +1009,8 @@ fn native_command_result(result: CommandResult) -> NativeCommandResult {
 }
 
 fn native_object_patch(patch: ObjectPatch) -> NativeObjectPatch {
+    let font_fingerprint = patch.font.as_ref().map(|font| font.bytes_sha256.clone());
+    let font_asset_handle = patch.font.as_ref().and_then(|font| font.asset_id.clone());
     NativeObjectPatch {
         object_id: patch.object_id.to_string(),
         page_id: patch.page_id.to_string(),
@@ -758,6 +1031,8 @@ fn native_object_patch(patch: ObjectPatch) -> NativeObjectPatch {
         }),
         bounds: patch.bounds.map(native_box),
         transform: patch.transform.map(native_transform),
+        font_fingerprint,
+        font_asset_handle,
     }
 }
 

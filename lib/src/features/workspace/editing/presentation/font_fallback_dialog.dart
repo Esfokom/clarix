@@ -1,20 +1,6 @@
 import 'package:flutter/material.dart';
 
-class FontFallbackProposal {
-  const FontFallbackProposal({
-    required this.token,
-    required this.fontName,
-    required this.source,
-    required this.embeddingAllowed,
-    required this.affectedCharacters,
-  });
-
-  final String token;
-  final String fontName;
-  final String source;
-  final bool embeddingAllowed;
-  final String affectedCharacters;
-}
+import '../../../../core/editing/editor_bridge_types.dart';
 
 class FontFallbackDialog extends StatelessWidget {
   const FontFallbackDialog({
@@ -24,7 +10,7 @@ class FontFallbackDialog extends StatelessWidget {
     super.key,
   });
 
-  final FontFallbackProposal proposal;
+  final EditorFontFallbackProposal proposal;
   final ValueChanged<String> onApprove;
   final VoidCallback onReject;
 

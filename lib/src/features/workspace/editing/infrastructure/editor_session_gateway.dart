@@ -14,6 +14,24 @@ abstract class EditorSessionGateway {
 
   Future<EditorCommandResult> submit(EditorCommandRequest request);
 
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  }) => Future<EditorFontFallbackProposal>.error(
+    UnsupportedError('font fallback proposals are unavailable'),
+  );
+
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  }) => Future<EditorCommandResult>.error(
+    UnsupportedError('font fallback approval is unavailable'),
+  );
+
   Future<EditorSceneObject> objectDetails(String objectId);
 
   Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi);
@@ -62,6 +80,32 @@ class BridgeEditorSessionGateway implements EditorSessionGateway {
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
       _required().submit(request);
+
+  @override
+  Future<EditorFontFallbackProposal> proposeFontFallback({
+    required int baseRevision,
+    required String objectId,
+    required int start,
+    required int end,
+    required String replacement,
+  }) => _required().proposeFontFallback(
+    baseRevision: baseRevision,
+    objectId: objectId,
+    start: start,
+    end: end,
+    replacement: replacement,
+  );
+
+  @override
+  Future<EditorCommandResult> approveFontFallback({
+    required String commandId,
+    required int baseRevision,
+    required String proposalToken,
+  }) => _required().approveFontFallback(
+    commandId: commandId,
+    baseRevision: baseRevision,
+    proposalToken: proposalToken,
+  );
 
   @override
   Future<EditorSceneObject> objectDetails(String objectId) =>

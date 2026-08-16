@@ -95,6 +95,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeApproveFontFallbackRequest
+  dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw);
+
+  @protected
   NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
     dynamic raw,
   );
@@ -111,6 +115,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeEditorSaveRequest dco_decode_box_autoadd_native_editor_save_request(
     dynamic raw,
   );
+
+  @protected
+  NativeFontFallbackProposalRequest
+  dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw);
 
   @protected
   NativeObjectDetailsRequest
@@ -231,6 +239,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeAffineTransform dco_decode_native_affine_transform(dynamic raw);
 
   @protected
+  NativeApproveFontFallbackRequest
+  dco_decode_native_approve_font_fallback_request(dynamic raw);
+
+  @protected
   NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw);
 
   @protected
@@ -265,6 +277,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeEditorSaveResult dco_decode_native_editor_save_result(dynamic raw);
+
+  @protected
+  NativeFontFallbackProposal dco_decode_native_font_fallback_proposal(
+    dynamic raw,
+  );
+
+  @protected
+  NativeFontFallbackProposalRequest
+  dco_decode_native_font_fallback_proposal_request(dynamic raw);
 
   @protected
   NativeObjectDetailsRequest dco_decode_native_object_details_request(
@@ -501,6 +522,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeApproveFontFallbackRequest
+  sse_decode_box_autoadd_native_approve_font_fallback_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(
     SseDeserializer deserializer,
   );
@@ -517,6 +544,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeEditorSaveRequest sse_decode_box_autoadd_native_editor_save_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeFontFallbackProposalRequest
+  sse_decode_box_autoadd_native_font_fallback_proposal_request(
     SseDeserializer deserializer,
   );
 
@@ -665,6 +698,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeApproveFontFallbackRequest
+  sse_decode_native_approve_font_fallback_request(SseDeserializer deserializer);
+
+  @protected
   NativeCheckpointRequest sse_decode_native_checkpoint_request(
     SseDeserializer deserializer,
   );
@@ -721,6 +758,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeEditorSaveResult sse_decode_native_editor_save_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeFontFallbackProposal sse_decode_native_font_fallback_proposal(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeFontFallbackProposalRequest
+  sse_decode_native_font_fallback_proposal_request(
     SseDeserializer deserializer,
   );
 
@@ -1023,6 +1071,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_approve_font_fallback_request(
+    NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_checkpoint_request(
     NativeCheckpointRequest self,
     SseSerializer serializer,
@@ -1043,6 +1097,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_editor_save_request(
     NativeEditorSaveRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_font_fallback_proposal_request(
+    NativeFontFallbackProposalRequest self,
     SseSerializer serializer,
   );
 
@@ -1221,6 +1281,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_approve_font_fallback_request(
+    NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_checkpoint_request(
     NativeCheckpointRequest self,
     SseSerializer serializer,
@@ -1289,6 +1355,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_editor_save_result(
     NativeEditorSaveResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_font_fallback_proposal(
+    NativeFontFallbackProposal self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_font_fallback_proposal_request(
+    NativeFontFallbackProposalRequest self,
     SseSerializer serializer,
   );
 

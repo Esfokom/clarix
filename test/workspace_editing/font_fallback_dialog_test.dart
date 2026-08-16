@@ -1,3 +1,4 @@
+import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/font_fallback_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,8 +9,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: FontFallbackDialog(
-          proposal: const FontFallbackProposal(
+          proposal: const EditorFontFallbackProposal(
             token: 'proposal-1',
+            objectId: 'object-1',
             fontName: 'Arial Unicode MS',
             source: 'Windows fonts',
             embeddingAllowed: true,

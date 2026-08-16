@@ -2,12 +2,14 @@ use std::path::PathBuf;
 
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentModel, DocumentObject, EditCapability, EditorCommand,
-    EditorSessionState, FontRef, FontSource, SessionId, SourceGlyph, TextBlock, TextLayoutRecipe,
-    Utf16Range,
+    EditorSessionState, FontFallbackApproval, FontRef, FontSource, SessionId, SourceGlyph,
+    TextBlock, TextLayoutRecipe, Utf16Range,
 };
 use clarix_pdf_adapter::{
-    IndependentPdfValidator, PdfImporter, PdfOxideImporter, PdfTextMaterializer, SourceRef,
+    IndependentPdfValidator, InstalledFontCatalog, InstalledFontRequest, PdfImporter,
+    PdfOxideImporter, PdfTextMaterializer, SourceRef,
 };
+use lopdf::content::Content;
 
 fn source() -> SourceRef {
     SourceRef::from_path(
@@ -112,6 +114,83 @@ fn replacement_survives_reopen_as_searchable_text() {
         .objects
         .iter()
         .any(|object| matches!(object, DocumentObject::Text(text) if text.text == "After")));
+}
+
+#[test]
+fn approved_fallback_is_embedded_and_reopens_as_searchable_text() {
+    let directory = tempfile::tempdir().unwrap();
+    let output = directory.path().join("fallback.pdf");
+    let model = qualified_snapshot();
+    let object_id = model.pages[0].objects[0].id();
+    let face = InstalledFontCatalog::windows()
+        .propose(&InstalledFontRequest {
+            preferred_family: "Arial".into(),
+            weight: 400,
+            italic: false,
+            text: "€".into(),
+        })
+        .expect("Windows must provide an embeddable fallback for the euro sign");
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            session.revision(),
+            EditorCommand::ReplaceTextRangeWithFontFallback {
+                object_id,
+                range: Utf16Range::new(0, 5).unwrap(),
+                replacement: "€".into(),
+                approval: Box::new(FontFallbackApproval {
+                    proposal_token: CommandId::new().to_string(),
+                    font: FontRef {
+                        postscript_name: face.postscript_name,
+                        bytes_sha256: face.bytes_sha256,
+                        asset_id: Some(face.path.to_string_lossy().into_owned()),
+                        source: FontSource::ApprovedFallback,
+                        embeddable: true,
+                    },
+                    glyphs: face.glyphs,
+                }),
+            },
+        ))
+        .unwrap();
+
+    PdfTextMaterializer::new(source())
+        .materialize_snapshot(&session.snapshot().unwrap(), &output)
+        .unwrap();
+
+    let saved = lopdf::Document::load(&output).unwrap();
+    let page_id = saved.get_pages()[&1];
+    let operations = Content::decode(&saved.get_page_content(page_id).unwrap())
+        .unwrap()
+        .operations;
+    let fallback_selection = operations
+        .iter()
+        .position(|operation| {
+            operation.operator == "Tf"
+                && operation.operands.first().is_some_and(
+                    |operand| matches!(operand, lopdf::Object::Name(name) if name.starts_with(b"ClarixFallback")),
+                )
+        })
+        .expect("saved content must select the embedded fallback font");
+    assert!(matches!(
+        operations.get(fallback_selection + 1),
+        Some(operation) if matches!(operation.operator.as_str(), "Tj" | "TJ" | "'" | "\"")
+    ));
+    assert!(matches!(
+        operations.get(fallback_selection + 2),
+        Some(operation) if operation.operator == "Tf"
+            && operation.operands.first().is_some_and(
+                |operand| matches!(operand, lopdf::Object::Name(name) if !name.starts_with(b"ClarixFallback")),
+            )
+    ));
+
+    let reopened = SourceRef::from_path(output).unwrap();
+    let page = PdfOxideImporter.inspect_page(&reopened, 1).unwrap();
+    assert!(page
+        .page
+        .objects
+        .iter()
+        .any(|object| matches!(object, DocumentObject::Text(text) if text.text == "€")));
 }
 
 #[test]

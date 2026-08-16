@@ -9,6 +9,7 @@ import '../domain/editor_selection.dart';
 import 'clean_patch_layer.dart';
 import 'editor_hit_test.dart';
 import 'editor_text_painter.dart';
+import 'font_fallback_dialog.dart';
 import 'native_text_editor.dart';
 import 'object_transform_handles.dart';
 import 'overflow_indicator.dart';
@@ -68,6 +69,13 @@ class PageEditScene extends StatelessWidget {
           !edited.any((object) => object.objectId == activeObject.objectId))
         activeObject,
     ];
+    final fallbackProposal = document.fontFallbackProposal;
+    final showFallbackProposal =
+        session != null &&
+        fallbackProposal != null &&
+        scene.objects.any(
+          (object) => object.objectId == fallbackProposal.objectId,
+        );
     return KeyedSubtree(
       key: ValueKey<String>('${scene.pageId}:${scene.revision}'),
       child: SizedBox.fromSize(
@@ -195,6 +203,15 @@ class PageEditScene extends StatelessWidget {
                     canIncreaseBounds: false,
                     onCancel: session!.clearError,
                   ),
+                ),
+              ),
+            if (showFallbackProposal)
+              Center(
+                child: FontFallbackDialog(
+                  proposal: fallbackProposal,
+                  onApprove: (token) =>
+                      unawaited(session!.approveFontFallback(token)),
+                  onReject: session!.rejectFontFallback,
                 ),
               ),
           ],

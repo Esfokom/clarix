@@ -3,6 +3,8 @@ use std::path::{Path, PathBuf};
 use sha2::{Digest, Sha256};
 use ttf_parser::{name_id, Face, Permissions};
 
+use clarix_editing_core::SourceGlyph;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InstalledFontRequest {
     pub preferred_family: String,
@@ -19,6 +21,7 @@ pub struct InstalledFontFace {
     pub bytes_sha256: String,
     pub weight: u16,
     pub italic: bool,
+    pub glyphs: Vec<SourceGlyph>,
 }
 
 #[derive(Debug, Clone)]
@@ -51,7 +54,12 @@ impl InstalledFontCatalog {
     }
 
     pub fn propose(&self, request: &InstalledFontRequest) -> Option<InstalledFontFace> {
-        if request.text.is_empty() || !request.text.chars().all(win_ansi_byte) {
+        if request.text.is_empty()
+            || !request
+                .text
+                .chars()
+                .all(|character| win_ansi_byte(character).is_some())
+        {
             return None;
         }
         let mut candidates = self
@@ -110,6 +118,22 @@ fn inspect_font(path: &Path, request: &InstalledFontRequest) -> Option<Installed
     let family = font_name(&face, name_id::TYPOGRAPHIC_FAMILY)
         .or_else(|| font_name(&face, name_id::FAMILY))?;
     let postscript_name = font_name(&face, name_id::POST_SCRIPT_NAME)?;
+    let mut utf16_start = 0_u32;
+    let glyphs = request
+        .text
+        .chars()
+        .map(|character| {
+            let utf16_end = utf16_start + character.len_utf16() as u32;
+            let glyph = SourceGlyph {
+                utf16_start,
+                utf16_end,
+                character_code: character as u32,
+                glyph_id: u32::from(face.glyph_index(character)?.0),
+            };
+            utf16_start = utf16_end;
+            Some(glyph)
+        })
+        .collect::<Option<Vec<_>>>()?;
     Some(InstalledFontFace {
         path: path.to_owned(),
         family,
@@ -117,6 +141,7 @@ fn inspect_font(path: &Path, request: &InstalledFontRequest) -> Option<Installed
         bytes_sha256: format!("{:x}", Sha256::digest(&bytes)),
         weight: face.weight().to_number(),
         italic: face.is_italic(),
+        glyphs,
     })
 }
 
@@ -149,37 +174,36 @@ fn normalize_family(value: &str) -> String {
         .collect()
 }
 
-pub(crate) fn win_ansi_byte(character: char) -> bool {
-    matches!(
-        character as u32,
-        0x20..=0x7e
-            | 0xa0..=0xff
-            | 0x20ac
-            | 0x201a
-            | 0x0192
-            | 0x201e
-            | 0x2026
-            | 0x2020
-            | 0x2021
-            | 0x02c6
-            | 0x2030
-            | 0x0160
-            | 0x2039
-            | 0x0152
-            | 0x017d
-            | 0x2018
-            | 0x2019
-            | 0x201c
-            | 0x201d
-            | 0x2022
-            | 0x2013
-            | 0x2014
-            | 0x02dc
-            | 0x2122
-            | 0x0161
-            | 0x203a
-            | 0x0153
-            | 0x017e
-            | 0x0178
-    )
+pub(crate) fn win_ansi_byte(character: char) -> Option<u8> {
+    match character as u32 {
+        code @ (0x20..=0x7e | 0xa0..=0xff) => Some(code as u8),
+        0x20ac => Some(0x80),
+        0x201a => Some(0x82),
+        0x0192 => Some(0x83),
+        0x201e => Some(0x84),
+        0x2026 => Some(0x85),
+        0x2020 => Some(0x86),
+        0x2021 => Some(0x87),
+        0x02c6 => Some(0x88),
+        0x2030 => Some(0x89),
+        0x0160 => Some(0x8a),
+        0x2039 => Some(0x8b),
+        0x0152 => Some(0x8c),
+        0x017d => Some(0x8e),
+        0x2018 => Some(0x91),
+        0x2019 => Some(0x92),
+        0x201c => Some(0x93),
+        0x201d => Some(0x94),
+        0x2022 => Some(0x95),
+        0x2013 => Some(0x96),
+        0x2014 => Some(0x97),
+        0x02dc => Some(0x98),
+        0x2122 => Some(0x99),
+        0x0161 => Some(0x9a),
+        0x203a => Some(0x9b),
+        0x0153 => Some(0x9c),
+        0x017e => Some(0x9e),
+        0x0178 => Some(0x9f),
+        _ => None,
+    }
 }
