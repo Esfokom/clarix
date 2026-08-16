@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    DurableCommit, EditorCommand, EditorSessionState, ObjectId, PageId, PageNode, PdfBox,
-    ProjectRepository, RecoveryRequest, SessionId, TextBlock, Utf16Range,
+    DurableCommit, EditorCommand, EditorSessionActor, EditorSessionState, ObjectId, PageId,
+    PageNode, PdfBox, ProjectRepository, RecoveryRequest, SessionId, TextBlock, Utf16Range,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository, StoreTable};
 
@@ -171,4 +171,277 @@ fn corrupt_current_model_falls_back_to_snapshot_and_replays_journal() {
         panic!("fixture object must remain text")
     };
     assert_eq!(block.text, "After");
+}
+
+#[test]
+fn reopened_actor_preserves_undo_and_redo_history() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, object_id) = fixture_model("Before");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = Arc::new(
+        SqliteProjectRepository::open(
+            location.clone(),
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let actor =
+        EditorSessionActor::spawn_durable(SessionId::new(), model.clone(), repository.clone());
+    actor
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 6).unwrap(),
+                replacement: "After".into(),
+            },
+        ))
+        .unwrap();
+    actor.close().unwrap();
+    drop(actor);
+    drop(repository);
+
+    let reopened_repository = Arc::new(
+        SqliteProjectRepository::open(
+            location,
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let recovered = EditorSessionActor::spawn_recovered(
+        SessionId::new(),
+        reopened_repository,
+        RecoveryRequest {
+            document_id: model.id,
+            source_fingerprint: model.source_fingerprint,
+        },
+    )
+    .unwrap();
+
+    let undo = recovered
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    assert_eq!(undo.committed_revision.value(), 2);
+    let DocumentObject::Text(after_undo) = recovered
+        .snapshot()
+        .unwrap()
+        .object(object_id)
+        .unwrap()
+        .clone()
+    else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(after_undo.text, "Before");
+
+    recovered
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(2),
+            EditorCommand::Redo,
+        ))
+        .unwrap();
+    let DocumentObject::Text(after_redo) = recovered
+        .snapshot()
+        .unwrap()
+        .object(object_id)
+        .unwrap()
+        .clone()
+    else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(after_redo.text, "After");
+    recovered.close().unwrap();
+}
+
+#[test]
+fn checkpoint_command_persists_checkpoint_snapshot_and_history_cursor() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, object_id) = fixture_model("Before");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = Arc::new(
+        SqliteProjectRepository::open(
+            location.clone(),
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let actor = EditorSessionActor::spawn_durable(SessionId::new(), model, repository);
+    actor
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 6).unwrap(),
+                replacement: "After".into(),
+            },
+        ))
+        .unwrap();
+    actor
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::CreateCheckpoint {
+                label: "Before review".into(),
+            },
+        ))
+        .unwrap();
+    actor.close().unwrap();
+
+    let connection = rusqlite::Connection::open(&location.database).unwrap();
+    let checkpoint: (String, i64, String) = connection
+        .query_row(
+            "SELECT label, revision, kind FROM checkpoints WHERE label = 'Before review'",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+        )
+        .unwrap();
+    assert_eq!(checkpoint, ("Before review".into(), 2, "User".into()));
+    let snapshot_count: i64 = connection
+        .query_row(
+            "SELECT COUNT(*) FROM snapshots WHERE revision = 2",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(snapshot_count, 1);
+    let cursor: i64 = connection
+        .query_row(
+            "SELECT undo_cursor FROM project WHERE singleton = 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(cursor, 2);
+}
+
+#[test]
+fn undo_persists_the_canonical_history_cursor() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, object_id) = fixture_model("Before");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = Arc::new(
+        SqliteProjectRepository::open(
+            location.clone(),
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let actor = EditorSessionActor::spawn_durable(SessionId::new(), model, repository);
+    actor
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 6).unwrap(),
+                replacement: "After".into(),
+            },
+        ))
+        .unwrap();
+    actor
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    actor.close().unwrap();
+
+    let connection = rusqlite::Connection::open(&location.database).unwrap();
+    let cursor: i64 = connection
+        .query_row(
+            "SELECT undo_cursor FROM project WHERE singleton = 1",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(cursor, 0);
+}
+
+#[test]
+fn recovered_actor_rejects_a_corrupt_history_cursor() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, object_id) = fixture_model("Before");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = Arc::new(
+        SqliteProjectRepository::open(
+            location.clone(),
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let actor =
+        EditorSessionActor::spawn_durable(SessionId::new(), model.clone(), repository.clone());
+    actor
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 6).unwrap(),
+                replacement: "After".into(),
+            },
+        ))
+        .unwrap();
+    actor.close().unwrap();
+    drop(actor);
+    drop(repository);
+    let connection = rusqlite::Connection::open(&location.database).unwrap();
+    connection
+        .execute(
+            "UPDATE project SET undo_cursor = 99 WHERE singleton = 1",
+            [],
+        )
+        .unwrap();
+    drop(connection);
+
+    let reopened = Arc::new(
+        SqliteProjectRepository::open(
+            location,
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let result = EditorSessionActor::spawn_recovered(
+        SessionId::new(),
+        reopened,
+        RecoveryRequest {
+            document_id: model.id,
+            source_fingerprint: model.source_fingerprint,
+        },
+    );
+
+    assert!(
+        matches!(result, Err(clarix_editing_core::EditingError::SidecarCommitFailed(message)) if message.contains("history cursor"))
+    );
 }

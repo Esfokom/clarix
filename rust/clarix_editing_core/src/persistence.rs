@@ -15,6 +15,7 @@ pub struct DurableCommit {
     pub after_objects: Vec<DocumentObject>,
     pub inverse: InverseOperation,
     pub resulting_model: DocumentModel,
+    pub undo_cursor: u64,
 }
 
 impl DurableCommit {
@@ -30,6 +31,28 @@ impl DurableCommit {
                 .next_state
                 .snapshot()
                 .expect("a prepared command retains an open next state"),
+            undo_cursor: prepared.next_state.undo_cursor(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RecoveredCommand {
+    pub envelope: CommandEnvelope,
+    pub previous_revision: DocumentRevision,
+    pub committed_revision: DocumentRevision,
+    pub before_objects: Vec<DocumentObject>,
+    pub after_objects: Vec<DocumentObject>,
+}
+
+impl From<&DurableCommit> for RecoveredCommand {
+    fn from(commit: &DurableCommit) -> Self {
+        Self {
+            envelope: commit.envelope.clone(),
+            previous_revision: commit.previous_revision,
+            committed_revision: commit.committed_revision,
+            before_objects: commit.before_objects.clone(),
+            after_objects: commit.after_objects.clone(),
         }
     }
 }
@@ -68,6 +91,7 @@ pub struct RecoveredProject {
     pub undo_cursor: u64,
     pub materialized_revision: Option<DocumentRevision>,
     pub warnings: Vec<String>,
+    pub commands: Vec<RecoveredCommand>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

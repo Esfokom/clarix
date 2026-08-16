@@ -44,6 +44,7 @@ impl MemoryRepository {
                 undo_cursor: 0,
                 materialized_revision: None,
                 warnings: Vec::new(),
+                commands: Vec::new(),
             }),
             fail_append,
             appends: Mutex::new(0),
@@ -63,7 +64,10 @@ impl ProjectRepository for MemoryRepository {
             ));
         }
         *self.appends.lock().unwrap() += 1;
-        self.recovered.lock().unwrap().model = commit.resulting_model.clone();
+        let mut recovered = self.recovered.lock().unwrap();
+        recovered.model = commit.resulting_model.clone();
+        recovered.undo_cursor = commit.undo_cursor;
+        recovered.commands.push(commit.into());
         Ok(())
     }
 

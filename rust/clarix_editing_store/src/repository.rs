@@ -1,8 +1,9 @@
 use std::sync::Mutex;
 
 use clarix_editing_core::{
-    DurableCommit, DurableSnapshot, MaterializationRecord, PersistenceError, ProjectCheckpoint,
-    ProjectRepository, RecoveredProject, RecoveryRequest,
+    CheckpointKind, DurableCommit, DurableSnapshot, EditorCommand, MaterializationRecord,
+    PersistenceError, ProjectCheckpoint, ProjectRepository, RecoveredCommand, RecoveredProject,
+    RecoveryRequest,
 };
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
@@ -130,6 +131,7 @@ impl ProjectRepository for SqliteProjectRepository {
                 })
                 .transpose()?,
             warnings,
+            commands: recovered_commands(&connection)?,
         })
     }
 
@@ -195,14 +197,38 @@ impl ProjectRepository for SqliteProjectRepository {
         let model_json = json(&commit.resulting_model).map_err(map_store_persistence)?;
         transaction
             .execute(
-                "UPDATE project SET revision = ?1, model_json = ?2, model_sha256 = ?3, undo_cursor = undo_cursor + 1 WHERE singleton = 1",
+                "UPDATE project SET revision = ?1, model_json = ?2, model_sha256 = ?3, undo_cursor = ?4 WHERE singleton = 1",
                 params![
                     i64_revision(commit.committed_revision).map_err(map_store_persistence)?,
                     model_json,
                     sha256_hex(model_json.as_bytes()),
+                    i64::try_from(commit.undo_cursor).map_err(|_| PersistenceError::Transaction("undo cursor exceeds SQLite range".into()))?,
                 ],
             )
             .map_err(map_persistence)?;
+        if let EditorCommand::CreateCheckpoint { label } = &commit.envelope.payload {
+            transaction
+                .execute(
+                    "INSERT OR REPLACE INTO checkpoints (label, revision, kind) VALUES (?1, ?2, ?3)",
+                    params![
+                        label,
+                        i64_revision(commit.committed_revision).map_err(map_store_persistence)?,
+                        format!("{:?}", CheckpointKind::User),
+                    ],
+                )
+                .map_err(map_persistence)?;
+            transaction
+                .execute(
+                    "INSERT OR REPLACE INTO snapshots (revision, model_json, model_sha256, undo_cursor) VALUES (?1, ?2, ?3, ?4)",
+                    params![
+                        i64_revision(commit.committed_revision).map_err(map_store_persistence)?,
+                        model_json,
+                        sha256_hex(model_json.as_bytes()),
+                        i64::try_from(commit.undo_cursor).map_err(|_| PersistenceError::Transaction("undo cursor exceeds SQLite range".into()))?,
+                    ],
+                )
+                .map_err(map_persistence)?;
+        }
         if self.take_fault(FaultPoint::AfterModelUpdate) {
             return Err(PersistenceError::Transaction(
                 "injected failure after model update".into(),
@@ -306,6 +332,55 @@ fn map_persistence(error: rusqlite::Error) -> PersistenceError {
 
 fn map_store_persistence(error: StoreError) -> PersistenceError {
     PersistenceError::Transaction(error.to_string())
+}
+
+fn recovered_commands(connection: &Connection) -> Result<Vec<RecoveredCommand>, PersistenceError> {
+    let mut statement = connection
+        .prepare(
+            "SELECT previous_revision, committed_revision, envelope_json, before_json, after_json, after_sha256 FROM commands ORDER BY committed_revision ASC",
+        )
+        .map_err(map_persistence)?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, i64>(0)?,
+                row.get::<_, i64>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, String>(4)?,
+                row.get::<_, String>(5)?,
+            ))
+        })
+        .map_err(map_persistence)?;
+    let mut commands = Vec::new();
+    for row in rows {
+        let (previous, committed, envelope, before, after, after_checksum) =
+            row.map_err(map_persistence)?;
+        if sha256_hex(after.as_bytes()) != after_checksum {
+            return Err(PersistenceError::Corrupt(format!(
+                "command revision {committed} checksum mismatch"
+            )));
+        }
+        commands.push(RecoveredCommand {
+            envelope: serde_json::from_str(&envelope)
+                .map_err(|error| PersistenceError::Corrupt(error.to_string()))?,
+            previous_revision: database_revision(previous)?,
+            committed_revision: database_revision(committed)?,
+            before_objects: serde_json::from_str(&before)
+                .map_err(|error| PersistenceError::Corrupt(error.to_string()))?,
+            after_objects: serde_json::from_str(&after)
+                .map_err(|error| PersistenceError::Corrupt(error.to_string()))?,
+        });
+    }
+    Ok(commands)
+}
+
+fn database_revision(
+    value: i64,
+) -> Result<clarix_editing_core::DocumentRevision, PersistenceError> {
+    u64::try_from(value)
+        .map(clarix_editing_core::DocumentRevision::from_value)
+        .map_err(|_| PersistenceError::Corrupt("negative command revision".into()))
 }
 
 fn recover_snapshot_and_journal(

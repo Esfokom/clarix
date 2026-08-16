@@ -34,7 +34,7 @@ pub use page_service::{
 };
 pub use persistence::{
     CheckpointKind, DurableCommit, DurableSnapshot, MaterializationRecord, PersistenceError,
-    ProjectCheckpoint, ProjectRepository, RecoveredProject, RecoveryRequest,
+    ProjectCheckpoint, ProjectRepository, RecoveredCommand, RecoveredProject, RecoveryRequest,
 };
 pub use ports::{
     AtomicReplaceRequest, AtomicReplacementPort, CleanPatchRequest, CleanPatchSource, ImportedPage,

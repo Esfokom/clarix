@@ -5,7 +5,8 @@ use crate::text::utf16_range_to_byte_range;
 use crate::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentModel, DocumentObject,
     DocumentRevision, EditCapability, EditingError, EditorCommand, InverseOperation, ObjectId,
-    ObjectPatch, PageNode, PreparedCommand, SelectionRebase, SessionId, TextRun, Utf16Range,
+    ObjectPatch, PageNode, PreparedCommand, RecoveredCommand, SelectionRebase, SessionId, TextRun,
+    Utf16Range,
 };
 
 #[derive(Debug, Clone)]
@@ -28,6 +29,107 @@ impl EditorSessionState {
             redo_stack: Vec::new(),
             closed: false,
         }
+    }
+
+    pub(crate) fn from_recovered(
+        session_id: SessionId,
+        model: DocumentModel,
+        commands: Vec<RecoveredCommand>,
+    ) -> Result<Self, EditingError> {
+        let model_revision = model.revision;
+        let mut state = Self::new(session_id, model);
+        let mut expected_revision = DocumentRevision::INITIAL;
+        for command in commands {
+            if command.previous_revision != expected_revision
+                || command.envelope.base_revision != expected_revision
+                || command.committed_revision
+                    != expected_revision
+                        .next()
+                        .map_err(|_| EditingError::RevisionOverflow)?
+            {
+                return Err(EditingError::SidecarCommitFailed(
+                    "recovered command revisions are not contiguous".into(),
+                ));
+            }
+            if !state.committed_commands.insert(command.envelope.command_id) {
+                return Err(EditingError::SidecarCommitFailed(
+                    "recovered command ID is duplicated".into(),
+                ));
+            }
+            match &command.envelope.payload {
+                EditorCommand::Undo => {
+                    let entry = state.undo_stack.pop().ok_or_else(|| {
+                        EditingError::SidecarCommitFailed(
+                            "recovered undo has no matching history entry".into(),
+                        )
+                    })?;
+                    state.redo_stack.push(entry);
+                }
+                EditorCommand::Redo => {
+                    let entry = state.redo_stack.pop().ok_or_else(|| {
+                        EditingError::SidecarCommitFailed(
+                            "recovered redo has no matching history entry".into(),
+                        )
+                    })?;
+                    state.undo_stack.push(entry);
+                }
+                EditorCommand::CreateCheckpoint { label } => {
+                    state.undo_stack.push(HistoryEntry::Checkpoint {
+                        label: label.clone(),
+                    });
+                    state.redo_stack.clear();
+                }
+                _ => {
+                    let [before] = command.before_objects.as_slice() else {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered object command has invalid before state".into(),
+                        ));
+                    };
+                    let [after] = command.after_objects.as_slice() else {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered object command has invalid after state".into(),
+                        ));
+                    };
+                    let typing = command.envelope.typing_group.clone();
+                    if matches!(
+                        command.envelope.payload,
+                        EditorCommand::ReplaceTextRange { .. }
+                    ) && state
+                        .undo_stack
+                        .last()
+                        .is_some_and(|previous| can_coalesce(previous, before, typing.as_ref()))
+                    {
+                        if let Some(HistoryEntry::Object {
+                            after: previous_after,
+                            typing: previous_typing,
+                            ..
+                        }) = state.undo_stack.last_mut()
+                        {
+                            **previous_after = after.clone();
+                            *previous_typing = typing;
+                        }
+                    } else {
+                        state.undo_stack.push(HistoryEntry::Object {
+                            before: Box::new(before.clone()),
+                            after: Box::new(after.clone()),
+                            typing,
+                        });
+                    }
+                    state.redo_stack.clear();
+                }
+            }
+            expected_revision = command.committed_revision;
+        }
+        if expected_revision != model_revision {
+            return Err(EditingError::SidecarCommitFailed(
+                "recovered journal does not reach the model revision".into(),
+            ));
+        }
+        Ok(state)
+    }
+
+    pub(crate) fn undo_cursor(&self) -> u64 {
+        self.undo_stack.len() as u64
     }
 
     pub fn session_id(&self) -> SessionId {

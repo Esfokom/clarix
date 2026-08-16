@@ -67,6 +67,7 @@ impl MemoryRepository {
             undo_cursor: 0,
             materialized_revision: None,
             warnings: Vec::new(),
+            commands: Vec::new(),
         }))
     }
 }
@@ -77,7 +78,10 @@ impl ProjectRepository for MemoryRepository {
     }
 
     fn append(&self, commit: &DurableCommit) -> Result<(), PersistenceError> {
-        self.0.lock().unwrap().model = commit.resulting_model.clone();
+        let mut recovered = self.0.lock().unwrap();
+        recovered.model = commit.resulting_model.clone();
+        recovered.undo_cursor = commit.undo_cursor;
+        recovered.commands.push(commit.into());
         Ok(())
     }
 

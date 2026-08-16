@@ -99,7 +99,15 @@ impl EditorSessionActor {
         let recovered = repository
             .recover(request)
             .map_err(|error| EditingError::SidecarCommitFailed(error.to_string()))?;
-        Ok(Self::spawn_durable(session_id, recovered.model, repository))
+        let undo_cursor = recovered.undo_cursor;
+        let state =
+            EditorSessionState::from_recovered(session_id, recovered.model, recovered.commands)?;
+        if state.undo_cursor() != undo_cursor {
+            return Err(EditingError::SidecarCommitFailed(
+                "recovered history cursor does not match the journal".into(),
+            ));
+        }
+        Ok(Self::spawn_with_state(state, Some(repository)))
     }
 
     fn spawn_with_repository(
@@ -107,16 +115,18 @@ impl EditorSessionActor {
         model: DocumentModel,
         repository: Option<Arc<dyn ProjectRepository>>,
     ) -> Self {
+        Self::spawn_with_state(EditorSessionState::new(session_id, model), repository)
+    }
+
+    fn spawn_with_state(
+        session: EditorSessionState,
+        repository: Option<Arc<dyn ProjectRepository>>,
+    ) -> Self {
+        let session_id = session.session_id();
         let (sender, receiver) = bounded(REQUEST_CAPACITY);
         let worker = std::thread::Builder::new()
             .name(format!("clarix-editor-{session_id}"))
-            .spawn(move || {
-                run_actor(
-                    receiver,
-                    EditorSessionState::new(session_id, model),
-                    repository,
-                )
-            })
+            .spawn(move || run_actor(receiver, session, repository))
             .expect("failed to spawn editor session actor");
         Self {
             inner: Arc::new(ActorInner {
