@@ -33,7 +33,7 @@ import 'pdf_editing_controller.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
-  PdfEditingController get _pdfEditing =>
+  PdfEditingController? get _pdfEditing =>
       ref.read(pdfEditingControllerProvider);
   final Map<String, DocumentMetadata> _savedPdfMetadata =
       <String, DocumentMetadata>{};
@@ -253,10 +253,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       }
     });
     try {
-      final PdfEditingSession? editing = _pdfEditing.sessionsByTabId[tab.id];
+      final legacy = _pdfEditing;
+      final PdfEditingSession? editing = legacy?.sessionsByTabId[tab.id];
       final bool hasTextChanges = editing?.isDirty ?? false;
       if (hasTextChanges) {
-        await _pdfEditing.save(tab.id, tab.filePath);
+        await legacy!.save(tab.id, tab.filePath);
       } else {
         await _pdfExtraction.savePdfAnnotations(
           path: tab.filePath,
@@ -274,8 +275,8 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
             ..remove(tab.id),
         ),
       );
-      if (_pdfEditing.sessionsByTabId.containsKey(tab.id)) {
-        _pdfEditing.markSaved(tab.id);
+      if (legacy?.sessionsByTabId.containsKey(tab.id) ?? false) {
+        legacy!.markSaved(tab.id);
       }
       _savedPdfMetadata[tab.id] = metadata;
     } on PdfEditFailure catch (error) {
@@ -420,7 +421,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         highlights: _highlightSnapshots(metadata.annotations),
       );
     }
-    _pdfEditing.replaceSession(tab.id, session);
+    _pdfEditing?.replaceSession(tab.id, session);
     ref.invalidate(pdfDocumentRefProvider(tab.filePath));
     state = AsyncData(
       current.copyWith(
@@ -480,9 +481,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       );
       return;
     }
+    final legacy = _pdfEditing;
+    if (legacy == null) return;
     await File(tab.filePath).copy(destination);
     try {
-      await _pdfEditing.save(tab.id, destination);
+      await legacy.save(tab.id, destination);
       final nextTabs = current.session.tabs
           .map(
             (item) => item.id == tab.id
@@ -537,7 +540,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         final tabId = current?.session.activeTabId;
         final locator = current?.pdfFailure?.locator;
         if (tabId != null && locator != null) {
-          _pdfEditing.selectBlock(tabId, locator);
+          _pdfEditing?.selectBlock(tabId, locator);
         }
     }
   }
@@ -562,7 +565,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     if (id == null) return false;
     final native = ref.read(editorSessionRegistryProvider)[id];
     return native?.canUndo ??
-        (_pdfEditing.sessionsByTabId[id]?.canUndo == true);
+        (_pdfEditing?.sessionsByTabId[id]?.canUndo == true);
   }
 
   bool get canRedoActive {
@@ -570,7 +573,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     if (id == null) return false;
     final native = ref.read(editorSessionRegistryProvider)[id];
     return native?.canRedo ??
-        (_pdfEditing.sessionsByTabId[id]?.canRedo == true);
+        (_pdfEditing?.sessionsByTabId[id]?.canRedo == true);
   }
 
   bool get hasUnsavedPdfEdits {
@@ -622,23 +625,25 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final DocumentTabState tab = current.session.tabs.firstWhere(
       (item) => item.id == tabId,
     );
-    final PdfEditingSession? editing = _pdfEditing.sessionsByTabId[tabId];
+    final legacy = _pdfEditing;
+    if (legacy == null) return;
+    final PdfEditingSession? editing = legacy.sessionsByTabId[tabId];
     if (editing == null || (undo ? !editing.canUndo : !editing.canRedo)) return;
     if (undo) {
-      await _pdfEditing.undo(tabId);
+      await legacy.undo(tabId);
     } else {
-      await _pdfEditing.redo(tabId);
+      await legacy.redo(tabId);
     }
     final DocumentMetadata existing = current.documentMetadata[tab.documentId]!;
     final DocumentMetadata previous = _metadataFromSession(
       existing,
-      _pdfEditing.sessionFor(tabId),
+      legacy.sessionFor(tabId),
     );
     await (await _metadataStore).write(previous);
     final Map<String, DocumentMetadata> metadata =
         Map<String, DocumentMetadata>.from(current.documentMetadata)
           ..[tab.documentId] = previous;
-    final PdfEditingSession next = _pdfEditing.sessionFor(tabId);
+    final PdfEditingSession next = legacy.sessionFor(tabId);
     state = AsyncData(
       current.copyWith(
         documentMetadata: metadata,
@@ -702,7 +707,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       clearActiveTabId: tabs.isEmpty,
       lastOpenedAt: DateTime.now().toUtc(),
     );
-    _pdfEditing.removeSession(tabId);
+    _pdfEditing?.removeSession(tabId);
     await ref.read(editorSessionRegistryProvider).close(tabId);
     await _commit(current.copyWith(session: session), persistAi: false);
     return true;
@@ -1531,10 +1536,11 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         .where((tab) => tab.documentId == document.identity.fingerprint)
         .map((tab) => tab.id)
         .firstOrNull;
-    if (tabId != null) {
+    final legacy = _pdfEditing;
+    if (tabId != null && legacy != null) {
       _ensurePdfEditingSession(tabId, document.identity.fingerprint, current);
-      final PdfEditingSession editing = _pdfEditing.sessionFor(tabId);
-      final PdfEditResult result = await _pdfEditing.dispatch(
+      final PdfEditingSession editing = legacy.sessionFor(tabId);
+      final PdfEditResult result = await legacy.dispatch(
         ChangePdfMetadataIntent(
           documentId: editing.documentId,
           documentRevision: editing.revision,
@@ -1567,11 +1573,13 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     WorkspaceSession session,
     Map<String, DocumentMetadata> metadata,
   ) {
+    final legacy = _pdfEditing;
+    if (legacy == null) return;
     for (final tab in session.tabs) {
-      if (_pdfEditing.sessionsByTabId.containsKey(tab.id)) continue;
+      if (legacy.sessionsByTabId.containsKey(tab.id)) continue;
       final document = metadata[tab.documentId];
       if (document == null) continue;
-      _pdfEditing.registerSession(
+      legacy.registerSession(
         tab.id,
         PdfEditingSession.empty(
           tab.documentId,
@@ -1589,9 +1597,10 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     String documentId,
     WorkspaceFeatureState current,
   ) {
-    if (_pdfEditing.sessionsByTabId.containsKey(tabId)) return;
+    final legacy = _pdfEditing;
+    if (legacy == null || legacy.sessionsByTabId.containsKey(tabId)) return;
     final document = current.documentMetadata[documentId];
-    _pdfEditing.registerSession(
+    legacy.registerSession(
       tabId,
       PdfEditingSession.empty(
         documentId,

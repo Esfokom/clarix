@@ -4,6 +4,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 import 'package:pdfrx/pdfrx.dart' hide PdfTextSelection;
 
+import '../../../core/editing/editor_bridge_types.dart';
 import '../domain/pdf_edit_intent.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_native_edit_types.dart';
@@ -135,6 +136,46 @@ final class PdfEditingController extends ChangeNotifier {
     return document == null || locator == null
         ? null
         : _native?.latestResult(document, logicalLocator: locator);
+  }
+
+  EditingSceneComparisonDiagnostic compareRustScene(
+    String tabId,
+    EditorPageScene scene,
+  ) {
+    final legacy = sessionFor(tabId).blocks
+        .where((block) => block.locator.pageNumber == scene.pageNumber)
+        .map(
+          (block) => EditingComparisonObject(
+            id: block.locator.objectPath.join('.'),
+            text: block.text,
+            left: block.bounds.left,
+            bottom: block.bounds.bottom,
+            right: block.bounds.right,
+            top: block.bounds.top,
+            capability: block.isEditable
+                ? 'editable'
+                : (block.readOnlyReason?.name ?? 'readOnly'),
+          ),
+        )
+        .toList(growable: false);
+    final rust = scene.objects
+        .map(
+          (object) => EditingComparisonObject(
+            id: object.objectId,
+            text: object.text ?? '',
+            left: object.bounds.left,
+            bottom: object.bounds.bottom,
+            right: object.bounds.right,
+            top: object.bounds.top,
+            capability: object.capability,
+          ),
+        )
+        .toList(growable: false);
+    return compareEditingSceneObjects(
+      pageNumber: scene.pageNumber,
+      legacy: legacy,
+      rust: rust,
+    );
   }
 
   void setTextSelection(String tabId, PdfTextRange range) {
@@ -595,4 +636,93 @@ final class PdfEditingController extends ChangeNotifier {
   static var _nextId = 0;
   static String _defaultCommandId() =>
       'pdf-edit-${DateTime.now().microsecondsSinceEpoch}-${++_nextId}';
+}
+
+class EditingComparisonObject {
+  const EditingComparisonObject({
+    required this.id,
+    required this.text,
+    required this.left,
+    required this.bottom,
+    required this.right,
+    required this.top,
+    required this.capability,
+  });
+
+  final String id;
+  final String text;
+  final double left;
+  final double bottom;
+  final double right;
+  final double top;
+  final String capability;
+}
+
+class EditingSceneComparisonDiagnostic {
+  const EditingSceneComparisonDiagnostic({
+    required this.pageNumber,
+    required this.legacyCount,
+    required this.rustCount,
+    required this.idMismatches,
+    required this.boundsMismatches,
+    required this.textMismatches,
+    required this.capabilityMismatches,
+  });
+
+  final int pageNumber;
+  final int legacyCount;
+  final int rustCount;
+  final int idMismatches;
+  final int boundsMismatches;
+  final int textMismatches;
+  final int capabilityMismatches;
+
+  Map<String, Object> toContentFreeFields() => <String, Object>{
+    'event': 'editing_scene_comparison',
+    'pageNumber': pageNumber,
+    'legacyCount': legacyCount,
+    'rustCount': rustCount,
+    'idMismatches': idMismatches,
+    'boundsMismatches': boundsMismatches,
+    'textMismatches': textMismatches,
+    'capabilityMismatches': capabilityMismatches,
+  };
+}
+
+EditingSceneComparisonDiagnostic compareEditingSceneObjects({
+  required int pageNumber,
+  required List<EditingComparisonObject> legacy,
+  required List<EditingComparisonObject> rust,
+  double boundsTolerance = 0.25,
+}) {
+  final pairedCount = legacy.length < rust.length ? legacy.length : rust.length;
+  final missingCount = (legacy.length - rust.length).abs();
+  var idMismatches = missingCount;
+  var boundsMismatches = missingCount;
+  var textMismatches = missingCount;
+  var capabilityMismatches = missingCount;
+  for (var index = 0; index < pairedCount; index += 1) {
+    final legacyObject = legacy[index];
+    final rustObject = rust[index];
+    if (legacyObject.id != rustObject.id) idMismatches += 1;
+    if ((legacyObject.left - rustObject.left).abs() > boundsTolerance ||
+        (legacyObject.bottom - rustObject.bottom).abs() > boundsTolerance ||
+        (legacyObject.right - rustObject.right).abs() > boundsTolerance ||
+        (legacyObject.top - rustObject.top).abs() > boundsTolerance) {
+      boundsMismatches += 1;
+    }
+    if (legacyObject.text != rustObject.text) textMismatches += 1;
+    if (legacyObject.capability != rustObject.capability) {
+      capabilityMismatches += 1;
+    }
+  }
+  return EditingSceneComparisonDiagnostic(
+    pageNumber: pageNumber,
+    legacyCount: legacy.length,
+    rustCount: rust.length,
+    idMismatches: idMismatches,
+    boundsMismatches: boundsMismatches,
+    textMismatches: textMismatches,
+    capabilityMismatches: capabilityMismatches,
+  );
 }

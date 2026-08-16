@@ -17,6 +17,7 @@ void main() {
           home: Scaffold(
             body: PdfTextEditorOverlay(
               mode: PdfEditingMode.text,
+              interaction: PdfEditingInteraction.textEditing,
               blocks: <PdfTextBlock>[block],
               selection: PdfTextSelection(
                 locator: block.locator,

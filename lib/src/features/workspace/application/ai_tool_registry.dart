@@ -18,7 +18,7 @@ final class AiToolRegistry {
     this.workspaceId = 'default',
   });
 
-  final PdfEditingController editing;
+  final PdfEditingController? editing;
   final ActionPermissionService permissions;
   final PdfDocumentPathResolver pathForDocument;
   final String workspaceId;
@@ -39,23 +39,32 @@ final class AiToolRegistry {
     'save_pdf_edits',
   };
 
-  List<Map<String, dynamic>> get schemas => names
-      .map(
-        (name) => <String, dynamic>{
-          'type': 'function',
-          'function': <String, dynamic>{
-            'name': name,
-            'description': _description(name),
-            'parameters': _schema(name),
-          },
-        },
-      )
-      .toList(growable: false);
+  List<Map<String, dynamic>> get schemas => editing == null
+      ? const <Map<String, dynamic>>[]
+      : names
+            .map(
+              (name) => <String, dynamic>{
+                'type': 'function',
+                'function': <String, dynamic>{
+                  'name': name,
+                  'description': _description(name),
+                  'parameters': _schema(name),
+                },
+              },
+            )
+            .toList(growable: false);
 
   Future<Map<String, Object?>> execute(
     AiToolCall call, {
     required Set<String> allowedDocumentIds,
   }) async {
+    final editing = this.editing;
+    if (editing == null) {
+      return _error(
+        'editing_authority_unavailable',
+        'AI PDF editing is unavailable while the Rust editor is authoritative.',
+      );
+    }
     if (!names.contains(call.name)) return _error('unknown_tool', call.name);
     try {
       final args = _decode(call.argumentsJson);
@@ -265,11 +274,11 @@ final class AiToolRegistry {
     throw FormatException('Unsupported mutation tool: $name.');
   }
 
-  PdfEditingSession _session(String documentId) => editing
+  PdfEditingSession _session(String documentId) => editing!
       .sessionsByTabId
       .values
       .firstWhere((session) => session.documentId == documentId);
-  String _tabId(String documentId) => editing.sessionsByTabId.entries
+  String _tabId(String documentId) => editing!.sessionsByTabId.entries
       .firstWhere((entry) => entry.value.documentId == documentId)
       .key;
 }

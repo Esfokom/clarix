@@ -1,4 +1,5 @@
 import 'package:clarix/src/features/workspace/domain/pdf_edit_intent.dart';
+import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_text_editor_overlay.dart';
 import 'package:flutter/material.dart';
@@ -16,6 +17,7 @@ void main() {
         home: Scaffold(
           body: PdfTextEditorOverlay(
             mode: PdfEditingMode.text,
+            interaction: PdfEditingInteraction.textEditing,
             blocks: <PdfTextBlock>[block],
             selection: PdfTextSelection(
               locator: block.locator,

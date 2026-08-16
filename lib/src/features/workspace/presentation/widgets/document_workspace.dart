@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 // ignore_for_file: unused_element, unused_element_parameter, unused_local_variable
@@ -495,6 +496,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   Timer? _selectionAutoPanTimer;
   int? _lastRepaintedEditRevision;
   bool _nativeLifecycleSyncScheduled = false;
+  final Set<String> _reportedSceneComparisons = <String>{};
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -528,8 +530,9 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
         ref.read(editorSessionRegistryProvider).close(oldWidget.tab.id),
       );
       final editing = ref.read(pdfEditingControllerProvider);
-      if (editing.sessionsByTabId[oldWidget.tab.id]?.mode !=
-          PdfEditingMode.reading) {
+      if (editing?.sessionsByTabId[oldWidget.tab.id]?.mode != null &&
+          editing!.sessionsByTabId[oldWidget.tab.id]?.mode !=
+              PdfEditingMode.reading) {
         unawaited(editing.leaveTextMode(oldWidget.tab.id));
       }
       _disposeSearcher();
@@ -622,12 +625,18 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
         setState(() {});
       });
     }
-    final PdfEditingController editing = ref.watch(
-      pdfEditingControllerProvider,
-    );
+    final rollout = ref.watch(editingRolloutProvider);
+    final PdfEditingController? editing = rollout.policy.constructsLegacyEditor
+        ? ref.watch(legacyPdfEditingControllerProvider)
+        : null;
     final PdfEditingSession? editSession =
-        editing.sessionsByTabId[widget.tab.id];
-    final nativeProjection = editing.nativeResultFor(widget.tab.id);
+        editing?.sessionsByTabId[widget.tab.id];
+    final nativeProjection = editing?.nativeResultFor(widget.tab.id);
+    if (rollout == EditingRollout.compareScenes &&
+        editing != null &&
+        registeredNative != null) {
+      _reportSceneComparisons(editing, registeredNative.state.scenes);
+    }
     if (nativeProjection != null &&
         nativeProjection.appliedRevision != _lastRepaintedEditRevision) {
       _lastRepaintedEditRevision = nativeProjection.appliedRevision;
@@ -772,7 +781,12 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                               scene: scene,
                                               document:
                                                   lifecycle.controller.state,
-                                              session: lifecycle.controller,
+                                              session:
+                                                  rollout
+                                                      .policy
+                                                      .rustGesturesEnabled
+                                                  ? lifecycle.controller
+                                                  : null,
                                               displaySize: pageRect.size,
                                               cleanPatches: lifecycle
                                                   .cleanPatchesFor(
@@ -781,7 +795,8 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                             ),
                                       ),
                                     ),
-                                  if (editSession?.mode !=
+                                  if (editing != null &&
+                                      editSession?.mode !=
                                           PdfEditingMode.reading &&
                                       editSession != null)
                                     PdfObjectTransformOverlay(
@@ -821,126 +836,130 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                             transform,
                                           ),
                                     ),
-                                  PdfTextEditorOverlay(
-                                    mode:
-                                        editSession?.mode ??
-                                        PdfEditingMode.reading,
-                                    interaction:
-                                        editSession?.interaction ??
-                                        PdfEditingInteraction.reading,
-                                    blocks:
-                                        editSession?.blocks
-                                            .where(
-                                              (block) =>
-                                                  block.locator.pageNumber ==
-                                                  page.pageNumber,
-                                            )
-                                            .toList(growable: false) ??
-                                        const <PdfTextBlock>[],
-                                    selection: editSession?.selection,
-                                    nativeProjection: nativeProjection,
-                                    onSelectionChanged: (range) => editing
-                                        .setTextSelection(widget.tab.id, range),
-                                    pageObjects:
-                                        editSession?.pageObjects
-                                            .where(
-                                              (object) =>
-                                                  object.locator.pageNumber ==
-                                                  page.pageNumber,
-                                            )
-                                            .toList(growable: false) ??
-                                        const <PdfPageObject>[],
-                                    onObjectPreview: (locator, transform) =>
-                                        editing.previewTransform(
+                                  if (editing != null)
+                                    PdfTextEditorOverlay(
+                                      mode:
+                                          editSession?.mode ??
+                                          PdfEditingMode.reading,
+                                      interaction:
+                                          editSession?.interaction ??
+                                          PdfEditingInteraction.reading,
+                                      blocks:
+                                          editSession?.blocks
+                                              .where(
+                                                (block) =>
+                                                    block.locator.pageNumber ==
+                                                    page.pageNumber,
+                                              )
+                                              .toList(growable: false) ??
+                                          const <PdfTextBlock>[],
+                                      selection: editSession?.selection,
+                                      nativeProjection: nativeProjection,
+                                      onSelectionChanged: (range) =>
+                                          editing.setTextSelection(
+                                            widget.tab.id,
+                                            range,
+                                          ),
+                                      pageObjects:
+                                          editSession?.pageObjects
+                                              .where(
+                                                (object) =>
+                                                    object.locator.pageNumber ==
+                                                    page.pageNumber,
+                                              )
+                                              .toList(growable: false) ??
+                                          const <PdfPageObject>[],
+                                      onObjectPreview: (locator, transform) =>
+                                          editing.previewTransform(
+                                            widget.tab.id,
+                                            _controller.document,
+                                            locator,
+                                            transform,
+                                          ),
+                                      rectForBlock: (block) =>
+                                          PdfRect(
+                                            block.bounds.left,
+                                            block.bounds.top,
+                                            block.bounds.right,
+                                            block.bounds.bottom,
+                                          ).toRect(
+                                            page: page,
+                                            scaledPageSize: pageRect.size,
+                                          ),
+                                      onSelect: (locator) {
+                                        unawaited(() async {
+                                          await editing.selectTextObject(
+                                            widget.tab.id,
+                                            _controller.document,
+                                            locator,
+                                          );
+                                          await ref
+                                              .read(
+                                                workspaceNotifierProvider
+                                                    .notifier,
+                                              )
+                                              .selectRightToolWindow(
+                                                RightToolWindow.textFormat,
+                                              );
+                                        }());
+                                      },
+                                      onBeginTextEditing: (locator, range) {
+                                        unawaited(() async {
+                                          await editing.beginTextEditing(
+                                            widget.tab.id,
+                                            _controller.document,
+                                            locator,
+                                            range,
+                                          );
+                                          await ref
+                                              .read(
+                                                workspaceNotifierProvider
+                                                    .notifier,
+                                              )
+                                              .selectRightToolWindow(
+                                                RightToolWindow.textFormat,
+                                              );
+                                        }());
+                                      },
+                                      documentId: editSession?.documentId,
+                                      documentRevision: editSession?.revision,
+                                      caseMatching:
+                                          editSession?.caseMatching ?? true,
+                                      onIntent: (intent) => unawaited(() async {
+                                        try {
+                                          await editing.dispatch(
+                                            intent,
+                                            provenance:
+                                                PdfCommandProvenance.manual,
+                                          );
+                                        } catch (error) {
+                                          ref
+                                              .read(
+                                                workspaceNotifierProvider
+                                                    .notifier,
+                                              )
+                                              .reportPdfEditFailure(error);
+                                        }
+                                      }()),
+                                      onClearSelection: () => unawaited(
+                                        editing.clearSelection(
                                           widget.tab.id,
-                                          _controller.document,
-                                          locator,
-                                          transform,
+                                          document: _controller.document,
                                         ),
-                                    rectForBlock: (block) =>
-                                        PdfRect(
-                                          block.bounds.left,
-                                          block.bounds.top,
-                                          block.bounds.right,
-                                          block.bounds.bottom,
-                                        ).toRect(
-                                          page: page,
-                                          scaledPageSize: pageRect.size,
+                                      ),
+                                      onUndo: () => unawaited(
+                                        editing.undo(
+                                          widget.tab.id,
+                                          document: _controller.document,
                                         ),
-                                    onSelect: (locator) {
-                                      unawaited(() async {
-                                        await editing.selectTextObject(
+                                      ),
+                                      onRedo: () => unawaited(
+                                        editing.redo(
                                           widget.tab.id,
-                                          _controller.document,
-                                          locator,
-                                        );
-                                        await ref
-                                            .read(
-                                              workspaceNotifierProvider
-                                                  .notifier,
-                                            )
-                                            .selectRightToolWindow(
-                                              RightToolWindow.textFormat,
-                                            );
-                                      }());
-                                    },
-                                    onBeginTextEditing: (locator, range) {
-                                      unawaited(() async {
-                                        await editing.beginTextEditing(
-                                          widget.tab.id,
-                                          _controller.document,
-                                          locator,
-                                          range,
-                                        );
-                                        await ref
-                                            .read(
-                                              workspaceNotifierProvider
-                                                  .notifier,
-                                            )
-                                            .selectRightToolWindow(
-                                              RightToolWindow.textFormat,
-                                            );
-                                      }());
-                                    },
-                                    documentId: editSession?.documentId,
-                                    documentRevision: editSession?.revision,
-                                    caseMatching:
-                                        editSession?.caseMatching ?? true,
-                                    onIntent: (intent) => unawaited(() async {
-                                      try {
-                                        await editing.dispatch(
-                                          intent,
-                                          provenance:
-                                              PdfCommandProvenance.manual,
-                                        );
-                                      } catch (error) {
-                                        ref
-                                            .read(
-                                              workspaceNotifierProvider
-                                                  .notifier,
-                                            )
-                                            .reportPdfEditFailure(error);
-                                      }
-                                    }()),
-                                    onClearSelection: () => unawaited(
-                                      editing.clearSelection(
-                                        widget.tab.id,
-                                        document: _controller.document,
+                                          document: _controller.document,
+                                        ),
                                       ),
                                     ),
-                                    onUndo: () => unawaited(
-                                      editing.undo(
-                                        widget.tab.id,
-                                        document: _controller.document,
-                                      ),
-                                    ),
-                                    onRedo: () => unawaited(
-                                      editing.redo(
-                                        widget.tab.id,
-                                        document: _controller.document,
-                                      ),
-                                    ),
-                                  ),
                                 ],
                           ),
                         );
@@ -1086,9 +1105,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                             onHighlightSelection: _controller.isReady
                                 ? _highlightSelection
                                 : null,
-                            textEditing:
-                                editSession != null &&
-                                editSession.mode != PdfEditingMode.reading,
+                            textEditing: rollout.policy.rustGesturesEnabled
+                                ? registeredNative != null
+                                : editSession != null &&
+                                      editSession.mode !=
+                                          PdfEditingMode.reading,
                             onToggleTextEditing: _controller.isReady
                                 ? _toggleTextEditing
                                 : null,
@@ -1120,9 +1141,13 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     PdfViewerController controller,
   ) async {
     _pageSurface.refresh();
-    unawaited(_openNativeEditor(widget.tab.id, widget.tab.filePath));
+    final rollout = ref.read(editingRolloutProvider);
+    if (rollout.policy.opensRustSession) {
+      unawaited(_openNativeEditor(widget.tab.id, widget.tab.filePath));
+    }
     final editing = ref.read(pdfEditingControllerProvider);
-    if (!editing.sessionsByTabId.containsKey(widget.tab.id)) {
+    if (editing != null &&
+        !editing.sessionsByTabId.containsKey(widget.tab.id)) {
       editing.registerSession(
         widget.tab.id,
         PdfEditingSession.empty(
@@ -1193,6 +1218,12 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
 
   Future<void> _toggleTextEditing() async {
     final editing = ref.read(pdfEditingControllerProvider);
+    if (editing == null) {
+      if (ref.read(editorSessionRegistryProvider)[widget.tab.id] == null) {
+        await _openNativeEditor(widget.tab.id, widget.tab.filePath);
+      }
+      return;
+    }
     final session = editing.sessionFor(widget.tab.id);
     if (session.mode != PdfEditingMode.reading) {
       await editing.leaveTextMode(
@@ -1203,6 +1234,27 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
       await editing.enterTextMode(widget.tab.id, _controller.document, _page);
     }
     if (mounted) _controller.invalidate();
+  }
+
+  void _reportSceneComparisons(
+    PdfEditingController legacy,
+    Map<int, EditorPageScene> scenes,
+  ) {
+    final legacySession = legacy.sessionsByTabId[widget.tab.id];
+    if (legacySession == null) return;
+    for (final scene in scenes.values) {
+      if (!legacySession.blocks.any(
+        (block) => block.locator.pageNumber == scene.pageNumber,
+      )) {
+        continue;
+      }
+      final key =
+          '${widget.tab.id}:${legacySession.revision}:'
+          '${scene.pageNumber}:${scene.revision}';
+      if (!_reportedSceneComparisons.add(key)) continue;
+      final diagnostic = legacy.compareRustScene(widget.tab.id, scene);
+      debugPrint(jsonEncode(diagnostic.toContentFreeFields()));
+    }
   }
 
   bool get _shouldShowSearchOverlay =>

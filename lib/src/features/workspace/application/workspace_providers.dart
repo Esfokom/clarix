@@ -33,6 +33,70 @@ import 'pdf_editing_controller.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
 
+enum EditingRollout {
+  legacy,
+  compareScenes,
+  clarixRustEditingV1;
+
+  static const String _configuredValue = String.fromEnvironment(
+    'CLARIX_EDITING_ROLLOUT',
+    defaultValue: 'clarixRustEditingV1',
+  );
+
+  static EditingRollout get configured => values.firstWhere(
+    (value) => value.name == _configuredValue,
+    orElse: () => clarixRustEditingV1,
+  );
+
+  EditingRolloutPolicy get policy => switch (this) {
+    legacy => const EditingRolloutPolicy(
+      opensRustSession: false,
+      constructsLegacyEditor: true,
+      rustGesturesEnabled: false,
+    ),
+    compareScenes => const EditingRolloutPolicy(
+      opensRustSession: true,
+      constructsLegacyEditor: true,
+      rustGesturesEnabled: false,
+    ),
+    clarixRustEditingV1 => const EditingRolloutPolicy(
+      opensRustSession: true,
+      constructsLegacyEditor: false,
+      rustGesturesEnabled: true,
+    ),
+  };
+}
+
+class EditingRolloutPolicy {
+  const EditingRolloutPolicy({
+    required this.opensRustSession,
+    required this.constructsLegacyEditor,
+    required this.rustGesturesEnabled,
+  });
+
+  final bool opensRustSession;
+  final bool constructsLegacyEditor;
+  final bool rustGesturesEnabled;
+
+  @override
+  bool operator ==(Object other) =>
+      other is EditingRolloutPolicy &&
+      opensRustSession == other.opensRustSession &&
+      constructsLegacyEditor == other.constructsLegacyEditor &&
+      rustGesturesEnabled == other.rustGesturesEnabled;
+
+  @override
+  int get hashCode => Object.hash(
+    opensRustSession,
+    constructsLegacyEditor,
+    rustGesturesEnabled,
+  );
+}
+
+final editingRolloutProvider = Provider<EditingRollout>(
+  (Ref ref) => EditingRollout.configured,
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );
@@ -239,7 +303,7 @@ final pdfEditSaveServiceProvider = Provider<PdfEditSaveService>((Ref ref) {
   );
 });
 
-final pdfEditingControllerProvider =
+final legacyPdfEditingControllerProvider =
     ChangeNotifierProvider<PdfEditingController>(
       (Ref ref) => PdfEditingController(
         engine: ref.watch(pdfTextEngineProvider),
@@ -247,3 +311,9 @@ final pdfEditingControllerProvider =
         nativeCoordinator: ref.watch(pdfNativeEditCoordinatorProvider),
       ),
     );
+
+final pdfEditingControllerProvider = Provider<PdfEditingController?>((Ref ref) {
+  final rollout = ref.watch(editingRolloutProvider);
+  if (!rollout.policy.constructsLegacyEditor) return null;
+  return ref.watch(legacyPdfEditingControllerProvider);
+});

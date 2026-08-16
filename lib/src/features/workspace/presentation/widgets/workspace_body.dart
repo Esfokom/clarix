@@ -247,8 +247,11 @@ class _TextFormatPane extends ConsumerWidget {
         },
       );
     }
-    final editing = ref.watch(pdfEditingControllerProvider);
-    final session = editing.sessionsByTabId[activeTab.id];
+    final rollout = ref.watch(editingRolloutProvider);
+    final editing = rollout.policy.constructsLegacyEditor
+        ? ref.watch(legacyPdfEditingControllerProvider)
+        : null;
+    final session = editing?.sessionsByTabId[activeTab.id];
     final selection = session?.selection;
     PdfTextBlock? block;
     if (selection != null && session != null) {
@@ -297,7 +300,7 @@ class _TextFormatPane extends ConsumerWidget {
       availableFamilies: families,
       caseMatching: session.caseMatching,
       substitutionMessage: substitutionMessage,
-      onCaseMatchingChanged: (enabled) => editing.dispatch(
+      onCaseMatchingChanged: (enabled) => editing!.dispatch(
         SetPdfCaseMatchingIntent(
           documentId: session.documentId,
           documentRevision: session.revision,
@@ -306,7 +309,7 @@ class _TextFormatPane extends ConsumerWidget {
         provenance: PdfCommandProvenance.manual,
       ),
       onIntent: (intent) =>
-          editing.dispatch(intent, provenance: PdfCommandProvenance.manual),
+          editing!.dispatch(intent, provenance: PdfCommandProvenance.manual),
     );
   }
 }
