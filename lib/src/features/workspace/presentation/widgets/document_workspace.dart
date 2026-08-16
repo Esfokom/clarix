@@ -488,9 +488,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   Offset? _selectionMenuPosition;
   Offset? _selectionAutoPanPointer;
   Timer? _selectionAutoPanTimer;
-  int? _lastRepaintedEditRevision;
   bool _nativeLifecycleSyncScheduled = false;
-  final Set<String> _reportedSceneComparisons = <String>{};
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;

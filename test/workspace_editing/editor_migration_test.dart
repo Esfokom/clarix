@@ -42,8 +42,9 @@ void main() {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         final contents = entity.readAsStringSync();
         for (final token in forbidden) {
-          if (contents.contains(token))
+          if (contents.contains(token)) {
             violations.add('${entity.path}: $token');
+          }
         }
       }
     }
