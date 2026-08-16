@@ -9,17 +9,35 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('requires an isolated project root for executable probes', () {
+    expect(
+      () => Phase1RecoveryProbeInvocation.tryParse(const <String>[
+        '--phase1-recovery-probe',
+        '--fixture',
+        'source.pdf',
+        '--seed',
+        '0',
+        '--accepted-marker',
+        'accepted.json',
+      ]),
+      throwsFormatException,
+    );
+  });
+
   test('parses accepted and verification probe invocations', () {
     final accepted = Phase1RecoveryProbeInvocation.tryParse(const <String>[
       '--phase1-recovery-probe',
       '--fixture',
       'source.pdf',
+      '--project-root',
+      'probe-project',
       '--seed',
       '2',
       '--accepted-marker',
       'accepted.json',
     ])!;
     expect(accepted.mode, Phase1RecoveryProbeMode.acceptThenWait);
+    expect(accepted.projectRootPath, 'probe-project');
     expect(accepted.seed, 2);
     expect(accepted.killWindow, Phase1RecoveryKillWindow.acceptedCommand);
 
@@ -27,6 +45,8 @@ void main() {
       '--phase1-recovery-probe',
       '--fixture',
       'source.pdf',
+      '--project-root',
+      'probe-project',
       '--seed',
       '3',
       '--accepted-marker',
@@ -40,6 +60,8 @@ void main() {
       '--phase1-recovery-verify',
       '--fixture',
       'source.pdf',
+      '--project-root',
+      'probe-project',
       '--seed',
       '2',
       '--recovered-marker',
@@ -59,6 +81,7 @@ void main() {
       Phase1RecoveryProbeInvocation(
         mode: Phase1RecoveryProbeMode.acceptThenWait,
         fixturePath: 'source.pdf',
+        projectRootPath: directory.path,
         seed: 2,
         markerPath: marker,
       ),
@@ -96,6 +119,7 @@ void main() {
         Phase1RecoveryProbeInvocation(
           mode: Phase1RecoveryProbeMode.acceptThenWait,
           fixturePath: 'source.pdf',
+          projectRootPath: directory.path,
           seed: 0,
           markerPath: marker,
           killWindow: Phase1RecoveryKillWindow.walCheckpoint,

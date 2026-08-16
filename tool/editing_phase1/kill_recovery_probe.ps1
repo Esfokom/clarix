@@ -29,10 +29,12 @@ try {
         $marker = Join-Path $probeRoot "accepted-$seed.json"
         $recovered = Join-Path $probeRoot "recovered-$seed.json"
         $checkpointMarker = Join-Path $probeRoot "checkpoint-$seed.marker"
+        $seedProjectRoot = Join-Path $probeRoot "project-$seed"
         $killWindow = if ((($seed + 1) % $WalCheckpointInterval) -eq 0) { "wal-checkpoint" } else { "accepted-command" }
         $arguments = @(
             "--phase1-recovery-probe",
             "--fixture", $resolvedFixture,
+            "--project-root", $seedProjectRoot,
             "--seed", $seed,
             "--accepted-marker", $marker,
             "--kill-window", $killWindow
@@ -69,6 +71,7 @@ try {
         $verifyArguments = @(
             "--phase1-recovery-verify",
             "--fixture", $resolvedFixture,
+            "--project-root", $seedProjectRoot,
             "--seed", $seed,
             "--recovered-marker", $recovered
         )

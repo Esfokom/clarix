@@ -53,7 +53,7 @@ two workers per document.
 | Approved font fallback | explicit one-time approval, durable project asset recovery, embedded searchable output, and local font-state restoration | Passed on `07ca201`; focused Rust/Flutter verification |
 | Profile editing | 1,000 edits, IME, undo/redo, focus/page/zoom/scroll identity, frame timings | Pending profile execution |
 | Large document | 2,001 scene requests, separate indexed/unindexed p95s, bounded residency, and RSS warm-tail/final sampling | Harness implemented; pending profile execution |
-| Crash recovery | at least 100 seeded terminations including WAL checkpoint timing | Harness implemented with deterministic passive-checkpoint/truncate midpoint; pending executable and run |
+| Crash recovery | at least 100 seeded terminations including WAL checkpoint timing | Harness implemented with per-seed isolated project roots and deterministic passive-checkpoint/truncate midpoint; pending executable and run |
 | Save faults | every save stage; hashes for source/temp/backup/output/sidecar before and after | Passed; see `editing-phase1-save-faults.json` |
 | External readers | actual supplied PDF through Rust and pdfrx/PDFium; named reader search/select evidence | Actual-file harness implemented; pending saved output and reader automation |
 | Generated bindings | regeneration produces no diff | Full gate passed on the recorded evidence commit; fallback DTOs regenerated on `07ca201` and passed focused compile/Clippy/analyze |

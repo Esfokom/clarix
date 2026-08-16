@@ -14,7 +14,7 @@ Future<void> main(List<String> arguments) async {
     try {
       await ClarixRustRuntime.requireInitialized();
       await Phase1RecoveryProbe(
-        BridgeEditorSessionGateway(),
+        BridgeEditorSessionGateway(projectRoot: recoveryProbe.projectRootPath),
       ).run(recoveryProbe);
     } catch (error, stackTrace) {
       stderr.writeln('Phase 1 recovery probe failed: $error');

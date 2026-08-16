@@ -16,6 +16,7 @@ class Phase1RecoveryProbeInvocation {
   const Phase1RecoveryProbeInvocation({
     required this.mode,
     required this.fixturePath,
+    required this.projectRootPath,
     required this.seed,
     required this.markerPath,
     this.killWindow = Phase1RecoveryKillWindow.acceptedCommand,
@@ -23,6 +24,7 @@ class Phase1RecoveryProbeInvocation {
 
   final Phase1RecoveryProbeMode mode;
   final String fixturePath;
+  final String projectRootPath;
   final int seed;
   final String markerPath;
   final Phase1RecoveryKillWindow killWindow;
@@ -46,6 +48,7 @@ class Phase1RecoveryProbeInvocation {
           ? Phase1RecoveryProbeMode.acceptThenWait
           : Phase1RecoveryProbeMode.verify,
       fixturePath: fixture,
+      projectRootPath: _value(arguments, '--project-root'),
       seed: seed,
       markerPath: _value(
         arguments,
