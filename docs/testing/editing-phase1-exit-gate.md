@@ -1,6 +1,6 @@
 # Phase 1 Native Text Editing Exit Gate
 
-Status: **implementation complete; runtime evidence pending**.
+Status: **implementation verification in progress; runtime evidence pending**.
 
 Phase 1 is not accepted, and the legacy Dart/PDFium mutation path must not be
 deleted, until every required row below passes on the evidence commit. The
@@ -46,10 +46,10 @@ two workers per document.
 | Patch cache | cold/warm behavior, decoded bytes within budget, coldest non-visible eviction | Harness implemented |
 | Save loop | repeated materialize/independent-validate cycles and no temp/backup leak | Harness implemented |
 | Profile editing | 1,000 edits, IME, undo/redo, focus/page/zoom/scroll identity, frame timings | Pending profile execution |
-| Large document | repeated scroll, scene/frame latency, residency, patch bytes, RSS plateau | Pending profile execution |
+| Large document | 2,001 scene requests, bounded residency, scene latency and RSS warm-tail/final sampling | Harness implemented; pending profile execution |
 | Crash recovery | at least 100 seeded terminations including WAL checkpoint timing | Pending executable and run |
-| Save faults | every save stage; hashes for source/temp/backup/output/sidecar before and after | Pending probe run |
-| External readers | Rust validator and pdfrx/PDFium mandatory; one available Windows reader | Pending saved output |
+| Save faults | every save stage; hashes for source/temp/backup/output/sidecar before and after | Passed; see `editing-phase1-save-faults.json` |
+| External readers | actual supplied PDF through Rust and pdfrx/PDFium; named reader search/select evidence | Actual-file harness implemented; pending saved output and reader automation |
 | Generated bindings | regeneration produces no diff | Pending gate run |
 | User release DLL | user-owned release command exits zero and DLL hash is recorded | Pending user execution |
 
@@ -60,7 +60,8 @@ two workers per document.
 flutter drive --profile --driver test_driver/integration_test.dart --target integration_test/phase1_editing_test.dart
 flutter drive --profile --driver test_driver/integration_test.dart --target integration_test/phase1_large_document_test.dart
 & tool/editing_phase1/kill_recovery_probe.ps1 -ExecutablePath <profile-exe> -FixturePath <fixture>
-& tool/editing_phase1/external_reader_probe.ps1 -SavedPdf <saved-pdf> -ReaderExecutable <reader> -ReaderName <name-and-version>
+& tool/editing_phase1/save_fault_probe.ps1
+& tool/editing_phase1/external_reader_probe.ps1 -SavedPdf <saved-pdf> -ExpectedText <new-text> -OldText <old-text> -ReaderExecutable <reader> -ReaderName <name-and-version>
 & tool/editing_phase1/record_phase1_evidence.ps1 -OutputPath docs/testing/editing-phase1-results.json
 ```
 

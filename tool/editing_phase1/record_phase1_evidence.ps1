@@ -11,6 +11,10 @@ $resolvedOutput = Join-Path $repoRoot $OutputPath
 $computer = Get-CimInstance Win32_ComputerSystem
 $processor = Get-CimInstance Win32_Processor | Select-Object -First 1
 $buildEvidence = [ordered]@{ status = "pending_user_execution"; exitCode = $null; dllPath = $null; dllSha256 = $null; timestampUtc = $null }
+$saveFaultEvidencePath = Join-Path $repoRoot "docs/testing/editing-phase1-save-faults.json"
+$externalReaderEvidencePath = Join-Path $repoRoot "docs/testing/editing-phase1-external-reader.json"
+$saveFaultEvidence = if (Test-Path $saveFaultEvidencePath) { Get-Content $saveFaultEvidencePath -Raw | ConvertFrom-Json } else { $null }
+$externalReaderEvidence = if (Test-Path $externalReaderEvidencePath) { Get-Content $externalReaderEvidencePath -Raw | ConvertFrom-Json } else { $null }
 
 if ($UserBuildExitCode) {
     $buildEvidence.status = if ([int]$UserBuildExitCode -eq 0) { "passed" } else { "failed" }
@@ -37,8 +41,26 @@ $report = [ordered]@{
     profileEditing = [ordered]@{ status = "pending_profile_execution" }
     profileLargeDocument = [ordered]@{ status = "pending_profile_execution" }
     forcedKillRecovery = [ordered]@{ status = "pending_executable"; requiredSeeds = 100 }
-    saveFaultMatrix = [ordered]@{ status = "pending_execution" }
-    externalReaders = [ordered]@{ rust = "pending"; pdfrxPdfium = "pending"; namedReader = "pending_or_named_skip" }
+    saveFaultMatrix = if ($saveFaultEvidence) {
+        [ordered]@{
+            status = $saveFaultEvidence.status
+            evidencePath = "docs/testing/editing-phase1-save-faults.json"
+            stages = $saveFaultEvidence.stages.Count
+        }
+    } else {
+        [ordered]@{ status = "pending_execution" }
+    }
+    externalReaders = if ($externalReaderEvidence) {
+        [ordered]@{
+            rust = $externalReaderEvidence.rustSearchExtractGeometry
+            pdfrxPdfium = $externalReaderEvidence.pdfrxPdfiumSearchExtractGeometry
+            oldTextAbsent = $externalReaderEvidence.oldTextAbsent
+            namedReader = $externalReaderEvidence.externalReader
+            evidencePath = "docs/testing/editing-phase1-external-reader.json"
+        }
+    } else {
+        [ordered]@{ rust = "pending"; pdfrxPdfium = "pending"; namedReader = "pending_or_named_skip" }
+    }
     performance = [ordered]@{
         sidecarLatency = "pending_criterion"
         saveLatency = "pending_criterion"
