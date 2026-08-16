@@ -15,6 +15,70 @@ fn fixture_path() -> String {
 }
 
 #[test]
+fn native_session_persists_requested_page_index_metadata() {
+    let project_root = tempfile::tempdir().unwrap();
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(project_root.path().to_string_lossy().into_owned()),
+    })
+    .unwrap();
+    session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    session.close().unwrap();
+
+    let projects = project_root.path().join("Clarix").join("Projects");
+    let document_directory = std::fs::read_dir(projects)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let database = document_directory.join("project.sqlite");
+    let connection = rusqlite::Connection::open(database).unwrap();
+    let indexed_pages: i64 = connection
+        .query_row("SELECT COUNT(*) FROM pages", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(indexed_pages, 1);
+}
+
+#[test]
+fn native_session_indexes_pages_without_widget_requests() {
+    let project_root = tempfile::tempdir().unwrap();
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(project_root.path().to_string_lossy().into_owned()),
+    })
+    .unwrap();
+    let projects = project_root.path().join("Clarix").join("Projects");
+    let document_directory = std::fs::read_dir(projects)
+        .unwrap()
+        .next()
+        .unwrap()
+        .unwrap()
+        .path();
+    let database = document_directory.join("project.sqlite");
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    let indexed_pages = loop {
+        let connection = rusqlite::Connection::open(&database).unwrap();
+        let count: i64 = connection
+            .query_row("SELECT COUNT(*) FROM pages", [], |row| row.get(0))
+            .unwrap();
+        if count > 0 || std::time::Instant::now() >= deadline {
+            break count;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(10));
+    };
+    session.close().unwrap();
+
+    assert_eq!(indexed_pages, 1);
+}
+
+#[test]
 fn native_editor_session_opens_edits_and_closes() {
     let session = NativeEditorSession::open(NativeOpenEditorRequest {
         source_path: fixture_path(),

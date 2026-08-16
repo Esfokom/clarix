@@ -1,13 +1,14 @@
 use std::sync::Mutex;
 
 use clarix_editing_core::{
-    CheckpointKind, DurableCommit, DurableSnapshot, EditorCommand, MaterializationRecord,
-    PersistenceError, ProjectCheckpoint, ProjectRepository, RecoveredCommand, RecoveredProject,
-    RecoveryRequest,
+    CheckpointKind, DocumentId, DocumentObject, DurableCommit, DurableSnapshot, EditorCommand,
+    ImportedPage, MaterializationRecord, PageIndexRepository, PersistenceError, ProjectCheckpoint,
+    ProjectRepository, RecoveredCommand, RecoveredProject, RecoveryRequest,
 };
 use rusqlite::{params, Connection, OptionalExtension};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use unicode_normalization::UnicodeNormalization;
 
 use crate::{schema, FaultPoint, ProjectLocation, ProjectSeed, StoreError, StoreTable};
 
@@ -311,6 +312,160 @@ impl ProjectRepository for SqliteProjectRepository {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct StoredIndexedPage {
+    page: clarix_editing_core::PageNode,
+    warnings: Vec<String>,
+}
+
+impl PageIndexRepository for SqliteProjectRepository {
+    fn load_indexed_page(
+        &self,
+        document_id: DocumentId,
+        source_fingerprint: &str,
+        page_number: u32,
+    ) -> Result<Option<ImportedPage>, PersistenceError> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| PersistenceError::Unavailable("repository lock poisoned".into()))?;
+        verify_project_identity(&connection, document_id, source_fingerprint)?;
+        let payload: Option<String> = connection
+            .query_row(
+                "SELECT payload_json FROM pages WHERE page_number = ?1",
+                params![page_number],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(map_persistence)?;
+        payload
+            .map(|payload| {
+                serde_json::from_str::<StoredIndexedPage>(&payload)
+                    .map(|stored| ImportedPage {
+                        page: stored.page,
+                        warnings: stored.warnings,
+                    })
+                    .map_err(|error| PersistenceError::Corrupt(error.to_string()))
+            })
+            .transpose()
+    }
+
+    fn store_indexed_page(
+        &self,
+        document_id: DocumentId,
+        source_fingerprint: &str,
+        imported: &ImportedPage,
+    ) -> Result<(), PersistenceError> {
+        let mut connection = self
+            .connection
+            .lock()
+            .map_err(|_| PersistenceError::Unavailable("repository lock poisoned".into()))?;
+        verify_project_identity(&connection, document_id, source_fingerprint)?;
+        let transaction = connection.transaction().map_err(map_persistence)?;
+        let old_object_ids = {
+            let mut statement = transaction
+                .prepare("SELECT object_id FROM objects WHERE page_id = ?1")
+                .map_err(map_persistence)?;
+            let object_ids = statement
+                .query_map(params![imported.page.id.to_string()], |row| {
+                    row.get::<_, String>(0)
+                })
+                .map_err(map_persistence)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(map_persistence)?;
+            object_ids
+        };
+        for object_id in old_object_ids {
+            transaction
+                .execute(
+                    "DELETE FROM text_runs WHERE object_id = ?1",
+                    params![object_id],
+                )
+                .map_err(map_persistence)?;
+            transaction
+                .execute(
+                    "DELETE FROM source_bindings WHERE object_id = ?1",
+                    params![object_id],
+                )
+                .map_err(map_persistence)?;
+            transaction
+                .execute(
+                    "DELETE FROM text_index WHERE object_id = ?1",
+                    params![object_id],
+                )
+                .map_err(map_persistence)?;
+        }
+        transaction
+            .execute(
+                "DELETE FROM objects WHERE page_id = ?1",
+                params![imported.page.id.to_string()],
+            )
+            .map_err(map_persistence)?;
+        let stored = StoredIndexedPage {
+            page: imported.page.clone(),
+            warnings: imported.warnings.clone(),
+        };
+        transaction
+            .execute(
+                "INSERT OR REPLACE INTO pages (page_id, page_number, payload_json) VALUES (?1, ?2, ?3)",
+                params![
+                    imported.page.id.to_string(),
+                    imported.page.page_number,
+                    json(&stored).map_err(map_store_persistence)?,
+                ],
+            )
+            .map_err(map_persistence)?;
+        transaction
+            .execute(
+                "INSERT OR REPLACE INTO page_index_state (page_id, state) VALUES (?1, 'Indexed')",
+                params![imported.page.id.to_string()],
+            )
+            .map_err(map_persistence)?;
+        for object in &imported.page.objects {
+            let object_id = object.id().to_string();
+            transaction
+                .execute(
+                    "INSERT INTO objects (object_id, page_id, payload_json) VALUES (?1, ?2, ?3)",
+                    params![
+                        object_id,
+                        imported.page.id.to_string(),
+                        json(object).map_err(map_store_persistence)?,
+                    ],
+                )
+                .map_err(map_persistence)?;
+            if let Some(binding) = object.source_binding() {
+                transaction
+                    .execute(
+                        "INSERT INTO source_bindings (object_id, payload_json) VALUES (?1, ?2)",
+                        params![object_id, json(binding).map_err(map_store_persistence)?,],
+                    )
+                    .map_err(map_persistence)?;
+            }
+            if let DocumentObject::Text(text) = object {
+                for (ordinal, run) in text.runs.iter().enumerate() {
+                    transaction
+                        .execute(
+                            "INSERT INTO text_runs (object_id, ordinal, payload_json) VALUES (?1, ?2, ?3)",
+                            params![
+                                object_id,
+                                i64::try_from(ordinal).map_err(|_| PersistenceError::Transaction("text run ordinal exceeds SQLite range".into()))?,
+                                json(run).map_err(map_store_persistence)?,
+                            ],
+                        )
+                        .map_err(map_persistence)?;
+                }
+                transaction
+                    .execute(
+                        "INSERT INTO text_index (object_id, normalized_text) VALUES (?1, ?2)",
+                        params![object_id, normalized_text(&text.text)],
+                    )
+                    .map_err(map_persistence)?;
+            }
+        }
+        transaction.commit().map_err(map_persistence)
+    }
+}
+
 fn json(value: &impl Serialize) -> Result<String, StoreError> {
     serde_json::to_string(value).map_err(StoreError::from)
 }
@@ -326,12 +481,34 @@ fn sha256_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
+fn normalized_text(text: &str) -> String {
+    text.nfkc().flat_map(char::to_lowercase).collect()
+}
+
 fn map_persistence(error: rusqlite::Error) -> PersistenceError {
     PersistenceError::Transaction(error.to_string())
 }
 
 fn map_store_persistence(error: StoreError) -> PersistenceError {
     PersistenceError::Transaction(error.to_string())
+}
+
+fn verify_project_identity(
+    connection: &Connection,
+    document_id: DocumentId,
+    source_fingerprint: &str,
+) -> Result<(), PersistenceError> {
+    let identity: (String, String) = connection
+        .query_row(
+            "SELECT document_id, source_fingerprint FROM project WHERE singleton = 1",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .map_err(map_persistence)?;
+    if identity.0 != document_id.to_string() || identity.1 != source_fingerprint {
+        return Err(PersistenceError::SourceMismatch);
+    }
+    Ok(())
 }
 
 fn recovered_commands(connection: &Connection) -> Result<Vec<RecoveredCommand>, PersistenceError> {

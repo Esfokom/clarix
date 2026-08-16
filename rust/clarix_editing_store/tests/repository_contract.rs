@@ -1,9 +1,16 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::PathBuf,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    DurableCommit, EditorCommand, EditorSessionActor, EditorSessionState, ObjectId, PageId,
-    PageNode, PdfBox, ProjectRepository, RecoveryRequest, SessionId, TextBlock, Utf16Range,
+    DurableCommit, EditorCommand, EditorSessionActor, EditorSessionState, ImportedPage, ObjectId,
+    PageId, PageImportRequest, PageImportSource, PageNode, PageSceneRequest, PageSceneService,
+    PdfBox, ProjectRepository, RecoveryRequest, SessionId, SourceReference, TextBlock, Utf16Range,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository, StoreTable};
 
@@ -444,4 +451,95 @@ fn recovered_actor_rejects_a_corrupt_history_cursor() {
     assert!(
         matches!(result, Err(clarix_editing_core::EditingError::SidecarCommitFailed(message)) if message.contains("history cursor"))
     );
+}
+
+struct IndexedFixtureImporter {
+    page: PageNode,
+    imports: AtomicUsize,
+}
+
+impl PageImportSource for IndexedFixtureImporter {
+    fn import_page(&self, _: PageImportRequest) -> Result<ImportedPage, String> {
+        self.imports.fetch_add(1, Ordering::AcqRel);
+        Ok(ImportedPage {
+            page: self.page.clone(),
+            warnings: vec!["fixture warning".into()],
+        })
+    }
+}
+
+#[test]
+fn indexed_page_metadata_survives_repository_reopen_without_reimport() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, _) = fixture_model("CAFE\u{301}");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = Arc::new(
+        SqliteProjectRepository::open(
+            location.clone(),
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let first_importer = Arc::new(IndexedFixtureImporter {
+        page: model.pages[0].clone(),
+        imports: AtomicUsize::new(0),
+    });
+    let service = PageSceneService::new(
+        model.id,
+        SourceReference::new(&model.source_fingerprint, "fixture.pdf"),
+        1,
+        2,
+        first_importer.clone(),
+    )
+    .unwrap()
+    .with_index_repository(repository.clone());
+    service.index_all_pages().unwrap();
+    assert_eq!(first_importer.imports.load(Ordering::Acquire), 1);
+    drop(service);
+    drop(repository);
+
+    let reopened = Arc::new(
+        SqliteProjectRepository::open(
+            location.clone(),
+            ProjectSeed {
+                model: model.clone(),
+                undo_cursor: 0,
+                materialized_revision: None,
+            },
+        )
+        .unwrap(),
+    );
+    let second_importer = Arc::new(IndexedFixtureImporter {
+        page: model.pages[0].clone(),
+        imports: AtomicUsize::new(0),
+    });
+    let reopened_service = PageSceneService::new(
+        model.id,
+        SourceReference::new(&model.source_fingerprint, "fixture.pdf"),
+        1,
+        2,
+        second_importer.clone(),
+    )
+    .unwrap()
+    .with_index_repository(reopened);
+    let scene = reopened_service
+        .request(PageSceneRequest::visible(1, DocumentRevision::INITIAL))
+        .unwrap();
+
+    assert_eq!(scene.page, model.pages[0]);
+    assert_eq!(scene.warnings, vec!["fixture warning"]);
+    assert_eq!(second_importer.imports.load(Ordering::Acquire), 0);
+    let connection = rusqlite::Connection::open(&location.database).unwrap();
+    let persisted: (i64, i64, i64, String) = connection
+        .query_row(
+            "SELECT (SELECT COUNT(*) FROM pages), (SELECT COUNT(*) FROM objects), (SELECT COUNT(*) FROM text_runs), (SELECT normalized_text FROM text_index LIMIT 1)",
+            [],
+            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+        )
+        .unwrap();
+    assert_eq!(persisted, (1, 1, 1, "café".into()));
 }

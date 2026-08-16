@@ -5,9 +5,9 @@ use std::sync::Arc;
 use clarix_editing_core::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    ObjectId, ObjectPatch, PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest,
-    SaveAssociation, SaveCoordinator, SaveMode, SaveRequest, SessionId, SourceReference, TextRun,
-    TextStyle, Utf16Range, ViewportPriority,
+    ObjectId, ObjectPatch, PageIndexTask, PageSceneRequest, PageSceneService, PdfBox,
+    RecoveryRequest, SaveAssociation, SaveCoordinator, SaveMode, SaveRequest, SessionId,
+    SourceReference, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
 use clarix_pdf_adapter::{
@@ -273,6 +273,7 @@ pub struct NativeEditorEvent {
 pub struct NativeEditorSession {
     actor: EditorSessionActor,
     page_service: PageSceneService,
+    background_indexing: PageIndexTask,
     clean_patches: CleanPatchCache,
     _repository: Arc<SqliteProjectRepository>,
     source: SourceRef,
@@ -322,10 +323,13 @@ impl NativeEditorSession {
             2,
             Arc::new(importer),
         )
-        .map_err(|error| format!("{}: {error}", error.code()))?;
+        .map_err(|error| format!("{}: {error}", error.code()))?
+        .with_index_repository(repository.clone());
+        let background_indexing = page_service.start_background_indexing();
         Ok(Self {
             actor,
             page_service,
+            background_indexing,
             clean_patches: CleanPatchCache::for_document(Arc::new(CleanPatchRenderer)),
             _repository: repository,
             source,
@@ -549,6 +553,9 @@ impl NativeEditorSession {
 
     pub fn close(&self) -> Result<(), String> {
         self.clean_patches.cancel();
+        self.background_indexing
+            .cancel_and_wait()
+            .map_err(|error| format!("{}: {error}", error.code()))?;
         self.actor.close().map_err(editing_error)
     }
 }

@@ -2,7 +2,10 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{DocumentModel, DocumentRevision, PageId, PageNode, PdfBox, SaveError};
+use crate::{
+    DocumentId, DocumentModel, DocumentRevision, PageId, PageNode, PdfBox, PersistenceError,
+    SaveError,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceReference {
@@ -33,6 +36,22 @@ pub struct ImportedPage {
 
 pub trait PageImportSource: Send + Sync {
     fn import_page(&self, request: PageImportRequest) -> Result<ImportedPage, String>;
+}
+
+pub trait PageIndexRepository: Send + Sync {
+    fn load_indexed_page(
+        &self,
+        document_id: DocumentId,
+        source_fingerprint: &str,
+        page_number: u32,
+    ) -> Result<Option<ImportedPage>, PersistenceError>;
+
+    fn store_indexed_page(
+        &self,
+        document_id: DocumentId,
+        source_fingerprint: &str,
+        page: &ImportedPage,
+    ) -> Result<(), PersistenceError>;
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

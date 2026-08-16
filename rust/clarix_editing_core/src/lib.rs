@@ -29,7 +29,7 @@ pub use model::{
     ImageNode, ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
 };
 pub use page_service::{
-    PageImportState, PageScene, PageSceneError, PageSceneRequest, PageSceneService,
+    PageImportState, PageIndexTask, PageScene, PageSceneError, PageSceneRequest, PageSceneService,
     ViewportPriority,
 };
 pub use persistence::{
@@ -38,8 +38,9 @@ pub use persistence::{
 };
 pub use ports::{
     AtomicReplaceRequest, AtomicReplacementPort, CleanPatchRequest, CleanPatchSource, ImportedPage,
-    MaterializationPort, MaterializationReport, PageImportRequest, PageImportSource, RasterAsset,
-    SourceReference, ValidationExpectation, ValidationPort, ValidationReport,
+    MaterializationPort, MaterializationReport, PageImportRequest, PageImportSource,
+    PageIndexRepository, RasterAsset, SourceReference, ValidationExpectation, ValidationPort,
+    ValidationReport,
 };
 pub use save::{
     SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage,

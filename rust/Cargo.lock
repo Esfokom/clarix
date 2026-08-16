@@ -738,6 +738,7 @@ dependencies = [
  "sha2 0.10.9",
  "tempfile",
  "thiserror",
+ "unicode-normalization",
 ]
 
 [[package]]
@@ -771,6 +772,7 @@ dependencies = [
  "lopdf",
  "ocr-rs",
  "pdf_oxide",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
