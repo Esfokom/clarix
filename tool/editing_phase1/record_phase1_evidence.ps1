@@ -175,6 +175,9 @@ $report = [ordered]@{
     }
     externalReaders = if ($externalReaderEvidence) {
         [ordered]@{
+            status = if ($externalReaderEvidence.rustSearchExtractGeometry -eq "passed" `
+                -and $externalReaderEvidence.pdfrxPdfiumSearchExtractGeometry -eq "passed" `
+                -and (@("passed", "skipped_unavailable") -contains $externalReaderEvidence.externalReader.status)) { "passed" } else { "failed_or_incomplete" }
             rust = $externalReaderEvidence.rustSearchExtractGeometry
             pdfrxPdfium = $externalReaderEvidence.pdfrxPdfiumSearchExtractGeometry
             oldTextAbsent = $externalReaderEvidence.oldTextAbsent
@@ -182,7 +185,7 @@ $report = [ordered]@{
             evidencePath = "docs/testing/editing-phase1-external-reader.json"
         }
     } else {
-        [ordered]@{ rust = "pending"; pdfrxPdfium = "pending"; namedReader = "pending_or_named_skip" }
+        [ordered]@{ status = "pending"; rust = "pending"; pdfrxPdfium = "pending"; namedReader = "pending_or_named_skip" }
     }
     performance = [ordered]@{
         criterion = if ($criterionReport) { $criterionReport } else { [ordered]@{ status = "pending_execution" } }

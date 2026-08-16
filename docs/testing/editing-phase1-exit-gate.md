@@ -70,7 +70,7 @@ flutter drive --profile --driver test_driver/phase1_editing_test.dart --target i
 flutter drive --profile --driver test_driver/phase1_large_document_test.dart --target integration_test/phase1_large_document_test.dart
 & tool/editing_phase1/kill_recovery_probe.ps1 -ExecutablePath <profile-exe> -FixturePath <fixture> -SeedCount 100 -WalCheckpointInterval 10
 & tool/editing_phase1/save_fault_probe.ps1
-& tool/editing_phase1/external_reader_probe.ps1 -SavedPdf <saved-pdf> -ExpectedText <new-text> -OldText <old-text> -ReaderExecutable <reader> -ReaderName <name-and-version>
+& tool/editing_phase1/external_reader_probe.ps1 -SavedPdf <saved-pdf> -ExpectedText <new-text> -OldText <old-text> -ReaderName <name-and-version> -ReaderEvidencePath <reader-evidence.json>
 & tool/editing_phase1/record_phase1_evidence.ps1 -NonBuildGatePassed -OutputPath docs/testing/editing-phase1-results.json
 ```
 
@@ -79,6 +79,27 @@ DLL, isolated project roots, and real PDF files. Their drivers retain separate
 metric files under `build/editing_phase1/`; the evidence recorder validates
 the required latency, frame, reload, focus, scene-residency, and request-count
 thresholds before marking either profile result passed.
+
+Named-reader evidence uses schema version 1 and must bind the reader name and
+version to the saved-PDF and expected-text SHA-256 values, with `search`,
+`selectionCopy`, and `visualPosition` all recorded as `passed`. A generic
+process launch is recorded as insufficient evidence. A skip is accepted only
+with a named reader and a concrete unavailability reason.
+
+```json
+{
+  "schemaVersion": 1,
+  "readerName": "Microsoft Edge",
+  "readerVersion": "151.0.4129.86",
+  "savedPdfSha256": "<lowercase-sha256>",
+  "expectedTextSha256": "<lowercase-utf8-text-sha256>",
+  "oldTextSha256": "<lowercase-utf8-text-sha256>",
+  "search": "passed",
+  "selectionCopy": "passed",
+  "visualPosition": "passed",
+  "oldTextAbsent": "passed"
+}
+```
 
 `run_phase1_checks.ps1` does not invoke `cargo build`. It prints this pending,
 user-owned command:
