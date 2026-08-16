@@ -161,6 +161,13 @@ impl FontRef {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FontFallbackApproval {
+    pub proposal_token: String,
+    pub font: FontRef,
+    pub glyphs: Vec<SourceGlyph>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum TextAlignment {
     Left,

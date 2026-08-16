@@ -20,7 +20,10 @@ fn proposes_an_embeddable_true_type_face_with_exact_glyph_coverage() {
     assert_eq!(proposal.family, "Arial");
     assert!(proposal.postscript_name.starts_with("Arial"));
     let bytes = std::fs::read(&proposal.path).unwrap();
-    assert_eq!(proposal.bytes_sha256, format!("{:x}", Sha256::digest(bytes)));
+    assert_eq!(
+        proposal.bytes_sha256,
+        format!("{:x}", Sha256::digest(bytes))
+    );
 }
 
 #[test]

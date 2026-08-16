@@ -5,8 +5,8 @@ use crate::history::{can_coalesce, HistoryEntry};
 use crate::text::utf16_range_to_byte_range;
 use crate::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentModel, DocumentObject,
-    DocumentRevision, EditCapability, EditingError, EditorCommand, InverseOperation, ObjectId,
-    ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand, RecoveredCommand,
+    DocumentRevision, EditCapability, EditingError, EditorCommand, FontSource, InverseOperation,
+    ObjectId, ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand, RecoveredCommand,
     SelectionRebase, SessionId, TextCharacterBox, TextRun, Utf16Range, WritingDirection,
 };
 
@@ -251,6 +251,12 @@ impl EditorSessionState {
                 object_id,
                 range,
                 replacement,
+            }
+            | EditorCommand::ReplaceTextRangeWithFontFallback {
+                object_id,
+                range,
+                replacement,
+                ..
             } => Some(SelectionRebase {
                 object_id: *object_id,
                 replaced_range: *range,
@@ -311,9 +317,20 @@ impl EditorSessionState {
         let object_bounds = after.bounds();
         let mut expanded_text_bounds = None;
         match command {
-            EditorCommand::ReplaceTextRange {
-                range, replacement, ..
-            } => {
+            EditorCommand::ReplaceTextRange { .. }
+            | EditorCommand::ReplaceTextRangeWithFontFallback { .. } => {
+                let (range, replacement, fallback) = match command {
+                    EditorCommand::ReplaceTextRange {
+                        range, replacement, ..
+                    } => (range, replacement, None),
+                    EditorCommand::ReplaceTextRangeWithFontFallback {
+                        range,
+                        replacement,
+                        approval,
+                        ..
+                    } => (range, replacement, Some(approval.as_ref())),
+                    _ => unreachable!("replace arm must contain a replace command"),
+                };
                 let DocumentObject::Text(block) = &mut after else {
                     return Err(EditingError::WrongObjectKind(object_id));
                 };
@@ -321,6 +338,36 @@ impl EditorSessionState {
                     .map_err(|_| EditingError::InvalidTextBoundary)?;
                 let mut candidate = block.text.clone();
                 candidate.replace_range(byte_range, replacement);
+                if let Some(approval) = fallback {
+                    let valid_font = approval.font.is_valid()
+                        && approval.font.embeddable
+                        && approval.font.source == FontSource::ApprovedFallback
+                        && approval
+                            .font
+                            .asset_id
+                            .as_deref()
+                            .is_some_and(|asset| !asset.trim().is_empty());
+                    let glyphs_cover_candidate = !approval.glyphs.is_empty()
+                        && candidate.chars().all(|character| {
+                            approval
+                                .glyphs
+                                .iter()
+                                .any(|glyph| glyph.character_code == character as u32)
+                        });
+                    if approval.proposal_token.trim().is_empty()
+                        || !valid_font
+                        || !glyphs_cover_candidate
+                    {
+                        return Err(EditingError::InvalidCommand(
+                            "font fallback approval is invalid or incomplete".into(),
+                        ));
+                    }
+                    for run in &mut block.runs {
+                        run.style.font_family = Some(approval.font.postscript_name.clone());
+                    }
+                    block.font = Some(approval.font.clone());
+                    block.source_glyphs = approval.glyphs.clone();
+                }
                 if block.font.is_some() && !block.source_glyphs.is_empty() {
                     let mut affected_characters = String::new();
                     for character in candidate.chars().filter(|character| {
@@ -568,6 +615,7 @@ fn changed_objects(
 fn command_object_id(command: &EditorCommand) -> Option<ObjectId> {
     match command {
         EditorCommand::ReplaceTextRange { object_id, .. }
+        | EditorCommand::ReplaceTextRangeWithFontFallback { object_id, .. }
         | EditorCommand::SetTextStyle { object_id, .. }
         | EditorCommand::SetParagraphStyle { object_id, .. }
         | EditorCommand::MoveObject { object_id, .. }
@@ -686,14 +734,17 @@ fn object_patch(
     after: &DocumentObject,
     revision: DocumentRevision,
 ) -> ObjectPatch {
-    let (text, text_runs, character_boxes) = match (before, after) {
+    let (text, text_runs, character_boxes, font) = match (before, after) {
         (DocumentObject::Text(before), DocumentObject::Text(after)) => (
             (before.text != after.text).then(|| after.text.clone()),
             (before.runs != after.runs).then(|| after.runs.clone()),
             (before.character_boxes != after.character_boxes)
                 .then(|| after.character_boxes.clone()),
+            (before.font != after.font)
+                .then(|| after.font.clone())
+                .flatten(),
         ),
-        _ => (None, None, None),
+        _ => (None, None, None, None),
     };
     ObjectPatch {
         object_id: after.id(),
@@ -702,6 +753,7 @@ fn object_patch(
         text,
         text_runs,
         character_boxes,
+        font,
         bounds: (before.bounds() != after.bounds()).then(|| after.bounds()),
         transform: (before.transform() != after.transform()).then(|| after.transform()),
     }

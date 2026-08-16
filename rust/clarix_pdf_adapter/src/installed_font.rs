@@ -96,7 +96,10 @@ fn inspect_font(path: &Path, request: &InstalledFontRequest) -> Option<Installed
     if face.tables().glyf.is_none()
         || face.is_variable()
         || !face.is_outline_embedding_allowed()
-        || !matches!(face.permissions(), Some(Permissions::Installable | Permissions::Editable))
+        || !matches!(
+            face.permissions(),
+            Some(Permissions::Installable | Permissions::Editable)
+        )
         || !request
             .text
             .chars()
@@ -130,7 +133,11 @@ fn font_score(face: &InstalledFontFace, request: &InstalledFontRequest) -> i64 {
     let candidate = normalize_family(&face.family);
     let family = if requested == candidate { 100_000 } else { 0 };
     let weight = 10_000_i64 - i64::from(face.weight.abs_diff(request.weight));
-    let italic = if face.italic == request.italic { 1_000 } else { 0 };
+    let italic = if face.italic == request.italic {
+        1_000
+    } else {
+        0
+    };
     family + weight + italic
 }
 

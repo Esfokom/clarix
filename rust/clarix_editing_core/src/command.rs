@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AffineTransform, CommandId, DocumentRevision, InverseOperation, ObjectId, PageId,
-    ParagraphStyle, PdfBox, TextStyle, TypingGroup, Utf16Range,
+    AffineTransform, CommandId, DocumentRevision, FontFallbackApproval, InverseOperation, ObjectId,
+    PageId, ParagraphStyle, PdfBox, TextStyle, TypingGroup, Utf16Range,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,6 +18,12 @@ pub enum EditorCommand {
         object_id: ObjectId,
         range: Utf16Range,
         replacement: String,
+    },
+    ReplaceTextRangeWithFontFallback {
+        object_id: ObjectId,
+        range: Utf16Range,
+        replacement: String,
+        approval: Box<FontFallbackApproval>,
     },
     SetTextStyle {
         object_id: ObjectId,
@@ -91,6 +97,8 @@ pub struct ObjectPatch {
     pub text: Option<String>,
     pub text_runs: Option<Vec<crate::TextRun>>,
     pub character_boxes: Option<Vec<crate::TextCharacterBox>>,
+    #[serde(default)]
+    pub font: Option<crate::FontRef>,
     pub bounds: Option<PdfBox>,
     pub transform: Option<AffineTransform>,
 }

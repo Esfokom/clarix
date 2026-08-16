@@ -1,8 +1,8 @@
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    EditorCommand, EditorSessionState, FontRef, FontSource, ObjectId, OverflowPolicy, PageId,
-    PageNode, PdfBox, SessionId, SourceGlyph, TextBlock, TextCharacterBox, TextLayoutRecipe,
-    Utf16Range,
+    EditorCommand, EditorSessionState, FontFallbackApproval, FontRef, FontSource, ObjectId,
+    OverflowPolicy, PageId, PageNode, PdfBox, SessionId, SourceGlyph, TextBlock, TextCharacterBox,
+    TextLayoutRecipe, Utf16Range,
 };
 
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
@@ -325,6 +325,70 @@ fn replacement_rejects_unencodable_glyph_before_revision_advances() {
 }
 
 #[test]
+fn approved_fallback_atomically_replaces_text_and_font() {
+    let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    let result = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRangeWithFontFallback {
+                object_id,
+                range: Utf16Range::new(0, 1).unwrap(),
+                replacement: "€".into(),
+                approval: Box::new(fallback_approval(true)),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!(session.text(object_id).unwrap(), "€B");
+    let font = result.object_patches[0].font.as_ref().unwrap();
+    assert_eq!(font.postscript_name, "ArialMT");
+    assert_eq!(font.source, FontSource::ApprovedFallback);
+    let snapshot = session.snapshot().unwrap();
+    let DocumentObject::Text(block) = snapshot.object(object_id).unwrap() else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(block.font(), Some(font));
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    let restored = session.snapshot().unwrap();
+    let DocumentObject::Text(restored) = restored.object(object_id).unwrap() else {
+        panic!("fixture object must remain text")
+    };
+    assert_eq!(restored.text, "AB");
+    assert_eq!(restored.font().unwrap().postscript_name, "FixtureSans");
+}
+
+#[test]
+fn invalid_fallback_approval_does_not_advance_revision() {
+    let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    let error = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRangeWithFontFallback {
+                object_id,
+                range: Utf16Range::new(0, 1).unwrap(),
+                replacement: "€".into(),
+                approval: Box::new(fallback_approval(false)),
+            },
+        ))
+        .unwrap_err();
+
+    assert_eq!(error.code(), "invalid_command");
+    assert_eq!(session.revision(), DocumentRevision::INITIAL);
+    assert_eq!(session.text(object_id).unwrap(), "AB");
+}
+
+#[test]
 fn reject_overflow_policy_preserves_canonical_text_and_revision() {
     let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
     let mut session = EditorSessionState::new(SessionId::new(), model);
@@ -453,4 +517,26 @@ fn qualified_text_model(overflow: OverflowPolicy) -> (DocumentModel, ObjectId) {
     )
     .unwrap();
     (model, object_id)
+}
+
+fn fallback_approval(embeddable: bool) -> FontFallbackApproval {
+    FontFallbackApproval {
+        proposal_token: "proposal-token".into(),
+        font: FontRef {
+            postscript_name: "ArialMT".into(),
+            bytes_sha256: "b".repeat(64),
+            asset_id: Some(r"C:\Windows\Fonts\arial.ttf".into()),
+            source: FontSource::ApprovedFallback,
+            embeddable,
+        },
+        glyphs: ['€', 'B']
+            .into_iter()
+            .map(|character| SourceGlyph {
+                utf16_start: 0,
+                utf16_end: character.len_utf16() as u32,
+                character_code: character as u32,
+                glyph_id: character as u32,
+            })
+            .collect(),
+    }
 }
