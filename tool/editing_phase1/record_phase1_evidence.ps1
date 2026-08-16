@@ -162,6 +162,11 @@ $overallPassed = $worktreeCleanAtCapture `
 $overallWaived = $runtimeEvidenceWaiver -and $runtimeEvidenceWaiver.status -eq "accepted_by_user" `
     -and $buildEvidence.status -eq "passed" `
     -and $saveFaultEvidence.status -eq "passed"
+$legacyAuthorityRemoved = -not (Test-Path (Join-Path $repoRoot "lib/src/features/workspace/application/pdf_editing_controller.dart")) `
+    -and -not (Test-Path (Join-Path $repoRoot "lib/src/features/workspace/application/pdf_edit_intent_dispatcher.dart")) `
+    -and -not (Test-Path (Join-Path $repoRoot "lib/src/features/workspace/infrastructure/pdf_native_edit_coordinator.dart")) `
+    -and -not (Test-Path (Join-Path $repoRoot "lib/src/features/workspace/infrastructure/pdf_preview_document_controller.dart")) `
+    -and -not (Test-Path (Join-Path $repoRoot "lib/src/features/workspace/infrastructure/pdf_edit_save_service.dart"))
 
 $report = [ordered]@{
     schemaVersion = 2
@@ -271,7 +276,9 @@ $report = [ordered]@{
         "pending"
     }
     userOwnedReleaseBuild = $buildEvidence
-    legacyDeletion = if ($overallPassed) {
+    legacyDeletion = if ($legacyAuthorityRemoved -and ($overallPassed -or $overallWaived)) {
+        "completed_and_verified"
+    } elseif ($overallPassed) {
         "authorized_by_passing_gate"
     } elseif ($overallWaived) {
         "authorized_by_user_runtime_waiver"

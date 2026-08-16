@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "capturedAtUtc": "2026-08-16T23:07:23.0363440Z",
-  "gitCommit": "f29045759dbaa49eb3ec957b66bf21bd7653fe72",
+  "capturedAtUtc": "2026-08-16T23:22:43.6147394Z",
+  "gitCommit": "9e4ca4b0b47948d58346372964ddcb2977f011db",
   "worktreeCleanAtCapture": true,
   "overallStatus": "accepted_with_user_runtime_waiver",
   "runtimeEvidenceWaiver": {
@@ -52,15 +52,16 @@
     "notes": "The full non-build gate remains attributed to nonBuildGate.gitCommit. This focused delta verifies approved fallback proposal, durable project asset recovery, generated transport, explicit UI approval, local PDF font-state restoration, and searchable embedded output without invoking cargo build."
   },
   "profileEditing": {
-    "status": "waived_by_user"
+    "status": "waived_by_user",
+    "reason": "User waived the remaining slow-machine runtime profiles and empirical loops after the individual tests passed."
   },
   "profileLargeDocument": {
-    "status": "waived_by_user"
+    "status": "waived_by_user",
+    "reason": "User waived the remaining slow-machine runtime profiles and empirical loops after the individual tests passed."
   },
   "forcedKillRecovery": {
     "status": "waived_by_user",
-    "requiredSeeds": 100,
-    "requiresWalCheckpointTermination": true
+    "reason": "User waived the remaining slow-machine runtime profiles and empirical loops after the individual tests passed."
   },
   "saveFaultMatrix": {
     "status": "passed",
@@ -70,9 +71,7 @@
   },
   "externalReaders": {
     "status": "waived_by_user",
-    "rust": "pending",
-    "pdfrxPdfium": "pending",
-    "namedReader": "pending_or_named_skip"
+    "reason": "User waived the remaining slow-machine runtime profiles and empirical loops after the individual tests passed."
   },
   "performance": {
     "criterion": {
@@ -109,5 +108,5 @@
     "dllSha256": "dbcd401edc01f6ee2f7155dea653bb9117b9ec97046b896ac477d706a4ad7f71",
     "timestampUtc": "2026-08-16T22:11:04.3272751Z"
   },
-  "legacyDeletion": "authorized_by_user_runtime_waiver"
+  "legacyDeletion": "completed_and_verified"
 }
