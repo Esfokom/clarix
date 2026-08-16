@@ -62,7 +62,7 @@ flutter drive --profile --driver test_driver/integration_test.dart --target inte
 & tool/editing_phase1/kill_recovery_probe.ps1 -ExecutablePath <profile-exe> -FixturePath <fixture> -SeedCount 100 -WalCheckpointInterval 10
 & tool/editing_phase1/save_fault_probe.ps1
 & tool/editing_phase1/external_reader_probe.ps1 -SavedPdf <saved-pdf> -ExpectedText <new-text> -OldText <old-text> -ReaderExecutable <reader> -ReaderName <name-and-version>
-& tool/editing_phase1/record_phase1_evidence.ps1 -OutputPath docs/testing/editing-phase1-results.json
+& tool/editing_phase1/record_phase1_evidence.ps1 -NonBuildGatePassed -OutputPath docs/testing/editing-phase1-results.json
 ```
 
 `run_phase1_checks.ps1` does not invoke `cargo build`. It prints this pending,

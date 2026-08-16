@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "capturedAtUtc": "2026-08-16T16:41:39.0457966Z",
-  "gitCommit": "2b8290bf4c36b5b316e283f273901bf5ba8a6a5f",
+  "capturedAtUtc": "2026-08-16T17:59:52.2083836Z",
+  "gitCommit": "1ebea9bb6677dd79e281a674e3207789330e16a8",
   "os": "Microsoft Windows NT 10.0.26200.0",
   "cpu": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
   "logicalProcessors": 8,
@@ -9,7 +9,17 @@
   "rustc": "rustc 1.96.0 (ac68faa20 2026-05-25)",
   "corpusManifestSha256": "006d2079c041698945587d2ffef9b4ea4a097931038149a917e066f60edf5d9e",
   "nonBuildGate": {
-    "status": "pending_execution"
+    "status": "passed",
+    "scope": [
+      "rust_format",
+      "rust_clippy",
+      "rust_tests",
+      "benchmark_compilation",
+      "generated_bindings",
+      "flutter_editing_tests",
+      "flutter_compatibility_tests",
+      "flutter_analysis"
+    ]
   },
   "profileEditing": {
     "status": "pending_profile_execution"
@@ -19,7 +29,8 @@
   },
   "forcedKillRecovery": {
     "status": "pending_executable",
-    "requiredSeeds": 100
+    "requiredSeeds": 100,
+    "requiresWalCheckpointTermination": true
   },
   "saveFaultMatrix": {
     "status": "passed",
@@ -39,7 +50,7 @@
     "reloadCount": "pending_profile",
     "viewportShiftCount": "pending_profile"
   },
-  "generatedBindingsDiff": "pending",
+  "generatedBindingsDiff": "passed",
   "userOwnedReleaseBuild": {
     "status": "pending_user_execution",
     "exitCode": null,

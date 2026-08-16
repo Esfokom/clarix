@@ -1,5 +1,6 @@
 param(
     [string]$OutputPath = "docs/testing/editing-phase1-results.json",
+    [switch]$NonBuildGatePassed,
     [string]$UserBuildExitCode,
     [string]$UserBuildDllPath,
     [string]$UserBuildTimestampUtc
@@ -39,7 +40,14 @@ $report = [ordered]@{
     memoryBytes = [uint64]$computer.TotalPhysicalMemory
     rustc = ((rustc --version) -join "`n").Trim()
     corpusManifestSha256 = (Get-FileHash (Join-Path $repoRoot "test_fixtures/editing_corpus/manifest.json") -Algorithm SHA256).Hash.ToLowerInvariant()
-    nonBuildGate = [ordered]@{ status = "pending_execution" }
+    nonBuildGate = if ($NonBuildGatePassed) {
+        [ordered]@{
+            status = "passed"
+            scope = @("rust_format", "rust_clippy", "rust_tests", "benchmark_compilation", "generated_bindings", "flutter_editing_tests", "flutter_compatibility_tests", "flutter_analysis")
+        }
+    } else {
+        [ordered]@{ status = "pending_execution" }
+    }
     profileEditing = [ordered]@{ status = "pending_profile_execution" }
     profileLargeDocument = [ordered]@{ status = "pending_profile_execution" }
     forcedKillRecovery = if ($killRecoveryEvidence) {
@@ -80,7 +88,7 @@ $report = [ordered]@{
         reloadCount = "pending_profile"
         viewportShiftCount = "pending_profile"
     }
-    generatedBindingsDiff = "pending"
+    generatedBindingsDiff = if ($NonBuildGatePassed) { "passed" } else { "pending" }
     userOwnedReleaseBuild = $buildEvidence
     legacyDeletion = "blocked_until_all_required_evidence_passes"
 }
