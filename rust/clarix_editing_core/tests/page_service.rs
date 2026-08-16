@@ -115,3 +115,25 @@ fn background_indexing_visits_every_page_with_the_same_bound() {
         assert_eq!(service.page_state(page_number), PageImportState::Indexed);
     }
 }
+
+#[test]
+fn thousand_page_visit_order_keeps_two_worker_bound_and_reports_residency() {
+    let importer = Arc::new(FixtureImporter::default());
+    let service = PageSceneService::new(
+        DocumentId::from_source_key("thousand-page-document"),
+        SourceReference::new("sha256:thousand", "thousand.pdf"),
+        1_000,
+        2,
+        importer.clone(),
+    )
+    .unwrap();
+
+    service.index_all_pages().unwrap();
+
+    assert!(importer.max_active.load(Ordering::Acquire) <= 2);
+    assert_eq!(service.resident_scene_count(), 1_000);
+    assert_eq!(service.in_flight_count(), 0);
+    for page_number in 1..=1_000 {
+        assert_eq!(service.import_count(page_number), 1);
+    }
+}

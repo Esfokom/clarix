@@ -30,3 +30,7 @@ harness = false
 [[bench]]
 name = "clean_patch"
 harness = false
+
+[[bench]]
+name = "save_latency"
+harness = false

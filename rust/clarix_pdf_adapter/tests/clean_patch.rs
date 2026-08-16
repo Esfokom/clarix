@@ -76,6 +76,8 @@ fn second_request_hits_cache_and_budget_evicts_coldest_scale() {
 
     cache.get_or_render(request(144)).unwrap();
     assert!(!cache.contains(&first.key));
+    assert_eq!(cache.resident_entry_count(), 1);
+    assert!(cache.decoded_bytes() <= 300);
 }
 
 #[test]

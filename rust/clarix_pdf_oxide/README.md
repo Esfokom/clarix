@@ -57,3 +57,21 @@ pwsh -File tool/editing_foundation/record_baseline.ps1 -OutputPath docs/testing/
 Binding regeneration is opt-in with `-IncludeBindingGeneration`. The Windows
 release build is deliberately opt-in with `-IncludeNativeBuild`; its explicit
 manual command remains the `cargo build --release` command above.
+
+## Phase 1 editing gate
+
+The Phase 1 gate covers the durable SQLite sidecar, bounded page service,
+clean-patch cache, native text materialization, independent validation, atomic
+Windows replacement, Flutter editing overlays, recovery, and external-reader
+qualification. From the repository root, run its non-build checks with:
+
+```text
+pwsh -File tool/editing_phase1/run_phase1_checks.ps1
+```
+
+The script compiles tests and benchmark targets but intentionally never invokes
+`cargo build`. Profile integration, forced-kill, external-reader, and evidence
+recording commands are documented in
+`docs/testing/editing-phase1-exit-gate.md`. The release DLL remains a user-owned
+command whose exit code, path, SHA-256, and timestamp must be added to
+`editing-phase1-results.json` before the legacy mutation path can be removed.

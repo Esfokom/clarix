@@ -254,6 +254,20 @@ impl CleanPatchCache {
             .unwrap_or(false)
     }
 
+    pub fn resident_entry_count(&self) -> usize {
+        self.state
+            .lock()
+            .map(|state| state.entries.len())
+            .unwrap_or_default()
+    }
+
+    pub fn decoded_bytes(&self) -> usize {
+        self.state
+            .lock()
+            .map(|state| state.decoded_bytes)
+            .unwrap_or_default()
+    }
+
     pub fn set_visible(&self, key: &CleanPatchKey, visible: bool) {
         if let Ok(mut state) = self.state.lock() {
             if let Some(entry) = state.entries.get_mut(key) {

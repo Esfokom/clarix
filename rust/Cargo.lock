@@ -731,6 +731,7 @@ name = "clarix_editing_store"
 version = "0.1.0"
 dependencies = [
  "clarix_editing_core",
+ "criterion",
  "rusqlite",
  "serde",
  "serde_json",

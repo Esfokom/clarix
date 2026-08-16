@@ -1,0 +1,56 @@
+param(
+    [string]$OutputPath = "docs/testing/editing-phase1-results.json",
+    [string]$UserBuildExitCode,
+    [string]$UserBuildDllPath,
+    [string]$UserBuildTimestampUtc
+)
+
+$ErrorActionPreference = "Stop"
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
+$resolvedOutput = Join-Path $repoRoot $OutputPath
+$computer = Get-CimInstance Win32_ComputerSystem
+$processor = Get-CimInstance Win32_Processor | Select-Object -First 1
+$buildEvidence = [ordered]@{ status = "pending_user_execution"; exitCode = $null; dllPath = $null; dllSha256 = $null; timestampUtc = $null }
+
+if ($UserBuildExitCode) {
+    $buildEvidence.status = if ([int]$UserBuildExitCode -eq 0) { "passed" } else { "failed" }
+    $buildEvidence.exitCode = [int]$UserBuildExitCode
+    $buildEvidence.timestampUtc = $UserBuildTimestampUtc
+    if ($UserBuildDllPath -and (Test-Path $UserBuildDllPath)) {
+        $resolvedDll = (Resolve-Path $UserBuildDllPath).Path
+        $buildEvidence.dllPath = $resolvedDll
+        $buildEvidence.dllSha256 = (Get-FileHash $resolvedDll -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+}
+
+$report = [ordered]@{
+    schemaVersion = 1
+    capturedAtUtc = [DateTime]::UtcNow.ToString("o")
+    gitCommit = (git -C $repoRoot rev-parse HEAD).Trim()
+    os = [System.Environment]::OSVersion.VersionString
+    cpu = $processor.Name.Trim()
+    logicalProcessors = [int]$computer.NumberOfLogicalProcessors
+    memoryBytes = [uint64]$computer.TotalPhysicalMemory
+    rustc = ((rustc --version) -join "`n").Trim()
+    corpusManifestSha256 = (Get-FileHash (Join-Path $repoRoot "test_fixtures/editing_corpus/manifest.json") -Algorithm SHA256).Hash.ToLowerInvariant()
+    nonBuildGate = [ordered]@{ status = "pending_execution" }
+    profileEditing = [ordered]@{ status = "pending_profile_execution" }
+    profileLargeDocument = [ordered]@{ status = "pending_profile_execution" }
+    forcedKillRecovery = [ordered]@{ status = "pending_executable"; requiredSeeds = 100 }
+    saveFaultMatrix = [ordered]@{ status = "pending_execution" }
+    externalReaders = [ordered]@{ rust = "pending"; pdfrxPdfium = "pending"; namedReader = "pending_or_named_skip" }
+    performance = [ordered]@{
+        sidecarLatency = "pending_criterion"
+        saveLatency = "pending_criterion"
+        frameLatency = "pending_profile"
+        memoryPlateau = "pending_profile"
+        reloadCount = "pending_profile"
+        viewportShiftCount = "pending_profile"
+    }
+    generatedBindingsDiff = "pending"
+    userOwnedReleaseBuild = $buildEvidence
+    legacyDeletion = "blocked_until_all_required_evidence_passes"
+}
+
+New-Item -ItemType Directory -Force -Path (Split-Path $resolvedOutput) | Out-Null
+$report | ConvertTo-Json -Depth 8 | Set-Content -Encoding utf8 $resolvedOutput

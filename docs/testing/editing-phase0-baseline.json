@@ -21,8 +21,8 @@
     "pageInspectionLatency": "measured",
     "memoryPlateau": "measured",
     "rasterDifference": "harness_ready_no_materializer",
-    "sidecarLatency": "owned_by_sidecar_plan",
-    "saveLatency": "owned_by_save_plan"
+    "sidecarLatency": "phase1_comparison_baseline_pending_measurement",
+    "saveLatency": "phase1_comparison_baseline_pending_measurement"
   },
   "commands": [
     {

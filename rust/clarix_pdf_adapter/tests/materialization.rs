@@ -5,7 +5,9 @@ use clarix_editing_core::{
     EditorSessionState, FontRef, FontSource, SessionId, SourceGlyph, TextBlock, TextLayoutRecipe,
     Utf16Range,
 };
-use clarix_pdf_adapter::{PdfImporter, PdfOxideImporter, PdfTextMaterializer, SourceRef};
+use clarix_pdf_adapter::{
+    IndependentPdfValidator, PdfImporter, PdfOxideImporter, PdfTextMaterializer, SourceRef,
+};
 
 fn source() -> SourceRef {
     SourceRef::from_path(
@@ -115,10 +117,21 @@ fn replacement_survives_reopen_as_searchable_text() {
 fn unqualified_snapshot_is_rejected_before_output_exists() {
     let source = source();
     let imported = PdfOxideImporter.inspect_page(&source, 1).unwrap();
+    let mut page = imported.page;
+    let object = &page.objects[0];
+    let DocumentObject::Text(text) = object else {
+        panic!("fixture must contain text")
+    };
+    page.objects[0] = DocumentObject::text(TextBlock::plain(
+        object.id(),
+        object.page_id(),
+        text.text.clone(),
+        object.bounds(),
+    ));
     let model = DocumentModel::new(
         clarix_editing_core::DocumentId::from_source_key("unqualified-test"),
         source.fingerprint().into(),
-        vec![imported.page],
+        vec![page],
     )
     .unwrap();
     let directory = tempfile::tempdir().unwrap();
@@ -130,4 +143,29 @@ fn unqualified_snapshot_is_rejected_before_output_exists() {
 
     assert_eq!(error.code(), "unsupported_materialization");
     assert!(!output.exists());
+}
+
+#[test]
+fn repeated_materialize_validate_cycles_leave_only_expected_outputs() {
+    let directory = tempfile::tempdir().unwrap();
+    let snapshot = qualified_snapshot();
+    let materializer = PdfTextMaterializer::new(source());
+    for cycle in 0..25 {
+        let output = directory.path().join(format!("cycle-{cycle}.pdf"));
+        materializer
+            .materialize_snapshot(&snapshot, &output)
+            .unwrap();
+        let report = IndependentPdfValidator
+            .validate_document(&output, 1)
+            .unwrap();
+        assert!(report.valid, "cycle {cycle}: {:?}", report.failures);
+    }
+    let files = std::fs::read_dir(directory.path())
+        .unwrap()
+        .map(|entry| entry.unwrap().path())
+        .collect::<Vec<_>>();
+    assert_eq!(files.len(), 25);
+    assert!(files
+        .iter()
+        .all(|path| { path.extension().and_then(|extension| extension.to_str()) == Some("pdf") }));
 }

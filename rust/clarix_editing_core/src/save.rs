@@ -111,7 +111,10 @@ impl<'a> SaveCoordinator<'a> {
         let materialization = self
             .materializer
             .materialize(&request.snapshot, &working)
-            .map_err(|error| error.at_stage(SaveStage::MaterializeTemp))?;
+            .map_err(|error| {
+                let _ = std::fs::remove_file(&working);
+                error.at_stage(SaveStage::MaterializeTemp)
+            })?;
         let expectation = ValidationExpectation {
             document_id: request.snapshot.id,
             revision: request.snapshot.revision,
@@ -120,7 +123,10 @@ impl<'a> SaveCoordinator<'a> {
         let validation = self
             .validator
             .validate(&working, &expectation)
-            .map_err(|error| error.at_stage(SaveStage::ValidateTemp))?;
+            .map_err(|error| {
+                let _ = std::fs::remove_file(&working);
+                error.at_stage(SaveStage::ValidateTemp)
+            })?;
         if !validation.valid {
             let _ = std::fs::remove_file(&working);
             return Err(SaveError::new(
@@ -141,7 +147,10 @@ impl<'a> SaveCoordinator<'a> {
                 backup: backup.clone(),
                 replace_existing: request.mode == SaveMode::Save,
             })
-            .map_err(|error| error.at_stage(SaveStage::ReplaceOrMove))?;
+            .map_err(|error| {
+                let _ = std::fs::remove_file(&working);
+                error.at_stage(SaveStage::ReplaceOrMove)
+            })?;
 
         let installed_fingerprint = fingerprint_file(&request.target).map_err(|message| {
             partial_finalization_error("installed_output_unreadable", message)

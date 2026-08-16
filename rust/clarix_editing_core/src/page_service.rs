@@ -304,6 +304,22 @@ impl PageSceneService {
             .and_then(|state| state.import_counts.get(&page_number).copied())
             .unwrap_or_default()
     }
+
+    pub fn resident_scene_count(&self) -> usize {
+        self.inner
+            .state
+            .lock()
+            .map(|state| state.scenes.len())
+            .unwrap_or_default()
+    }
+
+    pub fn in_flight_count(&self) -> usize {
+        self.inner
+            .state
+            .lock()
+            .map(|state| state.in_flight.len())
+            .unwrap_or_default()
+    }
 }
 
 fn state_for_priority(priority: ViewportPriority) -> PageImportState {

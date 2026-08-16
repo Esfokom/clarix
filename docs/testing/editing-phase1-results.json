@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "capturedAtUtc": null,
+  "gitCommit": null,
+  "status": "pending_evidence_execution",
+  "nonBuildGate": { "status": "pending_execution" },
+  "profileEditing": { "status": "pending_profile_execution" },
+  "profileLargeDocument": { "status": "pending_profile_execution" },
+  "forcedKillRecovery": {
+    "status": "pending_executable",
+    "requiredSeeds": 100
+  },
+  "saveFaultMatrix": { "status": "pending_execution" },
+  "externalReaders": {
+    "rust": "pending",
+    "pdfrxPdfium": "pending",
+    "namedReader": "pending_or_named_skip"
+  },
+  "performance": {
+    "sidecarLatency": "pending_criterion",
+    "saveLatency": "pending_criterion",
+    "frameLatency": "pending_profile",
+    "memoryPlateau": "pending_profile",
+    "reloadCount": "pending_profile",
+    "viewportShiftCount": "pending_profile"
+  },
+  "generatedBindingsDiff": "pending",
+  "userOwnedReleaseBuild": {
+    "status": "pending_user_execution",
+    "exitCode": null,
+    "dllPath": null,
+    "dllSha256": null,
+    "timestampUtc": null
+  },
+  "legacyDeletion": "blocked_until_all_required_evidence_passes"
+}
