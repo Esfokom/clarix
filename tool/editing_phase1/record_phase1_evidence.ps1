@@ -18,12 +18,16 @@ if (-not $CriterionRoot) {
 function Get-CriterionP95Micros {
     param([string[]]$Segments)
 
-    $samplePath = $CriterionRoot
+    $segmentedPath = $CriterionRoot
     foreach ($segment in $Segments) {
-        $samplePath = Join-Path $samplePath $segment
+        $segmentedPath = Join-Path $segmentedPath $segment
     }
-    $samplePath = Join-Path $samplePath "new/sample.json"
-    if (-not (Test-Path $samplePath)) {
+    $candidatePaths = @(
+        (Join-Path $segmentedPath "new/sample.json"),
+        (Join-Path (Join-Path $CriterionRoot ($Segments -join "_")) "new/sample.json")
+    )
+    $samplePath = $candidatePaths | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $samplePath) {
         return $null
     }
     $sample = Get-Content $samplePath -Raw | ConvertFrom-Json
@@ -208,7 +212,13 @@ $report = [ordered]@{
         reloadCount = if ($profileEditingEvidence -and $profileEditingEvidence.phase1Editing) { [int]$profileEditingEvidence.phase1Editing.pageReloadCount } else { "pending_profile" }
         viewportShiftCount = if ($profileEditingEvidence -and $profileEditingEvidence.phase1Editing) { [int]$profileEditingEvidence.phase1Editing.viewportShiftCount } else { "pending_profile" }
     }
-    generatedBindingsDiff = if ($NonBuildGatePassed) { "passed" } else { "pending" }
+    generatedBindingsDiff = if ($NonBuildGatePassed) {
+        "passed"
+    } elseif ($existingReport -and $existingReport.generatedBindingsDiff) {
+        $existingReport.generatedBindingsDiff
+    } else {
+        "pending"
+    }
     userOwnedReleaseBuild = $buildEvidence
     legacyDeletion = "blocked_until_all_required_evidence_passes"
 }
