@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/workspace/editing/application/editor_session_controller.dart';
 import 'package:clarix/src/features/workspace/editing/domain/editor_selection.dart';
 import 'package:clarix/src/features/workspace/editing/infrastructure/editor_session_gateway.dart';
+import 'package:clarix/src/features/workspace/editing/presentation/clean_patch_layer.dart';
+import 'package:clarix/src/features/workspace/editing/presentation/editor_hit_test.dart';
+import 'package:clarix/src/features/workspace/editing/presentation/page_edit_scene.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -28,14 +32,10 @@ void main() {
       ),
     );
 
-    final focus = FocusNode();
     final scroll = ScrollController(initialScrollOffset: 240);
-    var compositionCommits = 0;
-    controller.setCompositionCommitter(() async {
-      compositionCommits += 1;
-    });
+    final patch = (await tester.runAsync(_cleanPatch))!;
     addTearDown(() async {
-      focus.dispose();
+      patch.image.dispose();
       scroll.dispose();
       await controller.close();
     });
@@ -47,15 +47,30 @@ void main() {
             const SizedBox(height: 800),
             KeyedSubtree(
               key: const ValueKey<String>('pdfrx-page-1'),
-              child: TextField(focusNode: focus),
+              child: StreamBuilder(
+                stream: controller.changes,
+                initialData: controller.state,
+                builder: (context, snapshot) {
+                  final document = snapshot.data!;
+                  return PageEditScene(
+                    scene: document.scenes[1]!,
+                    document: document,
+                    displaySize: const Size(612, 792),
+                    cleanPatches: <String, CleanPatchAsset>{_objectId: patch},
+                    session: controller,
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 800),
           ],
         ),
       ),
     );
-    focus.requestFocus();
     await tester.pump();
+    final editor = find.byKey(const Key('clarix-native-editor'));
+    expect(editor, findsOneWidget);
+    final focus = tester.widget<TextField>(editor).focusNode!;
     final pageElement = tester.element(
       find.byKey(const ValueKey<String>('pdfrx-page-1')),
     );
@@ -66,14 +81,45 @@ void main() {
 
     for (var index = 0; index < 1_000; index += 1) {
       final before = Stopwatch()..start();
-      controller.applyLocalDelta(
-        objectId: _objectId,
-        range: const EditorTextRange(start: 0, end: 1),
-        replacement: index.isEven ? 'B' : 'A',
-      );
+      await tester.enterText(editor, index.isEven ? 'B' : 'A');
       await controller.flushCommands();
+      await tester.pump();
       latencies.add(before.elapsedMicroseconds);
     }
+    final beforeComposition = gateway.acceptedCommands;
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'IME',
+        selection: TextSelection.collapsed(offset: 3),
+        composing: TextRange(start: 0, end: 3),
+      ),
+    );
+    await tester.pump();
+    expect(gateway.acceptedCommands, beforeComposition);
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'IME',
+        selection: TextSelection.collapsed(offset: 3),
+        composing: TextRange.empty,
+      ),
+    );
+    await controller.flushCommands();
+    await tester.pump();
+    expect(gateway.acceptedCommands, beforeComposition + 1);
+
+    final sceneObject = controller.state.scenes[1]!.objects.single;
+    final hitIndex = EditorHitTestIndex(
+      pageSize: const Size(612, 792),
+      displaySize: const Size(612, 792),
+      objects: <EditorObjectHitGeometry>[
+        EditorObjectHitGeometry.fromObject(sceneObject),
+      ],
+    );
+    final caretTimer = Stopwatch()..start();
+    for (var index = 0; index < 10_000; index += 1) {
+      hitIndex.hitTest(Offset((index % 100).toDouble(), 782));
+    }
+    final warmCaretLookupMicros = caretTimer.elapsedMicroseconds;
     await controller.undo();
     await controller.redo();
     await controller.save(
@@ -87,9 +133,8 @@ void main() {
 
     latencies.sort();
     final p95 = latencies[(latencies.length * 0.95).floor()];
-    expect(gateway.acceptedCommands, 1_002);
-    expect(controller.state.revision, 1_002);
-    expect(compositionCommits, 1);
+    expect(gateway.acceptedCommands, 1_003);
+    expect(controller.state.revision, 1_003);
     expect(focus.hasFocus, isTrue);
     expect(scroll.offset, initialOffset);
     expect(
@@ -110,11 +155,24 @@ void main() {
       'viewportShiftCount': 0,
       'focusChangeCount': 0,
       'finalRevision': controller.state.revision,
-      'imeCompositionCommits': compositionCommits,
+      'imeCompositionCommits': 1,
       'undoRedoCommands': 2,
+      'warmCaretLookups': 10_000,
+      'warmCaretLookupTotalMicros': warmCaretLookupMicros,
     };
   });
 }
+
+Future<CleanPatchAsset> _cleanPatch() => CleanPatchDecoder.decodeRgba(
+  handle: 'profile-clean-patch',
+  objectId: _objectId,
+  bounds: const EditorPdfBox(left: 0, bottom: 0, right: 100, top: 20),
+  dpi: 144,
+  bleedPoints: 1,
+  width: 2,
+  height: 2,
+  rgbaBytes: Uint8List.fromList(List<int>.filled(16, 255)),
+);
 
 const _objectId = 'profile-object';
 
@@ -168,7 +226,32 @@ class _ProfileGateway implements EditorSessionGateway {
         ),
         capability: 'editable',
         modifiedRevision: expectedRevision,
-        runs: const <EditorTextRun>[],
+        runs: const <EditorTextRun>[
+          EditorTextRun(
+            start: 0,
+            end: 1,
+            style: EditorTextStyle(
+              fontSize: 12,
+              fontWeight: 400,
+              italic: false,
+              colorRgba: <int>[0, 0, 0, 255],
+            ),
+          ),
+        ],
+        characterBoxes: const <EditorTextCharacterBox>[
+          EditorTextCharacterBox(
+            start: 0,
+            end: 1,
+            bounds: EditorPdfBox(left: 0, bottom: 0, right: 100, top: 20),
+          ),
+        ],
+        layout: const EditorTextLayoutRecipe(
+          baseline: 12,
+          lineHeight: 14,
+          characterSpacing: 0,
+          horizontalScale: 1,
+          direction: 'lefttoright',
+        ),
       ),
     ],
   );
