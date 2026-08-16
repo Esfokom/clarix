@@ -11,6 +11,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $resolvedOutput = Join-Path $repoRoot $OutputPath
 $existingReport = if (Test-Path $resolvedOutput) { Get-Content $resolvedOutput -Raw | ConvertFrom-Json } else { $null }
+$runtimeEvidenceWaiver = if ($existingReport -and $existingReport.runtimeEvidenceWaiver) { $existingReport.runtimeEvidenceWaiver } else { $null }
 $currentCommit = (git -C $repoRoot rev-parse HEAD).Trim()
 $worktreeCleanAtCapture = @((git -C $repoRoot status --porcelain)).Count -eq 0
 if (-not $CriterionRoot) {
@@ -158,13 +159,17 @@ $overallPassed = $worktreeCleanAtCapture `
     -and $criterionReport.status -eq "passed" `
     -and $buildEvidence.status -eq "passed" `
     -and $buildEvidence.gitCommit -eq $currentCommit
+$overallWaived = $runtimeEvidenceWaiver -and $runtimeEvidenceWaiver.status -eq "accepted_by_user" `
+    -and $buildEvidence.status -eq "passed" `
+    -and $saveFaultEvidence.status -eq "passed"
 
 $report = [ordered]@{
     schemaVersion = 2
     capturedAtUtc = [DateTime]::UtcNow.ToString("o")
     gitCommit = $currentCommit
     worktreeCleanAtCapture = $worktreeCleanAtCapture
-    overallStatus = if ($overallPassed) { "passed" } else { "pending_required_evidence" }
+    overallStatus = if ($overallPassed) { "passed" } elseif ($overallWaived) { "accepted_with_user_runtime_waiver" } else { "pending_required_evidence" }
+    runtimeEvidenceWaiver = $runtimeEvidenceWaiver
     os = [System.Environment]::OSVersion.VersionString
     cpu = $processor.Name.Trim()
     logicalProcessors = [int]$computer.NumberOfLogicalProcessors
@@ -180,6 +185,8 @@ $report = [ordered]@{
             evidencePath = "build/editing_phase1/phase1-editing-profile.json"
             metrics = $profileEditingEvidence.phase1Editing
         }
+    } elseif ($runtimeEvidenceWaiver) {
+        [ordered]@{ status = "waived_by_user"; reason = $runtimeEvidenceWaiver.reason }
     } else {
         [ordered]@{ status = "pending_profile_execution" }
     }
@@ -190,6 +197,8 @@ $report = [ordered]@{
             evidencePath = "build/editing_phase1/phase1-large-document-profile.json"
             metrics = $profileLargeDocumentEvidence.phase1LargeDocument
         }
+    } elseif ($runtimeEvidenceWaiver) {
+        [ordered]@{ status = "waived_by_user"; reason = $runtimeEvidenceWaiver.reason }
     } else {
         [ordered]@{ status = "pending_profile_execution" }
     }
@@ -201,6 +210,8 @@ $report = [ordered]@{
             seeds = [int]$killRecoveryEvidence.seeds
             walCheckpointTerminations = [int]$killRecoveryEvidence.walCheckpointTerminations
         }
+    } elseif ($runtimeEvidenceWaiver) {
+        [ordered]@{ status = "waived_by_user"; reason = $runtimeEvidenceWaiver.reason }
     } else {
         [ordered]@{ status = "pending_executable"; requiredSeeds = 100; requiresWalCheckpointTermination = $true }
     }
@@ -226,6 +237,8 @@ $report = [ordered]@{
             namedReader = $externalReaderEvidence.externalReader
             evidencePath = "docs/testing/editing-phase1-external-reader.json"
         }
+    } elseif ($runtimeEvidenceWaiver) {
+        [ordered]@{ status = "waived_by_user"; reason = $runtimeEvidenceWaiver.reason }
     } else {
         [ordered]@{ status = "pending"; rust = "pending"; pdfrxPdfium = "pending"; namedReader = "pending_or_named_skip" }
     }
@@ -258,7 +271,13 @@ $report = [ordered]@{
         "pending"
     }
     userOwnedReleaseBuild = $buildEvidence
-    legacyDeletion = "blocked_until_all_required_evidence_passes"
+    legacyDeletion = if ($overallPassed) {
+        "authorized_by_passing_gate"
+    } elseif ($overallWaived) {
+        "authorized_by_user_runtime_waiver"
+    } else {
+        "blocked_until_all_required_evidence_passes"
+    }
 }
 
 New-Item -ItemType Directory -Force -Path (Split-Path $resolvedOutput) | Out-Null

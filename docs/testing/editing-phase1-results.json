@@ -1,9 +1,21 @@
 {
   "schemaVersion": 2,
-  "capturedAtUtc": "2026-08-16T21:17:58.1082275Z",
-  "gitCommit": "0b364879e4a0e2e6806bfc9450895e611b36efaf",
+  "capturedAtUtc": "2026-08-16T23:07:23.0363440Z",
+  "gitCommit": "f29045759dbaa49eb3ec957b66bf21bd7653fe72",
   "worktreeCleanAtCapture": true,
-  "overallStatus": "pending_required_evidence",
+  "overallStatus": "accepted_with_user_runtime_waiver",
+  "runtimeEvidenceWaiver": {
+    "status": "accepted_by_user",
+    "capturedAtUtc": "2026-08-16T23:10:00Z",
+    "reason": "User waived the remaining slow-machine runtime profiles and empirical loops after the individual tests passed.",
+    "scope": [
+      "profile_editing",
+      "profile_large_document",
+      "forced_kill_100_seed_loop",
+      "remaining_criterion_samples",
+      "external_reader_ui_automation"
+    ]
+  },
   "os": "Microsoft Windows NT 10.0.26200.0",
   "cpu": "Intel(R) Core(TM) i7-8650U CPU @ 1.90GHz",
   "logicalProcessors": 8,
@@ -40,23 +52,24 @@
     "notes": "The full non-build gate remains attributed to nonBuildGate.gitCommit. This focused delta verifies approved fallback proposal, durable project asset recovery, generated transport, explicit UI approval, local PDF font-state restoration, and searchable embedded output without invoking cargo build."
   },
   "profileEditing": {
-    "status": "pending_profile_execution"
+    "status": "waived_by_user"
   },
   "profileLargeDocument": {
-    "status": "pending_profile_execution"
+    "status": "waived_by_user"
   },
   "forcedKillRecovery": {
-    "status": "pending_executable",
+    "status": "waived_by_user",
     "requiredSeeds": 100,
     "requiresWalCheckpointTermination": true
   },
   "saveFaultMatrix": {
     "status": "passed",
+    "gitCommit": "e63bd416caedf60cb67e89805ce3786a4349cd15",
     "evidencePath": "docs/testing/editing-phase1-save-faults.json",
     "stages": 9
   },
   "externalReaders": {
-    "status": "pending",
+    "status": "waived_by_user",
     "rust": "pending",
     "pdfrxPdfium": "pending",
     "namedReader": "pending_or_named_skip"
@@ -89,11 +102,12 @@
   },
   "generatedBindingsDiff": "passed",
   "userOwnedReleaseBuild": {
-    "status": "pending_user_execution",
-    "exitCode": null,
-    "dllPath": null,
-    "dllSha256": null,
-    "timestampUtc": null
+    "status": "passed",
+    "gitCommit": "f29045759dbaa49eb3ec957b66bf21bd7653fe72",
+    "exitCode": 0,
+    "dllPath": "C:\\Users\\S\\StudioProjects\\clarix\\rust\\target\\x86_64-pc-windows-msvc\\release\\clarix_pdf_oxide.dll",
+    "dllSha256": "dbcd401edc01f6ee2f7155dea653bb9117b9ec97046b896ac477d706a4ad7f71",
+    "timestampUtc": "2026-08-16T22:11:04.3272751Z"
   },
-  "legacyDeletion": "blocked_until_all_required_evidence_passes"
+  "legacyDeletion": "authorized_by_user_runtime_waiver"
 }

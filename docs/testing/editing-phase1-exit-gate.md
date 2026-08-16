@@ -1,10 +1,10 @@
 # Phase 1 Native Text Editing Exit Gate
 
-Status: **implementation verification in progress; runtime evidence pending**.
+Status: **accepted with the user's runtime-evidence waiver; legacy editing
+authority removed and focused migration verification passed on `610e615`**.
 
-Phase 1 is not accepted, and the legacy Dart/PDFium mutation path must not be
-deleted, until every required row below passes on the evidence commit. The
-canonical results file is
+The remaining slow-machine empirical runs were explicitly waived after the
+individual checks passed. The canonical results file is
 [`editing-phase1-results.json`](editing-phase1-results.json).
 
 ## Required identity
@@ -51,13 +51,13 @@ two workers per document.
 | Patch cache | cold/warm behavior, decoded bytes within budget, coldest non-visible eviction | Harness implemented |
 | Save loop | repeated materialize/independent-validate cycles and no temp/backup leak | Harness implemented |
 | Approved font fallback | explicit one-time approval, durable project asset recovery, embedded searchable output, and local font-state restoration | Passed on `07ca201`; focused Rust/Flutter verification |
-| Profile editing | 1,000 edits, IME, undo/redo, focus/page/zoom/scroll identity, frame timings | Pending profile execution |
-| Large document | 2,001 scene requests, separate indexed/unindexed p95s, bounded residency, and RSS warm-tail/final sampling | Harness implemented; pending profile execution |
-| Crash recovery | at least 100 seeded terminations including WAL checkpoint timing | Harness implemented with per-seed isolated project roots and deterministic passive-checkpoint/truncate midpoint; pending executable and run |
+| Profile editing | 1,000 edits, IME, undo/redo, focus/page/zoom/scroll identity, frame timings | Waived by user after individual verification; slow-machine profile run stopped |
+| Large document | 2,001 scene requests, separate indexed/unindexed p95s, bounded residency, and RSS warm-tail/final sampling | Waived by user; harness implemented |
+| Crash recovery | at least 100 seeded terminations including WAL checkpoint timing | Waived by user; harness implemented with isolated roots and deterministic checkpoint timing |
 | Save faults | every save stage; hashes for source/temp/backup/output/sidecar before and after | Passed; see `editing-phase1-save-faults.json` |
-| External readers | actual supplied PDF through Rust and pdfrx/PDFium; named reader search/select evidence | Actual-file harness implemented; pending saved output and reader automation |
+| External readers | actual supplied PDF through Rust and pdfrx/PDFium; named reader search/select evidence | Waived by user; actual-file harness implemented |
 | Generated bindings | regeneration produces no diff | Full gate passed on the recorded evidence commit; fallback DTOs regenerated on `07ca201` and passed focused compile/Clippy/analyze |
-| User release DLL | user-owned release command exits zero and DLL hash is recorded | Pending user execution |
+| User release DLL | user-owned release command exits zero and DLL hash is recorded | Passed; SHA-256 `dbcd401edc01f6ee2f7155dea653bb9117b9ec97046b896ac477d706a4ad7f71` |
 
 ## Reproducible commands
 
