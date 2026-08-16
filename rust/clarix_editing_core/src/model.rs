@@ -77,6 +77,8 @@ pub struct TextBlock {
     pub source_glyphs: Vec<SourceGlyph>,
     #[serde(default)]
     pub character_boxes: Vec<crate::TextCharacterBox>,
+    #[serde(default)]
+    pub layout_capacity_graphemes: u32,
     pub capability_reason: Option<CapabilityReason>,
 }
 
@@ -95,6 +97,7 @@ impl TextBlock {
             layout: TextLayoutRecipe::default(),
             source_glyphs: Vec::new(),
             character_boxes: Vec::new(),
+            layout_capacity_graphemes: 0,
             capability_reason: None,
         }
     }
@@ -122,6 +125,9 @@ impl TextBlock {
     }
 
     pub fn with_character_boxes(mut self, character_boxes: Vec<crate::TextCharacterBox>) -> Self {
+        if self.layout_capacity_graphemes == 0 {
+            self.layout_capacity_graphemes = character_boxes.len() as u32;
+        }
         self.character_boxes = character_boxes;
         self
     }
@@ -555,6 +561,11 @@ fn validate_text_block(block: &TextBlock) -> Result<(), ModelError> {
         return Err(ModelError::InvalidTextRuns(id));
     }
     if !block.character_boxes.is_empty() {
+        if block.layout_capacity_graphemes != 0
+            && block.layout_capacity_graphemes < block.character_boxes.len() as u32
+        {
+            return Err(ModelError::InvalidCharacterGeometry(id));
+        }
         let mut expected_start = 0;
         for character in &block.character_boxes {
             if character.range.start != expected_start

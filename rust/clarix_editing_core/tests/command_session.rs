@@ -1,7 +1,8 @@
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    EditorCommand, EditorSessionState, ObjectId, PageId, PageNode, PdfBox, SessionId, TextBlock,
-    TextCharacterBox, Utf16Range,
+    EditorCommand, EditorSessionState, FontRef, FontSource, ObjectId, OverflowPolicy, PageId,
+    PageNode, PdfBox, SessionId, SourceGlyph, TextBlock, TextCharacterBox, TextLayoutRecipe,
+    Utf16Range,
 };
 
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
@@ -276,4 +277,180 @@ fn resizing_text_reflows_and_publishes_character_geometry() {
     let boxes = result.object_patches[0].character_boxes.as_ref().unwrap();
     assert_eq!(boxes[0].bounds.right, 100.0);
     assert_eq!(boxes[1].bounds.right, 200.0);
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 2).unwrap(),
+                replacement: "ABCD".into(),
+            },
+        ))
+        .unwrap();
+}
+
+#[test]
+fn replacement_rejects_unencodable_glyph_before_revision_advances() {
+    let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    let command_id = CommandId::new();
+    let command = CommandEnvelope::user(
+        command_id,
+        DocumentRevision::INITIAL,
+        EditorCommand::ReplaceTextRange {
+            object_id,
+            range: Utf16Range::new(0, 1).unwrap(),
+            replacement: "漢".into(),
+        },
+    );
+
+    assert_eq!(
+        session.submit(command.clone()).unwrap_err().code(),
+        "font_fallback_required"
+    );
+    assert_eq!(session.revision(), DocumentRevision::INITIAL);
+    assert_eq!(session.text(object_id).unwrap(), "AB");
+
+    let retry = CommandEnvelope {
+        payload: EditorCommand::ReplaceTextRange {
+            object_id,
+            range: Utf16Range::new(0, 1).unwrap(),
+            replacement: "C".into(),
+        },
+        ..command
+    };
+    assert_eq!(session.submit(retry).unwrap().committed_revision.value(), 1);
+}
+
+#[test]
+fn reject_overflow_policy_preserves_canonical_text_and_revision() {
+    let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+
+    let error = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 2).unwrap(),
+                replacement: "ABC".into(),
+            },
+        ))
+        .unwrap_err();
+
+    assert_eq!(error.code(), "text_overflow");
+    assert_eq!(session.revision(), DocumentRevision::INITIAL);
+    assert_eq!(session.text(object_id).unwrap(), "AB");
+}
+
+#[test]
+fn increase_bounds_overflow_policy_expands_and_publishes_bounds() {
+    let (model, object_id) = qualified_text_model(OverflowPolicy::IncreaseBounds);
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+
+    let result = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 2).unwrap(),
+                replacement: "ABC".into(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!(result.object_patches[0].bounds.unwrap().right, 150.0);
+    assert_eq!(session.text(object_id).unwrap(), "ABC");
+}
+
+#[test]
+fn shortening_text_does_not_shrink_persistent_layout_capacity() {
+    let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 2).unwrap(),
+                replacement: "A".into(),
+            },
+        ))
+        .unwrap();
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::from_value(1),
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 1).unwrap(),
+                replacement: "AB".into(),
+            },
+        ))
+        .unwrap();
+
+    assert_eq!(session.text(object_id).unwrap(), "AB");
+}
+
+fn qualified_text_model(overflow: OverflowPolicy) -> (DocumentModel, ObjectId) {
+    let page_id = PageId::from_source_key("qualified-command/page");
+    let object_id = ObjectId::from_source_key("qualified-command/object");
+    let layout = TextLayoutRecipe {
+        overflow,
+        ..TextLayoutRecipe::default()
+    };
+    let block = TextBlock::plain(
+        object_id,
+        page_id,
+        "AB",
+        PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
+    )
+    .with_text_contract(
+        FontRef {
+            postscript_name: "FixtureSans".into(),
+            bytes_sha256: "a".repeat(64),
+            asset_id: Some("fixture-font".into()),
+            source: FontSource::Embedded,
+            embeddable: true,
+        },
+        layout,
+        ['A', 'B', 'C']
+            .into_iter()
+            .map(|character| SourceGlyph {
+                utf16_start: 0,
+                utf16_end: 1,
+                character_code: character as u32,
+                glyph_id: character as u32,
+            })
+            .collect(),
+    )
+    .with_character_boxes(vec![
+        TextCharacterBox {
+            range: Utf16Range::new(0, 1).unwrap(),
+            bounds: PdfBox::new(0.0, 0.0, 50.0, 20.0).unwrap(),
+        },
+        TextCharacterBox {
+            range: Utf16Range::new(1, 2).unwrap(),
+            bounds: PdfBox::new(50.0, 0.0, 100.0, 20.0).unwrap(),
+        },
+    ]);
+    let model = DocumentModel::new(
+        DocumentId::from_source_key("qualified-command"),
+        "sha256:qualified-command".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            200.0,
+            100.0,
+            vec![DocumentObject::text(block)],
+        )],
+    )
+    .unwrap();
+    (model, object_id)
 }

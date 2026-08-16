@@ -221,6 +221,79 @@ fn native_editor_session_opens_edits_and_closes() {
 }
 
 #[test]
+fn native_submit_rejects_missing_glyphs_and_overflow_before_durability() {
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(
+            tempfile::tempdir()
+                .unwrap()
+                .keep()
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    })
+    .unwrap();
+    let scene = session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    let object = &scene.objects[0];
+    let object_id = object.object_id.clone();
+    let missing_glyph = session
+        .submit(NativeSubmitCommandRequest {
+            schema_version: 1,
+            command_id: CommandId::new().to_string(),
+            base_revision: 0,
+            payload: NativeEditorCommand {
+                kind: NativeEditorCommandKind::ReplaceTextRange,
+                object_id: Some(object_id.clone()),
+                start: Some(0),
+                end: Some(1),
+                replacement: Some("漢".into()),
+                style: None,
+                transform: None,
+                bounds: None,
+                radians: None,
+                center_x: None,
+                center_y: None,
+                label: None,
+            },
+        })
+        .unwrap_err();
+    assert!(missing_glyph.starts_with("font_fallback_required:"));
+    assert_eq!(session.metadata().unwrap().revision, 0);
+
+    let text_length = object.text.as_ref().unwrap().encode_utf16().count() as u32;
+    let overflow = session
+        .submit(NativeSubmitCommandRequest {
+            schema_version: 1,
+            command_id: CommandId::new().to_string(),
+            base_revision: 0,
+            payload: NativeEditorCommand {
+                kind: NativeEditorCommandKind::ReplaceTextRange,
+                object_id: Some(object_id),
+                start: Some(0),
+                end: Some(text_length),
+                replacement: Some("A".repeat(object.character_boxes.len() + 1)),
+                style: None,
+                transform: None,
+                bounds: None,
+                radians: None,
+                center_x: None,
+                center_y: None,
+                label: None,
+            },
+        })
+        .unwrap_err();
+    assert!(overflow.starts_with("text_overflow:"));
+    assert_eq!(session.metadata().unwrap().revision, 0);
+    session.close().unwrap();
+}
+
+#[test]
 fn native_editor_session_rejects_schema_and_identifier_mismatches() {
     let session = NativeEditorSession::open(NativeOpenEditorRequest {
         source_path: fixture_path(),

@@ -19,6 +19,19 @@ pub enum EditingError {
     WrongObjectKind(ObjectId),
     #[error("object {0} is read-only")]
     ReadOnly(ObjectId),
+    #[error("object {object_id} requires an approved font fallback for: {affected_characters}")]
+    FontFallbackRequired {
+        object_id: ObjectId,
+        affected_characters: String,
+    },
+    #[error(
+        "text object {object_id} requires {required_graphemes} graphemes but has capacity {capacity_graphemes}"
+    )]
+    TextOverflow {
+        object_id: ObjectId,
+        required_graphemes: usize,
+        capacity_graphemes: usize,
+    },
     #[error("editor session is closed")]
     SessionClosed,
     #[error("there is no command to undo")]
@@ -44,6 +57,8 @@ impl EditingError {
             Self::ObjectNotFound(_) => "object_not_found",
             Self::WrongObjectKind(_) => "wrong_object_kind",
             Self::ReadOnly(_) => "read_only",
+            Self::FontFallbackRequired { .. } => "font_fallback_required",
+            Self::TextOverflow { .. } => "text_overflow",
             Self::SessionClosed => "session_closed",
             Self::NothingToUndo => "nothing_to_undo",
             Self::NothingToRedo => "nothing_to_redo",

@@ -104,6 +104,32 @@ void main() {
     },
   );
 
+  for (final code in <String>['font_fallback_required', 'text_overflow']) {
+    test(
+      '$code rolls back optimistic text without refreshing the page',
+      () async {
+        final gateway = FakeEditorSessionGateway();
+        final controller = _controller(gateway);
+        await controller.open('fixture.pdf');
+
+        controller.applyLocalDelta(
+          objectId: objectId,
+          range: const EditorTextRange(start: 0, end: 6),
+          replacement: 'Rejected',
+        );
+        expect(controller.state.visibleText(objectId), 'Rejected');
+        gateway.rejectSubmit(Exception('$code: rejected before durability'));
+        await pumpEventQueue();
+
+        expect(controller.state.visibleText(objectId), 'Before');
+        expect(controller.state.errorCode, code);
+        expect(controller.state.revision, 0);
+        expect(gateway.pageRequests, 1);
+        await controller.close();
+      },
+    );
+  }
+
   test('discards a result for a different command id', () async {
     final gateway = FakeEditorSessionGateway();
     final controller = _controller(gateway);

@@ -6,8 +6,8 @@ use crate::text::utf16_range_to_byte_range;
 use crate::{
     AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentModel, DocumentObject,
     DocumentRevision, EditCapability, EditingError, EditorCommand, InverseOperation, ObjectId,
-    ObjectPatch, PageNode, PdfBox, PreparedCommand, RecoveredCommand, SelectionRebase, SessionId,
-    TextCharacterBox, TextRun, Utf16Range, WritingDirection,
+    ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand, RecoveredCommand,
+    SelectionRebase, SessionId, TextCharacterBox, TextRun, Utf16Range, WritingDirection,
 };
 
 #[derive(Debug, Clone)]
@@ -309,6 +309,7 @@ impl EditorSessionState {
         }
         let mut after = before.clone();
         let object_bounds = after.bounds();
+        let mut expanded_text_bounds = None;
         match command {
             EditorCommand::ReplaceTextRange {
                 range, replacement, ..
@@ -318,9 +319,56 @@ impl EditorSessionState {
                 };
                 let byte_range = utf16_range_to_byte_range(&block.text, *range)
                     .map_err(|_| EditingError::InvalidTextBoundary)?;
-                block.text.replace_range(byte_range, replacement);
+                let mut candidate = block.text.clone();
+                candidate.replace_range(byte_range, replacement);
+                if block.font.is_some() && !block.source_glyphs.is_empty() {
+                    let mut affected_characters = String::new();
+                    for character in candidate.chars().filter(|character| {
+                        !block
+                            .source_glyphs
+                            .iter()
+                            .any(|glyph| glyph.character_code == *character as u32)
+                    }) {
+                        if !affected_characters.contains(character) {
+                            affected_characters.push(character);
+                        }
+                    }
+                    if !affected_characters.is_empty() {
+                        return Err(EditingError::FontFallbackRequired {
+                            object_id,
+                            affected_characters,
+                        });
+                    }
+                }
+                let capacity_graphemes = block.layout_capacity_graphemes as usize;
+                let required_graphemes = candidate.graphemes(true).count();
+                let layout_bounds =
+                    if capacity_graphemes > 0 && required_graphemes > capacity_graphemes {
+                        match block.layout.overflow {
+                            OverflowPolicy::Reject => {
+                                return Err(EditingError::TextOverflow {
+                                    object_id,
+                                    required_graphemes,
+                                    capacity_graphemes,
+                                });
+                            }
+                            OverflowPolicy::IncreaseBounds => {
+                                let expanded = expand_text_bounds(
+                                    object_bounds,
+                                    block.layout.direction,
+                                    required_graphemes as f64 / capacity_graphemes as f64,
+                                );
+                                expanded_text_bounds = Some(expanded);
+                                block.layout_capacity_graphemes = required_graphemes as u32;
+                                expanded
+                            }
+                        }
+                    } else {
+                        object_bounds
+                    };
+                block.text = candidate;
                 block.character_boxes =
-                    reflow_character_boxes(&block.text, object_bounds, block.layout.direction);
+                    reflow_character_boxes(&block.text, layout_bounds, block.layout.direction);
                 let full_range = Utf16Range::new(0, block.text.encode_utf16().count() as u32)
                     .map_err(|_| EditingError::InvalidTextBoundary)?;
                 let style = block
@@ -361,6 +409,19 @@ impl EditorSessionState {
             EditorCommand::ResizeObject { bounds, .. } => {
                 after.set_bounds(*bounds);
                 if let DocumentObject::Text(block) = &mut after {
+                    let current_capacity = if block.layout_capacity_graphemes == 0 {
+                        block.character_boxes.len()
+                    } else {
+                        block.layout_capacity_graphemes as usize
+                    };
+                    let old_extent = primary_extent(object_bounds, block.layout.direction);
+                    let new_extent = primary_extent(*bounds, block.layout.direction);
+                    if old_extent > 0.0 && current_capacity > 0 {
+                        block.layout_capacity_graphemes =
+                            ((current_capacity as f64 * new_extent / old_extent).floor() as usize)
+                                .max(block.character_boxes.len())
+                                as u32;
+                    }
                     block.character_boxes =
                         reflow_character_boxes(&block.text, *bounds, block.layout.direction);
                 }
@@ -388,6 +449,9 @@ impl EditorSessionState {
                     "history command reached object dispatcher".into(),
                 ));
             }
+        }
+        if let Some(bounds) = expanded_text_bounds {
+            after.set_bounds(bounds);
         }
         after.set_modified_revision(revision);
         self.model
@@ -560,6 +624,30 @@ fn reflow_character_boxes(
             character
         })
         .collect()
+}
+
+fn expand_text_bounds(bounds: PdfBox, direction: WritingDirection, scale: f64) -> PdfBox {
+    match direction {
+        WritingDirection::LeftToRight => PdfBox {
+            right: bounds.left + (bounds.right - bounds.left) * scale,
+            ..bounds
+        },
+        WritingDirection::RightToLeft => PdfBox {
+            left: bounds.right - (bounds.right - bounds.left) * scale,
+            ..bounds
+        },
+        WritingDirection::TopToBottom => PdfBox {
+            bottom: bounds.top - (bounds.top - bounds.bottom) * scale,
+            ..bounds
+        },
+    }
+}
+
+fn primary_extent(bounds: PdfBox, direction: WritingDirection) -> f64 {
+    match direction {
+        WritingDirection::LeftToRight | WritingDirection::RightToLeft => bounds.right - bounds.left,
+        WritingDirection::TopToBottom => bounds.top - bounds.bottom,
+    }
 }
 
 fn split_text_runs(runs: &[TextRun], range: Utf16Range, style: crate::TextStyle) -> Vec<TextRun> {
