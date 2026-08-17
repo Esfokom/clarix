@@ -6,6 +6,23 @@ use clarix_editing_core::{
     PdfBox, SearchMode, SearchRequest, TextBlock, Utf16Range,
 };
 
+#[test]
+fn actor_validates_selection_against_its_current_revision() {
+    let (model, object_id) = sample_model("selection");
+    let actor = EditorSessionActor::spawn(model);
+    let selection = actor
+        .validate_selection(clarix_editing_core::SelectionSet {
+            revision: DocumentRevision::INITIAL,
+            kind: clarix_editing_core::SelectionKind::Objects,
+            ranges: Vec::new(),
+            object_ids: vec![object_id],
+            primary_index: Some(0),
+        })
+        .unwrap();
+    assert_eq!(selection.object_ids, vec![object_id]);
+    actor.close().unwrap();
+}
+
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
     let page_id = PageId::from_source_key("actor-test/page/1");
     let object_id = ObjectId::from_source_key("actor-test/page/1/text/1");

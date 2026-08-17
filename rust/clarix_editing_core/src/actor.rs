@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, DurableCommit, EditingError,
     EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SearchIndex, SearchPage,
-    SearchRequest, SessionId,
+    SearchRequest, SelectionSet, SessionId,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -34,6 +34,10 @@ enum ActorRequest {
     Search {
         request: SearchRequest,
         reply: Sender<Result<SearchPage, EditingError>>,
+    },
+    ValidateSelection {
+        selection: SelectionSet,
+        reply: Sender<Result<SelectionSet, EditingError>>,
     },
     Subscribe {
         capacity: usize,
@@ -183,6 +187,21 @@ impl EditorSessionActor {
             .map_err(|_| EditingError::ActorUnavailable)?
     }
 
+    pub fn validate_selection(
+        &self,
+        selection: SelectionSet,
+    ) -> Result<SelectionSet, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::ValidateSelection { selection, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
     pub fn subscribe(&self) -> Result<Receiver<EditorEvent>, EditingError> {
         self.subscribe_with_capacity(DEFAULT_SUBSCRIBER_CAPACITY)
     }
@@ -308,6 +327,9 @@ fn run_actor(
                         .map_err(|error| EditingError::InvalidCommand(error.to_string()))
                 });
                 let _ = reply.send(result);
+            }
+            ActorRequest::ValidateSelection { selection, reply } => {
+                let _ = reply.send(session.validate_selection(selection));
             }
             ActorRequest::Subscribe { capacity, reply } => {
                 let (sender, events) = bounded(capacity);
