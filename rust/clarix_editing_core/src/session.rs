@@ -1,13 +1,14 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::history::{can_coalesce, HistoryEntry};
 use crate::text::utf16_range_to_byte_range;
 use crate::{
-    AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentModel, DocumentObject,
-    DocumentRevision, EditCapability, EditingError, EditorCommand, FontSource, InverseOperation,
-    ObjectId, ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand, RecoveredCommand,
-    SelectionRebase, SessionId, TextCharacterBox, TextRun, Utf16Range, WritingDirection,
+    AffineTransform, AtomicEdit, CommandEnvelope, CommandId, CommandResult, DocumentModel,
+    DocumentObject, DocumentRevision, EditCapability, EditingError, EditorCommand, FontSource,
+    InverseOperation, ObjectId, ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand,
+    RecoveredCommand, ReplaceAllPreview, SearchIndex, SearchRequest, SelectionRebase, SessionId,
+    TextCharacterBox, TextRun, Utf16Range, WritingDirection,
 };
 
 #[derive(Debug, Clone)]
@@ -17,6 +18,7 @@ pub struct EditorSessionState {
     committed_commands: HashSet<CommandId>,
     undo_stack: Vec<HistoryEntry>,
     redo_stack: Vec<HistoryEntry>,
+    replace_previews: HashMap<String, ReplaceAllPreview>,
     closed: bool,
 }
 
@@ -28,6 +30,7 @@ impl EditorSessionState {
             committed_commands: HashSet::new(),
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
+            replace_previews: HashMap::new(),
             closed: false,
         }
     }
@@ -217,6 +220,73 @@ impl EditorSessionState {
         self.publish(prepared)
     }
 
+    pub fn preview_replace_all(
+        &mut self,
+        request: SearchRequest,
+        replacement: impl Into<String>,
+    ) -> Result<ReplaceAllPreview, EditingError> {
+        self.ensure_open()?;
+        let matches = SearchIndex::from_document(&self.model)
+            .all_matches(&request)
+            .map_err(|error| EditingError::InvalidCommand(error.to_string()))?;
+        if matches.is_empty() {
+            return Err(EditingError::InvalidCommand(
+                "replace-all query has no matches".into(),
+            ));
+        }
+        let preview = ReplaceAllPreview {
+            preview_id: uuid::Uuid::new_v4().to_string(),
+            revision: self.revision(),
+            replacement: replacement.into(),
+            matches,
+        };
+        self.replace_previews
+            .insert(preview.preview_id.clone(), preview.clone());
+        Ok(preview)
+    }
+
+    pub fn approve_replace_all(
+        &mut self,
+        preview_id: &str,
+        command_id: CommandId,
+        base_revision: DocumentRevision,
+    ) -> Result<CommandResult, EditingError> {
+        self.ensure_open()?;
+        let preview = self
+            .replace_previews
+            .get(preview_id)
+            .cloned()
+            .ok_or_else(|| {
+                EditingError::InvalidCommand("replace-all preview is unavailable".into())
+            })?;
+        if base_revision != self.revision() || preview.revision != base_revision {
+            return Err(EditingError::RevisionConflict {
+                expected: base_revision,
+                actual: self.revision(),
+            });
+        }
+        let edits = preview
+            .matches
+            .iter()
+            .rev()
+            .map(|matched| AtomicEdit::ReplaceTextRange {
+                object_id: matched.object_id,
+                range: Utf16Range::new(matched.start_utf16, matched.end_utf16)
+                    .expect("search ranges are ordered"),
+                replacement: preview.replacement.clone(),
+            })
+            .collect();
+        self.submit(CommandEnvelope {
+            command_id,
+            base_revision,
+            transaction_id: Some(preview.preview_id),
+            actor: crate::ActorKind::User,
+            provenance_ids: Vec::new(),
+            typing_group: None,
+            payload: EditorCommand::ApplyTransaction { edits },
+        })
+    }
+
     pub(crate) fn hydrate_page(
         &mut self,
         page: PageNode,
@@ -339,6 +409,7 @@ impl EditorSessionState {
         };
         self.model.set_revision(next_revision);
         self.committed_commands.insert(envelope.command_id);
+        self.replace_previews.clear();
         Ok(CommandResult {
             command_id: envelope.command_id,
             previous_revision,

@@ -43,6 +43,14 @@ pub struct SearchPage {
     pub is_complete: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReplaceAllPreview {
+    pub preview_id: String,
+    pub revision: DocumentRevision,
+    pub replacement: String,
+    pub matches: Vec<TextRangeRef>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum SearchError {
     #[error("search query must not be empty")]
@@ -95,7 +103,30 @@ impl SearchIndex {
     }
 
     pub fn search(&self, request: SearchRequest) -> Result<SearchPage, SearchError> {
-        validate_request(&request)?;
+        let mut matches = self.all_matches(&request)?;
+        let total_matches =
+            u32::try_from(matches.len()).map_err(|_| SearchError::ResultOverflow)?;
+        let start = usize::try_from(request.offset).unwrap_or(usize::MAX);
+        let end = start
+            .saturating_add(request.limit as usize)
+            .min(matches.len());
+        let page_matches = if start >= matches.len() {
+            Vec::new()
+        } else {
+            matches.drain(start..end).collect()
+        };
+        Ok(SearchPage {
+            revision: self.revision,
+            matches: page_matches,
+            total_matches,
+            indexed_pages: self.page_count,
+            page_count: self.page_count,
+            is_complete: true,
+        })
+    }
+
+    pub fn all_matches(&self, request: &SearchRequest) -> Result<Vec<TextRangeRef>, SearchError> {
+        validate_request(request)?;
         let mut matches = Vec::new();
         let query = match request.mode {
             SearchMode::Exact | SearchMode::Regex => request.query.clone(),
@@ -136,25 +167,7 @@ impl SearchIndex {
             }
         }
 
-        let total_matches =
-            u32::try_from(matches.len()).map_err(|_| SearchError::ResultOverflow)?;
-        let start = usize::try_from(request.offset).unwrap_or(usize::MAX);
-        let end = start
-            .saturating_add(request.limit as usize)
-            .min(matches.len());
-        let page_matches = if start >= matches.len() {
-            Vec::new()
-        } else {
-            matches.drain(start..end).collect()
-        };
-        Ok(SearchPage {
-            revision: self.revision,
-            matches: page_matches,
-            total_matches,
-            indexed_pages: self.page_count,
-            page_count: self.page_count,
-            is_complete: true,
-        })
+        Ok(matches)
     }
 }
 

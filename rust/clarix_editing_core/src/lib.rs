@@ -47,7 +47,10 @@ pub use save::{
     SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage,
     SaveStageGate,
 };
-pub use search::{SearchError, SearchIndex, SearchMode, SearchPage, SearchRequest, TextRangeRef};
+pub use search::{
+    ReplaceAllPreview, SearchError, SearchIndex, SearchMode, SearchPage, SearchRequest,
+    TextRangeRef,
+};
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontFallbackApproval, FontRef, FontSource, OverflowPolicy,
