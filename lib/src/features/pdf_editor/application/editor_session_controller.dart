@@ -6,6 +6,7 @@ import '../domain/editor_document_state.dart';
 import '../domain/editor_save_state.dart';
 import '../domain/editor_selection.dart';
 import '../infrastructure/editor_session_gateway.dart';
+import 'editor_viewport_controller.dart';
 
 typedef EditorCommandIdFactory = String Function();
 typedef EditorPhaseTwoMutation =
@@ -43,13 +44,19 @@ class EditorSessionController {
   final StreamController<EditorDocumentState> _changes =
       StreamController<EditorDocumentState>.broadcast(sync: true);
   StreamSubscription<EditorEvent>? _events;
-  final Map<int, int> _pageRequestGenerations = <int, int>{};
   EditorDocumentState _state = const EditorDocumentState();
   bool _disposed = false;
   Future<void> Function()? _commitComposition;
   bool _saveCancelled = false;
   int _fontFallbackEpoch = 0;
   Completer<void>? _phaseTwoMutationCompletion;
+  late final EditorViewportController _viewport = EditorViewportController(
+    gateway: _gateway,
+    maxResidentScenes: _maxResidentScenes,
+    state: () => _state,
+    emit: _emit,
+    isDisposed: () => _disposed,
+  );
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
@@ -65,6 +72,15 @@ class EditorSessionController {
       _state.pendingCommand != null || _phaseTwoMutationOutstanding;
 
   bool get _phaseTwoMutationOutstanding => _phaseTwoMutationCompletion != null;
+
+  EditorPhaseTwoGateway get phaseTwoGatewayForFeature => _phaseTwoGateway;
+  int get revisionForFeature => _state.revision;
+  void ensureActiveForFeature() => _ensureActive();
+  EditorDocumentState get stateForFeature => _state;
+  void replaceStateForFeature(EditorDocumentState next) => _emit(next);
+  Future<EditorCommandResult> submitPhaseTwoMutationForFeature(
+    EditorPhaseTwoMutation mutation,
+  ) => _submitPhaseTwoMutation(mutation);
 
   Future<void> open(String sourcePath) async {
     _ensureActive();
@@ -90,98 +106,14 @@ class EditorSessionController {
     int pageNumber, {
     EditorViewportPriority priority = EditorViewportPriority.visible,
     bool force = false,
-  }) async {
+  }) {
     _ensureActive();
-    if (pageNumber < 1 || pageNumber > _state.pageCount) {
-      return;
-    }
-    if (!force && _state.scenes[pageNumber]?.revision == _state.revision) {
-      return;
-    }
-    final requestedRevision = _state.revision;
-    final generation = (_pageRequestGenerations[pageNumber] ?? 0) + 1;
-    _pageRequestGenerations[pageNumber] = generation;
-    final scene = await _gateway.requestPage(
-      pageNumber,
-      requestedRevision,
-      priority: priority,
-    );
-    if (_disposed ||
-        _pageRequestGenerations[pageNumber] != generation ||
-        scene.revision != _state.revision) {
-      return;
-    }
-    final scenes = Map<int, EditorPageScene>.of(_state.scenes)
-      ..remove(pageNumber)
-      ..[pageNumber] = scene;
-    final objects = Map<String, EditorObjectState>.of(_state.objects);
-    final protectedObjects = <String>{
-      if (_state.selection case final selection?) selection.objectId,
-      if (_state.optimisticEdit case final edit?) edit.objectId,
-      if (_state.queuedEdit case final edit?) edit.objectId,
-    };
-    while (scenes.length > _maxResidentScenes) {
-      final candidates = scenes.keys.where(
-        (candidate) =>
-            candidate != pageNumber &&
-            !scenes[candidate]!.objects.any(
-              (object) => protectedObjects.contains(object.objectId),
-            ),
-      );
-      if (candidates.isEmpty) break;
-      final coldPage = candidates.first;
-      final coldScene = scenes.remove(coldPage)!;
-      _pageRequestGenerations.remove(coldPage);
-      for (final object in coldScene.objects) {
-        if (!protectedObjects.contains(object.objectId)) {
-          objects.remove(object.objectId);
-        }
-      }
-    }
-    for (final object in scene.objects) {
-      if (object.text == null) continue;
-      objects[object.objectId] = EditorObjectState(
-        objectId: object.objectId,
-        pageId: object.pageId,
-        acceptedText: object.text!,
-        modifiedRevision: object.modifiedRevision,
-      );
-    }
-    _emit(_state.copyWith(scenes: scenes, objects: objects));
+    return _viewport.refreshPage(pageNumber, priority: priority, force: force);
   }
 
   void updateViewport(Set<int> visiblePages, {int preloadRadius = 2}) {
     _ensureActive();
-    final visible = visiblePages
-        .where((page) => page >= 1 && page <= _state.pageCount)
-        .toSet();
-    final warm = <int>{};
-    for (final page in visible) {
-      for (
-        var candidate = page - preloadRadius;
-        candidate <= page + preloadRadius;
-        candidate++
-      ) {
-        if (candidate >= 1 && candidate <= _state.pageCount) {
-          warm.add(candidate);
-        }
-      }
-    }
-    for (final page in _pageRequestGenerations.keys.toList(growable: false)) {
-      if (!warm.contains(page) && !_state.scenes.containsKey(page)) {
-        _pageRequestGenerations[page] = _pageRequestGenerations[page]! + 1;
-      }
-    }
-    for (final page in warm) {
-      unawaited(
-        refreshPage(
-          page,
-          priority: visible.contains(page)
-              ? EditorViewportPriority.visible
-              : EditorViewportPriority.preload,
-        ),
-      );
-    }
+    _viewport.updateViewport(visiblePages, preloadRadius: preloadRadius);
   }
 
   Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi) {
@@ -192,105 +124,6 @@ class EditorSessionController {
   Future<void> releaseCleanPatchMemory() {
     _ensureActive();
     return _gateway.releaseCleanPatchMemory();
-  }
-
-  Future<EditorSearchResult> searchDocument({
-    required String query,
-    EditorSearchMode mode = EditorSearchMode.exact,
-    bool wholeWord = false,
-    int offset = 0,
-    int limit = 100,
-  }) {
-    _ensureActive();
-    return _phaseTwoGateway.search(
-      EditorSearchRequest(
-        expectedRevision: _state.revision,
-        query: query,
-        mode: mode,
-        wholeWord: wholeWord,
-        offset: offset,
-        limit: limit,
-      ),
-    );
-  }
-
-  Future<EditorSelectionSet> validateSelection(EditorSelectionSet selection) {
-    _ensureActive();
-    return _phaseTwoGateway.validateSelection(selection);
-  }
-
-  Future<EditorCompatibilityReport> compatibilityReport() {
-    _ensureActive();
-    return _phaseTwoGateway.compatibilityReport(_state.revision);
-  }
-
-  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) {
-    _ensureActive();
-    return _phaseTwoGateway.reportMemoryPressure(level);
-  }
-
-  Future<EditorAnnotation> annotationDetails(String objectId) {
-    _ensureActive();
-    return _phaseTwoGateway.annotationDetails(objectId);
-  }
-
-  Future<EditorCommandResult> createAnnotation(EditorAnnotation annotation) =>
-      _submitPhaseTwoMutation(
-        (gateway, commandId, baseRevision) => gateway.createAnnotation(
-          commandId: commandId,
-          baseRevision: baseRevision,
-          annotation: annotation,
-        ),
-      );
-
-  Future<EditorCommandResult> updateAnnotation(EditorAnnotation annotation) =>
-      _submitPhaseTwoMutation(
-        (gateway, commandId, baseRevision) => gateway.updateAnnotation(
-          commandId: commandId,
-          baseRevision: baseRevision,
-          annotation: annotation,
-        ),
-      );
-
-  Future<EditorCommandResult> deleteAnnotation(String objectId) =>
-      _submitPhaseTwoMutation(
-        (gateway, commandId, baseRevision) => gateway.deleteAnnotation(
-          commandId: commandId,
-          baseRevision: baseRevision,
-          objectId: objectId,
-        ),
-      );
-
-  void updateSelection(EditorSelection? selection) {
-    _ensureActive();
-    _emit(
-      _state.copyWith(selection: selection, clearSelection: selection == null),
-    );
-  }
-
-  void clearError() {
-    _ensureActive();
-    _emit(_state.copyWith(clearError: true));
-  }
-
-  void dismissSaveFailure() {
-    _ensureActive();
-    if (_state.save.phase != EditorSavePhase.failed) return;
-    _emit(
-      _state.copyWith(
-        save: _state.save.copyWith(
-          phase: EditorSavePhase.dirty,
-          clearError: true,
-          clearStage: true,
-        ),
-        clearError: true,
-      ),
-    );
-  }
-
-  void dismissRecovery() {
-    _ensureActive();
-    _emit(_state.copyWith(clearRecovery: true));
   }
 
   void setCompositionCommitter(Future<void> Function()? committer) {

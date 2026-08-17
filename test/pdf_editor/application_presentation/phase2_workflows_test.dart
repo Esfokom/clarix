@@ -1,4 +1,5 @@
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
+import 'package:clarix/src/features/pdf_editor/application/editor_session_inspection.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'support/native_editor_harness.dart';

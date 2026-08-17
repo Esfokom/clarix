@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
+import '../application/editor_session_presentation_state.dart';
 import '../domain/editor_document_state.dart';
 import '../domain/editor_selection.dart';
 import 'clean_patch_layer.dart';

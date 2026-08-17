@@ -28,5 +28,7 @@ export 'presentation/recovery_banner.dart';
 export 'presentation/save_conflict_dialog.dart';
 export 'presentation/save_progress_dialog.dart';
 export 'application/editor_session_controller.dart';
+export 'application/editor_session_inspection.dart';
+export 'application/editor_session_presentation_state.dart';
 export 'application/editor_session_registry.dart';
 export 'application/pdf_editor_coordinator.dart';

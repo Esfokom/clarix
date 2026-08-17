@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/pdf_editor/application/editor_session_controller.dart';
+import 'package:clarix/src/features/pdf_editor/application/editor_session_presentation_state.dart';
 import 'package:clarix/src/features/pdf_editor/domain/editor_document_state.dart';
 import 'package:clarix/src/features/pdf_editor/domain/editor_selection.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/editor_session_gateway.dart';

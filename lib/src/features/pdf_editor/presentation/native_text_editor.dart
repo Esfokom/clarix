@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
+import '../application/editor_session_presentation_state.dart';
 import '../domain/editor_selection.dart';
 import 'editor_semantics.dart';
 import 'editor_shortcuts.dart';
