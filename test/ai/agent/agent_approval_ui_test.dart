@@ -1,6 +1,6 @@
 import 'package:clarix/src/core/agent/agent_bridge_types.dart';
-import 'package:clarix/src/features/workspace/agent/presentation/agent_approval_card.dart';
-import 'package:clarix/src/features/workspace/agent/presentation/agent_diff_overlay.dart';
+import 'package:clarix/src/features/ai/presentation/agent_approval_card.dart';
+import 'package:clarix/src/features/ai/presentation/agent_diff_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

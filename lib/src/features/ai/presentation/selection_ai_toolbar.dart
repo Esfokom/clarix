@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/agent/agent_bridge_types.dart';
+import '../../../core/agent/agent_bridge_types.dart';
 import 'agent_disclosure_dialog.dart';
 
 enum SelectionAiAction { rewrite, shorten, expand, translate, summarize, ask }

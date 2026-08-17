@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/agent/agent_bridge_types.dart';
+import '../../../core/agent/agent_bridge_types.dart';
 
 class AgentDiffOverlay extends StatelessWidget {
   const AgentDiffOverlay({required this.proposal, super.key});

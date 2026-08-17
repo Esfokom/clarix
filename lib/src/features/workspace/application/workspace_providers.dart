@@ -10,13 +10,10 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/editing/editor_command_id.dart';
 import '../../../core/session_store.dart';
-import 'package:clarix/src/features/ai/ai.dart';
 import '../../utilities/application/pdf_utility_service.dart';
 import '../infrastructure/document_metadata_store.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-import '../agent/application/agent_run_controller.dart';
-import 'ai_runtime_service.dart';
-import 'action_permission_service.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
 
@@ -28,8 +25,13 @@ final sessionStoreProvider = Provider<ClarixSessionStore>(
   (Ref ref) => ClarixSessionStore(ref.watch(sharedPreferencesProvider)),
 );
 
-final aiPreferencesStoreProvider = Provider<AiPreferencesStore>(
-  (Ref ref) => AiPreferencesStore(ref.watch(sharedPreferencesProvider)),
+final actionPermissionServiceProvider = Provider<ActionPermissionService>(
+  (Ref ref) => ActionPermissionService(
+    store: SharedPreferencesActionPermissionStore(
+      ref.watch(sharedPreferencesProvider),
+    ),
+    defaultPolicy: ActionPermissionPolicy.askAlways,
+  ),
 );
 
 final pdfExtractionServiceProvider = Provider<HybridPdfExtractionService>(
@@ -61,37 +63,6 @@ final pdfDocumentRefProvider = Provider.autoDispose
       );
     });
 
-final chunkStoreProvider = Provider<DocumentChunkStore>(
-  (Ref ref) => DocumentChunkStore(),
-);
-final localRagStoreProvider = Provider<LocalRagStore>(
-  (Ref ref) => LocalRagStore(),
-);
-final localRagNativeRetrieverProvider = Provider<NativeLocalRagRetriever>((
-  Ref ref,
-) {
-  final DocumentChunkStore chunks = ref.watch(chunkStoreProvider);
-  return NativeLocalRagRetriever(
-    store: ref.watch(localRagStoreProvider),
-    readChunks: chunks.readChunks,
-  );
-});
-final localRagIndexerProvider = Provider<LocalRagIndexer>(
-  (Ref ref) => ref.watch(localRagNativeRetrieverProvider),
-);
-final localRagServiceProvider = Provider<LocalRagService>((Ref ref) {
-  final DocumentChunkStore chunks = ref.watch(chunkStoreProvider);
-  return LocalRagService(
-    readChunks: chunks.readChunks,
-    nativeRetriever: ref.watch(localRagNativeRetrieverProvider),
-  );
-});
-final providerProfileStoreProvider = Provider<ProviderProfileStore>(
-  (Ref ref) => ProviderProfileStore(
-    preferences: ref.watch(sharedPreferencesProvider),
-    secretStore: FlutterSecureProviderSecretStore(),
-  ),
-);
 final documentIdentityServiceProvider = Provider<DocumentIdentityService>(
   (Ref ref) => DocumentIdentityService(),
 );
@@ -108,31 +79,6 @@ final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>((
     );
   }
   return DocumentMetadataStore(root: root);
-});
-
-final conversationStoreProvider = FutureProvider<ConversationStore>((
-  Ref ref,
-) async {
-  final ConversationStore store = ConversationStore();
-  await store.initialize();
-  return store;
-});
-
-final actionPermissionServiceProvider = Provider<ActionPermissionService>(
-  (Ref ref) => ActionPermissionService(
-    store: SharedPreferencesActionPermissionStore(
-      ref.watch(sharedPreferencesProvider),
-    ),
-    defaultPolicy: ActionPermissionPolicy.askAlways,
-  ),
-);
-
-final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
-  final AiRuntimeService service = AiRuntimeService(
-    providerProfiles: ref.watch(providerProfileStoreProvider),
-  );
-  ref.onDispose(service.dispose);
-  return service;
 });
 
 final workspaceNotifierProvider =

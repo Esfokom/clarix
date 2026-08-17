@@ -6,8 +6,8 @@ import '../../../../core/models.dart';
 import '../../../../core/editing/editor_bridge_types.dart';
 import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import '../../domain/workspace_feature_state.dart';
-import 'ai_side_pane.dart';
 import 'document_workspace.dart';
 import 'quickstart_surface.dart';
 import 'reader_inspector.dart';
@@ -31,6 +31,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
   @override
   Widget build(BuildContext context) {
     final DocumentTabState? activeTab = _activeTab(widget.state);
+    final AiFeatureState aiState =
+        ref.watch(aiNotifierProvider).value ?? AiFeatureState.initial();
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool showInspector = constraints.maxWidth >= 1200;
@@ -92,10 +94,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                     SizedBox(
                       width: widget.state.session.rightPaneWidth,
                       child: showAiInline
-                          ? AiSidePane(
-                              state: widget.state,
-                              activeTab: activeTab,
-                            )
+                          ? _aiPane(aiState, activeTab)
                           : showTextFormatInline
                           ? _TextFormatPane(activeTab: activeTab)
                           : ReaderInspector(
@@ -123,7 +122,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                 bottom: 0,
                 child: SizedBox(
                   width: constraints.maxWidth.clamp(320, 380).toDouble(),
-                  child: AiSidePane(state: widget.state, activeTab: activeTab),
+                  child: _aiPane(aiState, activeTab),
                 ),
               ),
             ],
@@ -178,6 +177,31 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
           ],
         );
       },
+    );
+  }
+
+  Widget _aiPane(AiFeatureState aiState, DocumentTabState? tab) {
+    final controller = tab == null
+        ? null
+        : ref.watch(agentRunControllerProvider(tab.id));
+    final revision = tab == null
+        ? 0
+        : ref.watch(editorDocumentStateProvider(tab.id)).value?.revision ?? 0;
+    return AiSidePane(
+      aiState: aiState,
+      documentContext: tab == null || controller == null
+          ? null
+          : AiDocumentContext(
+              tabId: tab.id,
+              documentId: tab.documentId,
+              title: tab.title,
+              filePath: tab.filePath,
+              editorRevision: revision,
+              agentController: controller,
+              isMissingFile: tab.isMissingFile,
+            ),
+      onCollapse: () =>
+          ref.read(workspaceNotifierProvider.notifier).toggleComposerExpanded(),
     );
   }
 

@@ -7,22 +7,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../../../core/models.dart';
 import 'package:clarix/src/features/ai/ai.dart';
-import '../../../../core/theme_controller.dart';
-import '../../../../core/theme_profile.dart';
-import '../../application/workspace_providers.dart';
-import '../../domain/workspace_feature_state.dart';
-import '../../agent/application/agent_run_controller.dart';
-import '../../agent/presentation/agent_approval_card.dart';
-import 'inline_page_reference.dart';
-import 'workspace_common.dart';
+import '../../../core/theme_controller.dart';
+import '../../../core/theme_profile.dart';
+import '../../../core/workspace_surface_tokens.dart';
 
 class AiSidePane extends ConsumerStatefulWidget {
-  const AiSidePane({required this.state, required this.activeTab, super.key});
+  const AiSidePane({
+    required this.aiState,
+    required this.documentContext,
+    required this.onCollapse,
+    super.key,
+  });
 
-  final WorkspaceFeatureState state;
-  final DocumentTabState? activeTab;
+  final AiFeatureState aiState;
+  final AiDocumentContext? documentContext;
+  final VoidCallback onCollapse;
 
   @override
   ConsumerState<AiSidePane> createState() => _AiSidePaneState();
@@ -48,19 +48,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
-    final AiWorkspaceState ai = widget.state.aiState;
-    final agentController = widget.activeTab == null
-        ? null
-        : ref.watch(agentRunControllerProvider(widget.activeTab!.id));
-    final editorRevision = widget.activeTab == null
-        ? 0
-        : ref
-                  .watch(editorDocumentStateProvider(widget.activeTab!.id))
-                  .value
-                  ?.revision ??
-              0;
+    final AiWorkspaceState ai = widget.aiState.chat;
+    final agentController = widget.documentContext?.agentController;
+    final editorRevision = widget.documentContext?.editorRevision ?? 0;
     final int contextLimit =
-        widget.state.providerProfiles
+        widget.aiState.providerProfiles
             .where((profile) => profile.id == ai.selectedProviderId)
             .firstOrNull
             ?.contextWindowTokens ??
@@ -104,7 +96,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     height: 28,
                     padding: EdgeInsets.zero,
                     icon: const Icon(LucideIcons.history, size: 14),
-                    onPressed: ai.chatBusy || widget.activeTab == null
+                    onPressed: ai.chatBusy || widget.documentContext == null
                         ? null
                         : _showHistory,
                   ),
@@ -135,7 +127,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     onPressed: ai.chatBusy
                         ? null
                         : () => ref
-                              .read(workspaceNotifierProvider.notifier)
+                              .read(aiNotifierProvider.notifier)
                               .startNewConversation(),
                   ),
                 ),
@@ -145,9 +137,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   height: 28,
                   padding: EdgeInsets.zero,
                   icon: const Icon(LucideIcons.chevronRight, size: 14),
-                  onPressed: () => ref
-                      .read(workspaceNotifierProvider.notifier)
-                      .toggleComposerExpanded(),
+                  onPressed: widget.onCollapse,
                 ),
               ],
             ),
@@ -177,7 +167,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                           ai.messages[ai.messages.length - 1 - index];
                       return _MessageBubble(
                         message: message,
-                        activeTab: widget.activeTab,
+                        documentContext: widget.documentContext,
                         colors: colors,
                       );
                     },
@@ -191,7 +181,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
             onSend: _send,
             colors: colors,
             onStop: () =>
-                ref.read(workspaceNotifierProvider.notifier).stopGeneration(),
+                ref.read(aiNotifierProvider.notifier).stopGeneration(),
           ),
         ],
       ),
@@ -203,16 +193,18 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     if (prompt.isEmpty) {
       return;
     }
-    ref.read(workspaceNotifierProvider.notifier).sendPrompt(prompt);
+    final context = widget.documentContext;
+    if (context == null) return;
+    ref.read(aiNotifierProvider.notifier).sendPrompt(prompt, context);
     _controller.clear();
   }
 
   Future<void> _showHistory() async {
-    final DocumentTabState? tab = widget.activeTab;
-    if (tab == null) return;
+    final AiDocumentContext? document = widget.documentContext;
+    if (document == null) return;
     final BuildContext menuContext = context;
     final store = await ref.read(conversationStoreProvider.future);
-    final threads = await store.listThreads(tab.documentId);
+    final threads = await store.listThreads(document.documentId);
     if (!menuContext.mounted) return;
     final RenderBox button = menuContext.findRenderObject()! as RenderBox;
     final String? selected = await showMenu<String>(
@@ -259,13 +251,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       );
       if (confirmed == true) {
         await ref
-            .read(workspaceNotifierProvider.notifier)
-            .deleteConversation(selected.substring(7));
+            .read(aiNotifierProvider.notifier)
+            .deleteConversation(selected.substring(7), document.documentId);
       }
     } else if (selected != null) {
-      await ref
-          .read(workspaceNotifierProvider.notifier)
-          .selectConversation(selected);
+      await ref.read(aiNotifierProvider.notifier).selectConversation(selected);
     }
   }
 }
@@ -482,12 +472,12 @@ class _DocumentComposer extends StatelessWidget {
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.message,
-    required this.activeTab,
+    required this.documentContext,
     required this.colors,
   });
 
   final ComposerMessage message;
-  final DocumentTabState? activeTab;
+  final AiDocumentContext? documentContext;
   final WorkspaceSurfaceTokens colors;
 
   @override
@@ -520,7 +510,9 @@ class _MessageBubble extends StatelessWidget {
             ),
             if (!isUser)
               'inline-page-reference': InlinePageReferenceBuilder(
-                activeTab: activeTab,
+                document: documentContext,
+                documentRef: null,
+                onNavigate: null,
               ),
           },
           styleSheet: MarkdownStyleSheet(

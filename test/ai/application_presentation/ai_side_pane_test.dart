@@ -1,6 +1,5 @@
-import 'package:clarix/src/core/models.dart';
-import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dart';
-import 'package:clarix/src/features/workspace/presentation/widgets/ai_side_pane.dart';
+import 'package:clarix/src/features/ai/ai.dart';
+import 'package:clarix/src/features/ai/presentation/ai_side_pane.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -17,13 +16,9 @@ void main() {
         child: ShadApp(
           home: Scaffold(
             body: AiSidePane(
-              state: _state(const <ComposerMessage>[]),
-              activeTab: DocumentTabState.create(
-                id: 'tab',
-                documentId: 'document',
-                filePath: 'document.pdf',
-                title: 'document.pdf',
-              ),
+              aiState: _state(const <ComposerMessage>[]),
+              documentContext: null,
+              onCollapse: () {},
             ),
           ),
         ),
@@ -46,7 +41,7 @@ void main() {
         child: ShadApp(
           home: Scaffold(
             body: AiSidePane(
-              state: _state(<ComposerMessage>[
+              aiState: _state(<ComposerMessage>[
                 _message('user', r'# Question\n- **Bold** with $x^2$'),
                 _message(
                   'assistant',
@@ -61,12 +56,8 @@ void main() {
                   ],
                 ),
               ]),
-              activeTab: DocumentTabState.create(
-                id: 'tab',
-                documentId: 'document',
-                filePath: 'document.pdf',
-                title: 'document.pdf',
-              ),
+              documentContext: null,
+              onCollapse: () {},
             ),
           ),
         ),
@@ -89,18 +80,14 @@ void main() {
           child: ShadApp(
             home: Scaffold(
               body: AiSidePane(
-                state: _state(<ComposerMessage>[
+                aiState: _state(<ComposerMessage>[
                   _message(
                     'assistant',
                     'Case study (page 2). Organizational structure (pages 7–8).',
                   ),
                 ]),
-                activeTab: DocumentTabState.create(
-                  id: 'tab',
-                  documentId: 'document',
-                  filePath: 'document.pdf',
-                  title: 'document.pdf',
-                ),
+                documentContext: null,
+                onCollapse: () {},
               ),
             ),
           ),
@@ -122,18 +109,14 @@ void main() {
           child: ShadApp(
             home: Scaffold(
               body: AiSidePane(
-                state: _state(<ComposerMessage>[
+                aiState: _state(<ComposerMessage>[
                   _message(
                     'assistant',
                     'This is a document overview without page references.',
                   ),
                 ]),
-                activeTab: DocumentTabState.create(
-                  id: 'tab',
-                  documentId: 'document',
-                  filePath: 'document.pdf',
-                  title: 'document.pdf',
-                ),
+                documentContext: null,
+                onCollapse: () {},
               ),
             ),
           ),
@@ -153,17 +136,13 @@ void main() {
         child: ShadApp(
           home: Scaffold(
             body: AiSidePane(
-              state: _state(
+              aiState: _state(
                 const <ComposerMessage>[],
                 chatBusy: true,
                 statusMessage: 'Contacting DeepSeek.',
               ),
-              activeTab: DocumentTabState.create(
-                id: 'tab',
-                documentId: 'document',
-                filePath: 'document.pdf',
-                title: 'document.pdf',
-              ),
+              documentContext: null,
+              onCollapse: () {},
             ),
           ),
         ),
@@ -180,22 +159,18 @@ void main() {
   });
 }
 
-WorkspaceFeatureState _state(
+AiFeatureState _state(
   List<ComposerMessage> messages, {
   bool chatBusy = false,
   String? statusMessage,
-}) => WorkspaceFeatureState(
-  session: WorkspaceSession.initial(),
-  aiState: AiWorkspaceState.initial().copyWith(
+}) => AiFeatureState(
+  chat: AiWorkspaceState.initial().copyWith(
     providerReady: true,
     chatBusy: chatBusy,
     statusMessage: statusMessage,
     messages: messages,
   ),
-  outlines: const <String, List<OutlineNodeState>>{},
-  documentMetadata: const <String, DocumentMetadata>{},
-  composerExpanded: false,
-  bannerMessage: null,
+  providerProfiles: const <AiProviderProfile>[],
 );
 
 ComposerMessage _message(

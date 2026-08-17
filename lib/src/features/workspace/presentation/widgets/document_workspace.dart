@@ -20,10 +20,6 @@ import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'package:clarix/src/features/ai/ai.dart';
-import '../../agent/presentation/agent_disclosure_dialog.dart';
-import '../../agent/presentation/agent_diff_overlay.dart';
-import '../../agent/presentation/selection_ai_toolbar.dart';
-import '../../agent/application/agent_run_controller.dart';
 import 'pdf_viewer_interaction_math.dart';
 import 'workspace_common.dart';
 

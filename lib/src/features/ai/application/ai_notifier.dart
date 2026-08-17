@@ -1,0 +1,315 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../core/clarix_logger.dart';
+import '../domain/ai_feature_state.dart';
+import '../domain/ai_models.dart';
+import '../domain/ai_provider.dart';
+import '../infrastructure/native_conversation_migrator.dart';
+import 'ai_document_context.dart';
+import 'ai_providers.dart';
+
+/// Owns persisted AI preferences and the active document conversation.
+///
+/// Workspace supplies a document context at the call boundary; this controller
+/// never reads workspace state or constructs editor sessions.
+class AiNotifier extends AsyncNotifier<AiFeatureState> {
+  @override
+  Future<AiFeatureState> build() async {
+    final preferences = ref.read(aiPreferencesStoreProvider);
+    final profiles = ref.read(providerProfileStoreProvider);
+    final saved = await preferences.readState();
+    final available = await profiles.readProfiles();
+    final defaultId = await profiles.readDefaultProfileId();
+    final selected =
+        _profileById(available, defaultId) ??
+        (available.isEmpty ? null : available.first);
+    final ready =
+        selected != null &&
+        (await profiles.readApiKey(selected.id))?.isNotEmpty == true;
+    return AiFeatureState(
+      chat: saved.copyWith(
+        chatBusy: false,
+        selectedProviderId: selected?.id,
+        clearSelectedProviderId: selected == null,
+        providerReady: ready,
+        statusMessage: ready
+            ? '${selected.label} is ready.'
+            : 'Add a provider to start a remote AI chat.',
+      ),
+      providerProfiles: available,
+    );
+  }
+
+  Future<void> loadLatestConversation(String documentId) async {
+    final store = await ref.read(conversationStoreProvider.future);
+    final threads = await store.listThreads(documentId);
+    if (threads.isEmpty) {
+      await _commit(
+        _current.copyWith(
+          chat: _current.chat.copyWith(
+            messages: const <ComposerMessage>[],
+            lastRetrievalSnippets: const <CitationSnippet>[],
+          ),
+        ),
+      );
+      return;
+    }
+    await selectConversation(threads.first.id);
+  }
+
+  Future<void> selectConversation(String threadId) async {
+    final store = await ref.read(conversationStoreProvider.future);
+    final messages = await store.readMessages(threadId);
+    await _commit(
+      _current.copyWith(
+        chat: _current.chat.copyWith(
+          messages: messages
+              .map(
+                (message) => ComposerMessage(
+                  id: message.id,
+                  role: message.role,
+                  text: message.content,
+                  createdAt: message.createdAt,
+                  citations: message.citations,
+                ),
+              )
+              .toList(growable: false),
+        ),
+      ),
+    );
+  }
+
+  Future<void> deleteConversation(String threadId, String documentId) async {
+    await (await ref.read(
+      conversationStoreProvider.future,
+    )).deleteThread(threadId);
+    await loadLatestConversation(documentId);
+  }
+
+  Future<void> startNewConversation() async {
+    if (_current.chat.chatBusy) return;
+    await _commit(
+      _current.copyWith(
+        chat: _current.chat.copyWith(
+          messages: const <ComposerMessage>[],
+          lastRetrievalSnippets: const <CitationSnippet>[],
+          statusMessage: 'New conversation ready.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> clearAllConversations() async {
+    await (await ref.read(conversationStoreProvider.future)).clearAll();
+    await _commit(
+      _current.copyWith(
+        chat: _current.chat.copyWith(
+          messages: const <ComposerMessage>[],
+          lastRetrievalSnippets: const <CitationSnippet>[],
+          statusMessage: 'All saved conversations were cleared.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> toggleScopeMode() => _commit(
+    _current.copyWith(
+      chat: _current.chat.copyWith(
+        useCurrentDocumentScope: !_current.chat.useCurrentDocumentScope,
+      ),
+    ),
+  );
+
+  Future<void> selectProvider(String? profileId) async {
+    final profile = _profileById(_current.providerProfiles, profileId);
+    final profiles = ref.read(providerProfileStoreProvider);
+    final ready =
+        profile != null &&
+        (await profiles.readApiKey(profile.id))?.isNotEmpty == true;
+    if (profile != null) await profiles.saveDefaultProfileId(profile.id);
+    await _commit(
+      _current.copyWith(
+        chat: _current.chat.copyWith(
+          selectedProviderId: profile?.id,
+          clearSelectedProviderId: profile == null,
+          providerReady: ready,
+          statusMessage: ready
+              ? '${profile.label} is ready.'
+              : 'Add an API key to use this provider.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> saveProvider(AiProviderProfile profile, {String? apiKey}) async {
+    final profiles = ref.read(providerProfileStoreProvider);
+    await profiles.saveProfile(
+      profile,
+      apiKey: apiKey?.trim().isEmpty == true ? null : apiKey?.trim(),
+    );
+    await _commit(
+      _current.copyWith(providerProfiles: await profiles.readProfiles()),
+    );
+    await selectProvider(profile.id);
+  }
+
+  Future<void> testProvider(
+    AiProviderProfile profile, {
+    required String apiKey,
+  }) => ref.read(aiRuntimeServiceProvider).testProvider(profile, apiKey);
+
+  Future<void> deleteProvider(String profileId) async {
+    final profiles = ref.read(providerProfileStoreProvider);
+    await profiles.deleteProfile(profileId);
+    final wasSelected = _current.chat.selectedProviderId == profileId;
+    await _commit(
+      _current.copyWith(providerProfiles: await profiles.readProfiles()),
+    );
+    if (wasSelected) {
+      await selectProvider(null);
+    }
+  }
+
+  Future<void> sendPrompt(String prompt, AiDocumentContext context) async {
+    final current = _current;
+    if (prompt.trim().isEmpty ||
+        current.chat.chatBusy ||
+        !current.chat.providerReady ||
+        current.chat.selectedProviderId == null) {
+      return;
+    }
+    final user = ComposerMessage(
+      id: 'user_${DateTime.now().microsecondsSinceEpoch}',
+      role: 'user',
+      text: prompt.trim(),
+      createdAt: DateTime.now().toUtc(),
+      citations: const [],
+    );
+    final assistant = ComposerMessage(
+      id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
+      role: 'assistant',
+      text: '',
+      createdAt: DateTime.now().toUtc(),
+      citations: const [],
+    );
+    await _commit(
+      current.copyWith(
+        chat: current.chat.copyWith(
+          chatBusy: true,
+          activityPhase: AiRuntimePhase.loadingInference,
+          statusMessage:
+              'Loading inference model. First response can take a minute.',
+          messages: [...current.chat.messages, user, assistant],
+          lastRetrievalSnippets: const [],
+        ),
+      ),
+    );
+    final buffer = StringBuffer();
+    try {
+      final store = await ref.read(conversationStoreProvider.future);
+      await NativeConversationMigrator(
+        legacy: store,
+        importConversation: context.agentController.importConversation,
+        documentId: context.documentId,
+      ).run();
+      final threads = await store.listThreads(context.documentId);
+      final reply = await ref
+          .read(aiRuntimeServiceProvider)
+          .sendPrompt(
+            prompt: prompt.trim(),
+            profileId: current.chat.selectedProviderId!,
+            conversationId: threads.isEmpty
+                ? 'native:${context.documentId}'
+                : threads.first.id,
+            controller: context.agentController,
+            onStatus: _setActivity,
+            onToken: (token) {
+              buffer.write(token);
+              _replaceLastAssistant(buffer.toString(), busy: true);
+            },
+          );
+      _replaceLastAssistant(
+        reply.text,
+        citations: reply.citations,
+        busy: false,
+        phase: AiRuntimePhase.idle,
+        status: 'Ready to chat with your remote provider.',
+      );
+    } catch (error, stackTrace) {
+      clarixLog.w(
+        'Prompt generation failed.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _replaceLastAssistant(
+        'I could not generate a response.\n\n$error',
+        busy: false,
+        phase: AiRuntimePhase.failed,
+        status: 'Generation failed.',
+      );
+    }
+  }
+
+  Future<void> stopGeneration() async {
+    await ref.read(aiRuntimeServiceProvider).stopGeneration();
+    await _commit(
+      _current.copyWith(
+        chat: _current.chat.copyWith(
+          chatBusy: false,
+          activityPhase: AiRuntimePhase.idle,
+          statusMessage: 'Generation stopped.',
+        ),
+      ),
+    );
+  }
+
+  AiFeatureState get _current => state.value ?? AiFeatureState.initial();
+  Future<void> _commit(AiFeatureState value) async {
+    state = AsyncData(value);
+    await ref.read(aiPreferencesStoreProvider).writeState(value.chat);
+  }
+
+  void _setActivity(AiRuntimePhase phase, String message) {
+    final value = _current;
+    state = AsyncData(
+      value.copyWith(
+        chat: value.chat.copyWith(activityPhase: phase, statusMessage: message),
+      ),
+    );
+    clarixLog.i('AI activity: ${phase.name} - $message');
+  }
+
+  void _replaceLastAssistant(
+    String text, {
+    List<CitationSnippet>? citations,
+    bool? busy,
+    AiRuntimePhase? phase,
+    String? status,
+  }) {
+    final value = _current;
+    if (value.chat.messages.isEmpty) return;
+    final messages = List<ComposerMessage>.from(value.chat.messages);
+    messages[messages.length - 1] = messages.last.copyWith(
+      text: text,
+      citations: citations,
+    );
+    state = AsyncData(
+      value.copyWith(
+        chat: value.chat.copyWith(
+          messages: messages,
+          chatBusy: busy,
+          activityPhase: phase,
+          statusMessage: status,
+          lastRetrievalSnippets: citations,
+        ),
+      ),
+    );
+  }
+
+  AiProviderProfile? _profileById(
+    List<AiProviderProfile> profiles,
+    String? id,
+  ) => id == null
+      ? null
+      : profiles.where((profile) => profile.id == id).firstOrNull;
+}

@@ -1,5 +1,5 @@
 import 'package:clarix/src/core/agent/agent_bridge_types.dart';
-import 'package:clarix/src/features/workspace/agent/presentation/selection_ai_toolbar.dart';
+import 'package:clarix/src/features/ai/presentation/selection_ai_toolbar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

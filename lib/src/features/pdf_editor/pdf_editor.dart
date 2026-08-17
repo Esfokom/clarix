@@ -5,6 +5,7 @@ export 'domain/editor_selection.dart';
 export 'domain/pdf_edit_failures.dart';
 export 'domain/pdf_edit_command.dart';
 export 'domain/pdf_edit_intent.dart';
+export 'application/action_permission_service.dart';
 export 'domain/pdf_edit_session.dart';
 export 'domain/pdf_native_edit_types.dart';
 export 'domain/pdf_page_object.dart';

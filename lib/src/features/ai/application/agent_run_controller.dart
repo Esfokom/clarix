@@ -1,7 +1,7 @@
 import 'dart:async';
 
-import '../../../../core/agent/agent_bridge.dart';
-import '../../../../core/agent/agent_bridge_types.dart';
+import '../../../core/agent/agent_bridge.dart';
+import '../../../core/agent/agent_bridge_types.dart';
 
 class AgentRunControllerState {
   const AgentRunControllerState({

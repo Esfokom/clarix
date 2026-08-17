@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:pdfrx/pdfrx.dart';
 
-import '../../../../core/models.dart';
-import '../../application/workspace_providers.dart';
-import 'workspace_common.dart';
+import '../../../core/workspace_surface_tokens.dart';
 
 class InlinePageReferenceSyntax extends markdown.InlineSyntax {
   InlinePageReferenceSyntax()
@@ -28,9 +25,15 @@ class InlinePageReferenceSyntax extends markdown.InlineSyntax {
 }
 
 class InlinePageReferenceBuilder extends MarkdownElementBuilder {
-  InlinePageReferenceBuilder({required this.activeTab});
+  InlinePageReferenceBuilder({
+    required this.document,
+    required this.documentRef,
+    required this.onNavigate,
+  });
 
-  final DocumentTabState? activeTab;
+  final AiDocumentContext? document;
+  final PdfDocumentRef? documentRef;
+  final ValueChanged<CitationSnippet>? onNavigate;
   final Map<int, int> _occurrences = <int, int>{};
 
   @override
@@ -53,7 +56,9 @@ class InlinePageReferenceBuilder extends MarkdownElementBuilder {
             ? 'inline-page-reference-$pageNumber'
             : 'inline-page-reference-$pageNumber-$occurrence',
       ),
-      tab: activeTab,
+      document: document,
+      documentRef: documentRef,
+      onNavigate: onNavigate,
       pageNumber: pageNumber,
       label: element.textContent,
       textStyle: preferredStyle ?? parentStyle,
@@ -61,26 +66,29 @@ class InlinePageReferenceBuilder extends MarkdownElementBuilder {
   }
 }
 
-class _InlinePageReference extends ConsumerStatefulWidget {
+class _InlinePageReference extends StatefulWidget {
   const _InlinePageReference({
     super.key,
-    required this.tab,
+    required this.document,
+    required this.documentRef,
+    required this.onNavigate,
     required this.pageNumber,
     required this.label,
     required this.textStyle,
   });
 
-  final DocumentTabState? tab;
+  final AiDocumentContext? document;
+  final PdfDocumentRef? documentRef;
+  final ValueChanged<CitationSnippet>? onNavigate;
   final int pageNumber;
   final String label;
   final TextStyle? textStyle;
 
   @override
-  ConsumerState<_InlinePageReference> createState() =>
-      _InlinePageReferenceState();
+  State<_InlinePageReference> createState() => _InlinePageReferenceState();
 }
 
-class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
+class _InlinePageReferenceState extends State<_InlinePageReference> {
   static const double _previewWidth = 184;
   static const double _previewHeight = 226;
   static const double _previewGap = 8;
@@ -95,8 +103,11 @@ class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
 
   @override
   Widget build(BuildContext context) {
-    final DocumentTabState? tab = widget.tab;
-    final bool interactive = tab != null && !tab.isMissingFile;
+    final document = widget.document;
+    final bool interactive =
+        document != null &&
+        !document.isMissingFile &&
+        widget.documentRef != null;
     final TextStyle style = (widget.textStyle ?? const TextStyle()).copyWith(
       color: WorkspaceColors.accent,
       decoration: TextDecoration.underline,
@@ -116,16 +127,14 @@ class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
       child: CompositedTransformTarget(
         link: _previewLink,
         child: GestureDetector(
-          onTap: () => ref
-              .read(workspaceNotifierProvider.notifier)
-              .navigateToCitation(
-                CitationSnippet(
-                  documentId: tab.documentId,
-                  label: tab.title,
-                  pageNumber: widget.pageNumber,
-                  snippet: widget.label,
-                ),
-              ),
+          onTap: () => widget.onNavigate?.call(
+            CitationSnippet(
+              documentId: document.documentId,
+              label: document.title,
+              pageNumber: widget.pageNumber,
+              snippet: widget.label,
+            ),
+          ),
           child: label,
         ),
       ),
@@ -134,7 +143,6 @@ class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
 
   void _showPreview() {
     if (_preview != null) return;
-    final tab = widget.tab!;
     final RenderBox target = context.findRenderObject()! as RenderBox;
     final Rect targetRect = target.localToGlobal(Offset.zero) & target.size;
     final Size viewport = MediaQuery.sizeOf(context);
@@ -162,7 +170,7 @@ class _InlinePageReferenceState extends ConsumerState<_InlinePageReference> {
             child: Padding(
               padding: const EdgeInsets.all(8),
               child: PdfDocumentViewBuilder(
-                documentRef: ref.read(pdfDocumentRefProvider(tab.filePath)),
+                documentRef: widget.documentRef!,
                 builder: (BuildContext _, PdfDocument? document) =>
                     document == null
                     ? const Center(

@@ -1,9 +1,9 @@
 import 'package:clarix/src/core/agent/agent_bridge.dart';
 import 'package:clarix/src/core/agent/agent_bridge_types.dart';
-import 'package:clarix/src/features/workspace/agent/application/agent_run_controller.dart';
+import 'package:clarix/src/features/ai/application/agent_run_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../core/agent/agent_bridge_contract_test.dart'
+import '../../core/agent/agent_bridge_contract_test.dart'
     show FakeNativeAgentPort, request, sessionId, runId;
 
 void main() {

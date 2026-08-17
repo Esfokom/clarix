@@ -3,11 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 
 import '../../application/workspace_providers.dart';
-import '../../application/action_permission_service.dart';
+import 'package:clarix/src/features/ai/ai.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../../../core/reader_background_store.dart';
-import 'package:clarix/src/features/ai/ai.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
 

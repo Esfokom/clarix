@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/agent/agent_bridge_types.dart';
+import '../../../core/agent/agent_bridge_types.dart';
 
 class AgentDisclosureDialog extends StatelessWidget {
   const AgentDisclosureDialog({

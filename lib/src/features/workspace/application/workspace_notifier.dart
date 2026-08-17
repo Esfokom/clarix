@@ -14,10 +14,8 @@ import '../../../core/session_store.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
-import '../agent/application/agent_run_controller.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../infrastructure/document_metadata_store.dart';
-import 'ai_runtime_service.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {

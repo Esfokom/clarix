@@ -1,6 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
+import '../domain/pdf_edit_intent.dart';
 
 enum ActionPermissionPolicy { allow, askWhenRisky, askAlways }
 
