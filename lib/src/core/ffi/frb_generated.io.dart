@@ -3,6 +3,7 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'agent_api.dart';
 import 'api.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -62,6 +63,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
+
+  @protected
   NativeEditorSession
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
     dynamic raw,
@@ -75,6 +79,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
+
+  @protected
+  RustStreamSink<NativeAgentEvent> dco_decode_StreamSink_native_agent_event_Sse(
+    dynamic raw,
+  );
 
   @protected
   RustStreamSink<NativeEditorEvent>
@@ -177,6 +186,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeSelectionSet dco_decode_box_autoadd_native_selection_set(dynamic raw);
 
   @protected
+  NativeStartAgentRunRequest
+  dco_decode_box_autoadd_native_start_agent_run_request(dynamic raw);
+
+  @protected
   NativeSubmitCommandRequest
   dco_decode_box_autoadd_native_submit_command_request(dynamic raw);
 
@@ -205,6 +218,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
+
+  @protected
+  List<NativeAgentEvent> dco_decode_list_native_agent_event(dynamic raw);
 
   @protected
   List<NativeAnnotationRange> dco_decode_list_native_annotation_range(
@@ -262,13 +278,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Float32List dco_decode_list_prim_f_32_strict(dynamic raw);
 
   @protected
+  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw);
+
+  @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
 
   @protected
   Uint64List dco_decode_list_prim_usize_strict(dynamic raw);
 
   @protected
+  List<(String, String)> dco_decode_list_record_string_string(dynamic raw);
+
+  @protected
   NativeAffineTransform dco_decode_native_affine_transform(dynamic raw);
+
+  @protected
+  NativeAgentAudit dco_decode_native_agent_audit(dynamic raw);
+
+  @protected
+  NativeAgentEvent dco_decode_native_agent_event(dynamic raw);
+
+  @protected
+  NativeAgentRun dco_decode_native_agent_run(dynamic raw);
 
   @protected
   NativeAnnotation dco_decode_native_annotation(dynamic raw);
@@ -435,6 +466,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeSearchResult dco_decode_native_search_result(dynamic raw);
 
   @protected
+  NativeSelectionContext dco_decode_native_selection_context(dynamic raw);
+
+  @protected
   NativeSelectionKind dco_decode_native_selection_kind(dynamic raw);
 
   @protected
@@ -445,6 +479,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeSelectionSet dco_decode_native_selection_set(dynamic raw);
+
+  @protected
+  NativeStartAgentRunRequest dco_decode_native_start_agent_run_request(
+    dynamic raw,
+  );
 
   @protected
   NativeSubmitCommandRequest dco_decode_native_submit_command_request(
@@ -527,6 +566,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  (String, String) dco_decode_record_string_string(dynamic raw);
+
+  @protected
   int dco_decode_u_16(dynamic raw);
 
   @protected
@@ -578,6 +620,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeEditorSession
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
     SseDeserializer deserializer,
@@ -591,6 +638,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  RustStreamSink<NativeAgentEvent> sse_decode_StreamSink_native_agent_event_Sse(
     SseDeserializer deserializer,
   );
 
@@ -713,6 +765,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeStartAgentRunRequest
+  sse_decode_box_autoadd_native_start_agent_run_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeSubmitCommandRequest
   sse_decode_box_autoadd_native_submit_command_request(
     SseDeserializer deserializer,
@@ -745,6 +803,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
+
+  @protected
+  List<NativeAgentEvent> sse_decode_list_native_agent_event(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<NativeAnnotationRange> sse_decode_list_native_annotation_range(
@@ -820,15 +883,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer);
 
   @protected
+  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer);
+
+  @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
 
   @protected
   Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer);
 
   @protected
+  List<(String, String)> sse_decode_list_record_string_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeAffineTransform sse_decode_native_affine_transform(
     SseDeserializer deserializer,
   );
+
+  @protected
+  NativeAgentAudit sse_decode_native_agent_audit(SseDeserializer deserializer);
+
+  @protected
+  NativeAgentEvent sse_decode_native_agent_event(SseDeserializer deserializer);
+
+  @protected
+  NativeAgentRun sse_decode_native_agent_run(SseDeserializer deserializer);
 
   @protected
   NativeAnnotation sse_decode_native_annotation(SseDeserializer deserializer);
@@ -1069,6 +1149,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSelectionContext sse_decode_native_selection_context(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeSelectionKind sse_decode_native_selection_kind(
     SseDeserializer deserializer,
   );
@@ -1085,6 +1170,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeSelectionSet sse_decode_native_selection_set(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeStartAgentRunRequest sse_decode_native_start_agent_run_request(
     SseDeserializer deserializer,
   );
 
@@ -1185,6 +1275,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   int sse_decode_u_16(SseDeserializer deserializer);
 
   @protected
@@ -1244,6 +1339,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_Map_String_String_None(
+    Map<String, String> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
     NativeEditorSession self,
@@ -1260,6 +1361,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_String_Sse(
     RustStreamSink<String> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_StreamSink_native_agent_event_Sse(
+    RustStreamSink<NativeAgentEvent> self,
     SseSerializer serializer,
   );
 
@@ -1399,6 +1506,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_start_agent_run_request(
+    NativeStartAgentRunRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_submit_command_request(
     NativeSubmitCommandRequest self,
     SseSerializer serializer,
@@ -1433,6 +1546,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_native_agent_event(
+    List<NativeAgentEvent> self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_list_native_annotation_range(
@@ -1525,6 +1644,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_prim_u_32_strict(
+    Uint32List self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
     SseSerializer serializer,
@@ -1537,8 +1662,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_record_string_string(
+    List<(String, String)> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_affine_transform(
     NativeAffineTransform self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_agent_audit(
+    NativeAgentAudit self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_agent_event(
+    NativeAgentEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_agent_run(
+    NativeAgentRun self,
     SseSerializer serializer,
   );
 
@@ -1840,6 +1989,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_selection_context(
+    NativeSelectionContext self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_selection_kind(
     NativeSelectionKind self,
     SseSerializer serializer,
@@ -1860,6 +2015,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_selection_set(
     NativeSelectionSet self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_start_agent_run_request(
+    NativeStartAgentRunRequest self,
     SseSerializer serializer,
   );
 
@@ -1977,6 +2138,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_record_f_32_f_32_f_32_f_32(
     (double, double, double, double) self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
     SseSerializer serializer,
   );
 

@@ -14,7 +14,9 @@ use clarix_editing_core::{
     SaveCoordinator, SaveMode, SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet,
     SessionId, SourceReference, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
-use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
+use clarix_editing_store::{
+    ProjectLocation, ProjectSeed, SqliteAgentRunRepository, SqliteProjectRepository,
+};
 use clarix_pdf_adapter::{
     CleanPatchCache, CleanPatchRenderRequest, CleanPatchRenderer, IndependentPdfValidator,
     InstalledFontCatalog, InstalledFontRequest, PdfImporter, PdfOxideImporter, PdfTextMaterializer,
@@ -473,7 +475,7 @@ pub struct NativeEditorEvent {
 }
 
 pub struct NativeEditorSession {
-    actor: EditorSessionActor,
+    pub(crate) actor: EditorSessionActor,
     page_service: PageSceneService,
     background_indexing: PageIndexTask,
     clean_patches: CleanPatchCache,
@@ -484,6 +486,7 @@ pub struct NativeEditorSession {
     event_sequence: Arc<AtomicU64>,
     fallback_proposals: Mutex<HashMap<String, PendingFontFallback>>,
     fallback_assets: PathBuf,
+    pub(crate) agent_runtime: crate::agent_api::NativeAgentRuntime,
 }
 
 #[derive(Debug, Clone)]
@@ -512,7 +515,7 @@ impl NativeEditorSession {
         let fallback_assets = project_location.assets.clone();
         let repository = Arc::new(
             SqliteProjectRepository::open(
-                project_location,
+                project_location.clone(),
                 ProjectSeed {
                     model: model.clone(),
                     undo_cursor: 0,
@@ -520,6 +523,10 @@ impl NativeEditorSession {
                 },
             )
             .map_err(|error| format!("sidecar_open_failed: {error}"))?,
+        );
+        let agent_repository = Arc::new(
+            SqliteAgentRunRepository::open(&project_location.database)
+                .map_err(|error| format!("agent_sidecar_open_failed: {error}"))?,
         );
         let session_id = SessionId::new();
         let actor = EditorSessionActor::spawn_recovered(
@@ -541,6 +548,8 @@ impl NativeEditorSession {
         .map_err(|error| format!("{}: {error}", error.code()))?
         .with_index_repository(repository.clone());
         let background_indexing = page_service.start_background_indexing();
+        let agent_runtime =
+            crate::agent_api::NativeAgentRuntime::new(actor.clone(), agent_repository);
         Ok(Self {
             actor,
             page_service,
@@ -553,6 +562,7 @@ impl NativeEditorSession {
             event_sequence: Arc::new(AtomicU64::new(0)),
             fallback_proposals: Mutex::new(HashMap::new()),
             fallback_assets,
+            agent_runtime,
         })
     }
 
@@ -1120,6 +1130,7 @@ impl NativeEditorSession {
     }
 
     pub fn close(&self) -> Result<(), String> {
+        self.agent_runtime.close()?;
         self.clean_patches.cancel();
         self.background_indexing
             .cancel_and_wait()

@@ -1,6 +1,7 @@
 mod frb_generated; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be accurate, and you can change it according to your needs. */
 flutter_rust_bridge::frb_generated_sse_codec!();
 
+pub mod agent_api;
 pub mod agent_provider;
 pub mod api;
 pub mod editing_api;

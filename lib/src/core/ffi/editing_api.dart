@@ -3,6 +3,7 @@
 
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
+import 'agent_api.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
@@ -12,11 +13,20 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
+  Stream<NativeAgentEvent> agentEvents({required String runId});
+
   Future<NativeAnnotation> annotationDetails({required String objectId});
+
+  Future<NativeAgentRun> approveAgentProposal({
+    required String runId,
+    required String approvalId,
+  });
 
   Future<NativeCommandResult> approveFontFallback({
     required NativeApproveFontFallbackRequest request,
   });
+
+  Future<void> cancelAgentRun({required String runId});
 
   Future<NativeCommandResult> checkpoint({
     required NativeCheckpointRequest request,
@@ -60,6 +70,19 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
     required NativeFontFallbackProposalRequest request,
   });
 
+  Future<NativeAgentAudit> readAgentAudit({required String runId});
+
+  Future<NativeAgentRun> rebaseAgentProposal({
+    required String runId,
+    required String approvalId,
+    required BigInt currentRevision,
+  });
+
+  Future<NativeAgentRun> rejectAgentProposal({
+    required String runId,
+    required String approvalId,
+  });
+
   Future<void> releaseCleanPatchMemory();
 
   Future<void> reportMemoryPressure({required NativeMemoryPressureLevel level});
@@ -69,6 +92,17 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   });
 
   Future<NativeSearchResult> search({required NativeSearchRequest request});
+
+  Future<NativeSelectionContext> selectionContext({
+    required NativeSelectionSet selection,
+    required int beforeUtf16,
+    required int afterUtf16,
+    required int maxRanges,
+  });
+
+  Future<NativeAgentRun> startAgentRun({
+    required NativeStartAgentRunRequest request,
+  });
 
   Future<NativeCommandResult> submit({
     required NativeSubmitCommandRequest request,

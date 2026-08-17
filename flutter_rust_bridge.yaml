@@ -1,3 +1,3 @@
-rust_input: crate::api,crate::editing_api
+rust_input: crate::api,crate::editing_api,crate::agent_api
 rust_root: rust/clarix_pdf_oxide/
 dart_output: lib/src/core/ffi
