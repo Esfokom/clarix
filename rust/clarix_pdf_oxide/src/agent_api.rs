@@ -8,13 +8,16 @@ use std::time::Duration;
 
 use clarix_agent_core::{
     AgentProviderConfig, AgentRunEngine, AgentRunEventKind, AgentRunId, AgentRunRequest,
-    AgentRunStatus, ApprovalId, ConversationId, RunBudgets, SecretString,
+    AgentRunStatus, ApprovalId, CancellationToken, ConversationId, ModelProvider, ProviderEvent,
+    ProviderEventSink, ProviderMessage, ProviderRequest, ProviderRole, RunBudgets, SecretString,
 };
 use clarix_editing_core::{
     ContextLimits, DocumentRevision, EditorSessionActor, ObjectId, PageId, SelectionContext,
     SelectionKind, SelectionSet, TextRangeRef,
 };
-use clarix_editing_store::SqliteAgentRunRepository;
+use clarix_editing_store::{
+    ConversationImport, ConversationImportMessage, SqliteAgentRunRepository,
+};
 use sha2::{Digest, Sha256};
 
 use crate::agent_provider::OpenAiCompatibleRustProvider;
@@ -36,8 +39,8 @@ pub struct NativeStartAgentRunRequest {
     pub api_key: String,
     pub conversation_id: Option<String>,
     pub user_prompt: String,
-    pub selection: NativeSelectionSet,
-    pub disclosure_sha256: String,
+    pub selection: Option<NativeSelectionSet>,
+    pub disclosure_sha256: Option<String>,
     pub max_tool_calls: u32,
     pub max_provider_rounds: u32,
     pub max_elapsed_ms: u64,
@@ -98,6 +101,94 @@ pub struct NativeAgentAudit {
     pub run_id: String,
     pub status: String,
     pub events: Vec<NativeAgentEvent>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeConversationMessage {
+    pub id: String,
+    pub sequence: u64,
+    pub role: String,
+    pub content: String,
+    pub citations_json: String,
+    pub created_at: String,
+    pub token_estimate: u64,
+    pub is_compacted: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeConversationImport {
+    pub legacy_id: String,
+    pub document_id: String,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub summary: Option<String>,
+    pub summary_through_sequence: Option<u64>,
+    pub messages: Vec<NativeConversationMessage>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeConversationImportReceipt {
+    pub conversation_id: String,
+    pub message_count: u64,
+    pub digest_sha256: String,
+    pub already_present: bool,
+}
+
+#[derive(Clone)]
+pub struct NativeProviderTestRequest {
+    pub provider_endpoint: String,
+    pub model_id: String,
+    pub headers: HashMap<String, String>,
+    pub api_key: String,
+}
+
+impl fmt::Debug for NativeProviderTestRequest {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("NativeProviderTestRequest")
+            .field("provider_endpoint", &self.provider_endpoint)
+            .field("model_id", &self.model_id)
+            .field("header_names", &self.headers.keys().collect::<Vec<_>>())
+            .field("api_key", &"[REDACTED]")
+            .finish()
+    }
+}
+
+pub fn test_agent_provider(request: NativeProviderTestRequest) -> Result<(), String> {
+    let provider = OpenAiCompatibleRustProvider::new(
+        request.provider_endpoint,
+        request.model_id,
+        request.headers.into_iter().collect::<BTreeMap<_, _>>(),
+        request.api_key,
+        Duration::from_secs(30),
+    )
+    .map_err(|error| format!("{}: {error}", error.code()))?;
+    let mut sink = IgnoreProviderEvents;
+    provider
+        .complete(
+            ProviderRequest {
+                messages: vec![ProviderMessage {
+                    role: ProviderRole::User,
+                    content: "Reply with OK.".into(),
+                    tool_call_id: None,
+                    tool_calls: vec![],
+                }],
+                tools: vec![],
+                max_output_tokens: 8,
+            },
+            &CancellationToken::new(),
+            &mut sink,
+        )
+        .map(|_| ())
+        .map_err(|error| format!("{}: {error}", error.code()))
+}
+
+struct IgnoreProviderEvents;
+impl ProviderEventSink for IgnoreProviderEvents {
+    fn emit(&mut self, _event: ProviderEvent) -> Result<(), clarix_agent_core::AgentError> {
+        Ok(())
+    }
 }
 
 struct NativeRunHandle {
@@ -174,6 +265,55 @@ impl NativeAgentRuntime {
 }
 
 impl NativeEditorSession {
+    pub fn import_agent_conversation(
+        &self,
+        value: NativeConversationImport,
+    ) -> Result<NativeConversationImportReceipt, String> {
+        self.agent_runtime.ensure_open()?;
+        let document_id = self
+            .actor
+            .snapshot()
+            .map_err(|error| format!("{}: {error}", error.code()))?
+            .id;
+        let namespace = uuid::Uuid::from_u128(0x6172_6978_2d63_6f6e_7665_7273_6174_696f);
+        let conversation_id =
+            uuid::Uuid::new_v5(&namespace, value.legacy_id.as_bytes()).to_string();
+        let receipt = self
+            .agent_runtime
+            .repository
+            .import_conversation(&ConversationImport {
+                conversation_id,
+                legacy_id: value.legacy_id,
+                document_id: document_id.to_string(),
+                title: value.title,
+                created_at: value.created_at,
+                updated_at: value.updated_at,
+                summary: value.summary,
+                summary_through_sequence: value.summary_through_sequence,
+                messages: value
+                    .messages
+                    .into_iter()
+                    .map(|message| ConversationImportMessage {
+                        external_id: message.id,
+                        sequence: message.sequence,
+                        role: message.role,
+                        content: message.content,
+                        citations_json: message.citations_json,
+                        created_at: message.created_at,
+                        token_estimate: message.token_estimate,
+                        is_compacted: message.is_compacted,
+                    })
+                    .collect(),
+            })
+            .map_err(|error| format!("{}: {error}", error.code()))?;
+        Ok(NativeConversationImportReceipt {
+            conversation_id: receipt.conversation_id,
+            message_count: receipt.message_count,
+            digest_sha256: receipt.digest_sha256,
+            already_present: receipt.already_present,
+        })
+    }
+
     pub fn selection_context(
         &self,
         selection: NativeSelectionSet,
@@ -204,17 +344,35 @@ impl NativeEditorSession {
         if request.schema_version != AGENT_SCHEMA_VERSION {
             return Err("agent_schema_mismatch: unsupported request schema".into());
         }
-        let selection = core_selection(request.selection.clone())?;
-        let context = self
-            .actor
-            .selection_context(selection, ContextLimits::default())
-            .map_err(|error| format!("{}: {error}", error.code()))?;
-        let disclosure = disclosure_digest(&context)?;
-        if disclosure != request.disclosure_sha256 {
-            return Err(
-                "disclosure_mismatch: selection disclosure acknowledgement is stale".into(),
-            );
+        let context = request
+            .selection
+            .clone()
+            .map(core_selection)
+            .transpose()?
+            .map(|selection| {
+                self.actor
+                    .selection_context(selection, ContextLimits::default())
+                    .map_err(|error| format!("{}: {error}", error.code()))
+            })
+            .transpose()?;
+        if let Some(context) = &context {
+            let disclosure = disclosure_digest(context)?;
+            if request.disclosure_sha256.as_deref() != Some(disclosure.as_str()) {
+                return Err(
+                    "disclosure_mismatch: selection disclosure acknowledgement is stale".into(),
+                );
+            }
+        } else if request
+            .disclosure_sha256
+            .as_deref()
+            .is_some_and(|value| !value.is_empty())
+        {
+            return Err("disclosure_without_selection: disclosure requires a selection".into());
         }
+        let snapshot = self
+            .actor
+            .snapshot()
+            .map_err(|error| format!("{}: {error}", error.code()))?;
         let budgets = RunBudgets {
             max_tool_calls: request.max_tool_calls,
             max_provider_rounds: request.max_provider_rounds,
@@ -241,9 +399,8 @@ impl NativeEditorSession {
         let conversation_id = request
             .conversation_id
             .as_deref()
-            .map(ConversationId::from_str)
-            .transpose()
-            .map_err(|_| "invalid_conversation_id: expected a canonical UUID".to_owned())?
+            .map(stable_conversation_id)
+            .transpose()?
             .unwrap_or_default();
         let engine = Arc::new(AgentRunEngine::new(
             provider,
@@ -253,10 +410,10 @@ impl NativeEditorSession {
         let core_request = AgentRunRequest {
             run_id,
             conversation_id,
-            document_id: context.document_id,
-            starting_revision: context.document_revision,
+            document_id: snapshot.id,
+            starting_revision: snapshot.revision,
             user_prompt: request.user_prompt,
-            selection_context: Some(context),
+            selection_context: context,
             provider: AgentProviderConfig {
                 provider_id: "openai-compatible".into(),
                 endpoint: request.provider_endpoint,
@@ -564,4 +721,16 @@ fn status_name(status: AgentRunStatus) -> &'static str {
 
 fn parse_run_id(value: &str) -> Result<AgentRunId, String> {
     AgentRunId::from_str(value).map_err(|_| "invalid_run_id: expected a canonical UUID".to_owned())
+}
+
+fn stable_conversation_id(value: &str) -> Result<ConversationId, String> {
+    if value.trim().is_empty() {
+        return Err("invalid_conversation_id: conversation ID is empty".into());
+    }
+    if let Ok(id) = ConversationId::from_str(value) {
+        return Ok(id);
+    }
+    let namespace = uuid::Uuid::from_u128(0x6172_6978_2d63_6f6e_7665_7273_6174_696f);
+    ConversationId::from_str(&uuid::Uuid::new_v5(&namespace, value.as_bytes()).to_string())
+        .map_err(|_| "invalid_conversation_id: could not derive conversation ID".into())
 }

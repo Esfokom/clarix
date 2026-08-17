@@ -4,15 +4,51 @@ use std::sync::{Mutex, MutexGuard};
 
 use clarix_agent_core::{
     AgentError, AgentRunAudit, AgentRunAuditHeader, AgentRunEvent, AgentRunEventKind, AgentRunId,
-    AgentRunRepository, AgentRunRequest, AgentRunStatus, CommandAuditLink,
+    AgentRunRepository, AgentRunRequest, AgentRunStatus, CommandAuditLink, ConversationId,
+    ProviderMessage, ProviderRole,
 };
 use clarix_editing_core::{DocumentId, DocumentRevision};
 use rusqlite::{params, Connection, OptionalExtension, Transaction};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::{schema, StoreError};
 
 pub struct SqliteAgentRunRepository {
     connection: Mutex<Connection>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationImportMessage {
+    pub external_id: String,
+    pub sequence: u64,
+    pub role: String,
+    pub content: String,
+    pub citations_json: String,
+    pub created_at: String,
+    pub token_estimate: u64,
+    pub is_compacted: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationImport {
+    pub conversation_id: String,
+    pub legacy_id: String,
+    pub document_id: String,
+    pub title: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub summary: Option<String>,
+    pub summary_through_sequence: Option<u64>,
+    pub messages: Vec<ConversationImportMessage>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ConversationImportReceipt {
+    pub conversation_id: String,
+    pub message_count: u64,
+    pub digest_sha256: String,
+    pub already_present: bool,
 }
 
 impl SqliteAgentRunRepository {
@@ -45,6 +81,136 @@ impl SqliteAgentRunRepository {
         <Self as AgentRunRepository>::read_run_audit(self, run_id)
     }
 
+    pub fn import_conversation(
+        &self,
+        import: &ConversationImport,
+    ) -> Result<ConversationImportReceipt, AgentError> {
+        ConversationId::from_str(&import.conversation_id)
+            .map_err(|_| agent_store_error("conversation ID is not a canonical UUID"))?;
+        let mut expected = 1_u64;
+        for message in &import.messages {
+            if message.sequence != expected {
+                return Err(agent_store_error(
+                    "conversation message sequence is not contiguous",
+                ));
+            }
+            if !matches!(message.role.as_str(), "system" | "user" | "assistant") {
+                return Err(agent_store_error("conversation message role is invalid"));
+            }
+            expected += 1;
+        }
+        let digest = hex_digest(&serde_json::to_vec(import).map_err(map_json)?);
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(map_sqlite)?;
+        let existing: Option<String> = transaction
+            .query_row(
+                "SELECT conversation_id FROM agent_conversations WHERE conversation_id = ?1 OR legacy_id = ?2",
+                params![import.conversation_id, import.legacy_id],
+                |row| row.get(0),
+            )
+            .optional()
+            .map_err(map_sqlite)?;
+        if let Some(conversation_id) = existing {
+            let count = conversation_message_count(&transaction, &conversation_id)?;
+            transaction.commit().map_err(map_sqlite)?;
+            return Ok(ConversationImportReceipt {
+                conversation_id,
+                message_count: count,
+                digest_sha256: digest,
+                already_present: true,
+            });
+        }
+        transaction.execute(
+            "INSERT INTO agent_conversations
+             (conversation_id, document_id, legacy_id, title, created_at, updated_at, summary, summary_through_sequence)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                import.conversation_id,
+                import.document_id,
+                import.legacy_id,
+                import.title,
+                import.created_at,
+                import.updated_at,
+                import.summary,
+                import.summary_through_sequence.map(u64_to_i64).transpose()?,
+            ],
+        ).map_err(map_sqlite)?;
+        for message in &import.messages {
+            let payload = provider_payload(&message.role, &message.content)?;
+            transaction.execute(
+                "INSERT INTO agent_messages
+                 (conversation_id, external_id, sequence, role, content, citations_json, created_at, token_estimate, is_compacted, payload_json)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+                params![
+                    import.conversation_id,
+                    message.external_id,
+                    u64_to_i64(message.sequence)?,
+                    message.role,
+                    message.content,
+                    message.citations_json,
+                    message.created_at,
+                    u64_to_i64(message.token_estimate)?,
+                    i64::from(message.is_compacted),
+                    payload,
+                ],
+            ).map_err(map_sqlite)?;
+        }
+        transaction.commit().map_err(map_sqlite)?;
+        Ok(ConversationImportReceipt {
+            conversation_id: import.conversation_id.clone(),
+            message_count: import.messages.len() as u64,
+            digest_sha256: digest,
+            already_present: false,
+        })
+    }
+
+    pub fn read_conversation(
+        &self,
+        conversation_id: &str,
+    ) -> Result<Option<ConversationImport>, AgentError> {
+        let connection = self.connection()?;
+        let header = connection.query_row(
+            "SELECT conversation_id, COALESCE(legacy_id, ''), document_id, title, created_at, updated_at, summary, summary_through_sequence
+             FROM agent_conversations WHERE conversation_id = ?1 OR legacy_id = ?1",
+            [conversation_id],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?, row.get::<_, String>(2)?, row.get::<_, String>(3)?, row.get::<_, String>(4)?, row.get::<_, String>(5)?, row.get::<_, Option<String>>(6)?, row.get::<_, Option<i64>>(7)?)),
+        ).optional().map_err(map_sqlite)?;
+        let Some(header) = header else {
+            return Ok(None);
+        };
+        let mut statement = connection.prepare(
+            "SELECT COALESCE(external_id, ''), sequence, role, content, citations_json, created_at, token_estimate, is_compacted
+             FROM agent_messages WHERE conversation_id = ?1 ORDER BY sequence",
+        ).map_err(map_sqlite)?;
+        let messages = statement
+            .query_map([&header.0], |row| {
+                Ok(ConversationImportMessage {
+                    external_id: row.get(0)?,
+                    sequence: row.get::<_, i64>(1)? as u64,
+                    role: row.get(2)?,
+                    content: row.get(3)?,
+                    citations_json: row.get(4)?,
+                    created_at: row.get(5)?,
+                    token_estimate: row.get::<_, i64>(6)? as u64,
+                    is_compacted: row.get::<_, i64>(7)? != 0,
+                })
+            })
+            .map_err(map_sqlite)?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(map_sqlite)?;
+        Ok(Some(ConversationImport {
+            conversation_id: header.0,
+            legacy_id: header.1,
+            document_id: header.2,
+            title: header.3,
+            created_at: header.4,
+            updated_at: header.5,
+            summary: header.6,
+            summary_through_sequence: header.7.map(|value| value as u64),
+            messages,
+        }))
+    }
+
     fn connection(&self) -> Result<MutexGuard<'_, Connection>, AgentError> {
         self.connection
             .lock()
@@ -53,6 +219,56 @@ impl SqliteAgentRunRepository {
 }
 
 impl AgentRunRepository for SqliteAgentRunRepository {
+    fn load_conversation_messages(
+        &self,
+        conversation_id: ConversationId,
+    ) -> Result<Vec<ProviderMessage>, AgentError> {
+        let connection = self.connection()?;
+        let mut statement = connection.prepare(
+            "SELECT payload_json FROM agent_messages WHERE conversation_id = ?1 AND is_compacted = 0 ORDER BY sequence",
+        ).map_err(map_sqlite)?;
+        let messages = statement
+            .query_map([conversation_id.to_string()], |row| row.get::<_, String>(0))
+            .map_err(map_sqlite)?
+            .map(|payload| {
+                payload
+                    .map_err(map_sqlite)
+                    .and_then(|value| serde_json::from_str(&value).map_err(map_json))
+            })
+            .collect();
+        messages
+    }
+
+    fn append_conversation_exchange(
+        &self,
+        conversation_id: ConversationId,
+        user: ProviderMessage,
+        assistant: ProviderMessage,
+    ) -> Result<(), AgentError> {
+        let mut connection = self.connection()?;
+        let transaction = connection.transaction().map_err(map_sqlite)?;
+        let start: i64 = transaction
+            .query_row(
+                "SELECT COALESCE(MAX(sequence), 0) FROM agent_messages WHERE conversation_id = ?1",
+                [conversation_id.to_string()],
+                |row| row.get(0),
+            )
+            .map_err(map_sqlite)?;
+        for (offset, message) in [(1_i64, user), (2_i64, assistant)] {
+            let role = match message.role {
+                ProviderRole::System => "system",
+                ProviderRole::User => "user",
+                ProviderRole::Assistant => "assistant",
+                ProviderRole::Tool => "tool",
+            };
+            transaction.execute(
+                "INSERT INTO agent_messages (conversation_id, sequence, role, content, payload_json) VALUES (?1, ?2, ?3, ?4, ?5)",
+                params![conversation_id.to_string(), start + offset, role, message.content, serde_json::to_string(&message).map_err(map_json)?],
+            ).map_err(map_sqlite)?;
+        }
+        transaction.execute("UPDATE agent_conversations SET updated_at = CURRENT_TIMESTAMP WHERE conversation_id = ?1", [conversation_id.to_string()]).map_err(map_sqlite)?;
+        transaction.commit().map_err(map_sqlite)
+    }
     fn create_run(&self, request: &AgentRunRequest) -> Result<(), AgentError> {
         let mut connection = self.connection()?;
         let transaction = connection.transaction().map_err(map_sqlite)?;
@@ -309,6 +525,43 @@ fn apply_event_links(
         _ => {}
     }
     Ok(())
+}
+
+fn provider_payload(role: &str, content: &str) -> Result<String, AgentError> {
+    let role = match role {
+        "system" => ProviderRole::System,
+        "user" => ProviderRole::User,
+        "assistant" => ProviderRole::Assistant,
+        _ => return Err(agent_store_error("conversation message role is invalid")),
+    };
+    serde_json::to_string(&ProviderMessage {
+        role,
+        content: content.to_owned(),
+        tool_call_id: None,
+        tool_calls: vec![],
+    })
+    .map_err(map_json)
+}
+
+fn conversation_message_count(
+    transaction: &Transaction<'_>,
+    conversation_id: &str,
+) -> Result<u64, AgentError> {
+    let count: i64 = transaction
+        .query_row(
+            "SELECT COUNT(*) FROM agent_messages WHERE conversation_id = ?1",
+            [conversation_id],
+            |row| row.get(0),
+        )
+        .map_err(map_sqlite)?;
+    u64::try_from(count).map_err(|_| agent_store_error("negative conversation message count"))
+}
+
+fn hex_digest(bytes: &[u8]) -> String {
+    Sha256::digest(bytes)
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn recover_interrupted(connection: &Connection) -> Result<(), StoreError> {

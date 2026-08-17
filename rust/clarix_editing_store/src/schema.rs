@@ -2,7 +2,7 @@ use rusqlite::Connection;
 
 use crate::StoreError;
 
-pub const SCHEMA_VERSION: i64 = 3;
+pub const SCHEMA_VERSION: i64 = 4;
 
 pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
     connection.execute_batch(
@@ -74,13 +74,27 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
             CREATE TABLE agent_conversations (
                 conversation_id TEXT PRIMARY KEY,
                 document_id TEXT NOT NULL,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                legacy_id TEXT UNIQUE,
+                title TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                summary TEXT,
+                summary_through_sequence INTEGER
             );
             CREATE TABLE agent_messages (
                 message_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 conversation_id TEXT NOT NULL REFERENCES agent_conversations(conversation_id) ON DELETE CASCADE,
+                external_id TEXT,
+                sequence INTEGER NOT NULL DEFAULT 0,
                 role TEXT NOT NULL,
-                payload_json TEXT NOT NULL
+                content TEXT NOT NULL DEFAULT '',
+                citations_json TEXT NOT NULL DEFAULT '[]',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                token_estimate INTEGER NOT NULL DEFAULT 0,
+                is_compacted INTEGER NOT NULL DEFAULT 0,
+                payload_json TEXT NOT NULL,
+                UNIQUE(conversation_id, sequence),
+                UNIQUE(conversation_id, external_id)
             );
             CREATE TABLE agent_runs (
                 run_id TEXT PRIMARY KEY,
@@ -124,7 +138,7 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
                 run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
                 status TEXT NOT NULL
             );
-            PRAGMA user_version = 3;
+            PRAGMA user_version = 4;
             COMMIT;
             "#,
         )?;
@@ -151,6 +165,30 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
     if current == 2 {
         create_agent_tables(connection)?;
     }
+    if current == 3 {
+        connection.execute_batch(
+            r#"
+            BEGIN IMMEDIATE;
+            ALTER TABLE agent_conversations ADD COLUMN legacy_id TEXT;
+            ALTER TABLE agent_conversations ADD COLUMN title TEXT NOT NULL DEFAULT '';
+            ALTER TABLE agent_conversations ADD COLUMN updated_at TEXT NOT NULL DEFAULT '';
+            ALTER TABLE agent_conversations ADD COLUMN summary TEXT;
+            ALTER TABLE agent_conversations ADD COLUMN summary_through_sequence INTEGER;
+            ALTER TABLE agent_messages ADD COLUMN external_id TEXT;
+            ALTER TABLE agent_messages ADD COLUMN sequence INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE agent_messages ADD COLUMN content TEXT NOT NULL DEFAULT '';
+            ALTER TABLE agent_messages ADD COLUMN citations_json TEXT NOT NULL DEFAULT '[]';
+            ALTER TABLE agent_messages ADD COLUMN created_at TEXT NOT NULL DEFAULT '';
+            ALTER TABLE agent_messages ADD COLUMN token_estimate INTEGER NOT NULL DEFAULT 0;
+            ALTER TABLE agent_messages ADD COLUMN is_compacted INTEGER NOT NULL DEFAULT 0;
+            CREATE UNIQUE INDEX agent_conversations_legacy_id ON agent_conversations(legacy_id) WHERE legacy_id IS NOT NULL;
+            CREATE UNIQUE INDEX agent_messages_sequence ON agent_messages(conversation_id, sequence);
+            CREATE UNIQUE INDEX agent_messages_external_id ON agent_messages(conversation_id, external_id) WHERE external_id IS NOT NULL;
+            PRAGMA user_version = 4;
+            COMMIT;
+            "#,
+        )?;
+    }
     Ok(())
 }
 
@@ -161,13 +199,27 @@ fn create_agent_tables(connection: &Connection) -> Result<(), StoreError> {
         CREATE TABLE agent_conversations (
             conversation_id TEXT PRIMARY KEY,
             document_id TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            legacy_id TEXT UNIQUE,
+            title TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            summary TEXT,
+            summary_through_sequence INTEGER
         );
         CREATE TABLE agent_messages (
             message_id INTEGER PRIMARY KEY AUTOINCREMENT,
             conversation_id TEXT NOT NULL REFERENCES agent_conversations(conversation_id) ON DELETE CASCADE,
+            external_id TEXT,
+            sequence INTEGER NOT NULL DEFAULT 0,
             role TEXT NOT NULL,
-            payload_json TEXT NOT NULL
+            content TEXT NOT NULL DEFAULT '',
+            citations_json TEXT NOT NULL DEFAULT '[]',
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            token_estimate INTEGER NOT NULL DEFAULT 0,
+            is_compacted INTEGER NOT NULL DEFAULT 0,
+            payload_json TEXT NOT NULL,
+            UNIQUE(conversation_id, sequence),
+            UNIQUE(conversation_id, external_id)
         );
         CREATE TABLE agent_runs (
             run_id TEXT PRIMARY KEY,
@@ -211,7 +263,7 @@ fn create_agent_tables(connection: &Connection) -> Result<(), StoreError> {
             run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
             status TEXT NOT NULL
         );
-        PRAGMA user_version = 3;
+        PRAGMA user_version = 4;
         COMMIT;
         "#,
     )?;

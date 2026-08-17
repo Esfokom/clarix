@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:crypto/crypto.dart';
 
 import '../../../core/models.dart';
 import '../domain/conversation.dart';
@@ -14,6 +15,7 @@ class ConversationStore {
 
   final Future<Directory> Function() _directoryProvider;
   Database? _database;
+  Directory? _root;
 
   Future<void> initialize() async {
     if (_database != null) {
@@ -22,6 +24,7 @@ class ConversationStore {
     sqfliteFfiInit();
     final Directory root = await _directoryProvider();
     await root.create(recursive: true);
+    _root = root;
     _database = await databaseFactoryFfi.openDatabase(
       path.join(root.path, 'clarix_conversations.sqlite'),
       options: OpenDatabaseOptions(
@@ -53,6 +56,23 @@ class ConversationStore {
       orderBy: 'updated_at DESC',
     );
     return rows.map(_thread).toList(growable: false);
+  }
+
+  Future<bool> isMigrated(String documentId) async =>
+      (await _migrationMarker(documentId)).exists();
+
+  Future<void> markMigrated(String documentId) async {
+    final file = await _migrationMarker(documentId);
+    await file.writeAsString('native-conversation-v1\n', flush: true);
+  }
+
+  Future<File> _migrationMarker(String documentId) async {
+    final root = _root;
+    if (root == null) {
+      throw StateError('ConversationStore.initialize() must be called first.');
+    }
+    final digest = sha256.convert(utf8.encode(documentId)).toString();
+    return File(path.join(root.path, 'clarix_conversations.$digest.migrated'));
   }
 
   Future<ConversationThread> createThread({

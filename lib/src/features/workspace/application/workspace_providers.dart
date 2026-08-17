@@ -25,7 +25,6 @@ import '../editing/domain/editor_document_state.dart';
 import '../editing/infrastructure/editor_session_gateway.dart';
 import 'ai_runtime_service.dart';
 import 'action_permission_service.dart';
-import 'ai_tool_registry.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
 
@@ -132,26 +131,9 @@ final actionPermissionServiceProvider = Provider<ActionPermissionService>(
   ),
 );
 
-final aiToolRegistryProvider = Provider<AiToolRegistry>((Ref ref) {
-  return AiToolRegistry(
-    permissions: ref.watch(actionPermissionServiceProvider),
-    pathForDocument: (documentId) {
-      final workspace = ref.read(workspaceNotifierProvider).value;
-      if (workspace == null) return null;
-      for (final tab in workspace.session.tabs) {
-        if (tab.documentId == documentId) return tab.filePath;
-      }
-      return null;
-    },
-  );
-});
-
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
     providerProfiles: ref.watch(providerProfileStoreProvider),
-    chunkStore: ref.watch(chunkStoreProvider),
-    localRag: ref.watch(localRagServiceProvider),
-    toolRegistry: ref.watch(aiToolRegistryProvider),
   );
   ref.onDispose(service.dispose);
   return service;

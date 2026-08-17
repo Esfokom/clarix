@@ -125,6 +125,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
 
   @protected
+  NativeConversationImport dco_decode_box_autoadd_native_conversation_import(
+    dynamic raw,
+  );
+
+  @protected
   NativeDeleteAnnotationRequest
   dco_decode_box_autoadd_native_delete_annotation_request(dynamic raw);
 
@@ -161,6 +166,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSaveRequest dco_decode_box_autoadd_native_pdf_save_request(
+    dynamic raw,
+  );
+
+  @protected
+  NativeProviderTestRequest dco_decode_box_autoadd_native_provider_test_request(
     dynamic raw,
   );
 
@@ -229,6 +239,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NativeCompatibilityIssue> dco_decode_list_native_compatibility_issue(
+    dynamic raw,
+  );
+
+  @protected
+  List<NativeConversationMessage> dco_decode_list_native_conversation_message(
     dynamic raw,
   );
 
@@ -343,6 +358,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeCompatibilityReport dco_decode_native_compatibility_report(dynamic raw);
 
   @protected
+  NativeConversationImport dco_decode_native_conversation_import(dynamic raw);
+
+  @protected
+  NativeConversationImportReceipt dco_decode_native_conversation_import_receipt(
+    dynamic raw,
+  );
+
+  @protected
+  NativeConversationMessage dco_decode_native_conversation_message(dynamic raw);
+
+  @protected
   NativeDeleteAnnotationRequest dco_decode_native_delete_annotation_request(
     dynamic raw,
   );
@@ -425,6 +451,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSource dco_decode_native_pdf_source(dynamic raw);
+
+  @protected
+  NativeProviderTestRequest dco_decode_native_provider_test_request(
+    dynamic raw,
+  );
 
   @protected
   NativeRagChunk dco_decode_native_rag_chunk(dynamic raw);
@@ -529,6 +560,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  );
+
+  @protected
+  NativeSelectionSet? dco_decode_opt_box_autoadd_native_selection_set(
     dynamic raw,
   );
 
@@ -692,6 +728,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeConversationImport sse_decode_box_autoadd_native_conversation_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeDeleteAnnotationRequest
   sse_decode_box_autoadd_native_delete_annotation_request(
     SseDeserializer deserializer,
@@ -736,6 +777,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSaveRequest sse_decode_box_autoadd_native_pdf_save_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeProviderTestRequest sse_decode_box_autoadd_native_provider_test_request(
     SseDeserializer deserializer,
   );
 
@@ -816,6 +862,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NativeCompatibilityIssue> sse_decode_list_native_compatibility_issue(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<NativeConversationMessage> sse_decode_list_native_conversation_message(
     SseDeserializer deserializer,
   );
 
@@ -968,6 +1019,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeConversationImport sse_decode_native_conversation_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeConversationImportReceipt sse_decode_native_conversation_import_receipt(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeConversationMessage sse_decode_native_conversation_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeDeleteAnnotationRequest sse_decode_native_delete_annotation_request(
     SseDeserializer deserializer,
   );
@@ -1086,6 +1152,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer);
+
+  @protected
+  NativeProviderTestRequest sse_decode_native_provider_test_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   NativeRagChunk sse_decode_native_rag_chunk(SseDeserializer deserializer);
@@ -1232,6 +1303,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeSelectionRebase? sse_decode_opt_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSelectionSet? sse_decode_opt_box_autoadd_native_selection_set(
     SseDeserializer deserializer,
   );
 
@@ -1422,6 +1498,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_conversation_import(
+    NativeConversationImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_delete_annotation_request(
     NativeDeleteAnnotationRequest self,
     SseSerializer serializer,
@@ -1472,6 +1554,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_pdf_save_request(
     NativePdfSaveRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_provider_test_request(
+    NativeProviderTestRequest self,
     SseSerializer serializer,
   );
 
@@ -1562,6 +1650,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_native_compatibility_issue(
     List<NativeCompatibilityIssue> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_conversation_message(
+    List<NativeConversationMessage> self,
     SseSerializer serializer,
   );
 
@@ -1764,6 +1858,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_conversation_import(
+    NativeConversationImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_conversation_import_receipt(
+    NativeConversationImportReceipt self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_conversation_message(
+    NativeConversationMessage self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_delete_annotation_request(
     NativeDeleteAnnotationRequest self,
     SseSerializer serializer,
@@ -1907,6 +2019,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_pdf_source(
     NativePdfSource self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_provider_test_request(
+    NativeProviderTestRequest self,
     SseSerializer serializer,
   );
 
@@ -2090,6 +2208,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_native_selection_rebase(
     NativeSelectionRebase? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_selection_set(
+    NativeSelectionSet? self,
     SseSerializer serializer,
   );
 

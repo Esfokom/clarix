@@ -54,6 +54,9 @@ class NativeAgentEventWire {
 }
 
 abstract interface class NativeAgentPort {
+  Future<AgentConversationImportReceipt> importConversation(
+    AgentConversationImport conversation,
+  );
   Future<AgentSelectionContext> selectionContext(AgentSelection selection);
   Future<NativeAgentRunWire> start(AgentStartRequest request);
   Stream<NativeAgentEventWire> events(String runId);
@@ -99,6 +102,13 @@ class AgentBridgeSession {
 
   Stream<AgentRunEvent> get events => _events.stream;
   String? get activeRunId => _activeRunId;
+
+  Future<AgentConversationImportReceipt> importConversation(
+    AgentConversationImport conversation,
+  ) {
+    _ensureOpen();
+    return _native.importConversation(conversation);
+  }
 
   Future<AgentSelectionContext> selectionContext(
     AgentSelection selection,
@@ -287,6 +297,45 @@ class FrbNativeAgentPort implements NativeAgentPort {
   final native_editor.NativeEditorSession _session;
 
   @override
+  Future<AgentConversationImportReceipt> importConversation(
+    AgentConversationImport conversation,
+  ) async {
+    final value = await _session.importAgentConversation(
+      value: native_agent.NativeConversationImport(
+        legacyId: conversation.legacyId,
+        documentId: conversation.documentId,
+        title: conversation.title,
+        createdAt: conversation.createdAt,
+        updatedAt: conversation.updatedAt,
+        summary: conversation.summary,
+        summaryThroughSequence: conversation.summaryThroughSequence == null
+            ? null
+            : BigInt.from(conversation.summaryThroughSequence!),
+        messages: conversation.messages
+            .map(
+              (message) => native_agent.NativeConversationMessage(
+                id: message.id,
+                sequence: BigInt.from(message.sequence),
+                role: message.role,
+                content: message.content,
+                citationsJson: message.citationsJson,
+                createdAt: message.createdAt,
+                tokenEstimate: BigInt.from(message.tokenEstimate),
+                isCompacted: message.isCompacted,
+              ),
+            )
+            .toList(growable: false),
+      ),
+    );
+    return AgentConversationImportReceipt(
+      conversationId: value.conversationId,
+      messageCount: _safeInt(value.messageCount, 'messageCount'),
+      digestSha256: value.digestSha256,
+      alreadyPresent: value.alreadyPresent,
+    );
+  }
+
+  @override
   Future<AgentSelectionContext> selectionContext(
     AgentSelection selection,
   ) async {
@@ -329,7 +378,9 @@ class FrbNativeAgentPort implements NativeAgentPort {
         apiKey: request.apiKey,
         conversationId: request.conversationId,
         userPrompt: request.userPrompt,
-        selection: _selection(request.selection),
+        selection: request.selection == null
+            ? null
+            : _selection(request.selection!),
         disclosureSha256: request.disclosureSha256,
         maxToolCalls: request.maxToolCalls,
         maxProviderRounds: request.maxProviderRounds,

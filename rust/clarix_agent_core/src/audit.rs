@@ -5,8 +5,8 @@ use clarix_editing_core::{CommandId, DocumentId, DocumentRevision};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AgentError, AgentRunEvent, AgentRunId, AgentRunRequest, AgentRunStatus, ApprovalId, ProposalId,
-    ToolCallId,
+    AgentError, AgentRunEvent, AgentRunId, AgentRunRequest, AgentRunStatus, ApprovalId,
+    ConversationId, ProposalId, ProviderMessage, ToolCallId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,6 +37,20 @@ pub struct AgentRunAudit {
 }
 
 pub trait AgentRunRepository: Send + Sync + 'static {
+    fn load_conversation_messages(
+        &self,
+        _conversation_id: ConversationId,
+    ) -> Result<Vec<ProviderMessage>, AgentError> {
+        Ok(Vec::new())
+    }
+    fn append_conversation_exchange(
+        &self,
+        _conversation_id: ConversationId,
+        _user: ProviderMessage,
+        _assistant: ProviderMessage,
+    ) -> Result<(), AgentError> {
+        Ok(())
+    }
     fn create_run(&self, request: &AgentRunRequest) -> Result<(), AgentError>;
     fn append_event(&self, event: AgentRunEvent) -> Result<(), AgentError>;
     fn link_command(&self, run_id: AgentRunId, link: CommandAuditLink) -> Result<(), AgentError>;

@@ -15,6 +15,7 @@ import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
 import '../domain/ai_provider.dart';
 import '../domain/conversation.dart';
+import '../agent/application/agent_run_controller.dart';
 import '../editing/application/editor_session_controller.dart';
 import '../editing/domain/editor_save_state.dart';
 import '../editing/domain/editor_close_choice.dart';
@@ -22,9 +23,8 @@ import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/provider_profile_store.dart';
-import '../infrastructure/openai_compatible_provider.dart';
+import '../infrastructure/native_conversation_migrator.dart';
 import 'ai_runtime_service.dart';
-import 'conversation_context.dart';
 import 'workspace_providers.dart';
 
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
@@ -935,13 +935,31 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
     try {
       final StringBuffer answerBuffer = StringBuffer();
-      final List<AiChatMessage> history = await _historyFor(activeTab, current);
+      if (activeTab == null) {
+        throw StateError(
+          'Open a document before starting an agent conversation.',
+        );
+      }
+      final registry = ref.read(editorSessionRegistryProvider);
+      final controller = registry.agent(activeTab.id);
+      if (controller == null) {
+        throw StateError('The native editor session is not ready.');
+      }
+      final store = await ref.read(conversationStoreProvider.future);
+      await NativeConversationMigrator(
+        legacy: store,
+        importConversation: controller.importConversation,
+        documentId: activeTab.documentId,
+      ).run();
+      final threads = await store.listThreads(activeTab.documentId);
+      final conversationId = threads.isEmpty
+          ? 'native:${activeTab.documentId}'
+          : threads.first.id;
       final _AiReplyData reply = await _generateReply(
         prompt: prompt.trim(),
         profileId: current.aiState.selectedProviderId!,
-        useCurrentDocumentScope: true,
-        currentDocumentId: activeTab?.documentId,
-        history: history,
+        conversationId: conversationId,
+        controller: controller,
         onStatus: _setAiActivity,
         onToken: (String token) {
           answerBuffer.write(token);
@@ -981,35 +999,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
           ),
         ),
       );
-      if (activeTab != null) {
-        final store = await ref.read(conversationStoreProvider.future);
-        final threads = await store.listThreads(activeTab.documentId);
-        final thread = threads.isEmpty
-            ? await store.createThread(
-                documentId: activeTab.documentId,
-                title: prompt.trim().split('\n').first,
-              )
-            : threads.first;
-        await store.appendExchange(
-          threadId: thread.id,
-          user: ConversationMessage(
-            id: userMessage.id,
-            role: userMessage.role,
-            content: userMessage.text,
-            createdAt: userMessage.createdAt,
-            tokenEstimate: _estimateTokens(userMessage.text),
-            citations: userMessage.citations,
-          ),
-          assistant: ConversationMessage(
-            id: assistantMessage.id,
-            role: assistantMessage.role,
-            content: reply.text,
-            createdAt: assistantMessage.createdAt,
-            tokenEstimate: _estimateTokens(reply.text),
-            citations: reply.citations,
-          ),
-        );
-      }
     } catch (error, stackTrace) {
       clarixLog.w(
         'Prompt generation failed.',
@@ -1617,18 +1606,16 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   Future<_AiReplyData> _generateReply({
     required String prompt,
     required String profileId,
-    required bool useCurrentDocumentScope,
-    required String? currentDocumentId,
-    List<AiChatMessage> history = const <AiChatMessage>[],
+    required String conversationId,
+    required AgentRunController controller,
     required void Function(AiRuntimePhase phase, String message) onStatus,
     required void Function(String token) onToken,
   }) async {
     final AiReply reply = await _ai.sendPrompt(
       prompt: prompt,
       profileId: profileId,
-      useCurrentDocumentScope: useCurrentDocumentScope,
-      currentDocumentId: currentDocumentId,
-      history: history,
+      conversationId: conversationId,
+      controller: controller,
       onToken: onToken,
       onStatus: onStatus,
     );
@@ -1674,54 +1661,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     if (persistAi) {
       await _sessionStore.writeAiWorkspaceState(newState.aiState);
     }
-  }
-
-  int _estimateTokens(String text) => (text.trim().length / 4).ceil();
-
-  Future<List<AiChatMessage>> _historyFor(
-    DocumentTabState? tab,
-    WorkspaceFeatureState current,
-  ) async {
-    if (tab == null) return const <AiChatMessage>[];
-    final store = await ref.read(conversationStoreProvider.future);
-    final threads = await store.listThreads(tab.documentId);
-    if (threads.isEmpty) return const <AiChatMessage>[];
-    final thread = threads.first;
-    final messages = await store.readMessages(thread.id);
-    final profile = current.providerProfiles.firstWhere(
-      (item) => item.id == current.aiState.selectedProviderId,
-    );
-    final plan = ConversationContextPlanner().plan(
-      messages: messages,
-      contextWindowTokens: profile.contextWindowTokens,
-    );
-    if (plan.messagesToCompact.isNotEmpty) {
-      final summary = await _ai.summarizeConversation(
-        profileId: profile.id,
-        transcript: plan.messagesToCompact
-            .map((item) => '${item.role}: ${item.content}')
-            .join('\n'),
-      );
-      await store.saveSummary(
-        threadId: thread.id,
-        summary: summary,
-        throughSequence: plan.messagesToCompact.last.sequence!,
-      );
-      return <AiChatMessage>[
-        AiChatMessage.system('Conversation summary: $summary'),
-      ];
-    }
-    return <AiChatMessage>[
-      if (thread.summary != null)
-        AiChatMessage.system('Conversation summary: ${thread.summary}'),
-      ...messages
-          .where((item) => !item.isCompacted)
-          .map(
-            (item) => item.role == 'user'
-                ? AiChatMessage.user(item.content)
-                : AiChatMessage.assistant(item.content),
-          ),
-    ];
   }
 
   WorkspaceFeatureState _requireState() {

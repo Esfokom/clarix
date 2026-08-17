@@ -72,6 +72,10 @@ class AgentRunController {
   Future<AgentSelectionContext> selectionContext(AgentSelection selection) =>
       _bridge.selectionContext(selection);
 
+  Future<AgentConversationImportReceipt> importConversation(
+    AgentConversationImport conversation,
+  ) => _bridge.importConversation(conversation);
+
   Future<AgentRunView> start(AgentStartRequest request) async {
     _ensureActive();
     if (_state.activeRunId != null && !(_state.status?.isTerminal ?? true)) {

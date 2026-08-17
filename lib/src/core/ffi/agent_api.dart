@@ -7,9 +7,12 @@ import 'editing_api.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `close`, `core_selection`, `disclosure_digest`, `ensure_open`, `event_kind_name`, `handle`, `join_worker`, `native_event`, `native_run`, `native_selection_context`, `new`, `parse_run_id`, `status_name`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `NativeAgentRuntime`, `NativeRunHandle`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `close`, `core_selection`, `disclosure_digest`, `ensure_open`, `event_kind_name`, `handle`, `join_worker`, `native_event`, `native_run`, `native_selection_context`, `new`, `parse_run_id`, `stable_conversation_id`, `status_name`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `IgnoreProviderEvents`, `NativeAgentRuntime`, `NativeRunHandle`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `emit`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+
+Future<void> testAgentProvider({required NativeProviderTestRequest request}) =>
+    RustLib.instance.api.crateAgentApiTestAgentProvider(request: request);
 
 class NativeAgentAudit {
   final int schemaVersion;
@@ -109,6 +112,162 @@ class NativeAgentRun {
           status == other.status;
 }
 
+class NativeConversationImport {
+  final String legacyId;
+  final String documentId;
+  final String title;
+  final String createdAt;
+  final String updatedAt;
+  final String? summary;
+  final BigInt? summaryThroughSequence;
+  final List<NativeConversationMessage> messages;
+
+  const NativeConversationImport({
+    required this.legacyId,
+    required this.documentId,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+    this.summary,
+    this.summaryThroughSequence,
+    required this.messages,
+  });
+
+  @override
+  int get hashCode =>
+      legacyId.hashCode ^
+      documentId.hashCode ^
+      title.hashCode ^
+      createdAt.hashCode ^
+      updatedAt.hashCode ^
+      summary.hashCode ^
+      summaryThroughSequence.hashCode ^
+      messages.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeConversationImport &&
+          runtimeType == other.runtimeType &&
+          legacyId == other.legacyId &&
+          documentId == other.documentId &&
+          title == other.title &&
+          createdAt == other.createdAt &&
+          updatedAt == other.updatedAt &&
+          summary == other.summary &&
+          summaryThroughSequence == other.summaryThroughSequence &&
+          messages == other.messages;
+}
+
+class NativeConversationImportReceipt {
+  final String conversationId;
+  final BigInt messageCount;
+  final String digestSha256;
+  final bool alreadyPresent;
+
+  const NativeConversationImportReceipt({
+    required this.conversationId,
+    required this.messageCount,
+    required this.digestSha256,
+    required this.alreadyPresent,
+  });
+
+  @override
+  int get hashCode =>
+      conversationId.hashCode ^
+      messageCount.hashCode ^
+      digestSha256.hashCode ^
+      alreadyPresent.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeConversationImportReceipt &&
+          runtimeType == other.runtimeType &&
+          conversationId == other.conversationId &&
+          messageCount == other.messageCount &&
+          digestSha256 == other.digestSha256 &&
+          alreadyPresent == other.alreadyPresent;
+}
+
+class NativeConversationMessage {
+  final String id;
+  final BigInt sequence;
+  final String role;
+  final String content;
+  final String citationsJson;
+  final String createdAt;
+  final BigInt tokenEstimate;
+  final bool isCompacted;
+
+  const NativeConversationMessage({
+    required this.id,
+    required this.sequence,
+    required this.role,
+    required this.content,
+    required this.citationsJson,
+    required this.createdAt,
+    required this.tokenEstimate,
+    required this.isCompacted,
+  });
+
+  @override
+  int get hashCode =>
+      id.hashCode ^
+      sequence.hashCode ^
+      role.hashCode ^
+      content.hashCode ^
+      citationsJson.hashCode ^
+      createdAt.hashCode ^
+      tokenEstimate.hashCode ^
+      isCompacted.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeConversationMessage &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          sequence == other.sequence &&
+          role == other.role &&
+          content == other.content &&
+          citationsJson == other.citationsJson &&
+          createdAt == other.createdAt &&
+          tokenEstimate == other.tokenEstimate &&
+          isCompacted == other.isCompacted;
+}
+
+class NativeProviderTestRequest {
+  final String providerEndpoint;
+  final String modelId;
+  final Map<String, String> headers;
+  final String apiKey;
+
+  const NativeProviderTestRequest({
+    required this.providerEndpoint,
+    required this.modelId,
+    required this.headers,
+    required this.apiKey,
+  });
+
+  @override
+  int get hashCode =>
+      providerEndpoint.hashCode ^
+      modelId.hashCode ^
+      headers.hashCode ^
+      apiKey.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeProviderTestRequest &&
+          runtimeType == other.runtimeType &&
+          providerEndpoint == other.providerEndpoint &&
+          modelId == other.modelId &&
+          headers == other.headers &&
+          apiKey == other.apiKey;
+}
+
 class NativeSelectionContext {
   final int schemaVersion;
   final String documentId;
@@ -168,8 +327,8 @@ class NativeStartAgentRunRequest {
   final String apiKey;
   final String? conversationId;
   final String userPrompt;
-  final NativeSelectionSet selection;
-  final String disclosureSha256;
+  final NativeSelectionSet? selection;
+  final String? disclosureSha256;
   final int maxToolCalls;
   final int maxProviderRounds;
   final BigInt maxElapsedMs;
@@ -183,8 +342,8 @@ class NativeStartAgentRunRequest {
     required this.apiKey,
     this.conversationId,
     required this.userPrompt,
-    required this.selection,
-    required this.disclosureSha256,
+    this.selection,
+    this.disclosureSha256,
     required this.maxToolCalls,
     required this.maxProviderRounds,
     required this.maxElapsedMs,

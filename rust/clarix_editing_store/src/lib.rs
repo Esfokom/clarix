@@ -61,4 +61,7 @@ pub enum StoreError {
     #[error("repository lock is poisoned")]
     Poisoned,
 }
-pub use agent_repository::SqliteAgentRunRepository;
+pub use agent_repository::{
+    ConversationImport, ConversationImportMessage, ConversationImportReceipt,
+    SqliteAgentRunRepository,
+};

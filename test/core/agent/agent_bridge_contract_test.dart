@@ -8,6 +8,16 @@ const sessionId = '00000000-0000-4000-8000-000000000001';
 const runId = '00000000-0000-4000-8000-000000000002';
 
 class FakeNativeAgentPort implements NativeAgentPort {
+  @override
+  Future<AgentConversationImportReceipt> importConversation(
+    AgentConversationImport conversation,
+  ) async => AgentConversationImportReceipt(
+    conversationId: '00000000-0000-4000-8000-000000000010',
+    messageCount: conversation.messages.length,
+    digestSha256:
+        '0000000000000000000000000000000000000000000000000000000000000000',
+    alreadyPresent: false,
+  );
   FakeNativeAgentPort(this.wireEvents);
 
   final List<NativeAgentEventWire> wireEvents;

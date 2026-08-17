@@ -52,11 +52,18 @@ void main() {
     expect(violations, isEmpty);
   });
 
-  test('AI mutation remains deferred until the Rust authority is exposed', () {
-    final registry = File(
-      'lib/src/features/workspace/application/ai_tool_registry.dart',
-    ).readAsStringSync();
-    expect(registry, contains('static const Set<String> names = <String>{}'));
-    expect(registry, isNot(contains('PdfEditingController')));
+  test('Dart no longer contains an AI mutation authority', () {
+    expect(
+      File(
+        'lib/src/features/workspace/application/ai_tool_registry.dart',
+      ).existsSync(),
+      isFalse,
+    );
+    expect(
+      File(
+        'lib/src/features/workspace/application/ai_agent_runtime.dart',
+      ).existsSync(),
+      isFalse,
+    );
   });
 }

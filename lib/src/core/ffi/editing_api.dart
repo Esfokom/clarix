@@ -52,6 +52,10 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
 
   Stream<NativeEditorEvent> events();
 
+  Future<NativeConversationImportReceipt> importAgentConversation({
+    required NativeConversationImport value,
+  });
+
   Future<NativeEditorMetadata> metadata();
 
   Future<NativeSceneObject> objectDetails({

@@ -6,7 +6,9 @@ use clarix_agent_core::{
     ConversationId, ProposalId, RunBudgets, SecretString, ToolCallId,
 };
 use clarix_editing_core::{CommandId, DocumentId, DocumentRevision};
-use clarix_editing_store::SqliteAgentRunRepository;
+use clarix_editing_store::{
+    ConversationImport, ConversationImportMessage, SqliteAgentRunRepository,
+};
 use tempfile::TempDir;
 
 fn request(run_id: AgentRunId, status_secret: &str) -> AgentRunRequest {
@@ -203,4 +205,59 @@ fn duplicate_or_non_monotonic_event_sequences_are_rejected() {
             .unwrap(),
         )
         .is_err());
+}
+
+#[test]
+fn legacy_conversation_import_is_atomic_ordered_and_idempotent() {
+    let repository = SqliteAgentRunRepository::open_in_memory().unwrap();
+    let conversation_id = ConversationId::new().to_string();
+    let import = ConversationImport {
+        conversation_id: conversation_id.clone(),
+        legacy_id: "thread_legacy".into(),
+        document_id: DocumentId::from_source_key("agent-store/document").to_string(),
+        title: "Draft".into(),
+        created_at: "2026-08-17T00:00:00Z".into(),
+        updated_at: "2026-08-17T00:01:00Z".into(),
+        summary: Some("Earlier context".into()),
+        summary_through_sequence: Some(1),
+        messages: vec![
+            ConversationImportMessage {
+                external_id: "m1".into(),
+                sequence: 1,
+                role: "user".into(),
+                content: "Hello".into(),
+                citations_json: "[]".into(),
+                created_at: "2026-08-17T00:00:00Z".into(),
+                token_estimate: 2,
+                is_compacted: true,
+            },
+            ConversationImportMessage {
+                external_id: "m2".into(),
+                sequence: 2,
+                role: "assistant".into(),
+                content: "Hi".into(),
+                citations_json: "[]".into(),
+                created_at: "2026-08-17T00:00:01Z".into(),
+                token_estimate: 1,
+                is_compacted: false,
+            },
+        ],
+    };
+    let first = repository.import_conversation(&import).unwrap();
+    let second = repository.import_conversation(&import).unwrap();
+    let read = repository
+        .read_conversation(&conversation_id)
+        .unwrap()
+        .unwrap();
+    assert!(!first.already_present);
+    assert!(second.already_present);
+    assert_eq!(first.digest_sha256, second.digest_sha256);
+    assert_eq!(
+        read.messages
+            .iter()
+            .map(|message| message.sequence)
+            .collect::<Vec<_>>(),
+        vec![1, 2]
+    );
+    assert_eq!(read.summary.as_deref(), Some("Earlier context"));
 }

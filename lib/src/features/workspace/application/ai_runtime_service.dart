@@ -1,42 +1,37 @@
+import 'dart:async';
+
+import '../../../core/agent/agent_bridge_types.dart';
+import '../../../core/ffi/agent_api.dart' as native_agent;
 import '../../../core/models.dart';
+import '../agent/application/agent_run_controller.dart';
 import '../domain/ai_provider.dart';
-import '../infrastructure/document_chunk_store.dart';
-import '../infrastructure/local_rag_service.dart';
-import '../infrastructure/openai_compatible_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
-import 'ai_agent_runtime.dart';
-import 'ai_tool_registry.dart';
 
 class AiRuntimeService {
-  AiRuntimeService({
-    required this.providerProfiles,
-    required this.chunkStore,
-    LocalRagService? localRag,
-    OpenAiCompatibleProvider? provider,
-    this.toolRegistry,
-  }) : _provider = provider ?? OpenAiCompatibleProvider(),
-       _localRag =
-           localRag ?? LocalRagService(readChunks: chunkStore.readChunks);
+  AiRuntimeService({required this.providerProfiles});
 
   final ProviderProfileStore providerProfiles;
-  final DocumentChunkStore chunkStore;
-  final OpenAiCompatibleProvider _provider;
-  final LocalRagService _localRag;
-  final AiToolRegistry? toolRegistry;
+  AgentRunController? _activeController;
 
   Future<void> testProvider(AiProviderProfile profile, String apiKey) {
     if (apiKey.trim().isEmpty) {
       throw ArgumentError('Enter an API key before testing this provider.');
     }
-    return _provider.testCredentials(profile: profile, apiKey: apiKey.trim());
+    return native_agent.testAgentProvider(
+      request: native_agent.NativeProviderTestRequest(
+        providerEndpoint: profile.baseUrl,
+        modelId: profile.modelId,
+        headers: profile.headers,
+        apiKey: apiKey.trim(),
+      ),
+    );
   }
 
   Future<AiReply> sendPrompt({
     required String prompt,
     required String profileId,
-    required bool useCurrentDocumentScope,
-    String? currentDocumentId,
-    List<AiChatMessage> history = const <AiChatMessage>[],
+    required String conversationId,
+    required AgentRunController controller,
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
   }) async {
@@ -49,61 +44,62 @@ class AiRuntimeService {
     if (key == null || key.isEmpty) {
       throw StateError('Add an API key for ${profile.label}.');
     }
-    onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
-    final reply =
-        await AiAgentRuntime(
-          provider: _provider,
-          localRag: _localRag,
-          toolRegistry: toolRegistry,
-        ).run(
-          AiAgentRequest(
-            profile: profile,
-            apiKey: key,
-            prompt: prompt,
-            documentIds: useCurrentDocumentScope && currentDocumentId != null
-                ? <String>[currentDocumentId]
-                : const <String>[],
-            history: history,
-          ),
+    _activeController = controller;
+    var delivered = 0;
+    final terminal = Completer<AgentRunControllerState>();
+    late final StreamSubscription<AgentRunControllerState> subscription;
+    subscription = controller.changes.listen(
+      (state) {
+        if (state.assistantText.length > delivered) {
+          onToken(state.assistantText.substring(delivered));
+          delivered = state.assistantText.length;
+        }
+        onStatus?.call(_phase(state.status), state.progressLabel);
+        if ((state.status?.isTerminal ?? false) && !terminal.isCompleted) {
+          terminal.complete(state);
+        }
+      },
+      onError: (Object error, StackTrace stack) {
+        if (!terminal.isCompleted) terminal.completeError(error, stack);
+      },
+    );
+    try {
+      onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
+      await controller.start(
+        AgentStartRequest(
+          providerEndpoint: profile.baseUrl,
+          modelId: profile.modelId,
+          headers: profile.headers,
+          apiKey: key,
+          conversationId: conversationId,
+          userPrompt: prompt,
+        ),
+      );
+      final result = await terminal.future;
+      if (result.error != null || result.status == AgentRunStatus.failed) {
+        throw StateError(
+          'Native agent run failed: ${result.error ?? 'provider error'}',
         );
-    onToken(reply.text);
-    return AiReply(text: reply.text, citations: reply.citations);
+      }
+      return AiReply(
+        text: result.assistantText,
+        citations: const <CitationSnippet>[],
+      );
+    } finally {
+      await subscription.cancel();
+      if (identical(_activeController, controller)) _activeController = null;
+    }
   }
 
-  Future<void> stopGeneration() async => _provider.cancel();
+  Future<void> stopGeneration() async => _activeController?.cancel();
+  Future<void> dispose() async => stopGeneration();
 
-  Future<String> summarizeConversation({
-    required String profileId,
-    required String transcript,
-  }) async {
-    final profiles = await providerProfiles.readProfiles();
-    final profile = profiles.where((item) => item.id == profileId).firstOrNull;
-    if (profile == null) {
-      throw StateError('Select a remote AI provider to chat.');
-    }
-    final key = await providerProfiles.readApiKey(profile.id);
-    if (key == null || key.isEmpty) {
-      throw StateError('Add an API key for ${profile.label}.');
-    }
-    final events = await _provider
-        .streamChat(
-          OpenAiChatRequest(
-            profile: profile,
-            apiKey: key,
-            messages: <AiChatMessage>[
-              const AiChatMessage.system(
-                'Summarize the conversation for future follow-ups. Preserve user intent, unresolved questions, document-supported conclusions with page citations, and important names, dates, quantities, and constraints.',
-              ),
-              AiChatMessage.user(transcript),
-            ],
-            tools: const <Map<String, dynamic>>[],
-          ),
-        )
-        .toList();
-    return events.whereType<AiTextDelta>().map((item) => item.text).join();
-  }
-
-  Future<void> dispose() async {}
+  AiRuntimePhase _phase(AgentRunStatus? status) => switch (status) {
+    AgentRunStatus.callingProvider => AiRuntimePhase.generating,
+    AgentRunStatus.executingTool => AiRuntimePhase.executingTool,
+    AgentRunStatus.failed => AiRuntimePhase.failed,
+    _ => AiRuntimePhase.loadingInference,
+  };
 }
 
 class AiReply {

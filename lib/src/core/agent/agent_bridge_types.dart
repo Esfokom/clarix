@@ -72,8 +72,8 @@ class AgentStartRequest {
     required this.headers,
     required this.apiKey,
     required this.userPrompt,
-    required this.selection,
-    required this.disclosureSha256,
+    this.selection,
+    this.disclosureSha256,
     this.conversationId,
     this.maxToolCalls = 12,
     this.maxProviderRounds = 6,
@@ -87,8 +87,8 @@ class AgentStartRequest {
   final String apiKey;
   final String? conversationId;
   final String userPrompt;
-  final AgentSelection selection;
-  final String disclosureSha256;
+  final AgentSelection? selection;
+  final String? disclosureSha256;
   final int maxToolCalls;
   final int maxProviderRounds;
   final int maxElapsedMs;
@@ -180,6 +180,61 @@ class AgentDisclosure {
   final String nearbyTextAfter;
   final List<int> pageNumbers;
   final String sha256;
+}
+
+class AgentConversationMessage {
+  const AgentConversationMessage({
+    required this.id,
+    required this.sequence,
+    required this.role,
+    required this.content,
+    required this.citationsJson,
+    required this.createdAt,
+    required this.tokenEstimate,
+    required this.isCompacted,
+  });
+  final String id;
+  final int sequence;
+  final String role;
+  final String content;
+  final String citationsJson;
+  final String createdAt;
+  final int tokenEstimate;
+  final bool isCompacted;
+}
+
+class AgentConversationImport {
+  const AgentConversationImport({
+    required this.legacyId,
+    required this.documentId,
+    required this.title,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.messages,
+    this.summary,
+    this.summaryThroughSequence,
+  });
+  final String legacyId;
+  final String documentId;
+  final String title;
+  final String createdAt;
+  final String updatedAt;
+  final String? summary;
+  final int? summaryThroughSequence;
+  final List<AgentConversationMessage> messages;
+}
+
+class AgentConversationImportReceipt {
+  const AgentConversationImportReceipt({
+    required this.conversationId,
+    required this.messageCount,
+    required this.digestSha256,
+    required this.alreadyPresent,
+  });
+  final String conversationId;
+  final int messageCount;
+  final String digestSha256;
+  final bool alreadyPresent;
 }
 
 class AgentProtocolViolation implements Exception {
