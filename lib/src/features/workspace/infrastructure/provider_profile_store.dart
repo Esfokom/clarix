@@ -33,6 +33,8 @@ class ProviderProfileStore {
 
   static const String _profilesKey = 'clarix.ai.providers';
   static const String _defaultProfileKey = 'clarix.ai.default_provider';
+  static String get profilesStorageKeyForTest => _profilesKey;
+  static String get defaultProfileStorageKeyForTest => _defaultProfileKey;
   final SharedPreferencesAsync preferences;
   final ProviderSecretStore secretStore;
 

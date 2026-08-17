@@ -10,6 +10,9 @@ class ClarixSessionStore {
   static const String _workspaceKey = 'clarix.workspace.session';
   static const String _aiKey = 'clarix.ai.state';
 
+  static String get workspaceStorageKeyForTest => _workspaceKey;
+  static String get aiStorageKeyForTest => _aiKey;
+
   final SharedPreferencesAsync _preferences;
 
   Future<WorkspaceSession> readWorkspaceSession() async {
@@ -41,5 +44,4 @@ class ClarixSessionStore {
   Future<void> writeAiWorkspaceState(AiWorkspaceState state) {
     return _preferences.setString(_aiKey, jsonEncode(state.toJson()));
   }
-
 }
