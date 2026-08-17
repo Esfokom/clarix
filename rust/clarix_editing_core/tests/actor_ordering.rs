@@ -3,7 +3,7 @@ use std::sync::{Arc, Barrier};
 use clarix_editing_core::{
     CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
     EditingError, EditorCommand, EditorEvent, EditorSessionActor, ObjectId, PageId, PageNode,
-    PdfBox, TextBlock, Utf16Range,
+    PdfBox, SearchMode, SearchRequest, TextBlock, Utf16Range,
 };
 
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
@@ -192,5 +192,25 @@ fn subscriber_receives_lagged_marker_after_capacity_returns() {
         events.recv().unwrap(),
         EditorEvent::CommandCommitted { result } if result.committed_revision.value() == 4
     ));
+    actor.close().unwrap();
+}
+
+#[test]
+fn actor_searches_the_current_revision_without_cross_thread_model_access() {
+    let (model, _) = sample_model("draft draft");
+    let actor = EditorSessionActor::spawn(model);
+
+    let result = actor
+        .search(SearchRequest {
+            query: "draft".into(),
+            mode: SearchMode::Exact,
+            whole_word: true,
+            offset: 0,
+            limit: 10,
+        })
+        .unwrap();
+
+    assert_eq!(result.revision, DocumentRevision::INITIAL);
+    assert_eq!(result.total_matches, 2);
     actor.close().unwrap();
 }

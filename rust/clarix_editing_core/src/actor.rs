@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, DurableCommit, EditingError,
-    EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SessionId,
+    EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SearchIndex, SearchPage,
+    SearchRequest, SessionId,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -29,6 +30,10 @@ enum ActorRequest {
     },
     Snapshot {
         reply: Sender<Result<DocumentModel, EditingError>>,
+    },
+    Search {
+        request: SearchRequest,
+        reply: Sender<Result<SearchPage, EditingError>>,
     },
     Subscribe {
         capacity: usize,
@@ -166,6 +171,18 @@ impl EditorSessionActor {
             .map_err(|_| EditingError::ActorUnavailable)?
     }
 
+    pub fn search(&self, request: SearchRequest) -> Result<SearchPage, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::Search { request, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
     pub fn subscribe(&self) -> Result<Receiver<EditorEvent>, EditingError> {
         self.subscribe_with_capacity(DEFAULT_SUBSCRIBER_CAPACITY)
     }
@@ -283,6 +300,14 @@ fn run_actor(
             }
             ActorRequest::Snapshot { reply } => {
                 let _ = reply.send(session.snapshot());
+            }
+            ActorRequest::Search { request, reply } => {
+                let result = session.snapshot().and_then(|model| {
+                    SearchIndex::from_document(&model)
+                        .search(request)
+                        .map_err(|error| EditingError::InvalidCommand(error.to_string()))
+                });
+                let _ = reply.send(result);
             }
             ActorRequest::Subscribe { capacity, reply } => {
                 let (sender, events) = bounded(capacity);
