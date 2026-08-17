@@ -1,4 +1,5 @@
 import '../../../core/models.dart';
+import '../../../core/ocr_models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 
 class ReaderSearchService {
