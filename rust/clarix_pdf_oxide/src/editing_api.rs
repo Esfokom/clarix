@@ -10,8 +10,8 @@ use clarix_editing_core::{
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
     FontFallbackApproval, FontRef, FontSource, ObjectId, ObjectPatch, PageIndexTask,
     PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SaveAssociation, SaveCoordinator,
-    SaveMode, SaveRequest, SessionId, SourceReference, TextRun, TextStyle, Utf16Range,
-    ViewportPriority,
+    SaveMode, SaveRequest, SearchMode, SearchRequest, SessionId, SourceReference, TextRun,
+    TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
 use clarix_pdf_adapter::{
@@ -54,6 +54,45 @@ pub enum NativeViewportPriority {
     Preload,
     Visible,
     ActiveSelection,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeSearchMode {
+    Exact,
+    CaseFolded,
+    Normalized,
+    Regex,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeSearchRequest {
+    pub expected_revision: u64,
+    pub query: String,
+    pub mode: NativeSearchMode,
+    pub whole_word: bool,
+    pub offset: u32,
+    pub limit: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeSearchMatch {
+    pub object_id: String,
+    pub page_id: String,
+    pub page_number: u32,
+    pub start_utf16: u32,
+    pub end_utf16: u32,
+    pub quoted_text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeSearchResult {
+    pub schema_version: u32,
+    pub revision: u64,
+    pub matches: Vec<NativeSearchMatch>,
+    pub total_matches: u32,
+    pub indexed_pages: u32,
+    pub page_count: u32,
+    pub is_complete: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -444,6 +483,46 @@ impl NativeEditorSession {
             height: page.height,
             revision: snapshot.revision.value(),
             objects: page.objects.iter().map(native_scene_object).collect(),
+        })
+    }
+
+    pub fn search(&self, request: NativeSearchRequest) -> Result<NativeSearchResult, String> {
+        let expected_revision = DocumentRevision::from_value(request.expected_revision);
+        let result = self
+            .actor
+            .search(SearchRequest {
+                query: request.query,
+                mode: native_search_mode(request.mode),
+                whole_word: request.whole_word,
+                offset: request.offset,
+                limit: request.limit,
+            })
+            .map_err(editing_error)?;
+        if result.revision != expected_revision {
+            return Err(editing_error(EditingError::RevisionConflict {
+                expected: expected_revision,
+                actual: result.revision,
+            }));
+        }
+        Ok(NativeSearchResult {
+            schema_version: EDITOR_SCHEMA_VERSION,
+            revision: result.revision.value(),
+            matches: result
+                .matches
+                .into_iter()
+                .map(|matched| NativeSearchMatch {
+                    object_id: matched.object_id.to_string(),
+                    page_id: matched.page_id.to_string(),
+                    page_number: matched.page_number,
+                    start_utf16: matched.start_utf16,
+                    end_utf16: matched.end_utf16,
+                    quoted_text: matched.quoted_text,
+                })
+                .collect(),
+            total_matches: result.total_matches,
+            indexed_pages: result.indexed_pages,
+            page_count: result.page_count,
+            is_complete: result.is_complete,
         })
     }
 
@@ -1113,6 +1192,15 @@ fn viewport_priority(priority: NativeViewportPriority) -> ViewportPriority {
         NativeViewportPriority::Preload => ViewportPriority::Preload,
         NativeViewportPriority::Visible => ViewportPriority::Visible,
         NativeViewportPriority::ActiveSelection => ViewportPriority::ActiveSelection,
+    }
+}
+
+fn native_search_mode(mode: NativeSearchMode) -> SearchMode {
+    match mode {
+        NativeSearchMode::Exact => SearchMode::Exact,
+        NativeSearchMode::CaseFolded => SearchMode::CaseFolded,
+        NativeSearchMode::Normalized => SearchMode::Normalized,
+        NativeSearchMode::Regex => SearchMode::Regex,
     }
 }
 

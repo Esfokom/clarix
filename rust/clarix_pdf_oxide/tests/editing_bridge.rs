@@ -3,8 +3,8 @@ use clarix_pdf_oxide::editing_api::{
     NativeApproveFontFallbackRequest, NativeCleanPatchRequest, NativeEditorCommand,
     NativeEditorCommandKind, NativeEditorSaveMode, NativeEditorSaveRequest, NativeEditorSession,
     NativeFontFallbackProposalRequest, NativeObjectDetailsRequest, NativeOpenEditorRequest,
-    NativePageSceneRequest, NativeSaveAssociation, NativeSubmitCommandRequest,
-    NativeViewportPriority,
+    NativePageSceneRequest, NativeSaveAssociation, NativeSearchMode, NativeSearchRequest,
+    NativeSubmitCommandRequest, NativeViewportPriority,
 };
 
 fn fixture_path() -> String {
@@ -77,6 +77,45 @@ fn native_session_indexes_pages_without_widget_requests() {
     session.close().unwrap();
 
     assert_eq!(indexed_pages, 1);
+}
+
+#[test]
+fn native_session_searches_the_rust_authoritative_page_model() {
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(
+            tempfile::tempdir()
+                .unwrap()
+                .keep()
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    })
+    .unwrap();
+    let scene = session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    let query = scene.objects[0].text.clone().unwrap();
+
+    let result = session
+        .search(NativeSearchRequest {
+            expected_revision: 0,
+            query,
+            mode: NativeSearchMode::Exact,
+            whole_word: false,
+            offset: 0,
+            limit: 10,
+        })
+        .unwrap();
+
+    assert_eq!(result.revision, 0);
+    assert_eq!(result.total_matches, 1);
+    assert_eq!(result.matches[0].object_id, scene.objects[0].object_id);
+    session.close().unwrap();
 }
 
 #[test]
