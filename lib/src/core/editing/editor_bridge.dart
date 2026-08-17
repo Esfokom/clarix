@@ -61,6 +61,36 @@ abstract interface class NativeFontFallbackPort {
   });
 }
 
+abstract interface class NativePhaseTwoPort {
+  Future<EditorSearchResult> search(EditorSearchRequest request);
+
+  Future<EditorSelectionSet> validateSelection(EditorSelectionSet selection);
+
+  Future<EditorCompatibilityReport> compatibilityReport(int expectedRevision);
+
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level);
+
+  Future<EditorAnnotation> annotationDetails(String objectId);
+
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  });
+
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  });
+
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  });
+}
+
 class EditorBridge {
   const EditorBridge();
 
@@ -260,6 +290,135 @@ class EditorBridgeSession {
     return value;
   }
 
+  Future<EditorSearchResult> search(EditorSearchRequest request) async {
+    _ensureOpen();
+    final phaseTwo = _phaseTwoPort();
+    final value = await phaseTwo.search(request);
+    _ensureOpen();
+    _validateSchema(value.schemaVersion);
+    return value;
+  }
+
+  Future<EditorSelectionSet> validateSelection(
+    EditorSelectionSet selection,
+  ) async {
+    _ensureOpen();
+    final phaseTwo = _phaseTwoPort();
+    final value = await phaseTwo.validateSelection(selection);
+    _ensureOpen();
+    return value;
+  }
+
+  Future<EditorCompatibilityReport> compatibilityReport(
+    int expectedRevision,
+  ) async {
+    _ensureOpen();
+    final value = await _phaseTwoPort().compatibilityReport(expectedRevision);
+    _ensureOpen();
+    _validateSchema(value.schemaVersion);
+    return value;
+  }
+
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) async {
+    _ensureOpen();
+    await _phaseTwoPort().reportMemoryPressure(level);
+    _ensureOpen();
+  }
+
+  Future<EditorAnnotation> annotationDetails(String objectId) async {
+    _ensureOpen();
+    final value = await _phaseTwoPort().annotationDetails(
+      _canonicalUuid(objectId, 'objectId'),
+    );
+    _ensureOpen();
+    return value;
+  }
+
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) => _submitAnnotation(
+    commandId: commandId,
+    baseRevision: baseRevision,
+    annotation: annotation,
+    submit: _phaseTwoPort().createAnnotation,
+  );
+
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) => _submitAnnotation(
+    commandId: commandId,
+    baseRevision: baseRevision,
+    annotation: annotation,
+    submit: _phaseTwoPort().updateAnnotation,
+  );
+
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  }) async {
+    _ensureOpen();
+    final canonicalCommandId = _canonicalUuid(commandId, 'commandId');
+    final value = await _phaseTwoPort().deleteAnnotation(
+      commandId: canonicalCommandId,
+      baseRevision: baseRevision,
+      objectId: _canonicalUuid(objectId, 'objectId'),
+    );
+    _ensureOpen();
+    _validateAnnotationAck(value, canonicalCommandId, baseRevision);
+    return value;
+  }
+
+  NativePhaseTwoPort _phaseTwoPort() {
+    final native = _native;
+    if (native is NativePhaseTwoPort) {
+      return native as NativePhaseTwoPort;
+    }
+    throw UnsupportedError('native Phase 2 editing workflows are unavailable');
+  }
+
+  Future<EditorCommandResult> _submitAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+    required Future<EditorCommandResult> Function({
+      required String commandId,
+      required int baseRevision,
+      required EditorAnnotation annotation,
+    })
+    submit,
+  }) async {
+    _ensureOpen();
+    final canonicalCommandId = _canonicalUuid(commandId, 'commandId');
+    final value = await submit(
+      commandId: canonicalCommandId,
+      baseRevision: baseRevision,
+      annotation: annotation,
+    );
+    _ensureOpen();
+    _validateAnnotationAck(value, canonicalCommandId, baseRevision);
+    return value;
+  }
+
+  void _validateAnnotationAck(
+    EditorCommandResult value,
+    String commandId,
+    int baseRevision,
+  ) {
+    _validateSchema(value.schemaVersion);
+    if (value.commandId != commandId ||
+        value.previousRevision != baseRevision ||
+        !value.durable) {
+      throw const EditorProtocolViolation(
+        'annotation acknowledgement is not durably based on the requested revision',
+      );
+    }
+  }
+
   Future<void> close() => _closing ??= _closeOnce();
 
   Future<void> _closeOnce() async {
@@ -307,7 +466,8 @@ class EditorBridgeSession {
   }
 }
 
-class _FrbNativeEditorPort implements NativeEditorPort, NativeFontFallbackPort {
+class _FrbNativeEditorPort
+    implements NativeEditorPort, NativeFontFallbackPort, NativePhaseTwoPort {
   _FrbNativeEditorPort(this._session);
 
   final native.NativeEditorSession _session;
@@ -378,6 +538,135 @@ class _FrbNativeEditorPort implements NativeEditorPort, NativeFontFallbackPort {
     );
     return _commandResultFromNative(value);
   }
+
+  @override
+  Future<EditorSearchResult> search(EditorSearchRequest request) async {
+    final value = await _session.search(
+      request: native.NativeSearchRequest(
+        expectedRevision: BigInt.from(request.expectedRevision),
+        query: request.query,
+        mode: switch (request.mode) {
+          EditorSearchMode.exact => native.NativeSearchMode.exact,
+          EditorSearchMode.caseFolded => native.NativeSearchMode.caseFolded,
+          EditorSearchMode.normalized => native.NativeSearchMode.normalized,
+          EditorSearchMode.regex => native.NativeSearchMode.regex,
+        },
+        wholeWord: request.wholeWord,
+        offset: request.offset,
+        limit: request.limit,
+      ),
+    );
+    return EditorSearchResult(
+      schemaVersion: value.schemaVersion,
+      revision: _intFromBigInt(value.revision, 'search.revision'),
+      matches: value.matches
+          .map(
+            (match) => EditorSearchMatch(
+              objectId: match.objectId,
+              pageId: match.pageId,
+              pageNumber: match.pageNumber,
+              startUtf16: match.startUtf16,
+              endUtf16: match.endUtf16,
+              quotedText: match.quotedText,
+            ),
+          )
+          .toList(growable: false),
+      totalMatches: value.totalMatches,
+      indexedPages: value.indexedPages,
+      pageCount: value.pageCount,
+      isComplete: value.isComplete,
+    );
+  }
+
+  @override
+  Future<EditorSelectionSet> validateSelection(
+    EditorSelectionSet selection,
+  ) async {
+    final value = await _session.validateSelection(
+      selection: native.NativeSelectionSet(
+        expectedRevision: BigInt.from(selection.revision),
+        kind: selection.kind == EditorSelectionKind.textRanges
+            ? native.NativeSelectionKind.textRanges
+            : native.NativeSelectionKind.objects,
+        ranges: selection.ranges
+            .map(
+              (range) => native.NativeSelectionRange(
+                objectId: range.objectId,
+                pageId: range.pageId,
+                pageNumber: range.pageNumber,
+                startUtf16: range.startUtf16,
+                endUtf16: range.endUtf16,
+                quotedText: range.quotedText,
+              ),
+            )
+            .toList(growable: false),
+        objectIds: selection.objectIds,
+        primaryIndex: selection.primaryIndex,
+      ),
+    );
+    return _selectionFromNative(value);
+  }
+
+  @override
+  Future<EditorCompatibilityReport> compatibilityReport(
+    int expectedRevision,
+  ) async => _compatibilityFromNative(
+    await _session.compatibilityReport(
+      expectedRevision: BigInt.from(expectedRevision),
+    ),
+  );
+
+  @override
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) =>
+      _session.reportMemoryPressure(
+        level: level == EditorMemoryPressureLevel.moderate
+            ? native.NativeMemoryPressureLevel.moderate
+            : native.NativeMemoryPressureLevel.critical,
+      );
+
+  @override
+  Future<EditorAnnotation> annotationDetails(String objectId) async =>
+      _annotationFromNative(
+        await _session.annotationDetails(objectId: objectId),
+      );
+
+  @override
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) async => _commandResultFromNative(
+    await _session.createAnnotation(
+      request: _annotationRequestToNative(commandId, baseRevision, annotation),
+    ),
+  );
+
+  @override
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) async => _commandResultFromNative(
+    await _session.updateAnnotation(
+      request: _annotationRequestToNative(commandId, baseRevision, annotation),
+    ),
+  );
+
+  @override
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  }) async => _commandResultFromNative(
+    await _session.deleteAnnotation(
+      request: native.NativeDeleteAnnotationRequest(
+        schemaVersion: _editorSchemaVersion,
+        commandId: commandId,
+        baseRevision: BigInt.from(baseRevision),
+        objectId: objectId,
+      ),
+    ),
+  );
 
   @override
   Future<EditorFontFallbackProposal> proposeFontFallback({
@@ -604,6 +893,7 @@ EditorCommandResult _commandResultFromNative(
   ),
   durable: value.durable,
   warnings: List<String>.unmodifiable(value.warnings),
+  removedObjectIds: List<String>.unmodifiable(value.removedObjectIds),
   objectPatches: value.objectPatches
       .map(
         (patch) => EditorObjectPatch(
@@ -636,6 +926,137 @@ EditorCommandResult _commandResultFromNative(
       )
       .toList(growable: false),
 );
+
+EditorSelectionSet _selectionFromNative(
+  native.NativeValidatedSelection value,
+) => EditorSelectionSet(
+  revision: _intFromBigInt(value.revision, 'selection.revision'),
+  kind: value.kind == native.NativeSelectionKind.textRanges
+      ? EditorSelectionKind.textRanges
+      : EditorSelectionKind.objects,
+  ranges: value.ranges
+      .map(
+        (range) => EditorSelectionRange(
+          objectId: range.objectId,
+          pageId: range.pageId,
+          pageNumber: range.pageNumber,
+          startUtf16: range.startUtf16,
+          endUtf16: range.endUtf16,
+          quotedText: range.quotedText,
+        ),
+      )
+      .toList(growable: false),
+  objectIds: List<String>.unmodifiable(value.objectIds),
+  primaryIndex: value.primaryIndex,
+);
+
+EditorCompatibilityReport _compatibilityFromNative(
+  native.NativeCompatibilityReport value,
+) => EditorCompatibilityReport(
+  schemaVersion: value.schemaVersion,
+  revision: _intFromBigInt(value.revision, 'compatibility.revision'),
+  editableCount: value.editableCount,
+  overlayOnlyCount: value.overlayOnlyCount,
+  readOnlyCount: value.readOnlyCount,
+  issues: value.issues
+      .map(
+        (issue) => EditorCompatibilityIssue(
+          objectId: issue.objectId,
+          pageId: issue.pageId,
+          kind: issue.kind,
+          capability: issue.capability,
+          code: issue.code,
+          message: issue.message,
+          supportedOperations: List<String>.unmodifiable(
+            issue.supportedOperations,
+          ),
+        ),
+      )
+      .toList(growable: false),
+);
+
+native.NativeAnnotationCommandRequest _annotationRequestToNative(
+  String commandId,
+  int baseRevision,
+  EditorAnnotation annotation,
+) => native.NativeAnnotationCommandRequest(
+  schemaVersion: _editorSchemaVersion,
+  commandId: commandId,
+  baseRevision: BigInt.from(baseRevision),
+  annotation: _annotationToNative(annotation),
+);
+
+native.NativeAnnotation _annotationToNative(EditorAnnotation annotation) =>
+    native.NativeAnnotation(
+      objectId: annotation.objectId,
+      pageId: annotation.pageId,
+      bounds: native.NativePdfBox(
+        left: annotation.bounds.left,
+        bottom: annotation.bounds.bottom,
+        right: annotation.bounds.right,
+        top: annotation.bounds.top,
+      ),
+      kind: switch (annotation.kind) {
+        EditorAnnotationKind.bookmark => native.NativeAnnotationKind.bookmark,
+        EditorAnnotationKind.highlight => native.NativeAnnotationKind.highlight,
+        EditorAnnotationKind.comment => native.NativeAnnotationKind.comment,
+      },
+      anchorKind: annotation.anchorKind == EditorAnnotationAnchorKind.pagePoint
+          ? native.NativeAnnotationAnchorKind.pagePoint
+          : native.NativeAnnotationAnchorKind.textRanges,
+      anchorX: annotation.anchorX,
+      anchorY: annotation.anchorY,
+      ranges: annotation.ranges
+          .map(
+            (range) => native.NativeAnnotationRange(
+              rangeId: range.rangeId,
+              objectId: range.objectId,
+              startUtf16: range.startUtf16,
+              endUtf16: range.endUtf16,
+              quotedText: range.quotedText,
+            ),
+          )
+          .toList(growable: false),
+      title: annotation.title,
+      body: annotation.body,
+      colorRgba: Uint8List.fromList(annotation.colorRgba),
+      opacity: annotation.opacity,
+      resolved: annotation.resolved,
+    );
+
+EditorAnnotation _annotationFromNative(native.NativeAnnotation annotation) =>
+    EditorAnnotation(
+      objectId: annotation.objectId,
+      pageId: annotation.pageId,
+      bounds: _boxFromNative(annotation.bounds),
+      kind: switch (annotation.kind) {
+        native.NativeAnnotationKind.bookmark => EditorAnnotationKind.bookmark,
+        native.NativeAnnotationKind.highlight => EditorAnnotationKind.highlight,
+        native.NativeAnnotationKind.comment => EditorAnnotationKind.comment,
+      },
+      anchorKind:
+          annotation.anchorKind == native.NativeAnnotationAnchorKind.pagePoint
+          ? EditorAnnotationAnchorKind.pagePoint
+          : EditorAnnotationAnchorKind.textRanges,
+      anchorX: annotation.anchorX,
+      anchorY: annotation.anchorY,
+      ranges: annotation.ranges
+          .map(
+            (range) => EditorAnnotationRange(
+              rangeId: range.rangeId,
+              objectId: range.objectId,
+              startUtf16: range.startUtf16,
+              endUtf16: range.endUtf16,
+              quotedText: range.quotedText,
+            ),
+          )
+          .toList(growable: false),
+      title: annotation.title,
+      body: annotation.body,
+      colorRgba: List<int>.unmodifiable(annotation.colorRgba),
+      opacity: annotation.opacity,
+      resolved: annotation.resolved,
+    );
 
 native.NativeEditorCommand _commandToNative(EditorCommand value) =>
     native.NativeEditorCommand(

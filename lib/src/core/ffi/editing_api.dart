@@ -6,12 +6,14 @@
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `replace_utf16`, `required`, `text_style`, `viewport_priority`
+// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PendingFontFallback`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
+  Future<NativeAnnotation> annotationDetails({required String objectId});
+
   Future<NativeCommandResult> approveFontFallback({
     required NativeApproveFontFallbackRequest request,
   });
@@ -25,6 +27,18 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   });
 
   Future<void> close();
+
+  Future<NativeCompatibilityReport> compatibilityReport({
+    required BigInt expectedRevision,
+  });
+
+  Future<NativeCommandResult> createAnnotation({
+    required NativeAnnotationCommandRequest request,
+  });
+
+  Future<NativeCommandResult> deleteAnnotation({
+    required NativeDeleteAnnotationRequest request,
+  });
 
   Stream<NativeEditorEvent> events();
 
@@ -48,12 +62,24 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
 
   Future<void> releaseCleanPatchMemory();
 
+  Future<void> reportMemoryPressure({required NativeMemoryPressureLevel level});
+
   Future<NativeEditorSaveResult> save({
     required NativeEditorSaveRequest request,
   });
 
+  Future<NativeSearchResult> search({required NativeSearchRequest request});
+
   Future<NativeCommandResult> submit({
     required NativeSubmitCommandRequest request,
+  });
+
+  Future<NativeCommandResult> updateAnnotation({
+    required NativeAnnotationCommandRequest request,
+  });
+
+  Future<NativeValidatedSelection> validateSelection({
+    required NativeSelectionSet selection,
   });
 }
 
@@ -94,6 +120,143 @@ class NativeAffineTransform {
           d == other.d &&
           e == other.e &&
           f == other.f;
+}
+
+class NativeAnnotation {
+  final String objectId;
+  final String pageId;
+  final NativePdfBox bounds;
+  final NativeAnnotationKind kind;
+  final NativeAnnotationAnchorKind anchorKind;
+  final double? anchorX;
+  final double? anchorY;
+  final List<NativeAnnotationRange> ranges;
+  final String title;
+  final String body;
+  final Uint8List colorRgba;
+  final double opacity;
+  final bool resolved;
+
+  const NativeAnnotation({
+    required this.objectId,
+    required this.pageId,
+    required this.bounds,
+    required this.kind,
+    required this.anchorKind,
+    this.anchorX,
+    this.anchorY,
+    required this.ranges,
+    required this.title,
+    required this.body,
+    required this.colorRgba,
+    required this.opacity,
+    required this.resolved,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      pageId.hashCode ^
+      bounds.hashCode ^
+      kind.hashCode ^
+      anchorKind.hashCode ^
+      anchorX.hashCode ^
+      anchorY.hashCode ^
+      ranges.hashCode ^
+      title.hashCode ^
+      body.hashCode ^
+      colorRgba.hashCode ^
+      opacity.hashCode ^
+      resolved.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeAnnotation &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          pageId == other.pageId &&
+          bounds == other.bounds &&
+          kind == other.kind &&
+          anchorKind == other.anchorKind &&
+          anchorX == other.anchorX &&
+          anchorY == other.anchorY &&
+          ranges == other.ranges &&
+          title == other.title &&
+          body == other.body &&
+          colorRgba == other.colorRgba &&
+          opacity == other.opacity &&
+          resolved == other.resolved;
+}
+
+enum NativeAnnotationAnchorKind { pagePoint, textRanges }
+
+class NativeAnnotationCommandRequest {
+  final int schemaVersion;
+  final String commandId;
+  final BigInt baseRevision;
+  final NativeAnnotation annotation;
+
+  const NativeAnnotationCommandRequest({
+    required this.schemaVersion,
+    required this.commandId,
+    required this.baseRevision,
+    required this.annotation,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      commandId.hashCode ^
+      baseRevision.hashCode ^
+      annotation.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeAnnotationCommandRequest &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          commandId == other.commandId &&
+          baseRevision == other.baseRevision &&
+          annotation == other.annotation;
+}
+
+enum NativeAnnotationKind { bookmark, highlight, comment }
+
+class NativeAnnotationRange {
+  final String rangeId;
+  final String objectId;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+
+  const NativeAnnotationRange({
+    required this.rangeId,
+    required this.objectId,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  @override
+  int get hashCode =>
+      rangeId.hashCode ^
+      objectId.hashCode ^
+      startUtf16.hashCode ^
+      endUtf16.hashCode ^
+      quotedText.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeAnnotationRange &&
+          runtimeType == other.runtimeType &&
+          rangeId == other.rangeId &&
+          objectId == other.objectId &&
+          startUtf16 == other.startUtf16 &&
+          endUtf16 == other.endUtf16 &&
+          quotedText == other.quotedText;
 }
 
 class NativeApproveFontFallbackRequest {
@@ -219,6 +382,7 @@ class NativeCommandResult {
   final BigInt committedRevision;
   final bool durable;
   final List<String> warnings;
+  final List<String> removedObjectIds;
   final NativeSelectionRebase? selectionRebase;
   final List<NativeObjectPatch> objectPatches;
 
@@ -228,6 +392,7 @@ class NativeCommandResult {
     required this.committedRevision,
     required this.durable,
     required this.warnings,
+    required this.removedObjectIds,
     this.selectionRebase,
     required this.objectPatches,
   });
@@ -239,6 +404,7 @@ class NativeCommandResult {
       committedRevision.hashCode ^
       durable.hashCode ^
       warnings.hashCode ^
+      removedObjectIds.hashCode ^
       selectionRebase.hashCode ^
       objectPatches.hashCode;
 
@@ -252,8 +418,122 @@ class NativeCommandResult {
           committedRevision == other.committedRevision &&
           durable == other.durable &&
           warnings == other.warnings &&
+          removedObjectIds == other.removedObjectIds &&
           selectionRebase == other.selectionRebase &&
           objectPatches == other.objectPatches;
+}
+
+class NativeCompatibilityIssue {
+  final String objectId;
+  final String pageId;
+  final String kind;
+  final String capability;
+  final String code;
+  final String message;
+  final List<String> supportedOperations;
+
+  const NativeCompatibilityIssue({
+    required this.objectId,
+    required this.pageId,
+    required this.kind,
+    required this.capability,
+    required this.code,
+    required this.message,
+    required this.supportedOperations,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      pageId.hashCode ^
+      kind.hashCode ^
+      capability.hashCode ^
+      code.hashCode ^
+      message.hashCode ^
+      supportedOperations.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeCompatibilityIssue &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          pageId == other.pageId &&
+          kind == other.kind &&
+          capability == other.capability &&
+          code == other.code &&
+          message == other.message &&
+          supportedOperations == other.supportedOperations;
+}
+
+class NativeCompatibilityReport {
+  final int schemaVersion;
+  final BigInt revision;
+  final int editableCount;
+  final int overlayOnlyCount;
+  final int readOnlyCount;
+  final List<NativeCompatibilityIssue> issues;
+
+  const NativeCompatibilityReport({
+    required this.schemaVersion,
+    required this.revision,
+    required this.editableCount,
+    required this.overlayOnlyCount,
+    required this.readOnlyCount,
+    required this.issues,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      revision.hashCode ^
+      editableCount.hashCode ^
+      overlayOnlyCount.hashCode ^
+      readOnlyCount.hashCode ^
+      issues.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeCompatibilityReport &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          revision == other.revision &&
+          editableCount == other.editableCount &&
+          overlayOnlyCount == other.overlayOnlyCount &&
+          readOnlyCount == other.readOnlyCount &&
+          issues == other.issues;
+}
+
+class NativeDeleteAnnotationRequest {
+  final int schemaVersion;
+  final String commandId;
+  final BigInt baseRevision;
+  final String objectId;
+
+  const NativeDeleteAnnotationRequest({
+    required this.schemaVersion,
+    required this.commandId,
+    required this.baseRevision,
+    required this.objectId,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      commandId.hashCode ^
+      baseRevision.hashCode ^
+      objectId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeDeleteAnnotationRequest &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          commandId == other.commandId &&
+          baseRevision == other.baseRevision &&
+          objectId == other.objectId;
 }
 
 class NativeEditorCommand {
@@ -556,6 +836,8 @@ class NativeFontFallbackProposalRequest {
           replacement == other.replacement;
 }
 
+enum NativeMemoryPressureLevel { moderate, critical }
+
 class NativeObjectDetailsRequest {
   final String objectId;
 
@@ -816,6 +1098,170 @@ class NativeSceneObject {
 
 enum NativeSceneObjectKind { text, unsupported }
 
+class NativeSearchMatch {
+  final String objectId;
+  final String pageId;
+  final int pageNumber;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+
+  const NativeSearchMatch({
+    required this.objectId,
+    required this.pageId,
+    required this.pageNumber,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      pageId.hashCode ^
+      pageNumber.hashCode ^
+      startUtf16.hashCode ^
+      endUtf16.hashCode ^
+      quotedText.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeSearchMatch &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          pageId == other.pageId &&
+          pageNumber == other.pageNumber &&
+          startUtf16 == other.startUtf16 &&
+          endUtf16 == other.endUtf16 &&
+          quotedText == other.quotedText;
+}
+
+enum NativeSearchMode { exact, caseFolded, normalized, regex }
+
+class NativeSearchRequest {
+  final BigInt expectedRevision;
+  final String query;
+  final NativeSearchMode mode;
+  final bool wholeWord;
+  final int offset;
+  final int limit;
+
+  const NativeSearchRequest({
+    required this.expectedRevision,
+    required this.query,
+    required this.mode,
+    required this.wholeWord,
+    required this.offset,
+    required this.limit,
+  });
+
+  @override
+  int get hashCode =>
+      expectedRevision.hashCode ^
+      query.hashCode ^
+      mode.hashCode ^
+      wholeWord.hashCode ^
+      offset.hashCode ^
+      limit.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeSearchRequest &&
+          runtimeType == other.runtimeType &&
+          expectedRevision == other.expectedRevision &&
+          query == other.query &&
+          mode == other.mode &&
+          wholeWord == other.wholeWord &&
+          offset == other.offset &&
+          limit == other.limit;
+}
+
+class NativeSearchResult {
+  final int schemaVersion;
+  final BigInt revision;
+  final List<NativeSearchMatch> matches;
+  final int totalMatches;
+  final int indexedPages;
+  final int pageCount;
+  final bool isComplete;
+
+  const NativeSearchResult({
+    required this.schemaVersion,
+    required this.revision,
+    required this.matches,
+    required this.totalMatches,
+    required this.indexedPages,
+    required this.pageCount,
+    required this.isComplete,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      revision.hashCode ^
+      matches.hashCode ^
+      totalMatches.hashCode ^
+      indexedPages.hashCode ^
+      pageCount.hashCode ^
+      isComplete.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeSearchResult &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          revision == other.revision &&
+          matches == other.matches &&
+          totalMatches == other.totalMatches &&
+          indexedPages == other.indexedPages &&
+          pageCount == other.pageCount &&
+          isComplete == other.isComplete;
+}
+
+enum NativeSelectionKind { textRanges, objects }
+
+class NativeSelectionRange {
+  final String objectId;
+  final String pageId;
+  final int pageNumber;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+
+  const NativeSelectionRange({
+    required this.objectId,
+    required this.pageId,
+    required this.pageNumber,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      pageId.hashCode ^
+      pageNumber.hashCode ^
+      startUtf16.hashCode ^
+      endUtf16.hashCode ^
+      quotedText.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeSelectionRange &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          pageId == other.pageId &&
+          pageNumber == other.pageNumber &&
+          startUtf16 == other.startUtf16 &&
+          endUtf16 == other.endUtf16 &&
+          quotedText == other.quotedText;
+}
+
 class NativeSelectionRebase {
   final String objectId;
   final int start;
@@ -845,6 +1291,41 @@ class NativeSelectionRebase {
           start == other.start &&
           end == other.end &&
           insertedUtf16Length == other.insertedUtf16Length;
+}
+
+class NativeSelectionSet {
+  final BigInt expectedRevision;
+  final NativeSelectionKind kind;
+  final List<NativeSelectionRange> ranges;
+  final List<String> objectIds;
+  final int? primaryIndex;
+
+  const NativeSelectionSet({
+    required this.expectedRevision,
+    required this.kind,
+    required this.ranges,
+    required this.objectIds,
+    this.primaryIndex,
+  });
+
+  @override
+  int get hashCode =>
+      expectedRevision.hashCode ^
+      kind.hashCode ^
+      ranges.hashCode ^
+      objectIds.hashCode ^
+      primaryIndex.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeSelectionSet &&
+          runtimeType == other.runtimeType &&
+          expectedRevision == other.expectedRevision &&
+          kind == other.kind &&
+          ranges == other.ranges &&
+          objectIds == other.objectIds &&
+          primaryIndex == other.primaryIndex;
 }
 
 class NativeSubmitCommandRequest {
@@ -994,6 +1475,45 @@ class NativeTextStyle {
           fontWeight == other.fontWeight &&
           italic == other.italic &&
           colorRgba == other.colorRgba;
+}
+
+class NativeValidatedSelection {
+  final int schemaVersion;
+  final BigInt revision;
+  final NativeSelectionKind kind;
+  final List<NativeSelectionRange> ranges;
+  final List<String> objectIds;
+  final int? primaryIndex;
+
+  const NativeValidatedSelection({
+    required this.schemaVersion,
+    required this.revision,
+    required this.kind,
+    required this.ranges,
+    required this.objectIds,
+    this.primaryIndex,
+  });
+
+  @override
+  int get hashCode =>
+      schemaVersion.hashCode ^
+      revision.hashCode ^
+      kind.hashCode ^
+      ranges.hashCode ^
+      objectIds.hashCode ^
+      primaryIndex.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeValidatedSelection &&
+          runtimeType == other.runtimeType &&
+          schemaVersion == other.schemaVersion &&
+          revision == other.revision &&
+          kind == other.kind &&
+          ranges == other.ranges &&
+          objectIds == other.objectIds &&
+          primaryIndex == other.primaryIndex;
 }
 
 enum NativeViewportPriority { background, preload, visible, activeSelection }

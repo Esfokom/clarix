@@ -92,6 +92,106 @@ class FakeNativeEditorPort implements NativeEditorPort {
   );
 }
 
+class FakePhaseTwoPort extends FakeNativeEditorPort
+    implements NativePhaseTwoPort {
+  EditorAnnotation? annotation;
+
+  @override
+  Future<EditorSearchResult> search(EditorSearchRequest request) async =>
+      EditorSearchResult(
+        schemaVersion: schemaVersion,
+        revision: request.expectedRevision,
+        matches: const <EditorSearchMatch>[
+          EditorSearchMatch(
+            objectId: '00000000-0000-4000-8000-000000000010',
+            pageId: '00000000-0000-4000-8000-000000000011',
+            pageNumber: 1,
+            startUtf16: 0,
+            endUtf16: 5,
+            quotedText: 'hello',
+          ),
+        ],
+        totalMatches: 1,
+        indexedPages: 1,
+        pageCount: 1,
+        isComplete: true,
+      );
+
+  @override
+  Future<EditorSelectionSet> validateSelection(
+    EditorSelectionSet selection,
+  ) async => selection;
+
+  @override
+  Future<EditorCompatibilityReport> compatibilityReport(
+    int expectedRevision,
+  ) async => EditorCompatibilityReport(
+    schemaVersion: schemaVersion,
+    revision: expectedRevision,
+    editableCount: 1,
+    overlayOnlyCount: 0,
+    readOnlyCount: 0,
+    issues: const <EditorCompatibilityIssue>[],
+  );
+
+  @override
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) async {}
+
+  @override
+  Future<EditorAnnotation> annotationDetails(String objectId) async =>
+      annotation!;
+
+  @override
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) async {
+    this.annotation = annotation;
+    return _annotationResult(commandId, baseRevision);
+  }
+
+  @override
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) async {
+    this.annotation = annotation;
+    return _annotationResult(commandId, baseRevision);
+  }
+
+  @override
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  }) async {
+    annotation = null;
+    return EditorCommandResult(
+      schemaVersion: schemaVersion,
+      commandId: commandId,
+      previousRevision: baseRevision,
+      committedRevision: baseRevision + 1,
+      durable: true,
+      warnings: const <String>[],
+      objectPatches: const <EditorObjectPatch>[],
+      removedObjectIds: <String>[objectId],
+    );
+  }
+
+  EditorCommandResult _annotationResult(String commandId, int baseRevision) =>
+      EditorCommandResult(
+        schemaVersion: schemaVersion,
+        commandId: commandId,
+        previousRevision: baseRevision,
+        committedRevision: baseRevision + 1,
+        durable: true,
+        warnings: const <String>[],
+        objectPatches: const <EditorObjectPatch>[],
+      );
+}
+
 const _sessionId = '00000000-0000-4000-8000-000000000001';
 
 void main() {
@@ -182,4 +282,42 @@ void main() {
       await subscription.cancel();
     },
   );
+
+  test('editor bridge exposes revisioned Phase 2 workflows', () async {
+    final native = FakePhaseTwoPort();
+    final session = EditorBridgeSession.forTest(native);
+    final search = await session.search(
+      const EditorSearchRequest(expectedRevision: 0, query: 'hello'),
+    );
+    expect(search.matches.single.quotedText, 'hello');
+    expect((await session.compatibilityReport(0)).editableCount, 1);
+
+    final annotation = const EditorAnnotation(
+      objectId: '00000000-0000-4000-8000-000000000020',
+      pageId: '00000000-0000-4000-8000-000000000021',
+      bounds: EditorPdfBox(left: 1, bottom: 2, right: 3, top: 4),
+      kind: EditorAnnotationKind.comment,
+      anchorKind: EditorAnnotationAnchorKind.pagePoint,
+      anchorX: 1,
+      anchorY: 2,
+      body: 'Review this',
+    );
+    final created = await session.createAnnotation(
+      commandId: '00000000-0000-4000-8000-000000000022',
+      baseRevision: 0,
+      annotation: annotation,
+    );
+    expect(created.committedRevision, 1);
+    expect(
+      (await session.annotationDetails(annotation.objectId)).body,
+      'Review this',
+    );
+    final deleted = await session.deleteAnnotation(
+      commandId: '00000000-0000-4000-8000-000000000023',
+      baseRevision: 1,
+      objectId: annotation.objectId,
+    );
+    expect(deleted.removedObjectIds, <String>[annotation.objectId]);
+    await session.close();
+  });
 }

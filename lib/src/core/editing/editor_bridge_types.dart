@@ -13,6 +13,16 @@ enum EditorCommandKind {
   redo,
 }
 
+enum EditorSearchMode { exact, caseFolded, normalized, regex }
+
+enum EditorSelectionKind { textRanges, objects }
+
+enum EditorAnnotationKind { bookmark, highlight, comment }
+
+enum EditorAnnotationAnchorKind { pagePoint, textRanges }
+
+enum EditorMemoryPressureLevel { moderate, critical }
+
 enum EditorEventKind { ready, commandCommitted, lagged, closed }
 
 enum EditorViewportPriority { background, preload, visible, activeSelection }
@@ -105,6 +115,182 @@ class EditorPdfBox {
   final double bottom;
   final double right;
   final double top;
+}
+
+class EditorSearchRequest {
+  const EditorSearchRequest({
+    required this.expectedRevision,
+    required this.query,
+    this.mode = EditorSearchMode.exact,
+    this.wholeWord = false,
+    this.offset = 0,
+    this.limit = 100,
+  });
+
+  final int expectedRevision;
+  final String query;
+  final EditorSearchMode mode;
+  final bool wholeWord;
+  final int offset;
+  final int limit;
+}
+
+class EditorSearchMatch {
+  const EditorSearchMatch({
+    required this.objectId,
+    required this.pageId,
+    required this.pageNumber,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  final String objectId;
+  final String pageId;
+  final int pageNumber;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+}
+
+class EditorSearchResult {
+  const EditorSearchResult({
+    required this.schemaVersion,
+    required this.revision,
+    required this.matches,
+    required this.totalMatches,
+    required this.indexedPages,
+    required this.pageCount,
+    required this.isComplete,
+  });
+
+  final int schemaVersion;
+  final int revision;
+  final List<EditorSearchMatch> matches;
+  final int totalMatches;
+  final int indexedPages;
+  final int pageCount;
+  final bool isComplete;
+}
+
+class EditorSelectionRange {
+  const EditorSelectionRange({
+    required this.objectId,
+    required this.pageId,
+    required this.pageNumber,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  final String objectId;
+  final String pageId;
+  final int pageNumber;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+}
+
+class EditorSelectionSet {
+  const EditorSelectionSet({
+    required this.revision,
+    required this.kind,
+    this.ranges = const <EditorSelectionRange>[],
+    this.objectIds = const <String>[],
+    this.primaryIndex,
+  });
+
+  final int revision;
+  final EditorSelectionKind kind;
+  final List<EditorSelectionRange> ranges;
+  final List<String> objectIds;
+  final int? primaryIndex;
+}
+
+class EditorCompatibilityIssue {
+  const EditorCompatibilityIssue({
+    required this.objectId,
+    required this.pageId,
+    required this.kind,
+    required this.capability,
+    required this.code,
+    required this.message,
+    required this.supportedOperations,
+  });
+
+  final String objectId;
+  final String pageId;
+  final String kind;
+  final String capability;
+  final String code;
+  final String message;
+  final List<String> supportedOperations;
+}
+
+class EditorCompatibilityReport {
+  const EditorCompatibilityReport({
+    required this.schemaVersion,
+    required this.revision,
+    required this.editableCount,
+    required this.overlayOnlyCount,
+    required this.readOnlyCount,
+    required this.issues,
+  });
+
+  final int schemaVersion;
+  final int revision;
+  final int editableCount;
+  final int overlayOnlyCount;
+  final int readOnlyCount;
+  final List<EditorCompatibilityIssue> issues;
+}
+
+class EditorAnnotationRange {
+  const EditorAnnotationRange({
+    required this.rangeId,
+    required this.objectId,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  final String rangeId;
+  final String objectId;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+}
+
+class EditorAnnotation {
+  const EditorAnnotation({
+    required this.objectId,
+    required this.pageId,
+    required this.bounds,
+    required this.kind,
+    required this.anchorKind,
+    this.anchorX,
+    this.anchorY,
+    this.ranges = const <EditorAnnotationRange>[],
+    this.title = '',
+    this.body = '',
+    this.colorRgba = const <int>[255, 212, 59, 255],
+    this.opacity = 1,
+    this.resolved = false,
+  });
+
+  final String objectId;
+  final String pageId;
+  final EditorPdfBox bounds;
+  final EditorAnnotationKind kind;
+  final EditorAnnotationAnchorKind anchorKind;
+  final double? anchorX;
+  final double? anchorY;
+  final List<EditorAnnotationRange> ranges;
+  final String title;
+  final String body;
+  final List<int> colorRgba;
+  final double opacity;
+  final bool resolved;
 }
 
 class EditorAffineTransform {
@@ -332,6 +518,7 @@ class EditorCommandResult {
     required this.durable,
     required this.warnings,
     required this.objectPatches,
+    this.removedObjectIds = const <String>[],
   });
 
   final int schemaVersion;
@@ -341,6 +528,7 @@ class EditorCommandResult {
   final bool durable;
   final List<String> warnings;
   final List<EditorObjectPatch> objectPatches;
+  final List<String> removedObjectIds;
 }
 
 class EditorEvent {

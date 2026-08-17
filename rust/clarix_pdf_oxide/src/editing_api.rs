@@ -421,6 +421,7 @@ pub struct NativeCommandResult {
     pub committed_revision: u64,
     pub durable: bool,
     pub warnings: Vec<String>,
+    pub removed_object_ids: Vec<String>,
     pub selection_rebase: Option<NativeSelectionRebase>,
     pub object_patches: Vec<NativeObjectPatch>,
 }
@@ -1514,6 +1515,11 @@ fn native_command_result(result: CommandResult) -> NativeCommandResult {
             .warnings
             .into_iter()
             .map(|warning| format!("{}: {}", warning.code, warning.message))
+            .collect(),
+        removed_object_ids: result
+            .removed_object_ids
+            .into_iter()
+            .map(|object_id| object_id.to_string())
             .collect(),
         selection_rebase: result.selection_rebase.map(|rebase| NativeSelectionRebase {
             object_id: rebase.object_id.to_string(),

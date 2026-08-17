@@ -95,6 +95,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeAnnotationCommandRequest
+  dco_decode_box_autoadd_native_annotation_command_request(dynamic raw);
+
+  @protected
   NativeApproveFontFallbackRequest
   dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw);
 
@@ -110,6 +114,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
+
+  @protected
+  NativeDeleteAnnotationRequest
+  dco_decode_box_autoadd_native_delete_annotation_request(dynamic raw);
 
   @protected
   NativeEditorSaveRequest dco_decode_box_autoadd_native_editor_save_request(
@@ -158,9 +166,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSearchRequest dco_decode_box_autoadd_native_search_request(dynamic raw);
+
+  @protected
   NativeSelectionRebase dco_decode_box_autoadd_native_selection_rebase(
     dynamic raw,
   );
+
+  @protected
+  NativeSelectionSet dco_decode_box_autoadd_native_selection_set(dynamic raw);
 
   @protected
   NativeSubmitCommandRequest
@@ -193,6 +207,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
+  List<NativeAnnotationRange> dco_decode_list_native_annotation_range(
+    dynamic raw,
+  );
+
+  @protected
+  List<NativeCompatibilityIssue> dco_decode_list_native_compatibility_issue(
+    dynamic raw,
+  );
+
+  @protected
   List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw);
 
   @protected
@@ -214,6 +238,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw);
+
+  @protected
+  List<NativeSearchMatch> dco_decode_list_native_search_match(dynamic raw);
+
+  @protected
+  List<NativeSelectionRange> dco_decode_list_native_selection_range(
+    dynamic raw,
+  );
 
   @protected
   List<NativeTextCharacterBox> dco_decode_list_native_text_character_box(
@@ -239,6 +271,25 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeAffineTransform dco_decode_native_affine_transform(dynamic raw);
 
   @protected
+  NativeAnnotation dco_decode_native_annotation(dynamic raw);
+
+  @protected
+  NativeAnnotationAnchorKind dco_decode_native_annotation_anchor_kind(
+    dynamic raw,
+  );
+
+  @protected
+  NativeAnnotationCommandRequest dco_decode_native_annotation_command_request(
+    dynamic raw,
+  );
+
+  @protected
+  NativeAnnotationKind dco_decode_native_annotation_kind(dynamic raw);
+
+  @protected
+  NativeAnnotationRange dco_decode_native_annotation_range(dynamic raw);
+
+  @protected
   NativeApproveFontFallbackRequest
   dco_decode_native_approve_font_fallback_request(dynamic raw);
 
@@ -253,6 +304,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCommandResult dco_decode_native_command_result(dynamic raw);
+
+  @protected
+  NativeCompatibilityIssue dco_decode_native_compatibility_issue(dynamic raw);
+
+  @protected
+  NativeCompatibilityReport dco_decode_native_compatibility_report(dynamic raw);
+
+  @protected
+  NativeDeleteAnnotationRequest dco_decode_native_delete_annotation_request(
+    dynamic raw,
+  );
 
   @protected
   NativeEditorCommand dco_decode_native_editor_command(dynamic raw);
@@ -286,6 +348,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeFontFallbackProposalRequest
   dco_decode_native_font_fallback_proposal_request(dynamic raw);
+
+  @protected
+  NativeMemoryPressureLevel dco_decode_native_memory_pressure_level(
+    dynamic raw,
+  );
 
   @protected
   NativeObjectDetailsRequest dco_decode_native_object_details_request(
@@ -356,7 +423,28 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw);
 
   @protected
+  NativeSearchMatch dco_decode_native_search_match(dynamic raw);
+
+  @protected
+  NativeSearchMode dco_decode_native_search_mode(dynamic raw);
+
+  @protected
+  NativeSearchRequest dco_decode_native_search_request(dynamic raw);
+
+  @protected
+  NativeSearchResult dco_decode_native_search_result(dynamic raw);
+
+  @protected
+  NativeSelectionKind dco_decode_native_selection_kind(dynamic raw);
+
+  @protected
+  NativeSelectionRange dco_decode_native_selection_range(dynamic raw);
+
+  @protected
   NativeSelectionRebase dco_decode_native_selection_rebase(dynamic raw);
+
+  @protected
+  NativeSelectionSet dco_decode_native_selection_set(dynamic raw);
 
   @protected
   NativeSubmitCommandRequest dco_decode_native_submit_command_request(
@@ -374,6 +462,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeTextStyle dco_decode_native_text_style(dynamic raw);
+
+  @protected
+  NativeValidatedSelection dco_decode_native_validated_selection(dynamic raw);
 
   @protected
   NativeViewportPriority dco_decode_native_viewport_priority(dynamic raw);
@@ -522,6 +613,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeAnnotationCommandRequest
+  sse_decode_box_autoadd_native_annotation_command_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeApproveFontFallbackRequest
   sse_decode_box_autoadd_native_approve_font_fallback_request(
     SseDeserializer deserializer,
@@ -539,6 +636,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCommandResult sse_decode_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeDeleteAnnotationRequest
+  sse_decode_box_autoadd_native_delete_annotation_request(
     SseDeserializer deserializer,
   );
 
@@ -595,7 +698,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSearchRequest sse_decode_box_autoadd_native_search_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeSelectionRebase sse_decode_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSelectionSet sse_decode_box_autoadd_native_selection_set(
     SseDeserializer deserializer,
   );
 
@@ -634,6 +747,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
+  List<NativeAnnotationRange> sse_decode_list_native_annotation_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<NativeCompatibilityIssue> sse_decode_list_native_compatibility_issue(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<NativeObjectPatch> sse_decode_list_native_object_patch(
     SseDeserializer deserializer,
   );
@@ -669,6 +792,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeSearchMatch> sse_decode_list_native_search_match(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<NativeSelectionRange> sse_decode_list_native_selection_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<NativeTextCharacterBox> sse_decode_list_native_text_character_box(
     SseDeserializer deserializer,
   );
@@ -698,6 +831,29 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeAnnotation sse_decode_native_annotation(SseDeserializer deserializer);
+
+  @protected
+  NativeAnnotationAnchorKind sse_decode_native_annotation_anchor_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeAnnotationCommandRequest sse_decode_native_annotation_command_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeAnnotationKind sse_decode_native_annotation_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeAnnotationRange sse_decode_native_annotation_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeApproveFontFallbackRequest
   sse_decode_native_approve_font_fallback_request(SseDeserializer deserializer);
 
@@ -718,6 +874,21 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeCommandResult sse_decode_native_command_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCompatibilityIssue sse_decode_native_compatibility_issue(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeCompatibilityReport sse_decode_native_compatibility_report(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeDeleteAnnotationRequest sse_decode_native_delete_annotation_request(
     SseDeserializer deserializer,
   );
 
@@ -769,6 +940,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeFontFallbackProposalRequest
   sse_decode_native_font_fallback_proposal_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeMemoryPressureLevel sse_decode_native_memory_pressure_level(
     SseDeserializer deserializer,
   );
 
@@ -875,7 +1051,40 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeSearchMatch sse_decode_native_search_match(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSearchMode sse_decode_native_search_mode(SseDeserializer deserializer);
+
+  @protected
+  NativeSearchRequest sse_decode_native_search_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSearchResult sse_decode_native_search_result(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSelectionKind sse_decode_native_selection_kind(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSelectionRange sse_decode_native_selection_range(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeSelectionRebase sse_decode_native_selection_rebase(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeSelectionSet sse_decode_native_selection_set(
     SseDeserializer deserializer,
   );
 
@@ -899,6 +1108,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer);
+
+  @protected
+  NativeValidatedSelection sse_decode_native_validated_selection(
+    SseDeserializer deserializer,
+  );
 
   @protected
   NativeViewportPriority sse_decode_native_viewport_priority(
@@ -1071,6 +1285,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_annotation_command_request(
+    NativeAnnotationCommandRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_approve_font_fallback_request(
     NativeApproveFontFallbackRequest self,
     SseSerializer serializer,
@@ -1091,6 +1311,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_command_result(
     NativeCommandResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_delete_annotation_request(
+    NativeDeleteAnnotationRequest self,
     SseSerializer serializer,
   );
 
@@ -1155,8 +1381,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_search_request(
+    NativeSearchRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_selection_rebase(
     NativeSelectionRebase self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_selection_set(
+    NativeSelectionSet self,
     SseSerializer serializer,
   );
 
@@ -1197,6 +1435,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_native_annotation_range(
+    List<NativeAnnotationRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_compatibility_issue(
+    List<NativeCompatibilityIssue> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_native_object_patch(
     List<NativeObjectPatch> self,
     SseSerializer serializer,
@@ -1235,6 +1485,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_native_scene_object(
     List<NativeSceneObject> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_search_match(
+    List<NativeSearchMatch> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_selection_range(
+    List<NativeSelectionRange> self,
     SseSerializer serializer,
   );
 
@@ -1281,6 +1543,36 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_annotation(
+    NativeAnnotation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_annotation_anchor_kind(
+    NativeAnnotationAnchorKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_annotation_command_request(
+    NativeAnnotationCommandRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_annotation_kind(
+    NativeAnnotationKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_annotation_range(
+    NativeAnnotationRange self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_approve_font_fallback_request(
     NativeApproveFontFallbackRequest self,
     SseSerializer serializer,
@@ -1307,6 +1599,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_command_result(
     NativeCommandResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_compatibility_issue(
+    NativeCompatibilityIssue self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_compatibility_report(
+    NativeCompatibilityReport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_delete_annotation_request(
+    NativeDeleteAnnotationRequest self,
     SseSerializer serializer,
   );
 
@@ -1367,6 +1677,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_font_fallback_proposal_request(
     NativeFontFallbackProposalRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_memory_pressure_level(
+    NativeMemoryPressureLevel self,
     SseSerializer serializer,
   );
 
@@ -1500,8 +1816,50 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_search_match(
+    NativeSearchMatch self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_search_mode(
+    NativeSearchMode self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_search_request(
+    NativeSearchRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_search_result(
+    NativeSearchResult self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_selection_kind(
+    NativeSelectionKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_selection_range(
+    NativeSelectionRange self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_selection_rebase(
     NativeSelectionRebase self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_selection_set(
+    NativeSelectionSet self,
     SseSerializer serializer,
   );
 
@@ -1529,6 +1887,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_text_style(
     NativeTextStyle self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_validated_selection(
+    NativeValidatedSelection self,
     SseSerializer serializer,
   );
 
