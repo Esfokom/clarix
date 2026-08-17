@@ -4,6 +4,7 @@ mod cancellation;
 mod model;
 mod openai_stream;
 mod policy;
+mod proposal;
 mod provider;
 mod tool_registry;
 
@@ -15,6 +16,10 @@ pub use model::{
 };
 pub use openai_stream::OpenAiStreamDecoder;
 pub use policy::{PermissionDecision, PermissionPolicy};
+pub use proposal::{
+    ApprovalToken, ChangeProposal, ChangeProposalDraft, ProposalDiff, ProposalStatus,
+    ProposalStore, ProposalTargetDiff,
+};
 pub use provider::{
     ModelProvider, ProviderCompletion, ProviderEvent, ProviderEventSink, ProviderMessage,
     ProviderRequest, ProviderRole, ProviderToolCall, ProviderToolDefinition, ProviderUsage,

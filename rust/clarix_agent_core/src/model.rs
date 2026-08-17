@@ -327,6 +327,21 @@ pub enum AgentError {
     InvalidToolArguments(String),
     #[error("document {0} is outside the active agent scope")]
     DocumentNotAllowed(DocumentId),
+    #[error("approval token was not found")]
+    ApprovalNotFound,
+    #[error("approval was already resolved")]
+    ApprovalAlreadyResolved,
+    #[error("approval token does not match its proposal binding")]
+    ApprovalBindingMismatch,
+    #[error("proposal revision conflict: expected {expected:?}, actual {actual:?}")]
+    ProposalRevisionConflict {
+        expected: DocumentRevision,
+        actual: DocumentRevision,
+    },
+    #[error("proposal quote no longer matches the document")]
+    ProposalQuoteMismatch,
+    #[error("proposal operation failed ({code}): {message}")]
+    ProposalOperation { code: String, message: String },
     #[error("provider failure ({code}): {message}")]
     Provider { code: String, message: String },
     #[error("tool failure ({code}): {message}")]
@@ -343,6 +358,12 @@ impl AgentError {
             Self::UnknownTool(_) => "unknown_tool",
             Self::InvalidToolArguments(_) => "invalid_tool_arguments",
             Self::DocumentNotAllowed(_) => "document_not_allowed",
+            Self::ApprovalNotFound => "approval_not_found",
+            Self::ApprovalAlreadyResolved => "approval_already_resolved",
+            Self::ApprovalBindingMismatch => "approval_binding_mismatch",
+            Self::ProposalRevisionConflict { .. } => "proposal_revision_conflict",
+            Self::ProposalQuoteMismatch => "proposal_quote_mismatch",
+            Self::ProposalOperation { .. } => "proposal_operation_failed",
             Self::Provider { .. } => "provider_failure",
             Self::Tool { .. } => "tool_failure",
         }
