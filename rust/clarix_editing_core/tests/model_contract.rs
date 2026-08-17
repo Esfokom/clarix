@@ -32,6 +32,45 @@ fn annotation_node_keeps_a_stable_text_anchor_and_comment_metadata() {
 }
 
 #[test]
+fn document_graph_rejects_annotation_ranges_that_do_not_target_text_on_the_same_page() {
+    let page_id = PageId::from_source_key("annotation-invalid/page/1");
+    let annotation_id = ObjectId::from_source_key("annotation-invalid/comment/1");
+    let missing_text_id = ObjectId::from_source_key("annotation-invalid/text/missing");
+    let annotation = clarix_editing_core::AnnotationNode::comment(
+        annotation_id,
+        page_id,
+        PdfBox::new(10.0, 20.0, 11.0, 21.0).unwrap(),
+        clarix_editing_core::AnnotationAnchor::Text {
+            ranges: vec![clarix_editing_core::AnnotationTextRange {
+                range_id: "range-1".into(),
+                object_id: missing_text_id,
+                start_utf16: 0,
+                end_utf16: 1,
+                quoted_text: "x".into(),
+            }],
+        },
+        "Review this",
+    );
+
+    let result = DocumentModel::new(
+        DocumentId::from_source_key("annotation-invalid"),
+        "sha256:annotation-invalid".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            612.0,
+            792.0,
+            vec![DocumentObject::Annotation(annotation)],
+        )],
+    );
+
+    assert!(matches!(
+        result,
+        Err(clarix_editing_core::ModelError::InvalidAnnotationAnchor(id)) if id == annotation_id
+    ));
+}
+
+#[test]
 fn ids_revisions_and_utf16_ranges_are_stable() {
     let id = ObjectId::from_source_key("sha256:abc/page:3/object:7");
     assert_eq!(id.to_string().parse::<ObjectId>().unwrap(), id);

@@ -512,6 +512,8 @@ impl DocumentModel {
             }
         }
 
+        validate_annotations(&pages, &object_index)?;
+
         Ok(Self {
             id,
             source_fingerprint,
@@ -703,8 +705,60 @@ pub enum ModelError {
     InvalidTextRuns(ObjectId),
     #[error("text object {0} has invalid or incomplete character geometry")]
     InvalidCharacterGeometry(ObjectId),
+    #[error("annotation {0} has an invalid text anchor")]
+    InvalidAnnotationAnchor(ObjectId),
     #[error("non-editable text object {0} has no capability reason")]
     MissingCapabilityReason(ObjectId),
+}
+
+fn validate_annotations(
+    pages: &[PageNode],
+    object_index: &HashMap<ObjectId, (usize, usize)>,
+) -> Result<(), ModelError> {
+    for page in pages {
+        for object in &page.objects {
+            let DocumentObject::Annotation(annotation) = object else {
+                continue;
+            };
+            if !annotation.opacity.is_finite() || !(0.0..=1.0).contains(&annotation.opacity) {
+                return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+            }
+            let AnnotationAnchor::Text { ranges } = &annotation.anchor else {
+                continue;
+            };
+            if ranges.is_empty() {
+                return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+            }
+            for range in ranges {
+                if range.range_id.trim().is_empty() || range.start_utf16 >= range.end_utf16 {
+                    return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+                }
+                let Some((page_index, object_index)) = object_index.get(&range.object_id) else {
+                    return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+                };
+                let target_page = &pages[*page_index];
+                if target_page.id != annotation.page_id() {
+                    return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+                }
+                let DocumentObject::Text(text) = &target_page.objects[*object_index] else {
+                    return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+                };
+                let Ok(byte_range) = crate::text::utf16_range_to_byte_range(
+                    &text.text,
+                    Utf16Range {
+                        start: range.start_utf16,
+                        end: range.end_utf16,
+                    },
+                ) else {
+                    return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+                };
+                if text.text[byte_range] != range.quoted_text {
+                    return Err(ModelError::InvalidAnnotationAnchor(annotation.id()));
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 fn validate_text_block(block: &TextBlock) -> Result<(), ModelError> {
