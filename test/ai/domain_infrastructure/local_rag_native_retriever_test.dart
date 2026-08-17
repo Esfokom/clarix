@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:clarix/src/core/models.dart';
-import 'package:clarix/src/features/workspace/infrastructure/local_rag_native_retriever.dart';
-import 'package:clarix/src/features/workspace/infrastructure/local_rag_store.dart';
+import 'package:clarix/src/features/ai/infrastructure/local_rag_native_retriever.dart';
+import 'package:clarix/src/features/ai/infrastructure/local_rag_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

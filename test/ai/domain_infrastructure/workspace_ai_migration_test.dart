@@ -1,4 +1,5 @@
 import 'package:clarix/src/core/models.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

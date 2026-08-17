@@ -10,14 +10,9 @@ import 'package:pdfrx/pdfrx.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/editing/editor_command_id.dart';
 import '../../../core/session_store.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import '../../utilities/application/pdf_utility_service.dart';
-import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
-import '../infrastructure/conversation_store.dart';
-import '../infrastructure/local_rag_native_retriever.dart';
-import '../infrastructure/local_rag_service.dart';
-import '../infrastructure/local_rag_store.dart';
-import '../infrastructure/provider_profile_store.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../agent/application/agent_run_controller.dart';
 import 'ai_runtime_service.dart';
@@ -31,6 +26,10 @@ final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
 
 final sessionStoreProvider = Provider<ClarixSessionStore>(
   (Ref ref) => ClarixSessionStore(ref.watch(sharedPreferencesProvider)),
+);
+
+final aiPreferencesStoreProvider = Provider<AiPreferencesStore>(
+  (Ref ref) => AiPreferencesStore(ref.watch(sharedPreferencesProvider)),
 );
 
 final pdfExtractionServiceProvider = Provider<HybridPdfExtractionService>(

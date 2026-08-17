@@ -11,17 +11,12 @@ import '../../../core/editing/editor_bridge_types.dart';
 import '../../../core/models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
-import '../domain/ai_provider.dart';
-import '../domain/conversation.dart';
 import '../agent/application/agent_run_controller.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
-import '../infrastructure/local_rag_native_retriever.dart';
-import '../infrastructure/provider_profile_store.dart';
-import '../infrastructure/native_conversation_migrator.dart';
 import 'ai_runtime_service.dart';
 import 'workspace_providers.dart';
 
@@ -29,6 +24,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   final Map<String, DocumentMetadata> _savedPdfMetadata =
       <String, DocumentMetadata>{};
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
+  AiPreferencesStore get _aiPreferences => ref.read(aiPreferencesStoreProvider);
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
   DocumentChunkStore get _chunkStore => ref.read(chunkStoreProvider);
@@ -45,8 +41,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   Future<WorkspaceFeatureState> build() async {
     final WorkspaceSession storedSession = await _sessionStore
         .readWorkspaceSession();
-    final AiWorkspaceState storedAi = await _sessionStore
-        .readAiWorkspaceState();
+    final AiWorkspaceState storedAi = await _aiPreferences.readState();
     final List<AiProviderProfile> providerProfiles = await _providerProfiles
         .readProfiles();
     final String? defaultProfileId = await _providerProfiles
@@ -1658,7 +1653,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       await _sessionStore.writeWorkspaceSession(newState.session);
     }
     if (persistAi) {
-      await _sessionStore.writeAiWorkspaceState(newState.aiState);
+      await _aiPreferences.writeState(newState.aiState);
     }
   }
 

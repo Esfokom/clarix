@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:clarix/src/core/models.dart';
-import 'package:clarix/src/features/workspace/infrastructure/document_chunk_store.dart';
+import 'package:clarix/src/features/ai/infrastructure/document_chunk_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

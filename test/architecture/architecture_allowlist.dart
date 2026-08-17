@@ -19,7 +19,6 @@ const Set<String> temporaryFeatureBoundaryAllowlist = <String>{
 };
 
 const Set<String> temporarilyMissingFeatureEntryPoints = <String>{
-  'lib/src/features/ai/ai.dart',
   'lib/src/features/reader/reader.dart',
   'lib/src/features/settings/settings.dart',
   'lib/src/features/utilities/utilities.dart',

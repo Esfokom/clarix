@@ -1,4 +1,4 @@
-import '../../../core/models.dart';
+import 'ai_models.dart';
 
 class ConversationThread {
   const ConversationThread({

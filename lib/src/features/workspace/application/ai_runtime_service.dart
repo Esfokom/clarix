@@ -2,10 +2,8 @@ import 'dart:async';
 
 import '../../../core/agent/agent_bridge_types.dart';
 import '../../../core/ffi/agent_api.dart' as native_agent;
-import '../../../core/models.dart';
 import '../agent/application/agent_run_controller.dart';
-import '../domain/ai_provider.dart';
-import '../infrastructure/provider_profile_store.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 
 class AiRuntimeService {
   AiRuntimeService({required this.providerProfiles});

@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:clarix/src/core/agent/agent_bridge_types.dart';
-import 'package:clarix/src/features/workspace/domain/conversation.dart';
-import 'package:clarix/src/features/workspace/infrastructure/conversation_store.dart';
-import 'package:clarix/src/features/workspace/infrastructure/native_conversation_migrator.dart';
+import 'package:clarix/src/features/ai/domain/conversation.dart';
+import 'package:clarix/src/features/ai/infrastructure/conversation_store.dart';
+import 'package:clarix/src/features/ai/infrastructure/native_conversation_migrator.dart';
 
 void main() {
   test(

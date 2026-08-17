@@ -1,5 +1,5 @@
 import '../../../core/models.dart';
-import 'ai_provider.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 
 enum PdfRecoveryAction { reload, saveCopy, selectBlock, rediscover }

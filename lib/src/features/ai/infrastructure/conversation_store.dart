@@ -6,8 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:crypto/crypto.dart';
 
-import '../../../core/models.dart';
 import '../domain/conversation.dart';
+import '../domain/ai_models.dart';
 
 class ConversationStore {
   ConversationStore({Future<Directory> Function()? directoryProvider})

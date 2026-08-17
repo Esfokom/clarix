@@ -8,6 +8,7 @@ import 'package:markdown/markdown.dart' as markdown;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';

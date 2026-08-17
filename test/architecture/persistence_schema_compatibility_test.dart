@@ -2,8 +2,7 @@ import 'dart:convert';
 
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/session_store.dart';
-import 'package:clarix/src/features/workspace/domain/ai_provider.dart';
-import 'package:clarix/src/features/workspace/infrastructure/provider_profile_store.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,7 +27,7 @@ void main() {
       ClarixSessionStore.workspaceStorageKeyForTest,
       'clarix.workspace.session',
     );
-    expect(ClarixSessionStore.aiStorageKeyForTest, 'clarix.ai.state');
+    expect(AiPreferencesStore.storageKeyForTest, 'clarix.ai.state');
     expect(
       ProviderProfileStore.profilesStorageKeyForTest,
       'clarix.ai.providers',
@@ -109,11 +108,11 @@ void main() {
     };
 
     expect(state.toJson(), expected);
-    final ClarixSessionStore store = ClarixSessionStore(
+    final AiPreferencesStore store = AiPreferencesStore(
       SharedPreferencesAsync(),
     );
-    await store.writeAiWorkspaceState(state);
-    final AiWorkspaceState restored = await store.readAiWorkspaceState();
+    await store.writeState(state);
+    final AiWorkspaceState restored = await store.readState();
     expect(restored.toJson(), <String, dynamic>{
       ...expected,
       'activityPhase': 'idle',

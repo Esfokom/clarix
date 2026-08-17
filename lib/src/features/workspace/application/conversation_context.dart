@@ -1,4 +1,4 @@
-import '../domain/conversation.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 
 class ConversationContextPlan {
   const ConversationContextPlan({

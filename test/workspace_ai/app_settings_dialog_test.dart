@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
-import 'package:clarix/src/features/workspace/domain/ai_provider.dart';
+import 'package:clarix/src/features/ai/domain/ai_provider.dart';
 import 'package:clarix/src/features/workspace/infrastructure/document_metadata_store.dart';
-import 'package:clarix/src/features/workspace/infrastructure/provider_profile_store.dart';
+import 'package:clarix/src/features/ai/infrastructure/provider_profile_store.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/app_settings_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

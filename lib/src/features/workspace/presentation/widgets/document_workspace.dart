@@ -19,7 +19,7 @@ import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
-import '../../domain/ai_provider.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import '../../agent/presentation/agent_disclosure_dialog.dart';
 import '../../agent/presentation/agent_diff_overlay.dart';
 import '../../agent/presentation/selection_ai_toolbar.dart';

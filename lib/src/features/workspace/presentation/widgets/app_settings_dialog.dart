@@ -7,7 +7,7 @@ import '../../application/action_permission_service.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../../../core/reader_background_store.dart';
-import '../../domain/ai_provider.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
 
