@@ -488,10 +488,10 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   double get _zoom => _metrics.value.zoom;
 
   AiProviderProfile? _selectedProvider() {
-    final workspace = ref.read(workspaceNotifierProvider).value;
-    final selected = workspace?.aiState.selectedProviderId;
+    final ai = ref.read(aiNotifierProvider).value;
+    final selected = ai?.chat.selectedProviderId;
     if (selected == null) return null;
-    return workspace?.providerProfiles
+    return ai?.providerProfiles
         .where((profile) => profile.id == selected)
         .firstOrNull;
   }

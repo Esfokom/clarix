@@ -586,89 +586,10 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
         .where((DocumentTabState item) => item.id == tabId)
         .firstOrNull;
     if (tab != null) {
-      await loadLatestConversation(tab.documentId);
+      await ref
+          .read(aiNotifierProvider.notifier)
+          .loadLatestConversation(tab.documentId);
     }
-  }
-
-  Future<void> loadLatestConversation(String documentId) async {
-    final store = await ref.read(conversationStoreProvider.future);
-    final threads = await store.listThreads(documentId);
-    final WorkspaceFeatureState current = _requireState();
-    if (threads.isEmpty) {
-      await _commit(
-        current.copyWith(
-          aiState: current.aiState.copyWith(
-            messages: const <ComposerMessage>[],
-            lastRetrievalSnippets: const <CitationSnippet>[],
-          ),
-        ),
-      );
-      return;
-    }
-    await selectConversation(threads.first.id);
-  }
-
-  Future<void> selectConversation(String threadId) async {
-    final store = await ref.read(conversationStoreProvider.future);
-    final messages = await store.readMessages(threadId);
-    final WorkspaceFeatureState current = _requireState();
-    await _commit(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          messages: messages
-              .map(
-                (ConversationMessage message) => ComposerMessage(
-                  id: message.id,
-                  role: message.role,
-                  text: message.content,
-                  createdAt: message.createdAt,
-                  citations: message.citations,
-                ),
-              )
-              .toList(growable: false),
-        ),
-      ),
-    );
-  }
-
-  Future<void> deleteConversation(String threadId) async {
-    final store = await ref.read(conversationStoreProvider.future);
-    await store.deleteThread(threadId);
-    final DocumentTabState? tab = activeTabState;
-    if (tab != null) {
-      await loadLatestConversation(tab.documentId);
-    }
-  }
-
-  Future<void> startNewConversation() async {
-    final WorkspaceFeatureState current = _requireState();
-    if (current.aiState.chatBusy) {
-      return;
-    }
-    await _commit(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          messages: const <ComposerMessage>[],
-          lastRetrievalSnippets: const <CitationSnippet>[],
-          statusMessage: 'New conversation ready.',
-        ),
-      ),
-    );
-  }
-
-  Future<void> clearAllConversations() async {
-    final store = await ref.read(conversationStoreProvider.future);
-    await store.clearAll();
-    final WorkspaceFeatureState current = _requireState();
-    await _commit(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          messages: const <ComposerMessage>[],
-          lastRetrievalSnippets: const <CitationSnippet>[],
-          statusMessage: 'All saved conversations were cleared.',
-        ),
-      ),
-    );
   }
 
   Future<void> clearDocumentCache() async {

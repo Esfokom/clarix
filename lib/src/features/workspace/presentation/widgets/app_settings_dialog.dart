@@ -31,6 +31,8 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
     final WorkspaceFeatureState? state = ref
         .watch(workspaceNotifierProvider)
         .value;
+    final AiFeatureState aiState =
+        ref.watch(aiNotifierProvider).value ?? AiFeatureState.initial();
     return Dialog(
       backgroundColor: WorkspaceColors.panel,
       child: ConstrainedBox(
@@ -165,7 +167,7 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                   ),
                                   const Divider(height: 32),
                                   const SizedBox(height: 16),
-                                  if (state.providerProfiles.isEmpty)
+                                  if (aiState.providerProfiles.isEmpty)
                                     const Padding(
                                       padding: EdgeInsets.symmetric(
                                         vertical: 18,
@@ -180,15 +182,14 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                       ),
                                     )
                                   else
-                                    ...state.providerProfiles.map(
-                                      (
-                                        AiProviderProfile profile,
-                                      ) => _ProviderTile(
-                                        profile: profile,
-                                        isDefault:
-                                            profile.id ==
-                                            state.aiState.selectedProviderId,
-                                      ),
+                                    ...aiState.providerProfiles.map(
+                                      (AiProviderProfile profile) =>
+                                          _ProviderTile(
+                                            profile: profile,
+                                            isDefault:
+                                                profile.id ==
+                                                aiState.chat.selectedProviderId,
+                                          ),
                                     ),
                                   const SizedBox(height: 12),
                                   Align(
@@ -281,9 +282,7 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
       ),
     );
     if (confirmed == true) {
-      await ref
-          .read(workspaceNotifierProvider.notifier)
-          .clearAllConversations();
+      await ref.read(aiNotifierProvider.notifier).clearAllConversations();
     }
   }
 }
@@ -692,7 +691,7 @@ class _ProviderTile extends ConsumerWidget {
             IconButton(
               tooltip: 'Make ${profile.label} default',
               onPressed: () => ref
-                  .read(workspaceNotifierProvider.notifier)
+                  .read(aiNotifierProvider.notifier)
                   .selectProvider(profile.id),
               icon: const Icon(Icons.check_circle_outline),
             ),
@@ -733,9 +732,7 @@ class _ProviderTile extends ConsumerWidget {
       ),
     );
     if (confirmed == true) {
-      await ref
-          .read(workspaceNotifierProvider.notifier)
-          .deleteProvider(profile.id);
+      await ref.read(aiNotifierProvider.notifier).deleteProvider(profile.id);
     }
   }
 }
@@ -907,7 +904,7 @@ class _ProviderEditorDialogState extends ConsumerState<_ProviderEditorDialog> {
     });
     try {
       await ref
-          .read(workspaceNotifierProvider.notifier)
+          .read(aiNotifierProvider.notifier)
           .testProvider(profile, apiKey: _apiKey.text);
       if (mounted) setState(() => _error = null);
     } catch (error) {
@@ -930,7 +927,7 @@ class _ProviderEditorDialogState extends ConsumerState<_ProviderEditorDialog> {
       _error = null;
     });
     try {
-      final notifier = ref.read(workspaceNotifierProvider.notifier);
+      final notifier = ref.read(aiNotifierProvider.notifier);
       await notifier.saveProvider(profile, apiKey: _apiKey.text);
       await notifier.selectProvider(profile.id);
       if (mounted) Navigator.of(context).pop();
