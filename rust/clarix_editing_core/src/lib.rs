@@ -11,6 +11,7 @@ mod page_service;
 mod persistence;
 mod ports;
 mod save;
+mod search;
 mod session;
 mod text;
 mod tools;
@@ -46,6 +47,7 @@ pub use save::{
     SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage,
     SaveStageGate,
 };
+pub use search::{SearchError, SearchIndex, SearchMode, SearchPage, SearchRequest, TextRangeRef};
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontFallbackApproval, FontRef, FontSource, OverflowPolicy,
