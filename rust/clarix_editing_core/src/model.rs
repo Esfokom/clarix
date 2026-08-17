@@ -559,7 +559,14 @@ impl DocumentModel {
         let Some((page_index, object_offset)) = self.object_index.get(&id).copied() else {
             return Err(ModelError::MissingObject(id));
         };
-        self.pages[page_index].objects[object_offset] = object;
+        let mut pages = self.pages.clone();
+        pages[page_index].objects[object_offset] = object;
+        *self = Self::from_parts(
+            self.id,
+            self.source_fingerprint.clone(),
+            self.revision,
+            pages,
+        )?;
         Ok(())
     }
 
