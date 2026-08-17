@@ -1,5 +1,5 @@
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
-import 'package:clarix/src/features/workspace/editing/domain/editor_selection.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_selection.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_text_format_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

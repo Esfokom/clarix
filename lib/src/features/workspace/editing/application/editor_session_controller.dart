@@ -2,9 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import '../../../../core/editing/editor_bridge_types.dart';
-import '../domain/editor_document_state.dart';
-import '../domain/editor_save_state.dart';
-import '../domain/editor_selection.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../infrastructure/editor_session_gateway.dart';
 
 typedef EditorCommandIdFactory = String Function();

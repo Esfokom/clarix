@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import '../../application/workspace_providers.dart';
-import '../../editing/domain/editor_save_state.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../widgets/workspace_body.dart';
 import '../widgets/workspace_common.dart';

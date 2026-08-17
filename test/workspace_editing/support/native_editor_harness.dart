@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/workspace/editing/application/editor_session_controller.dart';
-import 'package:clarix/src/features/workspace/editing/domain/editor_document_state.dart';
-import 'package:clarix/src/features/workspace/editing/domain/editor_selection.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_document_state.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_selection.dart';
 import 'package:clarix/src/features/workspace/editing/infrastructure/editor_session_gateway.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/native_text_editor.dart';
 import 'package:flutter/material.dart';

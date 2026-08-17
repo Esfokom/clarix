@@ -5,7 +5,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import '../../../../core/models.dart';
 import '../../../../core/editing/editor_bridge_types.dart';
 import '../../application/workspace_providers.dart';
-import '../../editing/domain/editor_document_state.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'ai_side_pane.dart';
 import 'document_workspace.dart';

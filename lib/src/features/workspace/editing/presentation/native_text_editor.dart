@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
-import '../domain/editor_selection.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'editor_semantics.dart';
 import 'editor_shortcuts.dart';
 

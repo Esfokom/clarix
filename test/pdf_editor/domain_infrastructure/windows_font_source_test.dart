@@ -1,4 +1,4 @@
-import 'package:clarix/src/features/workspace/infrastructure/windows_font_source.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/windows_font_source.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

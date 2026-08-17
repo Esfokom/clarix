@@ -1,10 +1,10 @@
-import 'package:clarix/src/features/workspace/domain/pdf_native_edit_types.dart';
-import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
-import 'package:clarix/src/features/workspace/infrastructure/pdfium_text_engine_native.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_native_edit_types.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/pdfium_text_engine_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../support/pdf_text_fixture.dart';
+import '../../support/pdf_text_fixture.dart';
 
 void main() {
   test(

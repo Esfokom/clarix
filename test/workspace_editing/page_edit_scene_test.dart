@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
-import 'package:clarix/src/features/workspace/editing/domain/editor_document_state.dart';
-import 'package:clarix/src/features/workspace/editing/domain/editor_selection.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_document_state.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_selection.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/clean_patch_layer.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/editor_hit_test.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/editor_text_painter.dart';

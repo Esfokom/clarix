@@ -1,4 +1,4 @@
-import 'package:clarix/src/features/workspace/domain/pdf_text_case.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_text_case.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

@@ -2,11 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../domain/pdf_edit_intent.dart';
-import '../../domain/pdf_edit_session.dart';
-import '../../domain/pdf_native_edit_types.dart';
-import '../../domain/pdf_page_object.dart';
-import '../../domain/pdf_text_types.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'pdf_native_text_input.dart';
 
 typedef PdfTextBlockRectResolver = Rect Function(PdfTextBlock block);

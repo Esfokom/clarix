@@ -1,6 +1,6 @@
 import 'dart:math' as math;
-import 'package:clarix/src/features/workspace/domain/pdf_page_object.dart';
-import 'package:clarix/src/features/workspace/domain/pdf_text_types.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_page_object.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

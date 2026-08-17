@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../domain/editor_close_choice.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 
 class DirtyCloseDialog extends StatelessWidget {
   const DirtyCloseDialog({

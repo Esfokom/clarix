@@ -1,4 +1,4 @@
-import 'package:clarix/src/features/workspace/editing/domain/editor_close_choice.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_close_choice.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/dirty_close_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

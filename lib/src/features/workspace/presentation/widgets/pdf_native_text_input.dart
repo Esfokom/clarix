@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../domain/pdf_edit_session.dart';
-import '../../domain/pdf_text_types.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 
 final class PdfNativeTextInput extends StatefulWidget {
   const PdfNativeTextInput({

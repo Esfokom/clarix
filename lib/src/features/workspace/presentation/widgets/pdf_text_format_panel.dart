@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/editing/editor_bridge_types.dart';
 import '../../editing/application/editor_session_controller.dart';
-import '../../editing/domain/editor_selection.dart';
-import '../../domain/pdf_edit_intent.dart';
-import '../../domain/pdf_text_types.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 
 final class PdfTextFormatPanel extends StatefulWidget {
   const PdfTextFormatPanel({

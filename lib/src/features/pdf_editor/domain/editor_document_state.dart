@@ -1,4 +1,4 @@
-import '../../../../core/editing/editor_bridge_types.dart';
+import '../../../core/editing/editor_bridge_types.dart';
 import 'editor_save_state.dart';
 import 'editor_selection.dart';
 

@@ -1,4 +1,4 @@
-import 'package:clarix/src/features/workspace/domain/pdf_edit_session.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_edit_session.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/document_workspace.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';

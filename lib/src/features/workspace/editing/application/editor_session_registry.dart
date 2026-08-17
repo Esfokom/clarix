@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'editor_session_controller.dart';
 import '../../agent/application/agent_run_controller.dart';
-import '../domain/editor_document_state.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../infrastructure/editor_session_gateway.dart';
 
 typedef EditorGatewayFactory = EditorSessionGateway Function();

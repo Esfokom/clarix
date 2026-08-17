@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:clarix/src/features/workspace/infrastructure/installed_font_catalog.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/installed_font_catalog.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

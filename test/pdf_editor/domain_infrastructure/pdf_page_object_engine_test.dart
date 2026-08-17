@@ -1,9 +1,9 @@
-import 'package:clarix/src/features/workspace/domain/pdf_page_object.dart';
-import 'package:clarix/src/features/workspace/infrastructure/pdfium_text_engine_native.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_page_object.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/pdfium_text_engine_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
 
-import '../support/pdf_text_fixture.dart';
+import '../../support/pdf_text_fixture.dart';
 
 void main() {
   test(

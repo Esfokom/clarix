@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../../../core/editing/editor_bridge_types.dart';
-import '../domain/editor_selection.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'editor_text_painter.dart';
 
 class EditorGlyphAnchor {

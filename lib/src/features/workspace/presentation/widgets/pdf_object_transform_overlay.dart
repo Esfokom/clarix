@@ -4,9 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../domain/pdf_edit_intent.dart';
-import '../../domain/pdf_page_object.dart';
-import '../../domain/pdf_text_types.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 
 typedef PdfPageObjectRectResolver = Rect Function(PdfPageObject object);
 typedef PdfObjectPreviewCallback =

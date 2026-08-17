@@ -1,5 +1,5 @@
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
-import 'package:clarix/src/features/workspace/editing/domain/editor_save_state.dart';
+import 'package:clarix/src/features/pdf_editor/domain/editor_save_state.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/save_conflict_dialog.dart';
 import 'package:clarix/src/features/workspace/editing/presentation/save_progress_dialog.dart';
 import 'package:flutter/material.dart';
