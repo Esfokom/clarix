@@ -3,7 +3,9 @@ pub const AGENT_CORE_SCHEMA_VERSION: u32 = 1;
 mod cancellation;
 mod model;
 mod openai_stream;
+mod policy;
 mod provider;
+mod tool_registry;
 
 pub use cancellation::CancellationToken;
 pub use model::{
@@ -12,9 +14,14 @@ pub use model::{
     ProviderRoundId, RunBudgets, SecretString, ToolCallId,
 };
 pub use openai_stream::OpenAiStreamDecoder;
+pub use policy::{PermissionDecision, PermissionPolicy};
 pub use provider::{
     ModelProvider, ProviderCompletion, ProviderEvent, ProviderEventSink, ProviderMessage,
     ProviderRequest, ProviderRole, ProviderToolCall, ProviderToolDefinition, ProviderUsage,
+};
+pub use tool_registry::{
+    AffectedScope, ToolApprovalRule, ToolExecution, ToolManifest, ToolRegistry,
+    ToolRevisionBehavior, ToolRiskClass, ToolScope, ToolValidationContext, ValidatedToolCall,
 };
 
 use clarix_editing_core::{EditingError, EditingToolGateway, ToolObservation, ToolRequest};

@@ -321,6 +321,12 @@ pub enum AgentError {
     InvalidEventSequence,
     #[error("invalid agent run status transition")]
     InvalidStatusTransition,
+    #[error("unknown agent tool: {0}")]
+    UnknownTool(String),
+    #[error("invalid tool arguments: {0}")]
+    InvalidToolArguments(String),
+    #[error("document {0} is outside the active agent scope")]
+    DocumentNotAllowed(DocumentId),
     #[error("provider failure ({code}): {message}")]
     Provider { code: String, message: String },
     #[error("tool failure ({code}): {message}")]
@@ -334,6 +340,9 @@ impl AgentError {
             Self::InvalidBudgets(_) => "invalid_budgets",
             Self::InvalidEventSequence => "invalid_event_sequence",
             Self::InvalidStatusTransition => "invalid_status_transition",
+            Self::UnknownTool(_) => "unknown_tool",
+            Self::InvalidToolArguments(_) => "invalid_tool_arguments",
+            Self::DocumentNotAllowed(_) => "document_not_allowed",
             Self::Provider { .. } => "provider_failure",
             Self::Tool { .. } => "tool_failure",
         }
