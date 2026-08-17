@@ -7,7 +7,7 @@ import '../../../../core/models.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
-import '../../editing/presentation/dirty_close_dialog.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
 

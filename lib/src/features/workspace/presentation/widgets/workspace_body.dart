@@ -10,7 +10,6 @@ import '../../domain/workspace_feature_state.dart';
 import 'ai_side_pane.dart';
 import 'document_workspace.dart';
 import 'quickstart_surface.dart';
-import 'pdf_text_format_panel.dart';
 import 'reader_inspector.dart';
 import 'workspace_common.dart';
 

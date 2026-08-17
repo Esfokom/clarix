@@ -17,17 +17,11 @@ import '../../../../core/agent/agent_bridge_types.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
-import '../../editing/presentation/page_scene_host.dart';
-import '../../editing/presentation/dirty_close_dialog.dart';
-import '../../editing/presentation/recovery_banner.dart';
-import '../../editing/presentation/save_conflict_dialog.dart';
-import '../../editing/presentation/save_progress_dialog.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-import '../../editing/presentation/page_edit_scene.dart';
-import '../../editing/presentation/pdfrx_page_surface.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../../domain/ai_provider.dart';
 import '../../agent/presentation/agent_disclosure_dialog.dart';
+import '../../agent/presentation/agent_diff_overlay.dart';
 import '../../agent/presentation/selection_ai_toolbar.dart';
 import '../../agent/application/agent_run_controller.dart';
 import 'pdf_viewer_interaction_math.dart';
@@ -513,9 +507,7 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
     int pageNumber,
   ) async {
     final profile = _selectedProvider();
-    final controller = ref
-        .read(editorSessionRegistryProvider)
-        .agent(widget.tab.id);
+    final controller = ref.read(agentRunControllerProvider(widget.tab.id));
     final text = object.text ?? '';
     if (profile == null || controller == null) return;
     if (!profile.shareRetrievedPassages) {
@@ -847,11 +839,11 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                         lifecycle: lifecycle,
                                         pageNumber: page.pageNumber,
                                         builder: (context, scene) {
-                                          final agent = ref
-                                              .read(
-                                                editorSessionRegistryProvider,
-                                              )
-                                              .agent(widget.tab.id);
+                                          final agent = ref.watch(
+                                            agentRunControllerProvider(
+                                              widget.tab.id,
+                                            ),
+                                          );
                                           Widget sceneWidget(
                                             AgentRunControllerState? agentState,
                                           ) => PageEditScene(
@@ -864,14 +856,42 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                                 .cleanPatchesFor(
                                                   page.pageNumber,
                                                 ),
-                                            selectionAiSharingEnabled:
-                                                _selectedProvider()
-                                                    ?.shareRetrievedPassages ??
-                                                false,
-                                            onSelectionAiAction:
-                                                _runSelectionAction,
-                                            agentProposal:
-                                                agentState?.pendingProposal,
+                                            selectionActionsBuilder:
+                                                (
+                                                  context,
+                                                  selection,
+                                                  object,
+                                                  pageNumber,
+                                                ) => SelectionAiToolbar(
+                                                  hasValidatedSelection: true,
+                                                  sharingEnabled:
+                                                      _selectedProvider()
+                                                          ?.shareRetrievedPassages ??
+                                                      false,
+                                                  onAction: (action) =>
+                                                      _runSelectionAction(
+                                                        action,
+                                                        selection,
+                                                        object,
+                                                        pageNumber,
+                                                      ),
+                                                ),
+                                            pageOverlayBuilder:
+                                                (context, pageNumber) {
+                                                  final proposal = agentState
+                                                      ?.pendingProposal;
+                                                  if (proposal == null ||
+                                                      !proposal.targets.any(
+                                                        (target) =>
+                                                            target.pageNumber ==
+                                                            pageNumber,
+                                                      )) {
+                                                    return null;
+                                                  }
+                                                  return AgentDiffOverlay(
+                                                    proposal: proposal,
+                                                  );
+                                                },
                                           );
                                           if (agent == null) {
                                             return sceneWidget(null);

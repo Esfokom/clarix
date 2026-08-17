@@ -16,7 +16,6 @@ import '../domain/workspace_feature_state.dart';
 import '../domain/ai_provider.dart';
 import '../domain/conversation.dart';
 import '../agent/application/agent_run_controller.dart';
-import '../editing/application/editor_session_controller.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/document_metadata_store.dart';
@@ -290,6 +289,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       final latest = _requireState();
       var nextSession = latest.session;
       if (result.followsNewSource) {
+        ref.invalidate(agentRunControllerProvider(tab.id));
         await ref
             .read(editorSessionRegistryProvider)
             .reopen(tabId: tab.id, sourcePath: request.targetPath);
@@ -577,6 +577,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       clearActiveTabId: tabs.isEmpty,
       lastOpenedAt: DateTime.now().toUtc(),
     );
+    ref.invalidate(agentRunControllerProvider(tabId));
     await ref.read(editorSessionRegistryProvider).close(tabId);
     await _commit(current.copyWith(session: session), persistAi: false);
     return true;
@@ -939,8 +940,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
           'Open a document before starting an agent conversation.',
         );
       }
-      final registry = ref.read(editorSessionRegistryProvider);
-      final controller = registry.agent(activeTab.id);
+      final controller = ref.read(agentRunControllerProvider(activeTab.id));
       if (controller == null) {
         throw StateError('The native editor session is not ready.');
       }

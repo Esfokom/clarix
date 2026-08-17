@@ -19,9 +19,7 @@ import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-import '../editing/application/editor_session_registry.dart';
 import '../agent/application/agent_run_controller.dart';
-import '../editing/infrastructure/editor_session_gateway.dart';
 import 'ai_runtime_service.dart';
 import 'action_permission_service.dart';
 import 'workspace_notifier.dart';
@@ -160,8 +158,13 @@ final editorDocumentStateProvider =
     });
 
 final agentRunControllerProvider = Provider.family<AgentRunController?, String>(
-  (Ref ref, String tabId) =>
-      ref.watch(editorSessionRegistryProvider).agent(tabId),
+  (Ref ref, String tabId) {
+    final bridge = ref.watch(editorSessionRegistryProvider).agentBridge(tabId);
+    if (bridge == null) return null;
+    final controller = AgentRunController(bridge: bridge);
+    ref.onDispose(() => unawaited(controller.dispose()));
+    return controller;
+  },
 );
 
 final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(

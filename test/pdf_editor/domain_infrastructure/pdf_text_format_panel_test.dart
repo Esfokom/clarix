@@ -1,6 +1,6 @@
 import 'package:clarix/src/features/pdf_editor/domain/pdf_edit_intent.dart';
 import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
-import 'package:clarix/src/features/workspace/presentation/widgets/pdf_text_format_panel.dart';
+import 'package:clarix/src/features/pdf_editor/presentation/pdf_text_format_panel.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 

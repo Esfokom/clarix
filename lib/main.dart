@@ -3,8 +3,7 @@ import 'dart:io';
 import 'package:clarix/src/app.dart';
 import 'package:clarix/src/core/boot.dart';
 import 'package:clarix/src/core/clarix_rust_runtime.dart';
-import 'package:clarix/src/features/workspace/editing/infrastructure/editor_session_gateway.dart';
-import 'package:clarix/src/features/workspace/editing/infrastructure/phase1_recovery_probe.dart';
+import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'package:flutter/material.dart';
 
 Future<void> main(List<String> arguments) async {

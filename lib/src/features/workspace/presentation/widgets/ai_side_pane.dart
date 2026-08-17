@@ -50,7 +50,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     final AiWorkspaceState ai = widget.state.aiState;
     final agentController = widget.activeTab == null
         ? null
-        : ref.read(editorSessionRegistryProvider).agent(widget.activeTab!.id);
+        : ref.watch(agentRunControllerProvider(widget.activeTab!.id));
     final editorRevision = widget.activeTab == null
         ? 0
         : ref

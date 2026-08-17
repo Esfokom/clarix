@@ -1,7 +1,7 @@
 import 'package:clarix/src/features/pdf_editor/domain/pdf_edit_intent.dart';
 import 'package:clarix/src/features/pdf_editor/domain/pdf_page_object.dart';
 import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
-import 'package:clarix/src/features/workspace/presentation/widgets/pdf_object_transform_overlay.dart';
+import 'package:clarix/src/features/pdf_editor/presentation/pdf_object_transform_overlay.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
