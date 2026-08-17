@@ -80,6 +80,20 @@ impl EditorSessionState {
                     });
                     state.redo_stack.clear();
                 }
+                EditorCommand::ApplyTransaction { .. } => {
+                    if command.before_objects.is_empty()
+                        || command.before_objects.len() != command.after_objects.len()
+                    {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered transaction has invalid object state".into(),
+                        ));
+                    }
+                    state.undo_stack.push(HistoryEntry::Objects {
+                        before: command.before_objects,
+                        after: command.after_objects,
+                    });
+                    state.redo_stack.clear();
+                }
                 _ => {
                     let [before] = command.before_objects.as_slice() else {
                         return Err(EditingError::SidecarCommitFailed(
@@ -278,6 +292,46 @@ impl EditorSessionState {
                 });
                 self.redo_stack.clear();
                 Vec::new()
+            }
+            EditorCommand::ApplyTransaction { edits } => {
+                let transaction_id = envelope.transaction_id.as_deref().ok_or_else(|| {
+                    EditingError::InvalidCommand(
+                        "transaction commands require a transaction ID".into(),
+                    )
+                })?;
+                if uuid::Uuid::parse_str(transaction_id).is_err() {
+                    return Err(EditingError::InvalidCommand(
+                        "transaction ID must be a UUID".into(),
+                    ));
+                }
+                if edits.is_empty() {
+                    return Err(EditingError::InvalidCommand(
+                        "transaction must contain at least one edit".into(),
+                    ));
+                }
+                let before_model = self.model.clone();
+                let undo_len = self.undo_stack.len();
+                for edit in edits {
+                    self.apply_object_command(&edit.as_command(), next_revision, None)?;
+                }
+                self.undo_stack.truncate(undo_len);
+                let (before_objects, after_objects) = changed_objects(&before_model, &self.model);
+                if before_objects.is_empty() {
+                    return Err(EditingError::InvalidCommand(
+                        "transaction did not change any object".into(),
+                    ));
+                }
+                let object_patches = before_objects
+                    .iter()
+                    .zip(&after_objects)
+                    .map(|(before, after)| object_patch(before, after, next_revision))
+                    .collect();
+                self.undo_stack.push(HistoryEntry::Objects {
+                    before: before_objects,
+                    after: after_objects,
+                });
+                self.redo_stack.clear();
+                object_patches
             }
             command => {
                 self.apply_object_command(command, next_revision, envelope.typing_group.as_ref())?
@@ -491,7 +545,10 @@ impl EditorSessionState {
                     *center_y,
                 ));
             }
-            EditorCommand::CreateCheckpoint { .. } | EditorCommand::Undo | EditorCommand::Redo => {
+            EditorCommand::ApplyTransaction { .. }
+            | EditorCommand::CreateCheckpoint { .. }
+            | EditorCommand::Undo
+            | EditorCommand::Redo => {
                 return Err(EditingError::InvalidCommand(
                     "history command reached object dispatcher".into(),
                 ));
@@ -555,6 +612,22 @@ impl EditorSessionState {
                 let _ = label;
                 Vec::new()
             }
+            HistoryEntry::Objects { before, .. } => before
+                .iter()
+                .map(|before| {
+                    let current = self
+                        .model
+                        .object(before.id())
+                        .cloned()
+                        .ok_or(EditingError::ObjectNotFound(before.id()))?;
+                    let mut restored = before.clone();
+                    restored.set_modified_revision(revision);
+                    self.model
+                        .replace_object(restored.clone())
+                        .map_err(|_| EditingError::ObjectNotFound(before.id()))?;
+                    Ok(object_patch(&current, &restored, revision))
+                })
+                .collect::<Result<Vec<_>, EditingError>>()?,
         };
         self.undo_stack.pop();
         self.redo_stack.push(entry);
@@ -585,6 +658,22 @@ impl EditorSessionState {
                 let _ = label;
                 Vec::new()
             }
+            HistoryEntry::Objects { after, .. } => after
+                .iter()
+                .map(|after| {
+                    let current = self
+                        .model
+                        .object(after.id())
+                        .cloned()
+                        .ok_or(EditingError::ObjectNotFound(after.id()))?;
+                    let mut restored = after.clone();
+                    restored.set_modified_revision(revision);
+                    self.model
+                        .replace_object(restored.clone())
+                        .map_err(|_| EditingError::ObjectNotFound(after.id()))?;
+                    Ok(object_patch(&current, &restored, revision))
+                })
+                .collect::<Result<Vec<_>, EditingError>>()?,
         };
         self.redo_stack.pop();
         self.undo_stack.push(entry);
@@ -621,7 +710,10 @@ fn command_object_id(command: &EditorCommand) -> Option<ObjectId> {
         | EditorCommand::MoveObject { object_id, .. }
         | EditorCommand::ResizeObject { object_id, .. }
         | EditorCommand::RotateObject { object_id, .. } => Some(*object_id),
-        EditorCommand::CreateCheckpoint { .. } | EditorCommand::Undo | EditorCommand::Redo => None,
+        EditorCommand::ApplyTransaction { .. }
+        | EditorCommand::CreateCheckpoint { .. }
+        | EditorCommand::Undo
+        | EditorCommand::Redo => None,
     }
 }
 

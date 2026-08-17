@@ -1,7 +1,7 @@
 use clarix_editing_core::{
-    CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    EditorCommand, EditorSessionState, InverseOperation, ObjectId, PageId, PageNode,
-    ParagraphStyle, PdfBox, SessionId, TextAlignment, TextBlock, TypingGroup, Utf16Range,
+    AtomicEdit, CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject,
+    DocumentRevision, EditorCommand, EditorSessionState, InverseOperation, ObjectId, PageId,
+    PageNode, ParagraphStyle, PdfBox, SessionId, TextAlignment, TextBlock, TypingGroup, Utf16Range,
 };
 
 fn fixture_session(text: &str) -> (EditorSessionState, ObjectId) {
@@ -145,4 +145,101 @@ fn grapheme_replacement_rebases_selection_by_utf16_length() {
     assert_eq!(rebase.object_id, object_id);
     assert_eq!(rebase.replaced_range, Utf16Range::new(1, 3).unwrap());
     assert_eq!(rebase.inserted_utf16_length, 7);
+}
+
+#[test]
+fn transaction_replaces_two_objects_and_undoes_them_together() {
+    let page_id = PageId::from_source_key("transaction/page/1");
+    let first_id = ObjectId::from_source_key("transaction/page/1/text/1");
+    let second_id = ObjectId::from_source_key("transaction/page/1/text/2");
+    let model = DocumentModel::new(
+        DocumentId::from_source_key("transaction"),
+        "sha256:transaction".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            612.0,
+            792.0,
+            vec![
+                DocumentObject::text(TextBlock::plain(
+                    first_id,
+                    page_id,
+                    "first",
+                    PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
+                )),
+                DocumentObject::text(TextBlock::plain(
+                    second_id,
+                    page_id,
+                    "second",
+                    PdfBox::new(0.0, 30.0, 100.0, 50.0).unwrap(),
+                )),
+            ],
+        )],
+    )
+    .unwrap();
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    let mut command = CommandEnvelope::user(
+        CommandId::new(),
+        DocumentRevision::INITIAL,
+        EditorCommand::ApplyTransaction {
+            edits: vec![
+                AtomicEdit::ReplaceTextRange {
+                    object_id: first_id,
+                    range: Utf16Range::new(0, 5).unwrap(),
+                    replacement: "FIRST".into(),
+                },
+                AtomicEdit::ReplaceTextRange {
+                    object_id: second_id,
+                    range: Utf16Range::new(0, 6).unwrap(),
+                    replacement: "SECOND".into(),
+                },
+            ],
+        },
+    );
+    command.transaction_id = Some("0f8fad5b-d9cb-469f-a165-70867728950e".into());
+
+    let result = session.submit(command).unwrap();
+
+    assert_eq!(result.committed_revision.value(), 1);
+    assert_eq!(result.object_patches.len(), 2);
+    assert_eq!(session.text(first_id).unwrap(), "FIRST");
+    assert_eq!(session.text(second_id).unwrap(), "SECOND");
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            result.committed_revision,
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    assert_eq!(session.text(first_id).unwrap(), "first");
+    assert_eq!(session.text(second_id).unwrap(), "second");
+}
+
+#[test]
+fn transaction_with_one_invalid_edit_leaves_every_object_unchanged() {
+    let (mut session, object_id) = fixture_session("Before");
+    let mut command = CommandEnvelope::user(
+        CommandId::new(),
+        DocumentRevision::INITIAL,
+        EditorCommand::ApplyTransaction {
+            edits: vec![
+                AtomicEdit::ReplaceTextRange {
+                    object_id,
+                    range: Utf16Range::new(0, 6).unwrap(),
+                    replacement: "After".into(),
+                },
+                AtomicEdit::ReplaceTextRange {
+                    object_id,
+                    range: Utf16Range::new(7, 7).unwrap(),
+                    replacement: "!".into(),
+                },
+            ],
+        },
+    );
+    command.transaction_id = Some("5f8fad5b-d9cb-469f-a165-70867728950e".into());
+
+    assert!(session.submit(command).is_err());
+    assert_eq!(session.revision(), DocumentRevision::INITIAL);
+    assert_eq!(session.text(object_id).unwrap(), "Before");
 }

@@ -24,6 +24,10 @@ pub(crate) enum HistoryEntry {
         after: Box<DocumentObject>,
         typing: Option<TypingGroup>,
     },
+    Objects {
+        before: Vec<DocumentObject>,
+        after: Vec<DocumentObject>,
+    },
     Checkpoint {
         label: String,
     },

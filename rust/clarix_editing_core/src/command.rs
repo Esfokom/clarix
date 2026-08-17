@@ -48,11 +48,97 @@ pub enum EditorCommand {
         center_x: f64,
         center_y: f64,
     },
+    ApplyTransaction {
+        edits: Vec<AtomicEdit>,
+    },
     CreateCheckpoint {
         label: String,
     },
     Undo,
     Redo,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AtomicEdit {
+    ReplaceTextRange {
+        object_id: ObjectId,
+        range: Utf16Range,
+        replacement: String,
+    },
+    SetTextStyle {
+        object_id: ObjectId,
+        range: Utf16Range,
+        style: TextStyle,
+    },
+    SetParagraphStyle {
+        object_id: ObjectId,
+        style: ParagraphStyle,
+    },
+    MoveObject {
+        object_id: ObjectId,
+        transform: AffineTransform,
+    },
+    ResizeObject {
+        object_id: ObjectId,
+        bounds: PdfBox,
+    },
+    RotateObject {
+        object_id: ObjectId,
+        radians: f64,
+        center_x: f64,
+        center_y: f64,
+    },
+}
+
+impl AtomicEdit {
+    pub(crate) fn as_command(&self) -> EditorCommand {
+        match self {
+            Self::ReplaceTextRange {
+                object_id,
+                range,
+                replacement,
+            } => EditorCommand::ReplaceTextRange {
+                object_id: *object_id,
+                range: *range,
+                replacement: replacement.clone(),
+            },
+            Self::SetTextStyle {
+                object_id,
+                range,
+                style,
+            } => EditorCommand::SetTextStyle {
+                object_id: *object_id,
+                range: *range,
+                style: style.clone(),
+            },
+            Self::SetParagraphStyle { object_id, style } => EditorCommand::SetParagraphStyle {
+                object_id: *object_id,
+                style: style.clone(),
+            },
+            Self::MoveObject {
+                object_id,
+                transform,
+            } => EditorCommand::MoveObject {
+                object_id: *object_id,
+                transform: *transform,
+            },
+            Self::ResizeObject { object_id, bounds } => EditorCommand::ResizeObject {
+                object_id: *object_id,
+                bounds: *bounds,
+            },
+            Self::RotateObject {
+                object_id,
+                radians,
+                center_x,
+                center_y,
+            } => EditorCommand::RotateObject {
+                object_id: *object_id,
+                radians: *radians,
+                center_x: *center_x,
+                center_y: *center_y,
+            },
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

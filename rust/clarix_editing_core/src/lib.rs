@@ -17,8 +17,8 @@ mod tools;
 
 pub use actor::{EditorEvent, EditorSessionActor};
 pub use command::{
-    ActorKind, CommandEnvelope, CommandResult, CommandWarning, EditorCommand, ObjectPatch,
-    PreparedCommand, SelectionRebase,
+    ActorKind, AtomicEdit, CommandEnvelope, CommandResult, CommandWarning, EditorCommand,
+    ObjectPatch, PreparedCommand, SelectionRebase,
 };
 pub use error::EditingError;
 pub use geometry::{AffineTransform, GeometryError, PdfBox};
