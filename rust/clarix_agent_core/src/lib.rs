@@ -1,13 +1,19 @@
 pub const AGENT_CORE_SCHEMA_VERSION: u32 = 1;
 
+mod audit;
 mod cancellation;
 mod model;
 mod openai_stream;
 mod policy;
 mod proposal;
 mod provider;
+mod run;
 mod tool_registry;
 
+pub use audit::{
+    AgentRunAudit, AgentRunAuditHeader, AgentRunRepository, CommandAuditLink,
+    InMemoryAgentRunRepository,
+};
 pub use cancellation::CancellationToken;
 pub use model::{
     AgentError, AgentProviderConfig, AgentRunEvent, AgentRunEventKind, AgentRunId, AgentRunOutcome,
@@ -24,6 +30,7 @@ pub use provider::{
     ModelProvider, ProviderCompletion, ProviderEvent, ProviderEventSink, ProviderMessage,
     ProviderRequest, ProviderRole, ProviderToolCall, ProviderToolDefinition, ProviderUsage,
 };
+pub use run::{ActiveApproval, AgentRunEngine, AgentRunSnapshot};
 pub use tool_registry::{
     AffectedScope, ToolApprovalRule, ToolExecution, ToolManifest, ToolRegistry,
     ToolRevisionBehavior, ToolRiskClass, ToolScope, ToolValidationContext, ValidatedToolCall,
