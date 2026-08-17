@@ -7,8 +7,9 @@ use crate::{
     AffineTransform, AtomicEdit, CommandEnvelope, CommandId, CommandResult, DocumentModel,
     DocumentObject, DocumentRevision, EditCapability, EditingError, EditorCommand, FontSource,
     InverseOperation, ObjectId, ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand,
-    RecoveredCommand, ReplaceAllPreview, SearchIndex, SearchRequest, SelectionRebase, SelectionSet,
-    SessionId, TextCharacterBox, TextRun, Utf16Range, WritingDirection,
+    ProposedToolEdit, RecoveredCommand, ReplaceAllPreview, SearchIndex, SearchRequest,
+    SelectionRebase, SelectionSet, SessionId, TextCharacterBox, TextRun, ToolTransactionPreview,
+    Utf16Range, WritingDirection,
 };
 
 #[derive(Debug, Clone)]
@@ -19,6 +20,7 @@ pub struct EditorSessionState {
     undo_stack: Vec<HistoryEntry>,
     redo_stack: Vec<HistoryEntry>,
     replace_previews: HashMap<String, ReplaceAllPreview>,
+    tool_transaction_previews: HashMap<String, ToolTransactionPreview>,
     closed: bool,
 }
 
@@ -31,6 +33,7 @@ impl EditorSessionState {
             undo_stack: Vec::new(),
             redo_stack: Vec::new(),
             replace_previews: HashMap::new(),
+            tool_transaction_previews: HashMap::new(),
             closed: false,
         }
     }
@@ -285,6 +288,24 @@ impl EditorSessionState {
         command_id: CommandId,
         base_revision: DocumentRevision,
     ) -> Result<CommandResult, EditingError> {
+        let prepared = self.prepare_replace_all(
+            preview_id,
+            command_id,
+            base_revision,
+            crate::ActorKind::User,
+            Vec::new(),
+        )?;
+        self.publish(prepared)
+    }
+
+    pub fn prepare_replace_all(
+        &self,
+        preview_id: &str,
+        command_id: CommandId,
+        base_revision: DocumentRevision,
+        actor: crate::ActorKind,
+        provenance_ids: Vec<String>,
+    ) -> Result<PreparedCommand, EditingError> {
         self.ensure_open()?;
         let preview = self
             .replace_previews
@@ -310,15 +331,95 @@ impl EditorSessionState {
                 replacement: preview.replacement.clone(),
             })
             .collect();
-        self.submit(CommandEnvelope {
+        self.prepare(CommandEnvelope {
             command_id,
             base_revision,
             transaction_id: Some(preview.preview_id),
-            actor: crate::ActorKind::User,
-            provenance_ids: Vec::new(),
+            actor,
+            provenance_ids,
             typing_group: None,
             payload: EditorCommand::ApplyTransaction { edits },
         })
+    }
+
+    pub fn preview_tool_transaction(
+        &mut self,
+        revision: DocumentRevision,
+        edits: Vec<ProposedToolEdit>,
+    ) -> Result<ToolTransactionPreview, EditingError> {
+        self.ensure_open()?;
+        if revision != self.revision() {
+            return Err(EditingError::RevisionConflict {
+                expected: revision,
+                actual: self.revision(),
+            });
+        }
+        let edits = crate::tools::normalize_proposed_edits(self, edits)?;
+        let atomic_edits = crate::tools::proposed_atomic_edits(&edits)?;
+        let preview_id = uuid::Uuid::new_v4().to_string();
+        self.prepare(CommandEnvelope {
+            command_id: CommandId::new(),
+            base_revision: revision,
+            transaction_id: Some(preview_id.clone()),
+            actor: crate::ActorKind::Agent,
+            provenance_ids: Vec::new(),
+            typing_group: None,
+            payload: EditorCommand::ApplyTransaction {
+                edits: atomic_edits,
+            },
+        })?;
+        let mut affected_object_ids = edits
+            .iter()
+            .flat_map(|edit| match edit {
+                ProposedToolEdit::ReplaceText { selection, .. }
+                | ProposedToolEdit::SetTextStyle { selection, .. } => selection
+                    .ranges
+                    .iter()
+                    .map(|range| range.object_id)
+                    .collect::<Vec<_>>(),
+            })
+            .collect::<Vec<_>>();
+        affected_object_ids.sort_by_key(ToString::to_string);
+        affected_object_ids.dedup();
+        let preview = ToolTransactionPreview {
+            preview_id,
+            revision,
+            edits,
+            affected_object_ids,
+        };
+        self.tool_transaction_previews
+            .insert(preview.preview_id.clone(), preview.clone());
+        Ok(preview)
+    }
+
+    pub fn prepare_tool_transaction(
+        &self,
+        preview_id: &str,
+        command_id: CommandId,
+        base_revision: DocumentRevision,
+        provenance_ids: Vec<String>,
+    ) -> Result<PreparedCommand, EditingError> {
+        self.ensure_open()?;
+        let preview = self
+            .tool_transaction_previews
+            .get(preview_id)
+            .ok_or_else(|| {
+                EditingError::InvalidCommand("transaction preview is unavailable".into())
+            })?;
+        if base_revision != self.revision() || preview.revision != base_revision {
+            return Err(EditingError::RevisionConflict {
+                expected: base_revision,
+                actual: self.revision(),
+            });
+        }
+        let edits = crate::tools::proposed_atomic_edits(&preview.edits)?;
+        self.prepare(crate::tools::agent_envelope(
+            command_id,
+            base_revision,
+            Some(preview.preview_id.clone()),
+            provenance_ids,
+            EditorCommand::ApplyTransaction { edits },
+        ))
     }
 
     pub fn validate_selection(

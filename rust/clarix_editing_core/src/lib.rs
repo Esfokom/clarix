@@ -66,4 +66,7 @@ pub use text::{
     ParagraphStyle, SourceGlyph, TextAffinity, TextAlignment, TextAnchor, TextCharacterBox,
     TextLayoutRecipe, TextRangeError, TextRun, TextStyle, Utf16Range, WritingDirection,
 };
-pub use tools::{EditingToolGateway, ObjectSummary, ToolObservation, ToolRequest, ToolRisk};
+pub use tools::{
+    EditingToolGateway, ObjectSummary, ProposedToolEdit, TextObjectObservation, ToolObservation,
+    ToolRequest, ToolRisk, ToolTransactionPreview,
+};

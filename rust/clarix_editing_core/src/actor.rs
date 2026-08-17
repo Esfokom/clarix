@@ -10,6 +10,7 @@ use crate::{
     CommandEnvelope, CommandResult, ContextLimits, DocumentModel, DocumentRevision, DurableCommit,
     EditingError, EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SearchIndex,
     SearchPage, SearchRequest, SelectionContext, SelectionContextBuilder, SelectionSet, SessionId,
+    ToolObservation, ToolRequest,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -43,6 +44,10 @@ enum ActorRequest {
         selection: SelectionSet,
         limits: ContextLimits,
         reply: Sender<Result<SelectionContext, EditingError>>,
+    },
+    InvokeTool {
+        request: ToolRequest,
+        reply: Sender<Result<ToolObservation, EditingError>>,
     },
     Subscribe {
         capacity: usize,
@@ -227,6 +232,21 @@ impl EditorSessionActor {
             .map_err(|_| EditingError::ActorUnavailable)?
     }
 
+    pub(crate) fn invoke_agent_tool(
+        &self,
+        request: ToolRequest,
+    ) -> Result<ToolObservation, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::InvokeTool { request, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
     pub fn subscribe(&self) -> Result<Receiver<EditorEvent>, EditingError> {
         self.subscribe_with_capacity(DEFAULT_SUBSCRIBER_CAPACITY)
     }
@@ -364,6 +384,20 @@ fn run_actor(
                 let result = session
                     .snapshot()
                     .and_then(|model| SelectionContextBuilder::build(&model, selection, limits));
+                let _ = reply.send(result);
+            }
+            ActorRequest::InvokeTool { request, reply } => {
+                let result =
+                    crate::tools::invoke_tool(&mut session, repository.as_deref(), request);
+                if let Ok(ToolObservation::Command { result: committed }) = &result {
+                    broadcast(
+                        &mut subscribers,
+                        EditorEvent::CommandCommitted {
+                            result: committed.clone(),
+                        },
+                        committed.committed_revision,
+                    );
+                }
                 let _ = reply.send(result);
             }
             ActorRequest::Subscribe { capacity, reply } => {
