@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AffineTransform, CommandId, DocumentRevision, FontFallbackApproval, InverseOperation, ObjectId,
-    PageId, ParagraphStyle, PdfBox, TextStyle, TypingGroup, Utf16Range,
+    AffineTransform, AnnotationNode, CommandId, DocumentRevision, FontFallbackApproval,
+    InverseOperation, ObjectId, PageId, ParagraphStyle, PdfBox, TextStyle, TypingGroup, Utf16Range,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,6 +47,9 @@ pub enum EditorCommand {
         radians: f64,
         center_x: f64,
         center_y: f64,
+    },
+    UpdateAnnotation {
+        annotation: AnnotationNode,
     },
     ApplyTransaction {
         edits: Vec<AtomicEdit>,

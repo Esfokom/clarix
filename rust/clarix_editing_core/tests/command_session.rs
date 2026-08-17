@@ -1,9 +1,69 @@
 use clarix_editing_core::{
-    CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    EditorCommand, EditorSessionState, FontFallbackApproval, FontRef, FontSource, ObjectId,
-    OverflowPolicy, PageId, PageNode, PdfBox, SessionId, SourceGlyph, TextBlock, TextCharacterBox,
-    TextLayoutRecipe, Utf16Range,
+    AnnotationAnchor, AnnotationNode, CommandEnvelope, CommandId, DocumentId, DocumentModel,
+    DocumentObject, DocumentRevision, EditorCommand, EditorSessionState, FontFallbackApproval,
+    FontRef, FontSource, ObjectId, OverflowPolicy, PageId, PageNode, PdfBox, SessionId,
+    SourceGlyph, TextBlock, TextCharacterBox, TextLayoutRecipe, Utf16Range,
 };
+
+#[test]
+fn annotation_update_is_revisioned_and_undoable() {
+    let page_id = PageId::from_source_key("annotation-command/page/1");
+    let annotation_id = ObjectId::from_source_key("annotation-command/page/1/comment/1");
+    let original = AnnotationNode::comment(
+        annotation_id,
+        page_id,
+        PdfBox::new(10.0, 10.0, 11.0, 11.0).unwrap(),
+        AnnotationAnchor::PagePoint { x: 10.0, y: 10.0 },
+        "Draft comment",
+    );
+    let model = DocumentModel::new(
+        DocumentId::from_source_key("annotation-command"),
+        "sha256:annotation-command".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            612.0,
+            792.0,
+            vec![DocumentObject::Annotation(original.clone())],
+        )],
+    )
+    .unwrap();
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+    let mut updated = original;
+    updated.body = "Reviewed comment".into();
+    updated.resolved = true;
+
+    let result = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::UpdateAnnotation {
+                annotation: updated,
+            },
+        ))
+        .unwrap();
+    assert_eq!(result.committed_revision.value(), 1);
+    let snapshot = session.snapshot().unwrap();
+    let DocumentObject::Annotation(annotation) = snapshot.object(annotation_id).unwrap() else {
+        panic!("fixture object must remain an annotation")
+    };
+    assert_eq!(annotation.body, "Reviewed comment");
+    assert!(annotation.resolved);
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            result.committed_revision,
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    let snapshot = session.snapshot().unwrap();
+    let DocumentObject::Annotation(annotation) = snapshot.object(annotation_id).unwrap() else {
+        panic!("fixture object must remain an annotation")
+    };
+    assert_eq!(annotation.body, "Draft comment");
+    assert!(!annotation.resolved);
+}
 
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
     let page_id = PageId::from_source_key("command-test/page/1");

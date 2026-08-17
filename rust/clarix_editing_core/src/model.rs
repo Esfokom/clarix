@@ -245,6 +245,14 @@ impl AnnotationNode {
             AnnotationAnchor::Text { ranges } => ranges.len(),
         }
     }
+
+    pub fn id(&self) -> ObjectId {
+        self.base.id
+    }
+
+    pub fn page_id(&self) -> PageId {
+        self.base.page_id
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

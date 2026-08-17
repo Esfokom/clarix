@@ -624,6 +624,14 @@ impl EditorSessionState {
                     *center_y,
                 ));
             }
+            EditorCommand::UpdateAnnotation { annotation } => {
+                if annotation.id() != object_id || annotation.page_id() != before.page_id() {
+                    return Err(EditingError::InvalidCommand(
+                        "annotation update identity does not match the target object".into(),
+                    ));
+                }
+                after = DocumentObject::Annotation(annotation.clone());
+            }
             EditorCommand::ApplyTransaction { .. }
             | EditorCommand::CreateCheckpoint { .. }
             | EditorCommand::Undo
@@ -789,6 +797,7 @@ fn command_object_id(command: &EditorCommand) -> Option<ObjectId> {
         | EditorCommand::MoveObject { object_id, .. }
         | EditorCommand::ResizeObject { object_id, .. }
         | EditorCommand::RotateObject { object_id, .. } => Some(*object_id),
+        EditorCommand::UpdateAnnotation { annotation } => Some(annotation.id()),
         EditorCommand::ApplyTransaction { .. }
         | EditorCommand::CreateCheckpoint { .. }
         | EditorCommand::Undo
