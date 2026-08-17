@@ -3,6 +3,7 @@ import 'package:clarix/src/features/utilities/application/pdf_utility_service.da
 import 'package:clarix/src/features/utilities/domain/utility_job.dart';
 import 'package:clarix/src/features/utilities/infrastructure/document_conversion_service.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_utilities_dialogs.dart';
+import 'package:clarix/src/features/workspace/presentation/widgets/pdf_combine_extract_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
