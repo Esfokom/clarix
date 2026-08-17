@@ -483,8 +483,15 @@ impl PageIndexRepository for SqliteProjectRepository {
                 }
                 transaction
                     .execute(
-                        "INSERT INTO text_index (object_id, normalized_text) VALUES (?1, ?2)",
-                        params![object_id, normalized_text(&text.text)],
+                        "INSERT INTO text_index (object_id, page_id, raw_text, case_folded_text, normalized_text, modified_revision) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                        params![
+                            object_id,
+                            imported.page.id.to_string(),
+                            text.text,
+                            case_folded_text(&text.text),
+                            normalized_text(&text.text),
+                            0_i64,
+                        ],
                     )
                     .map_err(map_persistence)?;
             }
@@ -510,6 +517,10 @@ fn sha256_hex(bytes: &[u8]) -> String {
 
 fn normalized_text(text: &str) -> String {
     text.nfkc().flat_map(char::to_lowercase).collect()
+}
+
+fn case_folded_text(text: &str) -> String {
+    text.chars().flat_map(char::to_lowercase).collect()
 }
 
 fn map_persistence(error: rusqlite::Error) -> PersistenceError {

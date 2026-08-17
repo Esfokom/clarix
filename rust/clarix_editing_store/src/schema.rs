@@ -2,7 +2,7 @@ use rusqlite::Connection;
 
 use crate::StoreError;
 
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
     connection.execute_batch(
@@ -38,7 +38,14 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
             CREATE TABLE text_runs (object_id TEXT NOT NULL, ordinal INTEGER NOT NULL, payload_json TEXT NOT NULL, PRIMARY KEY(object_id, ordinal));
             CREATE TABLE styles (style_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
             CREATE TABLE source_bindings (object_id TEXT PRIMARY KEY, payload_json TEXT NOT NULL);
-            CREATE TABLE text_index (object_id TEXT PRIMARY KEY, normalized_text TEXT NOT NULL);
+            CREATE TABLE text_index (
+                object_id TEXT PRIMARY KEY,
+                page_id TEXT NOT NULL,
+                raw_text TEXT NOT NULL,
+                case_folded_text TEXT NOT NULL,
+                normalized_text TEXT NOT NULL,
+                modified_revision INTEGER NOT NULL
+            );
             CREATE TABLE commands (
                 command_id TEXT PRIMARY KEY,
                 previous_revision INTEGER NOT NULL,
@@ -64,10 +71,77 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
             CREATE TABLE assets (sha256 TEXT PRIMARY KEY, metadata_json TEXT NOT NULL);
             CREATE TABLE previews (cache_key TEXT PRIMARY KEY, metadata_json TEXT NOT NULL);
             CREATE TABLE migration_log (from_version INTEGER NOT NULL, to_version INTEGER NOT NULL, completed_at TEXT NOT NULL);
-            PRAGMA user_version = 1;
+            PRAGMA user_version = 2;
+            COMMIT;
+            "#,
+        )?;
+    }
+    if current == 1 {
+        connection.execute_batch(
+            r#"
+            BEGIN IMMEDIATE;
+            DROP TABLE text_index;
+            CREATE TABLE text_index (
+                object_id TEXT PRIMARY KEY,
+                page_id TEXT NOT NULL,
+                raw_text TEXT NOT NULL,
+                case_folded_text TEXT NOT NULL,
+                normalized_text TEXT NOT NULL,
+                modified_revision INTEGER NOT NULL
+            );
+            PRAGMA user_version = 2;
             COMMIT;
             "#,
         )?;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use rusqlite::Connection;
+
+    use super::initialize;
+
+    #[test]
+    fn version_one_index_migrates_to_revisioned_search_columns() {
+        let connection = Connection::open_in_memory().unwrap();
+        connection
+            .execute_batch(
+                "CREATE TABLE text_index (object_id TEXT PRIMARY KEY, normalized_text TEXT NOT NULL);
+                 INSERT INTO text_index (object_id, normalized_text) VALUES ('old-object', 'draft');
+                 PRAGMA user_version = 1;",
+            )
+            .unwrap();
+
+        initialize(&connection).unwrap();
+
+        let columns = connection
+            .prepare("PRAGMA table_info(text_index)")
+            .unwrap()
+            .query_map([], |row| row.get::<_, String>(1))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        let rows: i64 = connection
+            .query_row("SELECT COUNT(*) FROM text_index", [], |row| row.get(0))
+            .unwrap();
+        let version: i64 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .unwrap();
+
+        assert_eq!(
+            columns,
+            vec![
+                "object_id",
+                "page_id",
+                "raw_text",
+                "case_folded_text",
+                "normalized_text",
+                "modified_revision",
+            ]
+        );
+        assert_eq!(rows, 0);
+        assert_eq!(version, 2);
+    }
 }
