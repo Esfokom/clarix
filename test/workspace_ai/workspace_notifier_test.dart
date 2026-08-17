@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
 import 'package:clarix/src/features/ai/domain/ai_provider.dart';
+import 'package:clarix/src/features/ai/application/ai_providers.dart';
 import 'package:clarix/src/features/workspace/infrastructure/document_metadata_store.dart';
 import 'package:clarix/src/features/ai/infrastructure/provider_profile_store.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -57,21 +58,17 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final state = await container.read(workspaceNotifierProvider.future);
+      final state = await container.read(aiNotifierProvider.future);
 
-      expect(state.aiState.selectedProviderId, other.id);
-      expect(state.aiState.providerReady, isTrue);
+      expect(state.chat.selectedProviderId, other.id);
+      expect(state.chat.providerReady, isTrue);
 
       await container
-          .read(workspaceNotifierProvider.notifier)
+          .read(aiNotifierProvider.notifier)
           .deleteProvider(other.id);
 
       expect(
-        container
-            .read(workspaceNotifierProvider)
-            .requireValue
-            .aiState
-            .selectedProviderId,
+        container.read(aiNotifierProvider).requireValue.chat.selectedProviderId,
         isNull,
       );
       expect(await store.readDefaultProfileId(), isNull);

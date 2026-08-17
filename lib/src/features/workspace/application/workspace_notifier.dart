@@ -22,7 +22,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   final Map<String, DocumentMetadata> _savedPdfMetadata =
       <String, DocumentMetadata>{};
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
-  AiPreferencesStore get _aiPreferences => ref.read(aiPreferencesStoreProvider);
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
   DocumentChunkStore get _chunkStore => ref.read(chunkStoreProvider);
@@ -31,49 +30,22 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       ref.read(documentIdentityServiceProvider);
   Future<DocumentMetadataStore> get _metadataStore =>
       ref.read(documentMetadataStoreProvider.future);
-  AiRuntimeService get _ai => ref.read(aiRuntimeServiceProvider);
-  ProviderProfileStore get _providerProfiles =>
-      ref.read(providerProfileStoreProvider);
 
   @override
   Future<WorkspaceFeatureState> build() async {
     final WorkspaceSession storedSession = await _sessionStore
         .readWorkspaceSession();
-    final AiWorkspaceState storedAi = await _aiPreferences.readState();
-    final List<AiProviderProfile> providerProfiles = await _providerProfiles
-        .readProfiles();
-    final String? defaultProfileId = await _providerProfiles
-        .readDefaultProfileId();
     final WorkspaceSession restoredSession = await _rehydrateWorkspace(
       storedSession,
     );
     final Map<String, DocumentMetadata> documentMetadata =
         await _loadDocumentMetadata(restoredSession);
-    AiWorkspaceState restoredAi = storedAi.copyWith(chatBusy: false);
-    final AiProviderProfile? selectedProfile =
-        _profileById(providerProfiles, defaultProfileId) ??
-        (providerProfiles.isEmpty ? null : providerProfiles.first);
-    final bool providerReady =
-        selectedProfile != null &&
-        (await _providerProfiles.readApiKey(selectedProfile.id))?.isNotEmpty ==
-            true;
-    restoredAi = restoredAi.copyWith(
-      selectedProviderId: selectedProfile?.id,
-      clearSelectedProviderId: selectedProfile == null,
-      providerReady: providerReady,
-      statusMessage: providerReady
-          ? '${selectedProfile.label} is ready.'
-          : 'Add a provider to start a remote AI chat.',
-    );
-
     return WorkspaceFeatureState(
       session: restoredSession,
-      aiState: restoredAi,
       outlines: const <String, List<OutlineNodeState>>{},
       documentMetadata: documentMetadata,
       composerExpanded: false,
       bannerMessage: null,
-      providerProfiles: providerProfiles,
     );
   }
 
@@ -742,216 +714,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     state = AsyncData(current.copyWith(outlines: outlines));
   }
 
-  Future<void> toggleScopeMode() async {
-    final WorkspaceFeatureState current = _requireState();
-    final AiWorkspaceState aiState = current.aiState.copyWith(
-      useCurrentDocumentScope: !current.aiState.useCurrentDocumentScope,
-    );
-    await _commit(current.copyWith(aiState: aiState));
-  }
-
-  Future<void> selectProvider(String? profileId) async {
-    final WorkspaceFeatureState current = _requireState();
-    final AiProviderProfile? profile = _profileById(
-      current.providerProfiles,
-      profileId,
-    );
-    final bool ready =
-        profile != null &&
-        (await _providerProfiles.readApiKey(profile.id))?.isNotEmpty == true;
-    if (profile != null) {
-      await _providerProfiles.saveDefaultProfileId(profile.id);
-    }
-    await _commit(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          selectedProviderId: profile?.id,
-          clearSelectedProviderId: profile == null,
-          providerReady: ready,
-          statusMessage: ready
-              ? '${profile.label} is ready.'
-              : 'Add an API key to use this provider.',
-        ),
-      ),
-    );
-  }
-
-  Future<void> saveProvider(AiProviderProfile profile, {String? apiKey}) async {
-    await _providerProfiles.saveProfile(
-      profile,
-      apiKey: apiKey?.trim().isEmpty == true ? null : apiKey?.trim(),
-    );
-    final WorkspaceFeatureState current = _requireState();
-    final List<AiProviderProfile> profiles = await _providerProfiles
-        .readProfiles();
-    await _commit(current.copyWith(providerProfiles: profiles));
-    await selectProvider(profile.id);
-  }
-
-  Future<void> testProvider(
-    AiProviderProfile profile, {
-    required String apiKey,
-  }) => _ai.testProvider(profile, apiKey);
-
-  Future<void> deleteProvider(String profileId) async {
-    await _providerProfiles.deleteProfile(profileId);
-    final WorkspaceFeatureState current = _requireState();
-    final List<AiProviderProfile> profiles = await _providerProfiles
-        .readProfiles();
-    await _commit(current.copyWith(providerProfiles: profiles));
-    if (current.aiState.selectedProviderId == profileId) {
-      await selectProvider(null);
-    }
-  }
-
-  Future<void> sendPrompt(String prompt) async {
-    final WorkspaceFeatureState current = _requireState();
-    final DocumentTabState? activeTab = activeTabState;
-    if (prompt.trim().isEmpty || current.aiState.chatBusy) {
-      return;
-    }
-    if (!current.aiState.providerReady ||
-        current.aiState.selectedProviderId == null) {
-      return;
-    }
-
-    final ComposerMessage userMessage = ComposerMessage(
-      id: 'user_${DateTime.now().microsecondsSinceEpoch}',
-      role: 'user',
-      text: prompt.trim(),
-      createdAt: DateTime.now().toUtc(),
-      citations: const <CitationSnippet>[],
-    );
-    final ComposerMessage assistantMessage = ComposerMessage(
-      id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
-      role: 'assistant',
-      text: '',
-      createdAt: DateTime.now().toUtc(),
-      citations: const <CitationSnippet>[],
-    );
-
-    await _commit(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          chatBusy: true,
-          activityPhase: AiRuntimePhase.loadingInference,
-          statusMessage:
-              'Loading inference model. First response can take a minute.',
-          messages: <ComposerMessage>[
-            ...current.aiState.messages,
-            userMessage,
-            assistantMessage,
-          ],
-          lastRetrievalSnippets: const <CitationSnippet>[],
-        ),
-      ),
-    );
-
-    try {
-      final StringBuffer answerBuffer = StringBuffer();
-      if (activeTab == null) {
-        throw StateError(
-          'Open a document before starting an agent conversation.',
-        );
-      }
-      final controller = ref.read(agentRunControllerProvider(activeTab.id));
-      if (controller == null) {
-        throw StateError('The native editor session is not ready.');
-      }
-      final store = await ref.read(conversationStoreProvider.future);
-      await NativeConversationMigrator(
-        legacy: store,
-        importConversation: controller.importConversation,
-        documentId: activeTab.documentId,
-      ).run();
-      final threads = await store.listThreads(activeTab.documentId);
-      final conversationId = threads.isEmpty
-          ? 'native:${activeTab.documentId}'
-          : threads.first.id;
-      final _AiReplyData reply = await _generateReply(
-        prompt: prompt.trim(),
-        profileId: current.aiState.selectedProviderId!,
-        conversationId: conversationId,
-        controller: controller,
-        onStatus: _setAiActivity,
-        onToken: (String token) {
-          answerBuffer.write(token);
-          final WorkspaceFeatureState live = _requireState();
-          final List<ComposerMessage> updatedMessages =
-              List<ComposerMessage>.from(live.aiState.messages);
-          updatedMessages[updatedMessages.length - 1] = updatedMessages.last
-              .copyWith(text: answerBuffer.toString());
-          state = AsyncData(
-            live.copyWith(
-              aiState: live.aiState.copyWith(
-                activityPhase: AiRuntimePhase.generating,
-                statusMessage: 'Generating response.',
-                messages: updatedMessages,
-              ),
-            ),
-          );
-        },
-      );
-
-      final WorkspaceFeatureState refreshed = _requireState();
-      final List<ComposerMessage> messages = List<ComposerMessage>.from(
-        refreshed.aiState.messages,
-      );
-      messages[messages.length - 1] = messages.last.copyWith(
-        text: reply.text,
-        citations: reply.citations,
-      );
-      await _commit(
-        refreshed.copyWith(
-          aiState: refreshed.aiState.copyWith(
-            chatBusy: false,
-            activityPhase: AiRuntimePhase.idle,
-            statusMessage: 'Ready to chat with your remote provider.',
-            messages: messages,
-            lastRetrievalSnippets: reply.citations,
-          ),
-        ),
-      );
-    } catch (error, stackTrace) {
-      clarixLog.w(
-        'Prompt generation failed.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      final WorkspaceFeatureState refreshed = _requireState();
-      final List<ComposerMessage> messages = List<ComposerMessage>.from(
-        refreshed.aiState.messages,
-      );
-      messages[messages.length - 1] = messages.last.copyWith(
-        text: 'I could not generate a response.\n\n$error',
-      );
-      await _commit(
-        refreshed.copyWith(
-          aiState: refreshed.aiState.copyWith(
-            chatBusy: false,
-            activityPhase: AiRuntimePhase.failed,
-            statusMessage: 'Generation failed.',
-            messages: messages,
-          ),
-        ),
-      );
-    }
-  }
-
-  Future<void> stopGeneration() async {
-    await _ai.stopGeneration();
-    final WorkspaceFeatureState current = _requireState();
-    await _commit(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          chatBusy: false,
-          activityPhase: AiRuntimePhase.idle,
-          statusMessage: 'Generation stopped.',
-        ),
-      ),
-    );
-  }
-
   DocumentTabState? get activeTabState {
     final WorkspaceFeatureState? current = state.value;
     if (current == null) {
@@ -1516,52 +1278,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
-  Future<_AiReplyData> _generateReply({
-    required String prompt,
-    required String profileId,
-    required String conversationId,
-    required AgentRunController controller,
-    required void Function(AiRuntimePhase phase, String message) onStatus,
-    required void Function(String token) onToken,
-  }) async {
-    final AiReply reply = await _ai.sendPrompt(
-      prompt: prompt,
-      profileId: profileId,
-      conversationId: conversationId,
-      controller: controller,
-      onToken: onToken,
-      onStatus: onStatus,
-    );
-    return _AiReplyData(text: reply.text, citations: reply.citations);
-  }
-
-  AiProviderProfile? _profileById(
-    List<AiProviderProfile> profiles,
-    String? profileId,
-  ) {
-    if (profileId == null) return null;
-    for (final AiProviderProfile profile in profiles) {
-      if (profile.id == profileId) return profile;
-    }
-    return null;
-  }
-
-  void _setAiActivity(AiRuntimePhase phase, String message) {
-    final WorkspaceFeatureState? current = state.value;
-    if (current == null) {
-      return;
-    }
-    state = AsyncData(
-      current.copyWith(
-        aiState: current.aiState.copyWith(
-          activityPhase: phase,
-          statusMessage: message,
-        ),
-      ),
-    );
-    clarixLog.i('AI activity: ${phase.name} - $message');
-  }
-
   Future<void> _commit(
     WorkspaceFeatureState newState, {
     bool persistSession = true,
@@ -1570,9 +1286,6 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     state = AsyncData(newState);
     if (persistSession) {
       await _sessionStore.writeWorkspaceSession(newState.session);
-    }
-    if (persistAi) {
-      await _aiPreferences.writeState(newState.aiState);
     }
   }
 
@@ -1583,11 +1296,4 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     }
     return current;
   }
-}
-
-class _AiReplyData {
-  const _AiReplyData({required this.text, required this.citations});
-
-  final String text;
-  final List<CitationSnippet> citations;
 }
