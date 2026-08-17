@@ -49,6 +49,7 @@ const oversizedProductionDartAllowlist = <String>{
   'lib/src/features/workspace/application/workspace_notifier.dart',
   'lib/src/features/workspace/editing/application/editor_session_controller.dart',
   'lib/src/features/workspace/infrastructure/pdfium_text_engine_native.dart',
+  'lib/src/features/workspace/domain/pdf_text_types.dart',
   'lib/src/features/workspace/presentation/widgets/app_settings_dialog.dart',
   'lib/src/features/workspace/presentation/widgets/document_workspace.dart',
   'lib/src/features/workspace/presentation/widgets/pdf_utilities_dialogs.dart',
@@ -156,6 +157,12 @@ Keep the `PdfiumTextEngineNative` adapter in `pdfium_text_engine_native.dart`. E
 - `pdfium_text_geometry.dart`: native rectangles, transforms, and normalization.
 
 Keep the same `PdfTextEngine` behavior and error text. Helpers are infrastructure-private and are not barrel exports.
+
+Split `pdf_text_types.dart` at its existing type-family boundaries into text
+geometry, text content/style, and text operation/result files. Preserve every
+class name, constructor, enum value, JSON/native conversion, equality rule, and
+default. Export the split domain files from `pdf_editor.dart`; do not leave a
+forwarding file at the former workspace path.
 
 ### 2.3 Verify
 
