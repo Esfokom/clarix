@@ -6,6 +6,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
+clarix_agent_core = { path = "../clarix_agent_core" }
 clarix_editing_core = { path = "../clarix_editing_core" }
 rusqlite.workspace = true
 serde.workspace = true

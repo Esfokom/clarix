@@ -197,6 +197,8 @@ where
                                 request.run_id,
                                 CommandAuditLink {
                                     tool_call_id,
+                                    proposal_id: None,
+                                    approval_id: None,
                                     command_id: result.command_id,
                                     previous_revision: result.previous_revision,
                                     committed_revision: result.committed_revision,
@@ -315,6 +317,8 @@ where
             self.repository.as_ref(),
             &mut pending.state,
             pending.snapshot.tool_call_id,
+            Some(pending.snapshot.proposal_id),
+            Some(pending.snapshot.approval_id),
             &observation,
         )?;
         pending
@@ -765,6 +769,8 @@ fn record_observation(
     repository: &dyn AgentRunRepository,
     state: &mut RunState,
     tool_call_id: ToolCallId,
+    proposal_id: Option<ProposalId>,
+    approval_id: Option<ApprovalId>,
     observation: &ToolObservation,
 ) -> Result<(), AgentError> {
     if let ToolObservation::Command { result } = observation {
@@ -772,6 +778,8 @@ fn record_observation(
             state.run_id,
             CommandAuditLink {
                 tool_call_id,
+                proposal_id,
+                approval_id,
                 command_id: result.command_id,
                 previous_revision: result.previous_revision,
                 committed_revision: result.committed_revision,

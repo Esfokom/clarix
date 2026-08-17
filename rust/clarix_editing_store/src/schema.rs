@@ -2,7 +2,7 @@ use rusqlite::Connection;
 
 use crate::StoreError;
 
-pub const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 3;
 
 pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
     connection.execute_batch(
@@ -71,7 +71,60 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
             CREATE TABLE assets (sha256 TEXT PRIMARY KEY, metadata_json TEXT NOT NULL);
             CREATE TABLE previews (cache_key TEXT PRIMARY KEY, metadata_json TEXT NOT NULL);
             CREATE TABLE migration_log (from_version INTEGER NOT NULL, to_version INTEGER NOT NULL, completed_at TEXT NOT NULL);
-            PRAGMA user_version = 2;
+            CREATE TABLE agent_conversations (
+                conversation_id TEXT PRIMARY KEY,
+                document_id TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE agent_messages (
+                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id TEXT NOT NULL REFERENCES agent_conversations(conversation_id) ON DELETE CASCADE,
+                role TEXT NOT NULL,
+                payload_json TEXT NOT NULL
+            );
+            CREATE TABLE agent_runs (
+                run_id TEXT PRIMARY KEY,
+                conversation_id TEXT NOT NULL REFERENCES agent_conversations(conversation_id) ON DELETE CASCADE,
+                document_id TEXT NOT NULL,
+                starting_revision INTEGER NOT NULL,
+                provider_id TEXT NOT NULL,
+                model_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                failure_code TEXT
+            );
+            CREATE TABLE agent_events (
+                run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+                sequence INTEGER NOT NULL,
+                document_revision INTEGER NOT NULL,
+                payload_json TEXT NOT NULL,
+                PRIMARY KEY(run_id, sequence)
+            );
+            CREATE TABLE agent_tool_calls (
+                run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+                tool_call_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                proposal_id TEXT,
+                approval_id TEXT,
+                command_id TEXT,
+                previous_revision INTEGER,
+                committed_revision INTEGER,
+                success INTEGER,
+                PRIMARY KEY(run_id, tool_call_id)
+            );
+            CREATE TABLE agent_proposals (
+                proposal_id TEXT PRIMARY KEY,
+                run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+                tool_call_id TEXT NOT NULL,
+                digest_sha256 TEXT,
+                payload_json TEXT
+            );
+            CREATE TABLE agent_approvals (
+                approval_id TEXT PRIMARY KEY,
+                proposal_id TEXT NOT NULL REFERENCES agent_proposals(proposal_id) ON DELETE CASCADE,
+                run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+                status TEXT NOT NULL
+            );
+            PRAGMA user_version = 3;
             COMMIT;
             "#,
         )?;
@@ -93,7 +146,75 @@ pub fn initialize(connection: &Connection) -> Result<(), StoreError> {
             COMMIT;
             "#,
         )?;
+        create_agent_tables(connection)?;
     }
+    if current == 2 {
+        create_agent_tables(connection)?;
+    }
+    Ok(())
+}
+
+fn create_agent_tables(connection: &Connection) -> Result<(), StoreError> {
+    connection.execute_batch(
+        r#"
+        BEGIN IMMEDIATE;
+        CREATE TABLE agent_conversations (
+            conversation_id TEXT PRIMARY KEY,
+            document_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE agent_messages (
+            message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT NOT NULL REFERENCES agent_conversations(conversation_id) ON DELETE CASCADE,
+            role TEXT NOT NULL,
+            payload_json TEXT NOT NULL
+        );
+        CREATE TABLE agent_runs (
+            run_id TEXT PRIMARY KEY,
+            conversation_id TEXT NOT NULL REFERENCES agent_conversations(conversation_id) ON DELETE CASCADE,
+            document_id TEXT NOT NULL,
+            starting_revision INTEGER NOT NULL,
+            provider_id TEXT NOT NULL,
+            model_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            failure_code TEXT
+        );
+        CREATE TABLE agent_events (
+            run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+            sequence INTEGER NOT NULL,
+            document_revision INTEGER NOT NULL,
+            payload_json TEXT NOT NULL,
+            PRIMARY KEY(run_id, sequence)
+        );
+        CREATE TABLE agent_tool_calls (
+            run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+            tool_call_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            proposal_id TEXT,
+            approval_id TEXT,
+            command_id TEXT,
+            previous_revision INTEGER,
+            committed_revision INTEGER,
+            success INTEGER,
+            PRIMARY KEY(run_id, tool_call_id)
+        );
+        CREATE TABLE agent_proposals (
+            proposal_id TEXT PRIMARY KEY,
+            run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+            tool_call_id TEXT NOT NULL,
+            digest_sha256 TEXT,
+            payload_json TEXT
+        );
+        CREATE TABLE agent_approvals (
+            approval_id TEXT PRIMARY KEY,
+            proposal_id TEXT NOT NULL REFERENCES agent_proposals(proposal_id) ON DELETE CASCADE,
+            run_id TEXT NOT NULL REFERENCES agent_runs(run_id) ON DELETE CASCADE,
+            status TEXT NOT NULL
+        );
+        PRAGMA user_version = 3;
+        COMMIT;
+        "#,
+    )?;
     Ok(())
 }
 
@@ -142,6 +263,6 @@ mod tests {
             ]
         );
         assert_eq!(rows, 0);
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
     }
 }

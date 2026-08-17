@@ -4,7 +4,10 @@ use std::sync::Mutex;
 use clarix_editing_core::{CommandId, DocumentId, DocumentRevision};
 use serde::{Deserialize, Serialize};
 
-use crate::{AgentError, AgentRunEvent, AgentRunId, AgentRunRequest, AgentRunStatus, ToolCallId};
+use crate::{
+    AgentError, AgentRunEvent, AgentRunId, AgentRunRequest, AgentRunStatus, ApprovalId, ProposalId,
+    ToolCallId,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AgentRunAuditHeader {
@@ -19,6 +22,8 @@ pub struct AgentRunAuditHeader {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CommandAuditLink {
     pub tool_call_id: ToolCallId,
+    pub proposal_id: Option<ProposalId>,
+    pub approval_id: Option<ApprovalId>,
     pub command_id: CommandId,
     pub previous_revision: DocumentRevision,
     pub committed_revision: DocumentRevision,

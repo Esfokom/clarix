@@ -1,3 +1,4 @@
+mod agent_repository;
 mod location;
 mod repository;
 mod schema;
@@ -60,3 +61,4 @@ pub enum StoreError {
     #[error("repository lock is poisoned")]
     Poisoned,
 }
+pub use agent_repository::SqliteAgentRunRepository;
