@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
 import 'package:clarix/src/features/ai/domain/ai_provider.dart';
+import 'package:clarix/src/features/ai/application/ai_providers.dart';
 import 'package:clarix/src/features/workspace/infrastructure/document_metadata_store.dart';
 import 'package:clarix/src/features/ai/infrastructure/provider_profile_store.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/app_settings_dialog.dart';
@@ -64,9 +65,9 @@ void main() {
     expect(await harness.store.readDefaultProfileId(), profiles.single.id);
     expect(
       harness.container
-          .read(workspaceNotifierProvider)
+          .read(aiNotifierProvider)
           .requireValue
-          .aiState
+          .chat
           .selectedProviderId,
       profiles.single.id,
     );
