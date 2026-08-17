@@ -1,7 +1,9 @@
 use clarix_editing_core::CommandId;
 use clarix_pdf_oxide::editing_api::{
-    NativeApproveFontFallbackRequest, NativeCleanPatchRequest, NativeEditorCommand,
-    NativeEditorCommandKind, NativeEditorSaveMode, NativeEditorSaveRequest, NativeEditorSession,
+    NativeAnnotation, NativeAnnotationAnchorKind, NativeAnnotationCommandRequest,
+    NativeAnnotationKind, NativeApproveFontFallbackRequest, NativeCleanPatchRequest,
+    NativeDeleteAnnotationRequest, NativeEditorCommand, NativeEditorCommandKind,
+    NativeEditorSaveMode, NativeEditorSaveRequest, NativeEditorSession,
     NativeFontFallbackProposalRequest, NativeObjectDetailsRequest, NativeOpenEditorRequest,
     NativePageSceneRequest, NativeSaveAssociation, NativeSearchMode, NativeSearchRequest,
     NativeSubmitCommandRequest, NativeViewportPriority,
@@ -115,6 +117,78 @@ fn native_session_searches_the_rust_authoritative_page_model() {
     assert_eq!(result.revision, 0);
     assert_eq!(result.total_matches, 1);
     assert_eq!(result.matches[0].object_id, scene.objects[0].object_id);
+    session.close().unwrap();
+}
+
+#[test]
+fn native_session_creates_reads_and_deletes_canonical_annotations() {
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(
+            tempfile::tempdir()
+                .unwrap()
+                .keep()
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    })
+    .unwrap();
+    let scene = session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    let annotation_id = clarix_editing_core::ObjectId::from_source_key("bridge/annotation/1");
+    let created = session
+        .create_annotation(NativeAnnotationCommandRequest {
+            schema_version: 1,
+            command_id: clarix_editing_core::CommandId::new().to_string(),
+            base_revision: 0,
+            annotation: NativeAnnotation {
+                object_id: annotation_id.to_string(),
+                page_id: scene.page_id,
+                bounds: clarix_pdf_oxide::editing_api::NativePdfBox {
+                    left: 10.0,
+                    bottom: 10.0,
+                    right: 11.0,
+                    top: 11.0,
+                },
+                kind: NativeAnnotationKind::Comment,
+                anchor_kind: NativeAnnotationAnchorKind::PagePoint,
+                anchor_x: Some(10.0),
+                anchor_y: Some(10.0),
+                ranges: Vec::new(),
+                title: String::new(),
+                body: "Bridge comment".into(),
+                color_rgba: vec![255, 212, 59, 255],
+                opacity: 1.0,
+                resolved: false,
+            },
+        })
+        .unwrap();
+    assert_eq!(created.committed_revision, 1);
+    assert_eq!(
+        session
+            .annotation_details(annotation_id.to_string())
+            .unwrap()
+            .body,
+        "Bridge comment"
+    );
+
+    let deleted = session
+        .delete_annotation(NativeDeleteAnnotationRequest {
+            schema_version: 1,
+            command_id: clarix_editing_core::CommandId::new().to_string(),
+            base_revision: 1,
+            object_id: annotation_id.to_string(),
+        })
+        .unwrap();
+    assert_eq!(deleted.committed_revision, 2);
+    assert!(session
+        .annotation_details(annotation_id.to_string())
+        .is_err());
     session.close().unwrap();
 }
 

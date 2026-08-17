@@ -6,12 +6,13 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
 use clarix_editing_core::{
-    AffineTransform, CommandEnvelope, CommandId, CommandResult, DocumentId, DocumentModel,
+    AffineTransform, AnnotationAnchor, AnnotationKind, AnnotationNode, AnnotationTextRange,
+    CommandEnvelope, CommandId, CommandResult, CompatibilityReporter, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    FontFallbackApproval, FontRef, FontSource, ObjectId, ObjectPatch, PageIndexTask,
-    PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SaveAssociation, SaveCoordinator,
-    SaveMode, SaveRequest, SearchMode, SearchRequest, SessionId, SourceReference, TextRun,
-    TextStyle, Utf16Range, ViewportPriority,
+    FontFallbackApproval, FontRef, FontSource, MemoryPressureLevel, ObjectId, ObjectPatch,
+    PageIndexTask, PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SaveAssociation,
+    SaveCoordinator, SaveMode, SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet,
+    SessionId, SourceReference, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository};
 use clarix_pdf_adapter::{
@@ -93,6 +94,123 @@ pub struct NativeSearchResult {
     pub indexed_pages: u32,
     pub page_count: u32,
     pub is_complete: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeSelectionKind {
+    TextRanges,
+    Objects,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeSelectionRange {
+    pub object_id: String,
+    pub page_id: String,
+    pub page_number: u32,
+    pub start_utf16: u32,
+    pub end_utf16: u32,
+    pub quoted_text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeSelectionSet {
+    pub expected_revision: u64,
+    pub kind: NativeSelectionKind,
+    pub ranges: Vec<NativeSelectionRange>,
+    pub object_ids: Vec<String>,
+    pub primary_index: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeValidatedSelection {
+    pub schema_version: u32,
+    pub revision: u64,
+    pub kind: NativeSelectionKind,
+    pub ranges: Vec<NativeSelectionRange>,
+    pub object_ids: Vec<String>,
+    pub primary_index: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeCompatibilityIssue {
+    pub object_id: String,
+    pub page_id: String,
+    pub kind: String,
+    pub capability: String,
+    pub code: String,
+    pub message: String,
+    pub supported_operations: Vec<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeCompatibilityReport {
+    pub schema_version: u32,
+    pub revision: u64,
+    pub editable_count: u32,
+    pub overlay_only_count: u32,
+    pub read_only_count: u32,
+    pub issues: Vec<NativeCompatibilityIssue>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeAnnotationKind {
+    Bookmark,
+    Highlight,
+    Comment,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeAnnotationAnchorKind {
+    PagePoint,
+    TextRanges,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeAnnotationRange {
+    pub range_id: String,
+    pub object_id: String,
+    pub start_utf16: u32,
+    pub end_utf16: u32,
+    pub quoted_text: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeAnnotation {
+    pub object_id: String,
+    pub page_id: String,
+    pub bounds: NativePdfBox,
+    pub kind: NativeAnnotationKind,
+    pub anchor_kind: NativeAnnotationAnchorKind,
+    pub anchor_x: Option<f64>,
+    pub anchor_y: Option<f64>,
+    pub ranges: Vec<NativeAnnotationRange>,
+    pub title: String,
+    pub body: String,
+    pub color_rgba: Vec<u8>,
+    pub opacity: f32,
+    pub resolved: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeAnnotationCommandRequest {
+    pub schema_version: u32,
+    pub command_id: String,
+    pub base_revision: u64,
+    pub annotation: NativeAnnotation,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeDeleteAnnotationRequest {
+    pub schema_version: u32,
+    pub command_id: String,
+    pub base_revision: u64,
+    pub object_id: String,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativeMemoryPressureLevel {
+    Moderate,
+    Critical,
 }
 
 #[derive(Debug, Clone)]
@@ -526,6 +644,143 @@ impl NativeEditorSession {
         })
     }
 
+    pub fn validate_selection(
+        &self,
+        selection: NativeSelectionSet,
+    ) -> Result<NativeValidatedSelection, String> {
+        let validated = self
+            .actor
+            .validate_selection(SelectionSet {
+                revision: DocumentRevision::from_value(selection.expected_revision),
+                kind: native_selection_kind(selection.kind),
+                ranges: selection
+                    .ranges
+                    .into_iter()
+                    .map(native_selection_range)
+                    .collect::<Result<Vec<_>, _>>()?,
+                object_ids: selection
+                    .object_ids
+                    .iter()
+                    .map(|object_id| parse_object_id(object_id))
+                    .collect::<Result<Vec<_>, _>>()?,
+                primary_index: selection.primary_index,
+            })
+            .map_err(editing_error)?;
+        Ok(NativeValidatedSelection {
+            schema_version: EDITOR_SCHEMA_VERSION,
+            revision: validated.revision.value(),
+            kind: native_selection_kind_to_native(validated.kind),
+            ranges: validated
+                .ranges
+                .into_iter()
+                .map(native_selection_range_from_core)
+                .collect(),
+            object_ids: validated
+                .object_ids
+                .into_iter()
+                .map(|object_id| object_id.to_string())
+                .collect(),
+            primary_index: validated.primary_index,
+        })
+    }
+
+    pub fn compatibility_report(
+        &self,
+        expected_revision: u64,
+    ) -> Result<NativeCompatibilityReport, String> {
+        let snapshot = self.actor.snapshot().map_err(editing_error)?;
+        let expected_revision = DocumentRevision::from_value(expected_revision);
+        if snapshot.revision != expected_revision {
+            return Err(editing_error(EditingError::RevisionConflict {
+                expected: expected_revision,
+                actual: snapshot.revision,
+            }));
+        }
+        let report = CompatibilityReporter::for_document(&snapshot);
+        Ok(NativeCompatibilityReport {
+            schema_version: EDITOR_SCHEMA_VERSION,
+            revision: report.revision.value(),
+            editable_count: report.editable_count,
+            overlay_only_count: report.overlay_only_count,
+            read_only_count: report.read_only_count,
+            issues: report
+                .issues
+                .into_iter()
+                .map(|issue| NativeCompatibilityIssue {
+                    object_id: issue.object_id.to_string(),
+                    page_id: issue.page_id.to_string(),
+                    kind: format!("{:?}", issue.kind).to_ascii_lowercase(),
+                    capability: format!("{:?}", issue.capability).to_ascii_lowercase(),
+                    code: issue.code,
+                    message: issue.message,
+                    supported_operations: issue.supported_operations,
+                })
+                .collect(),
+        })
+    }
+
+    pub fn report_memory_pressure(&self, level: NativeMemoryPressureLevel) {
+        self.page_service.report_memory_pressure(match level {
+            NativeMemoryPressureLevel::Moderate => MemoryPressureLevel::Moderate,
+            NativeMemoryPressureLevel::Critical => MemoryPressureLevel::Critical,
+        });
+        if matches!(level, NativeMemoryPressureLevel::Critical) {
+            self.clean_patches.clear();
+        }
+    }
+
+    pub fn create_annotation(
+        &self,
+        request: NativeAnnotationCommandRequest,
+    ) -> Result<NativeCommandResult, String> {
+        let annotation = native_annotation_request(&request)?;
+        self.submit_annotation_command(
+            request.command_id,
+            request.base_revision,
+            EditorCommand::CreateAnnotation { annotation },
+        )
+    }
+
+    pub fn update_annotation(
+        &self,
+        request: NativeAnnotationCommandRequest,
+    ) -> Result<NativeCommandResult, String> {
+        let annotation = native_annotation_request(&request)?;
+        self.submit_annotation_command(
+            request.command_id,
+            request.base_revision,
+            EditorCommand::UpdateAnnotation { annotation },
+        )
+    }
+
+    pub fn delete_annotation(
+        &self,
+        request: NativeDeleteAnnotationRequest,
+    ) -> Result<NativeCommandResult, String> {
+        if request.schema_version != EDITOR_SCHEMA_VERSION {
+            return Err(format!(
+                "schema_mismatch: expected {EDITOR_SCHEMA_VERSION}, got {}",
+                request.schema_version
+            ));
+        }
+        self.submit_annotation_command(
+            request.command_id,
+            request.base_revision,
+            EditorCommand::DeleteAnnotation {
+                object_id: parse_object_id(&request.object_id)?,
+            },
+        )
+    }
+
+    pub fn annotation_details(&self, object_id: String) -> Result<NativeAnnotation, String> {
+        let object_id = parse_object_id(&object_id)?;
+        let snapshot = self.actor.snapshot().map_err(editing_error)?;
+        let Some(DocumentObject::Annotation(annotation)) = snapshot.object(object_id) else {
+            return Err(format!("annotation_not_found: {object_id}"));
+        };
+        Ok(native_annotation_from_core(annotation))
+    }
+
     pub fn submit(
         &self,
         request: NativeSubmitCommandRequest,
@@ -551,6 +806,26 @@ impl NativeEditorSession {
             .lock()
             .map_err(|_| "font_fallback_unavailable: proposal lock poisoned".to_owned())?
             .clear();
+        self.page_service.set_revision(result.committed_revision);
+        Ok(native_command_result(result))
+    }
+
+    fn submit_annotation_command(
+        &self,
+        command_id: String,
+        base_revision: u64,
+        payload: EditorCommand,
+    ) -> Result<NativeCommandResult, String> {
+        let command_id = CommandId::from_str(&command_id)
+            .map_err(|error| format!("invalid_command_id: {error}"))?;
+        let result = self
+            .actor
+            .submit(CommandEnvelope::user(
+                command_id,
+                DocumentRevision::from_value(base_revision),
+                payload,
+            ))
+            .map_err(editing_error)?;
         self.page_service.set_revision(result.committed_revision);
         Ok(native_command_result(result))
     }
@@ -975,6 +1250,173 @@ fn persist_fallback_asset(
 
 fn parse_object_id(value: &str) -> Result<ObjectId, String> {
     ObjectId::from_str(value).map_err(|error| format!("invalid_object_id: {error}"))
+}
+
+fn native_selection_kind(kind: NativeSelectionKind) -> SelectionKind {
+    match kind {
+        NativeSelectionKind::TextRanges => SelectionKind::TextRanges,
+        NativeSelectionKind::Objects => SelectionKind::Objects,
+    }
+}
+
+fn native_selection_kind_to_native(kind: SelectionKind) -> NativeSelectionKind {
+    match kind {
+        SelectionKind::TextRanges => NativeSelectionKind::TextRanges,
+        SelectionKind::Objects => NativeSelectionKind::Objects,
+    }
+}
+
+fn native_selection_range(range: NativeSelectionRange) -> Result<TextRangeRef, String> {
+    Ok(TextRangeRef {
+        object_id: parse_object_id(&range.object_id)?,
+        page_id: clarix_editing_core::PageId::from_str(&range.page_id)
+            .map_err(|error| format!("invalid_page_id: {error}"))?,
+        page_number: range.page_number,
+        start_utf16: range.start_utf16,
+        end_utf16: range.end_utf16,
+        quoted_text: range.quoted_text,
+    })
+}
+
+fn native_selection_range_from_core(range: TextRangeRef) -> NativeSelectionRange {
+    NativeSelectionRange {
+        object_id: range.object_id.to_string(),
+        page_id: range.page_id.to_string(),
+        page_number: range.page_number,
+        start_utf16: range.start_utf16,
+        end_utf16: range.end_utf16,
+        quoted_text: range.quoted_text,
+    }
+}
+
+fn native_annotation_request(
+    request: &NativeAnnotationCommandRequest,
+) -> Result<AnnotationNode, String> {
+    if request.schema_version != EDITOR_SCHEMA_VERSION {
+        return Err(format!(
+            "schema_mismatch: expected {EDITOR_SCHEMA_VERSION}, got {}",
+            request.schema_version
+        ));
+    }
+    native_annotation(request.annotation.clone())
+}
+
+fn native_annotation(annotation: NativeAnnotation) -> Result<AnnotationNode, String> {
+    let id = parse_object_id(&annotation.object_id)?;
+    let page_id = clarix_editing_core::PageId::from_str(&annotation.page_id)
+        .map_err(|error| format!("invalid_page_id: {error}"))?;
+    let bounds = pdf_box(annotation.bounds)?;
+    let color_rgba = annotation
+        .color_rgba
+        .try_into()
+        .map_err(|_| "invalid_annotation: RGBA must contain four channels".to_owned())?;
+    if !annotation.opacity.is_finite() || !(0.0..=1.0).contains(&annotation.opacity) {
+        return Err("invalid_annotation: opacity must be finite and between zero and one".into());
+    }
+    let anchor = match annotation.anchor_kind {
+        NativeAnnotationAnchorKind::PagePoint => {
+            if !annotation.ranges.is_empty() {
+                return Err(
+                    "invalid_annotation: page-point anchors cannot contain text ranges".into(),
+                );
+            }
+            let x = required(annotation.anchor_x, "annotation.anchor_x")?;
+            let y = required(annotation.anchor_y, "annotation.anchor_y")?;
+            if !x.is_finite() || !y.is_finite() {
+                return Err("invalid_annotation: page-point coordinates must be finite".into());
+            }
+            AnnotationAnchor::PagePoint { x, y }
+        }
+        NativeAnnotationAnchorKind::TextRanges => {
+            if annotation.ranges.is_empty() {
+                return Err("invalid_annotation: text anchors require at least one range".into());
+            }
+            AnnotationAnchor::Text {
+                ranges: annotation
+                    .ranges
+                    .into_iter()
+                    .map(|range| {
+                        if range.range_id.trim().is_empty() {
+                            return Err(
+                                "invalid_annotation: text range ID must not be empty".into()
+                            );
+                        }
+                        if range.start_utf16 >= range.end_utf16 {
+                            return Err("invalid_annotation: text range must not be empty".into());
+                        }
+                        Ok(AnnotationTextRange {
+                            range_id: range.range_id,
+                            object_id: parse_object_id(&range.object_id)?,
+                            start_utf16: range.start_utf16,
+                            end_utf16: range.end_utf16,
+                            quoted_text: range.quoted_text,
+                        })
+                    })
+                    .collect::<Result<Vec<_>, String>>()?,
+            }
+        }
+    };
+    Ok(AnnotationNode::new(
+        id,
+        page_id,
+        bounds,
+        match annotation.kind {
+            NativeAnnotationKind::Bookmark => AnnotationKind::Bookmark,
+            NativeAnnotationKind::Highlight => AnnotationKind::Highlight,
+            NativeAnnotationKind::Comment => AnnotationKind::Comment,
+        },
+        anchor,
+        annotation.title,
+        annotation.body,
+        color_rgba,
+        annotation.opacity,
+        annotation.resolved,
+    ))
+}
+
+fn native_annotation_from_core(annotation: &AnnotationNode) -> NativeAnnotation {
+    let (anchor_kind, anchor_x, anchor_y, ranges) = match &annotation.anchor {
+        AnnotationAnchor::PagePoint { x, y } => (
+            NativeAnnotationAnchorKind::PagePoint,
+            Some(*x),
+            Some(*y),
+            Vec::new(),
+        ),
+        AnnotationAnchor::Text { ranges } => (
+            NativeAnnotationAnchorKind::TextRanges,
+            None,
+            None,
+            ranges
+                .iter()
+                .map(|range| NativeAnnotationRange {
+                    range_id: range.range_id.clone(),
+                    object_id: range.object_id.to_string(),
+                    start_utf16: range.start_utf16,
+                    end_utf16: range.end_utf16,
+                    quoted_text: range.quoted_text.clone(),
+                })
+                .collect(),
+        ),
+    };
+    NativeAnnotation {
+        object_id: annotation.id().to_string(),
+        page_id: annotation.page_id().to_string(),
+        bounds: native_box(annotation.bounds()),
+        kind: match annotation.kind {
+            AnnotationKind::Bookmark => NativeAnnotationKind::Bookmark,
+            AnnotationKind::Highlight => NativeAnnotationKind::Highlight,
+            AnnotationKind::Comment => NativeAnnotationKind::Comment,
+        },
+        anchor_kind,
+        anchor_x,
+        anchor_y,
+        ranges,
+        title: annotation.title.clone(),
+        body: annotation.body.clone(),
+        color_rgba: annotation.color_rgba.to_vec(),
+        opacity: annotation.opacity,
+        resolved: annotation.resolved,
+    }
 }
 
 fn text_style(style: NativeTextStyle) -> Result<TextStyle, String> {
