@@ -709,6 +709,10 @@ name = "clarix_agent_core"
 version = "0.1.0"
 dependencies = [
  "clarix_editing_core",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
 ]
 
 [[package]]
