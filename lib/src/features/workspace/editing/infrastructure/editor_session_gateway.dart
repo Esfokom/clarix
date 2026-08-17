@@ -1,5 +1,6 @@
 import '../../../../core/editing/editor_bridge.dart';
 import '../../../../core/editing/editor_bridge_types.dart';
+import '../../../../core/agent/agent_bridge.dart';
 
 abstract class EditorSessionGateway {
   Stream<EditorEvent> get events;
@@ -74,11 +75,16 @@ abstract interface class EditorPhaseTwoGateway {
   });
 }
 
+abstract interface class EditorAgentGateway {
+  AgentBridgeSession agentBridgeSession();
+}
+
 class BridgeEditorSessionGateway
     implements
         EditorSessionGateway,
         EditorFontFallbackGateway,
-        EditorPhaseTwoGateway {
+        EditorPhaseTwoGateway,
+        EditorAgentGateway {
   factory BridgeEditorSessionGateway({
     EditorBridge bridge = const EditorBridge(),
     String? projectRoot,
@@ -89,6 +95,7 @@ class BridgeEditorSessionGateway
   final EditorBridge _bridge;
   final String? _projectRoot;
   EditorBridgeSession? _session;
+  String? _sessionId;
 
   @override
   Stream<EditorEvent> get events =>
@@ -97,8 +104,17 @@ class BridgeEditorSessionGateway
   @override
   Future<EditorSessionMetadata> open(String sourcePath) async {
     _session = await _bridge.open(sourcePath, projectRoot: _projectRoot);
-    return _session!.metadata();
+    final metadata = await _session!.metadata();
+    _sessionId = metadata.sessionId;
+    return metadata;
   }
+
+  @override
+  AgentBridgeSession agentBridgeSession() => AgentBridgeSession.forTest(
+    _required().agentPort,
+    sessionId:
+        _sessionId ?? (throw StateError('editor metadata is unavailable')),
+  );
 
   @override
   Future<EditorPageScene> requestPage(
@@ -214,6 +230,7 @@ class BridgeEditorSessionGateway
   Future<void> close() async {
     final session = _session;
     _session = null;
+    _sessionId = null;
     await session?.close();
   }
 

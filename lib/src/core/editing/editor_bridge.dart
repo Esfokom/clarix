@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import '../clarix_rust_runtime.dart';
+import '../agent/agent_bridge.dart';
 import '../ffi/editing_api.dart' as native;
 import 'editor_bridge_types.dart';
 
@@ -137,6 +138,14 @@ class EditorBridgeSession {
   Future<void>? _closing;
 
   Stream<EditorEvent> get events => _eventsController.stream;
+
+  NativeAgentPort get agentPort {
+    final native = _native;
+    if (native is NativeAgentPortProvider) {
+      return (native as NativeAgentPortProvider).agentPort;
+    }
+    throw UnsupportedError('native agent session is unavailable');
+  }
 
   Future<EditorSessionMetadata> metadata() async {
     _ensureOpen();
@@ -467,10 +476,17 @@ class EditorBridgeSession {
 }
 
 class _FrbNativeEditorPort
-    implements NativeEditorPort, NativeFontFallbackPort, NativePhaseTwoPort {
+    implements
+        NativeEditorPort,
+        NativeFontFallbackPort,
+        NativePhaseTwoPort,
+        NativeAgentPortProvider {
   _FrbNativeEditorPort(this._session);
 
   final native.NativeEditorSession _session;
+
+  @override
+  NativeAgentPort get agentPort => FrbNativeAgentPort(_session);
 
   @override
   Stream<EditorEvent> get events => _session.events().map(_eventFromNative);

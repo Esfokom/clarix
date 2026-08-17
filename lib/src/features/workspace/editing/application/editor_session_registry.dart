@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'editor_session_controller.dart';
+import '../../agent/application/agent_run_controller.dart';
 import '../domain/editor_document_state.dart';
 import '../infrastructure/editor_session_gateway.dart';
 
@@ -18,6 +19,8 @@ class EditorSessionRegistry {
   final EditorCommandIdFactory _commandIds;
   final Map<String, EditorSessionController> _sessions =
       <String, EditorSessionController>{};
+  final Map<String, AgentRunController> _agentSessions =
+      <String, AgentRunController>{};
   final Map<String, StreamSubscription<EditorDocumentState>> _subscriptions =
       <String, StreamSubscription<EditorDocumentState>>{};
   final StreamController<String> _changes = StreamController<String>.broadcast(
@@ -27,6 +30,7 @@ class EditorSessionRegistry {
   Iterable<String> get tabIds => _sessions.keys;
 
   EditorSessionController? operator [](String tabId) => _sessions[tabId];
+  AgentRunController? agent(String tabId) => _agentSessions[tabId];
 
   Stream<EditorDocumentState?> watch(String tabId) async* {
     yield _sessions[tabId]?.state;
@@ -41,13 +45,19 @@ class EditorSessionRegistry {
   }) async {
     final existing = _sessions[tabId];
     if (existing != null) return existing;
+    final gateway = _gateways();
     final controller = EditorSessionController(
-      gateway: _gateways(),
+      gateway: gateway,
       commandIds: _commandIds,
     );
     _sessions[tabId] = controller;
     try {
       await controller.open(sourcePath);
+      if (gateway is EditorAgentGateway) {
+        _agentSessions[tabId] = AgentRunController(
+          bridge: (gateway as EditorAgentGateway).agentBridgeSession(),
+        );
+      }
       _subscriptions[tabId] = controller.changes.listen(
         (_) => _changes.add(tabId),
       );
@@ -55,6 +65,7 @@ class EditorSessionRegistry {
       return controller;
     } catch (_) {
       _sessions.remove(tabId);
+      await _agentSessions.remove(tabId)?.dispose();
       await controller.close();
       rethrow;
     }
@@ -63,6 +74,7 @@ class EditorSessionRegistry {
   Future<void> close(String tabId) async {
     final controller = _sessions[tabId];
     if (controller == null) return;
+    await _agentSessions.remove(tabId)?.dispose();
     await _subscriptions.remove(tabId)?.cancel();
     await controller.close();
     _sessions.remove(tabId);

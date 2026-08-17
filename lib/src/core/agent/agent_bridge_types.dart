@@ -1,0 +1,146 @@
+enum AgentRunStatus {
+  queued,
+  assemblingContext,
+  callingProvider,
+  executingTool,
+  awaitingApproval,
+  budgetPaused,
+  completed,
+  cancelled,
+  failed;
+
+  bool get isTerminal =>
+      this == completed || this == cancelled || this == failed;
+}
+
+class AgentSelectionRange {
+  const AgentSelectionRange({
+    required this.objectId,
+    required this.pageId,
+    required this.pageNumber,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.quotedText,
+  });
+
+  final String objectId;
+  final String pageId;
+  final int pageNumber;
+  final int startUtf16;
+  final int endUtf16;
+  final String quotedText;
+}
+
+class AgentSelection {
+  const AgentSelection({
+    required this.revision,
+    required this.ranges,
+    required this.objectIds,
+    this.primaryIndex,
+  });
+
+  final int revision;
+  final List<AgentSelectionRange> ranges;
+  final List<String> objectIds;
+  final int? primaryIndex;
+}
+
+class AgentStartRequest {
+  const AgentStartRequest({
+    required this.providerEndpoint,
+    required this.modelId,
+    required this.headers,
+    required this.apiKey,
+    required this.userPrompt,
+    required this.selection,
+    required this.disclosureSha256,
+    this.conversationId,
+    this.maxToolCalls = 12,
+    this.maxProviderRounds = 6,
+    this.maxElapsedMs = 120000,
+    this.maxOutputTokens = 8192,
+  });
+
+  final String providerEndpoint;
+  final String modelId;
+  final Map<String, String> headers;
+  final String apiKey;
+  final String? conversationId;
+  final String userPrompt;
+  final AgentSelection selection;
+  final String disclosureSha256;
+  final int maxToolCalls;
+  final int maxProviderRounds;
+  final int maxElapsedMs;
+  final int maxOutputTokens;
+}
+
+class AgentRunView {
+  const AgentRunView({required this.runId, required this.status});
+
+  final String runId;
+  final AgentRunStatus status;
+}
+
+class AgentRunEvent {
+  const AgentRunEvent({
+    required this.sessionId,
+    required this.runId,
+    required this.sequence,
+    required this.documentRevision,
+    required this.kind,
+    required this.payload,
+  });
+
+  final String sessionId;
+  final String runId;
+  final int sequence;
+  final int documentRevision;
+  final String kind;
+  final Map<String, Object?> payload;
+
+  bool get isTerminal => kind == 'finished';
+}
+
+class AgentProposal {
+  const AgentProposal({
+    required this.runId,
+    required this.proposalId,
+    required this.approvalId,
+    required this.baseRevision,
+    required this.digestSha256,
+  });
+
+  final String runId;
+  final String proposalId;
+  final String approvalId;
+  final int baseRevision;
+  final String digestSha256;
+}
+
+class AgentDisclosure {
+  const AgentDisclosure({
+    required this.providerLabel,
+    required this.selectedText,
+    required this.nearbyTextBefore,
+    required this.nearbyTextAfter,
+    required this.pageNumbers,
+    required this.sha256,
+  });
+
+  final String providerLabel;
+  final String selectedText;
+  final String nearbyTextBefore;
+  final String nearbyTextAfter;
+  final List<int> pageNumbers;
+  final String sha256;
+}
+
+class AgentProtocolViolation implements Exception {
+  const AgentProtocolViolation(this.message);
+
+  final String message;
+
+  @override
+  String toString() => 'AgentProtocolViolation: $message';
+}

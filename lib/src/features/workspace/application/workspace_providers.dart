@@ -20,6 +20,7 @@ import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/provider_profile_store.dart';
 import '../infrastructure/installed_font_catalog.dart';
 import '../editing/application/editor_session_registry.dart';
+import '../agent/application/agent_run_controller.dart';
 import '../editing/domain/editor_document_state.dart';
 import '../editing/infrastructure/editor_session_gateway.dart';
 import 'ai_runtime_service.dart';
@@ -176,6 +177,11 @@ final editorDocumentStateProvider =
     StreamProvider.family<EditorDocumentState?, String>((ref, tabId) {
       return ref.watch(editorSessionRegistryProvider).watch(tabId);
     });
+
+final agentRunControllerProvider = Provider.family<AgentRunController?, String>(
+  (Ref ref, String tabId) =>
+      ref.watch(editorSessionRegistryProvider).agent(tabId),
+);
 
 final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(
   (Ref ref) => InstalledFontCatalog.scan(),
