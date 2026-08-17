@@ -179,6 +179,32 @@ fn warm_scene_residency_obeys_the_configured_limit() {
 }
 
 #[test]
+fn critical_memory_pressure_evicts_warm_scenes_but_retains_visible_scenes() {
+    let importer = Arc::new(FixtureImporter::default());
+    let service = service(importer).with_resident_scene_limit(5).unwrap();
+    service
+        .request(PageSceneRequest::visible(1, DocumentRevision::INITIAL))
+        .unwrap();
+    for page_number in 2..=4 {
+        service
+            .request(PageSceneRequest {
+                page_number,
+                expected_revision: DocumentRevision::INITIAL,
+                priority: clarix_editing_core::ViewportPriority::Preload,
+            })
+            .unwrap();
+    }
+
+    service.report_memory_pressure(clarix_editing_core::MemoryPressureLevel::Critical);
+
+    assert_eq!(service.resident_scene_count(), 1);
+    assert_eq!(service.page_state(1), PageImportState::Visible);
+    for page_number in 2..=4 {
+        assert_eq!(service.page_state(page_number), PageImportState::Cold);
+    }
+}
+
+#[test]
 fn background_task_indexes_pages_without_widget_requests() {
     let importer = Arc::new(FixtureImporter::default());
     let service = PageSceneService::new(

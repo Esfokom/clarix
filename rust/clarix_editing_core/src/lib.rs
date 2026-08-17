@@ -31,8 +31,8 @@ pub use model::{
     ImageNode, ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
 };
 pub use page_service::{
-    PageImportState, PageIndexTask, PageScene, PageSceneError, PageSceneRequest, PageSceneService,
-    ViewportPriority,
+    MemoryPressureLevel, PageImportState, PageIndexTask, PageScene, PageSceneError,
+    PageSceneRequest, PageSceneService, ViewportPriority,
 };
 pub use persistence::{
     CheckpointKind, DurableCommit, DurableSnapshot, MaterializationRecord, PersistenceError,

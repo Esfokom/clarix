@@ -21,6 +21,12 @@ pub enum ViewportPriority {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum MemoryPressureLevel {
+    Moderate,
+    Critical,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PageImportState {
     Unseen,
     Indexed,
@@ -376,6 +382,25 @@ impl PageSceneService {
             state.scene_access.remove(&page_number);
             if state.indexed_pages.contains_key(&page_number) {
                 state.page_states.insert(page_number, PageImportState::Cold);
+            }
+        }
+    }
+
+    pub fn report_memory_pressure(&self, _: MemoryPressureLevel) {
+        if let Ok(mut state) = self.inner.state.lock() {
+            let evicted = state
+                .scenes
+                .iter()
+                .filter_map(|(page_number, scene)| {
+                    (scene.state != PageImportState::Visible).then_some(*page_number)
+                })
+                .collect::<Vec<_>>();
+            for page_number in evicted {
+                state.scenes.remove(&page_number);
+                state.scene_access.remove(&page_number);
+                if state.indexed_pages.contains_key(&page_number) {
+                    state.page_states.insert(page_number, PageImportState::Cold);
+                }
             }
         }
     }
