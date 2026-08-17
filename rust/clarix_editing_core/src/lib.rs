@@ -2,6 +2,7 @@ pub const EDITOR_CORE_SCHEMA_VERSION: u32 = 1;
 
 mod actor;
 mod command;
+mod compatibility;
 mod error;
 mod geometry;
 mod history;
@@ -22,6 +23,7 @@ pub use command::{
     ActorKind, AtomicEdit, CommandEnvelope, CommandResult, CommandWarning, EditorCommand,
     ObjectPatch, PreparedCommand, SelectionRebase,
 };
+pub use compatibility::{CompatibilityIssue, CompatibilityReport, CompatibilityReporter};
 pub use error::EditingError;
 pub use geometry::{AffineTransform, GeometryError, PdfBox};
 pub use history::{InverseOperation, TypingGroup};
