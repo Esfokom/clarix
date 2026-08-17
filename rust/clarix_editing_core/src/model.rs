@@ -590,6 +590,30 @@ impl DocumentModel {
         )
     }
 
+    pub fn replay_delta(
+        &self,
+        before_objects: impl IntoIterator<Item = DocumentObject>,
+        after_objects: impl IntoIterator<Item = DocumentObject>,
+        revision: DocumentRevision,
+    ) -> Result<Self, ModelError> {
+        let before_objects = before_objects.into_iter().collect::<Vec<_>>();
+        let after_objects = after_objects.into_iter().collect::<Vec<_>>();
+        if after_objects.is_empty() && !before_objects.is_empty() {
+            let mut replayed = self.clone();
+            for object in before_objects {
+                replayed.remove_object(object.id())?;
+            }
+            replayed.set_revision(revision);
+            return Self::from_parts(
+                replayed.id,
+                replayed.source_fingerprint,
+                replayed.revision,
+                replayed.pages,
+            );
+        }
+        self.replay_objects(after_objects, revision)
+    }
+
     pub(crate) fn set_revision(&mut self, revision: DocumentRevision) {
         self.revision = revision;
     }

@@ -54,6 +54,9 @@ pub enum EditorCommand {
     CreateAnnotation {
         annotation: AnnotationNode,
     },
+    DeleteAnnotation {
+        object_id: ObjectId,
+    },
     ApplyTransaction {
         edits: Vec<AtomicEdit>,
     },
@@ -201,6 +204,8 @@ pub struct CommandResult {
     pub previous_revision: DocumentRevision,
     pub committed_revision: DocumentRevision,
     pub object_patches: Vec<ObjectPatch>,
+    #[serde(default)]
+    pub removed_object_ids: Vec<ObjectId>,
     pub selection_rebase: Option<SelectionRebase>,
     pub warnings: Vec<CommandWarning>,
     #[serde(default)]

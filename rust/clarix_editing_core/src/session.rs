@@ -113,6 +113,22 @@ impl EditorSessionState {
                     });
                     state.redo_stack.clear();
                 }
+                EditorCommand::DeleteAnnotation { .. } => {
+                    let [before] = command.before_objects.as_slice() else {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered annotation deletion has invalid before state".into(),
+                        ));
+                    };
+                    let [] = command.after_objects.as_slice() else {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered annotation deletion has invalid after state".into(),
+                        ));
+                    };
+                    state.undo_stack.push(HistoryEntry::Deleted {
+                        object: Box::new(before.clone()),
+                    });
+                    state.redo_stack.clear();
+                }
                 _ => {
                     let [before] = command.before_objects.as_slice() else {
                         return Err(EditingError::SidecarCommitFailed(
@@ -374,6 +390,7 @@ impl EditorSessionState {
             }),
             _ => None,
         };
+        let mut removed_object_ids = Vec::new();
         let object_patches = match &envelope.payload {
             EditorCommand::Undo => self.apply_undo(next_revision)?,
             EditorCommand::Redo => self.apply_redo(next_revision)?,
@@ -446,6 +463,26 @@ impl EditorSessionState {
                 self.redo_stack.clear();
                 vec![created_object_patch(&object, next_revision)]
             }
+            EditorCommand::DeleteAnnotation { object_id } => {
+                let existing = self
+                    .model
+                    .object(*object_id)
+                    .cloned()
+                    .ok_or(EditingError::ObjectNotFound(*object_id))?;
+                if !matches!(existing, DocumentObject::Annotation(_)) {
+                    return Err(EditingError::WrongObjectKind(*object_id));
+                }
+                let removed = self
+                    .model
+                    .remove_object(*object_id)
+                    .map_err(|_| EditingError::ObjectNotFound(*object_id))?;
+                self.undo_stack.push(HistoryEntry::Deleted {
+                    object: Box::new(removed),
+                });
+                self.redo_stack.clear();
+                removed_object_ids.push(*object_id);
+                Vec::new()
+            }
             command => {
                 self.apply_object_command(command, next_revision, envelope.typing_group.as_ref())?
             }
@@ -458,6 +495,7 @@ impl EditorSessionState {
             previous_revision,
             committed_revision: next_revision,
             object_patches,
+            removed_object_ids,
             selection_rebase,
             warnings: Vec::new(),
             durable: false,
@@ -668,6 +706,7 @@ impl EditorSessionState {
                 after = DocumentObject::Annotation(annotation.clone());
             }
             EditorCommand::CreateAnnotation { .. }
+            | EditorCommand::DeleteAnnotation { .. }
             | EditorCommand::ApplyTransaction { .. }
             | EditorCommand::CreateCheckpoint { .. }
             | EditorCommand::Undo
@@ -757,6 +796,14 @@ impl EditorSessionState {
                     .map_err(|_| EditingError::ObjectNotFound(object.id()))?;
                 Vec::new()
             }
+            HistoryEntry::Deleted { object } => {
+                let mut restored = (**object).clone();
+                restored.set_modified_revision(revision);
+                self.model
+                    .insert_object(restored.clone())
+                    .map_err(|error| EditingError::InvalidCommand(error.to_string()))?;
+                vec![created_object_patch(&restored, revision)]
+            }
         };
         self.undo_stack.pop();
         self.redo_stack.push(entry);
@@ -811,6 +858,12 @@ impl EditorSessionState {
                     .map_err(|error| EditingError::InvalidCommand(error.to_string()))?;
                 vec![created_object_patch(&restored, revision)]
             }
+            HistoryEntry::Deleted { object } => {
+                self.model
+                    .remove_object(object.id())
+                    .map_err(|_| EditingError::ObjectNotFound(object.id()))?;
+                Vec::new()
+            }
         };
         self.redo_stack.pop();
         self.undo_stack.push(entry);
@@ -827,6 +880,7 @@ fn changed_objects(
     for before_page in &before.pages {
         for before_object in &before_page.objects {
             let Some(after_object) = after.object(before_object.id()) else {
+                before_objects.push(before_object.clone());
                 continue;
             };
             if after_object != before_object {
@@ -856,6 +910,7 @@ fn command_object_id(command: &EditorCommand) -> Option<ObjectId> {
         | EditorCommand::RotateObject { object_id, .. } => Some(*object_id),
         EditorCommand::UpdateAnnotation { annotation } => Some(annotation.id()),
         EditorCommand::CreateAnnotation { .. }
+        | EditorCommand::DeleteAnnotation { .. }
         | EditorCommand::ApplyTransaction { .. }
         | EditorCommand::CreateCheckpoint { .. }
         | EditorCommand::Undo

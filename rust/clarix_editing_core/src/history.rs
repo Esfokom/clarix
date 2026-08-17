@@ -32,6 +32,9 @@ pub(crate) enum HistoryEntry {
     Inserted {
         object: Box<DocumentObject>,
     },
+    Deleted {
+        object: Box<DocumentObject>,
+    },
     Checkpoint {
         label: String,
     },

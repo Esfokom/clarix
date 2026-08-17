@@ -104,6 +104,80 @@ fn journal_recovery_replays_annotation_creation() {
 }
 
 #[test]
+fn journal_recovery_replays_annotation_deletion() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, _) = fixture_model("Before");
+    let page_id = model.pages[0].id;
+    let annotation_id = ObjectId::from_source_key("store/page/1/comment/delete");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = SqliteProjectRepository::open(
+        location.clone(),
+        ProjectSeed {
+            model: model.clone(),
+            undo_cursor: 0,
+            materialized_revision: None,
+        },
+    )
+    .unwrap();
+    let mut session = EditorSessionState::new(SessionId::new(), model.clone());
+    let created = session
+        .prepare(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::CreateAnnotation {
+                annotation: AnnotationNode::comment(
+                    annotation_id,
+                    page_id,
+                    PdfBox::new(10.0, 10.0, 11.0, 11.0).unwrap(),
+                    AnnotationAnchor::PagePoint { x: 10.0, y: 10.0 },
+                    "Delete me",
+                ),
+            },
+        ))
+        .unwrap();
+    repository
+        .append(&DurableCommit::from_prepared(&created))
+        .unwrap();
+    let created_result = session.publish(created).unwrap();
+    let deleted = session
+        .prepare(CommandEnvelope::user(
+            CommandId::new(),
+            created_result.committed_revision,
+            EditorCommand::DeleteAnnotation {
+                object_id: annotation_id,
+            },
+        ))
+        .unwrap();
+    repository
+        .append(&DurableCommit::from_prepared(&deleted))
+        .unwrap();
+    drop(repository);
+
+    let connection = rusqlite::Connection::open(&location.database).unwrap();
+    connection.execute(
+        "UPDATE project SET model_json = 'corrupt', model_sha256 = 'invalid' WHERE singleton = 1",
+        [],
+    ).unwrap();
+    drop(connection);
+    let reopened = SqliteProjectRepository::open(
+        location,
+        ProjectSeed {
+            model: model.clone(),
+            undo_cursor: 0,
+            materialized_revision: None,
+        },
+    )
+    .unwrap();
+    let recovered = reopened
+        .recover(RecoveryRequest {
+            document_id: model.id,
+            source_fingerprint: model.source_fingerprint,
+        })
+        .unwrap();
+    assert!(recovered.model.object(annotation_id).is_none());
+}
+
+#[test]
 fn project_location_is_scoped_to_local_app_data_and_document_id() {
     let root = PathBuf::from(r"C:\Users\tester\AppData\Local");
     let document_id = DocumentId::from_source_key("store/document");

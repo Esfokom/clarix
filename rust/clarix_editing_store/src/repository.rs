@@ -632,7 +632,7 @@ fn recover_snapshot_and_journal(
     })?;
     let mut command_statement = connection
         .prepare(
-            "SELECT committed_revision, after_json, after_sha256 FROM commands WHERE committed_revision > ?1 AND committed_revision <= ?2 ORDER BY committed_revision ASC",
+            "SELECT committed_revision, before_json, after_json, after_sha256 FROM commands WHERE committed_revision > ?1 AND committed_revision <= ?2 ORDER BY committed_revision ASC",
         )
         .map_err(map_persistence)?;
     let commands = command_statement
@@ -641,23 +641,28 @@ fn recover_snapshot_and_journal(
                 row.get::<_, i64>(0)?,
                 row.get::<_, String>(1)?,
                 row.get::<_, String>(2)?,
+                row.get::<_, String>(3)?,
             ))
         })
         .map_err(map_persistence)?;
     for command in commands {
-        let (revision, after_json, checksum) = command.map_err(map_persistence)?;
+        let (revision, before_json, after_json, checksum) = command.map_err(map_persistence)?;
         if sha256_hex(after_json.as_bytes()) != checksum {
             return Err(PersistenceError::Corrupt(format!(
                 "command revision {revision} checksum mismatch"
             )));
         }
-        let objects = serde_json::from_str::<Vec<clarix_editing_core::DocumentObject>>(&after_json)
-            .map_err(|error| PersistenceError::Corrupt(error.to_string()))?;
+        let before_objects =
+            serde_json::from_str::<Vec<clarix_editing_core::DocumentObject>>(&before_json)
+                .map_err(|error| PersistenceError::Corrupt(error.to_string()))?;
+        let after_objects =
+            serde_json::from_str::<Vec<clarix_editing_core::DocumentObject>>(&after_json)
+                .map_err(|error| PersistenceError::Corrupt(error.to_string()))?;
         let revision = u64::try_from(revision)
             .map(clarix_editing_core::DocumentRevision::from_value)
             .map_err(|_| PersistenceError::Corrupt("negative command revision".into()))?;
         model = model
-            .replay_objects(objects, revision)
+            .replay_delta(before_objects, after_objects, revision)
             .map_err(|error| PersistenceError::Corrupt(error.to_string()))?;
     }
     if model.revision.value()
