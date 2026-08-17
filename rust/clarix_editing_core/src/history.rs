@@ -5,6 +5,7 @@ use crate::DocumentObject;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum InverseOperation {
     ReplaceObjects(Vec<DocumentObject>),
+    RemoveObjects(Vec<crate::ObjectId>),
     Checkpoint,
 }
 
@@ -27,6 +28,9 @@ pub(crate) enum HistoryEntry {
     Objects {
         before: Vec<DocumentObject>,
         after: Vec<DocumentObject>,
+    },
+    Inserted {
+        object: Box<DocumentObject>,
     },
     Checkpoint {
         label: String,

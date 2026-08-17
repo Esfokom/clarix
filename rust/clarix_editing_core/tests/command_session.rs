@@ -65,6 +65,43 @@ fn annotation_update_is_revisioned_and_undoable() {
     assert!(!annotation.resolved);
 }
 
+#[test]
+fn annotation_creation_is_revisioned_and_undoable() {
+    let (model, _) = sample_model("text");
+    let page_id = model.pages[0].id;
+    let annotation_id = ObjectId::from_source_key("annotation-create/page/1/comment/1");
+    let annotation = AnnotationNode::comment(
+        annotation_id,
+        page_id,
+        PdfBox::new(10.0, 10.0, 11.0, 11.0).unwrap(),
+        AnnotationAnchor::PagePoint { x: 10.0, y: 10.0 },
+        "New comment",
+    );
+    let mut session = EditorSessionState::new(SessionId::new(), model);
+
+    let result = session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::CreateAnnotation { annotation },
+        ))
+        .unwrap();
+    assert_eq!(result.committed_revision.value(), 1);
+    assert!(matches!(
+        session.snapshot().unwrap().object(annotation_id),
+        Some(DocumentObject::Annotation(annotation)) if annotation.body == "New comment"
+    ));
+
+    session
+        .submit(CommandEnvelope::user(
+            CommandId::new(),
+            result.committed_revision,
+            EditorCommand::Undo,
+        ))
+        .unwrap();
+    assert!(session.snapshot().unwrap().object(annotation_id).is_none());
+}
+
 fn sample_model(text: &str) -> (DocumentModel, ObjectId) {
     let page_id = PageId::from_source_key("command-test/page/1");
     let object_id = ObjectId::from_source_key("command-test/page/1/text/1");

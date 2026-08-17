@@ -7,10 +7,11 @@ use std::{
 };
 
 use clarix_editing_core::{
-    CommandEnvelope, CommandId, DocumentId, DocumentModel, DocumentObject, DocumentRevision,
-    DurableCommit, EditorCommand, EditorSessionActor, EditorSessionState, ImportedPage, ObjectId,
-    PageId, PageImportRequest, PageImportSource, PageNode, PageSceneRequest, PageSceneService,
-    PdfBox, ProjectRepository, RecoveryRequest, SessionId, SourceReference, TextBlock, Utf16Range,
+    AnnotationAnchor, AnnotationNode, CommandEnvelope, CommandId, DocumentId, DocumentModel,
+    DocumentObject, DocumentRevision, DurableCommit, EditorCommand, EditorSessionActor,
+    EditorSessionState, ImportedPage, ObjectId, PageId, PageImportRequest, PageImportSource,
+    PageNode, PageSceneRequest, PageSceneService, PdfBox, ProjectRepository, RecoveryRequest,
+    SessionId, SourceReference, TextBlock, Utf16Range,
 };
 use clarix_editing_store::{ProjectLocation, ProjectSeed, SqliteProjectRepository, StoreTable};
 
@@ -35,6 +36,71 @@ fn fixture_model(text: &str) -> (DocumentModel, ObjectId) {
     )
     .unwrap();
     (model, object_id)
+}
+
+#[test]
+fn journal_recovery_replays_annotation_creation() {
+    let temp = tempfile::tempdir().unwrap();
+    let (model, _) = fixture_model("Before");
+    let page_id = model.pages[0].id;
+    let annotation_id = ObjectId::from_source_key("store/page/1/comment/1");
+    let location = ProjectLocation::under(temp.path(), model.id);
+    let repository = SqliteProjectRepository::open(
+        location.clone(),
+        ProjectSeed {
+            model: model.clone(),
+            undo_cursor: 0,
+            materialized_revision: None,
+        },
+    )
+    .unwrap();
+    let session = EditorSessionState::new(SessionId::new(), model.clone());
+    let prepared = session
+        .prepare(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::CreateAnnotation {
+                annotation: AnnotationNode::comment(
+                    annotation_id,
+                    page_id,
+                    PdfBox::new(10.0, 10.0, 11.0, 11.0).unwrap(),
+                    AnnotationAnchor::PagePoint { x: 10.0, y: 10.0 },
+                    "Durable comment",
+                ),
+            },
+        ))
+        .unwrap();
+    repository
+        .append(&DurableCommit::from_prepared(&prepared))
+        .unwrap();
+    drop(repository);
+
+    let connection = rusqlite::Connection::open(&location.database).unwrap();
+    connection.execute(
+        "UPDATE project SET model_json = 'corrupt', model_sha256 = 'invalid' WHERE singleton = 1",
+        [],
+    ).unwrap();
+    drop(connection);
+
+    let reopened = SqliteProjectRepository::open(
+        location,
+        ProjectSeed {
+            model: model.clone(),
+            undo_cursor: 0,
+            materialized_revision: None,
+        },
+    )
+    .unwrap();
+    let recovered = reopened
+        .recover(RecoveryRequest {
+            document_id: model.id,
+            source_fingerprint: model.source_fingerprint,
+        })
+        .unwrap();
+    assert!(matches!(
+        recovered.model.object(annotation_id),
+        Some(DocumentObject::Annotation(annotation)) if annotation.body == "Durable comment"
+    ));
 }
 
 #[test]

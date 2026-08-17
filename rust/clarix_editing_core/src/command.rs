@@ -51,6 +51,9 @@ pub enum EditorCommand {
     UpdateAnnotation {
         annotation: AnnotationNode,
     },
+    CreateAnnotation {
+        annotation: AnnotationNode,
+    },
     ApplyTransaction {
         edits: Vec<AtomicEdit>,
     },

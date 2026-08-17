@@ -531,6 +531,43 @@ impl DocumentModel {
         Ok(())
     }
 
+    pub(crate) fn insert_object(&mut self, object: DocumentObject) -> Result<(), ModelError> {
+        if self.object_index.contains_key(&object.id()) {
+            return Err(ModelError::DuplicateObjectId(object.id()));
+        }
+        let Some(page_index) = self
+            .pages
+            .iter()
+            .position(|page| page.id == object.page_id())
+        else {
+            return Err(ModelError::MissingPage(object.page_id()));
+        };
+        let mut pages = self.pages.clone();
+        pages[page_index].objects.push(object);
+        *self = Self::from_parts(
+            self.id,
+            self.source_fingerprint.clone(),
+            self.revision,
+            pages,
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn remove_object(&mut self, id: ObjectId) -> Result<DocumentObject, ModelError> {
+        let Some((page_index, object_offset)) = self.object_index.get(&id).copied() else {
+            return Err(ModelError::MissingObject(id));
+        };
+        let mut pages = self.pages.clone();
+        let object = pages[page_index].objects.remove(object_offset);
+        *self = Self::from_parts(
+            self.id,
+            self.source_fingerprint.clone(),
+            self.revision,
+            pages,
+        )?;
+        Ok(object)
+    }
+
     pub fn replay_objects(
         &self,
         objects: impl IntoIterator<Item = DocumentObject>,
@@ -538,7 +575,11 @@ impl DocumentModel {
     ) -> Result<Self, ModelError> {
         let mut replayed = self.clone();
         for object in objects {
-            replayed.replace_object(object)?;
+            if replayed.object(object.id()).is_some() {
+                replayed.replace_object(object)?;
+            } else {
+                replayed.insert_object(object)?;
+            }
         }
         replayed.set_revision(revision);
         Self::from_parts(
@@ -596,6 +637,8 @@ pub enum ModelError {
     CrossPageGroupChild(ObjectId),
     #[error("object {0} does not exist")]
     MissingObject(ObjectId),
+    #[error("page {0} does not exist")]
+    MissingPage(PageId),
     #[error("page {0} was already hydrated with different content")]
     HydratedPageConflict(u32),
     #[error("editable imported text {0} has no complete font/materialization contract")]

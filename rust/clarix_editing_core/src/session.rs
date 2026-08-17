@@ -97,6 +97,22 @@ impl EditorSessionState {
                     });
                     state.redo_stack.clear();
                 }
+                EditorCommand::CreateAnnotation { .. } => {
+                    let [] = command.before_objects.as_slice() else {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered annotation creation has invalid before state".into(),
+                        ));
+                    };
+                    let [after] = command.after_objects.as_slice() else {
+                        return Err(EditingError::SidecarCommitFailed(
+                            "recovered annotation creation has invalid after state".into(),
+                        ));
+                    };
+                    state.undo_stack.push(HistoryEntry::Inserted {
+                        object: Box::new(after.clone()),
+                    });
+                    state.redo_stack.clear();
+                }
                 _ => {
                     let [before] = command.before_objects.as_slice() else {
                         return Err(EditingError::SidecarCommitFailed(
@@ -179,7 +195,9 @@ impl EditorSessionState {
         let mut next_state = self.clone();
         let result = next_state.apply_envelope(envelope.clone())?;
         let (before_objects, after_objects) = changed_objects(&before_model, &next_state.model);
-        let inverse = if before_objects.is_empty() {
+        let inverse = if before_objects.is_empty() && !after_objects.is_empty() {
+            InverseOperation::RemoveObjects(after_objects.iter().map(DocumentObject::id).collect())
+        } else if before_objects.is_empty() {
             InverseOperation::Checkpoint
         } else {
             InverseOperation::ReplaceObjects(before_objects.clone())
@@ -411,6 +429,23 @@ impl EditorSessionState {
                 self.redo_stack.clear();
                 object_patches
             }
+            EditorCommand::CreateAnnotation { annotation } => {
+                let mut object = DocumentObject::Annotation(annotation.clone());
+                if self.model.object(object.id()).is_some() {
+                    return Err(EditingError::InvalidCommand(
+                        "annotation ID already exists in the document".into(),
+                    ));
+                }
+                object.set_modified_revision(next_revision);
+                self.model
+                    .insert_object(object.clone())
+                    .map_err(|error| EditingError::InvalidCommand(error.to_string()))?;
+                self.undo_stack.push(HistoryEntry::Inserted {
+                    object: Box::new(object.clone()),
+                });
+                self.redo_stack.clear();
+                vec![created_object_patch(&object, next_revision)]
+            }
             command => {
                 self.apply_object_command(command, next_revision, envelope.typing_group.as_ref())?
             }
@@ -632,7 +667,8 @@ impl EditorSessionState {
                 }
                 after = DocumentObject::Annotation(annotation.clone());
             }
-            EditorCommand::ApplyTransaction { .. }
+            EditorCommand::CreateAnnotation { .. }
+            | EditorCommand::ApplyTransaction { .. }
             | EditorCommand::CreateCheckpoint { .. }
             | EditorCommand::Undo
             | EditorCommand::Redo => {
@@ -715,6 +751,12 @@ impl EditorSessionState {
                     Ok(object_patch(&current, &restored, revision))
                 })
                 .collect::<Result<Vec<_>, EditingError>>()?,
+            HistoryEntry::Inserted { object } => {
+                self.model
+                    .remove_object(object.id())
+                    .map_err(|_| EditingError::ObjectNotFound(object.id()))?;
+                Vec::new()
+            }
         };
         self.undo_stack.pop();
         self.redo_stack.push(entry);
@@ -761,6 +803,14 @@ impl EditorSessionState {
                     Ok(object_patch(&current, &restored, revision))
                 })
                 .collect::<Result<Vec<_>, EditingError>>()?,
+            HistoryEntry::Inserted { object } => {
+                let mut restored = (**object).clone();
+                restored.set_modified_revision(revision);
+                self.model
+                    .insert_object(restored.clone())
+                    .map_err(|error| EditingError::InvalidCommand(error.to_string()))?;
+                vec![created_object_patch(&restored, revision)]
+            }
         };
         self.redo_stack.pop();
         self.undo_stack.push(entry);
@@ -785,6 +835,13 @@ fn changed_objects(
             }
         }
     }
+    for after_page in &after.pages {
+        for after_object in &after_page.objects {
+            if before.object(after_object.id()).is_none() {
+                after_objects.push(after_object.clone());
+            }
+        }
+    }
     (before_objects, after_objects)
 }
 
@@ -798,7 +855,8 @@ fn command_object_id(command: &EditorCommand) -> Option<ObjectId> {
         | EditorCommand::ResizeObject { object_id, .. }
         | EditorCommand::RotateObject { object_id, .. } => Some(*object_id),
         EditorCommand::UpdateAnnotation { annotation } => Some(annotation.id()),
-        EditorCommand::ApplyTransaction { .. }
+        EditorCommand::CreateAnnotation { .. }
+        | EditorCommand::ApplyTransaction { .. }
         | EditorCommand::CreateCheckpoint { .. }
         | EditorCommand::Undo
         | EditorCommand::Redo => None,
@@ -936,6 +994,29 @@ fn object_patch(
         font,
         bounds: (before.bounds() != after.bounds()).then(|| after.bounds()),
         transform: (before.transform() != after.transform()).then(|| after.transform()),
+    }
+}
+
+fn created_object_patch(object: &DocumentObject, revision: DocumentRevision) -> ObjectPatch {
+    let (text, text_runs, character_boxes, font) = match object {
+        DocumentObject::Text(block) => (
+            Some(block.text.clone()),
+            Some(block.runs.clone()),
+            Some(block.character_boxes.clone()),
+            block.font.clone(),
+        ),
+        _ => (None, None, None, None),
+    };
+    ObjectPatch {
+        object_id: object.id(),
+        page_id: object.page_id(),
+        modified_revision: revision,
+        text,
+        text_runs,
+        character_boxes,
+        font,
+        bounds: Some(object.bounds()),
+        transform: Some(object.transform()),
     }
 }
 
