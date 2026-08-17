@@ -4,6 +4,34 @@ use clarix_editing_core::{
 };
 
 #[test]
+fn annotation_node_keeps_a_stable_text_anchor_and_comment_metadata() {
+    let page_id = PageId::from_source_key("annotation/page/1");
+    let annotation_id = ObjectId::from_source_key("annotation/page/1/comment/1");
+    let annotation = clarix_editing_core::AnnotationNode::comment(
+        annotation_id,
+        page_id,
+        PdfBox::new(10.0, 20.0, 11.0, 21.0).unwrap(),
+        clarix_editing_core::AnnotationAnchor::Text {
+            ranges: vec![clarix_editing_core::AnnotationTextRange {
+                range_id: "0f8fad5b-d9cb-469f-a165-70867728950e".into(),
+                object_id: ObjectId::from_source_key("annotation/page/1/text/1"),
+                start_utf16: 0,
+                end_utf16: 5,
+                quoted_text: "hello".into(),
+            }],
+        },
+        "Review this",
+    );
+
+    assert_eq!(
+        annotation.kind,
+        clarix_editing_core::AnnotationKind::Comment
+    );
+    assert_eq!(annotation.body, "Review this");
+    assert_eq!(annotation.range_count(), 1);
+}
+
+#[test]
 fn ids_revisions_and_utf16_ranges_are_stable() {
     let id = ObjectId::from_source_key("sha256:abc/page:3/object:7");
     assert_eq!(id.to_string().parse::<ObjectId>().unwrap(), id);

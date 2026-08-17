@@ -182,8 +182,70 @@ macro_rules! reserved_node {
 
 reserved_node!(ImageNode);
 reserved_node!(VectorNode);
-reserved_node!(AnnotationNode);
 reserved_node!(OcrLayer);
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AnnotationKind {
+    Bookmark,
+    Highlight,
+    Comment,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AnnotationTextRange {
+    pub range_id: String,
+    pub object_id: ObjectId,
+    pub start_utf16: u32,
+    pub end_utf16: u32,
+    pub quoted_text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum AnnotationAnchor {
+    PagePoint { x: f64, y: f64 },
+    Text { ranges: Vec<AnnotationTextRange> },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnnotationNode {
+    #[serde(flatten)]
+    base: NodeBase,
+    pub kind: AnnotationKind,
+    pub anchor: AnnotationAnchor,
+    pub title: String,
+    pub body: String,
+    pub color_rgba: [u8; 4],
+    pub opacity: f32,
+    pub resolved: bool,
+}
+
+impl AnnotationNode {
+    pub fn comment(
+        id: ObjectId,
+        page_id: PageId,
+        bounds: PdfBox,
+        anchor: AnnotationAnchor,
+        body: impl Into<String>,
+    ) -> Self {
+        Self {
+            base: NodeBase::new(id, page_id, bounds, EditCapability::Editable),
+            kind: AnnotationKind::Comment,
+            anchor,
+            title: String::new(),
+            body: body.into(),
+            color_rgba: [255, 212, 59, 255],
+            opacity: 1.0,
+            resolved: false,
+        }
+    }
+
+    pub fn range_count(&self) -> usize {
+        match &self.anchor {
+            AnnotationAnchor::PagePoint { .. } => 0,
+            AnnotationAnchor::Text { ranges } => ranges.len(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct GroupNode {

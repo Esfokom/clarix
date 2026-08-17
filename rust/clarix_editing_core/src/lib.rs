@@ -29,8 +29,9 @@ pub use geometry::{AffineTransform, GeometryError, PdfBox};
 pub use history::{InverseOperation, TypingGroup};
 pub use ids::{CommandId, DocumentId, DocumentRevision, ObjectId, PageId, SessionId};
 pub use model::{
-    AnnotationNode, CapabilityReason, DocumentModel, DocumentObject, EditCapability, GroupNode,
-    ImageNode, ModelError, ObjectKind, OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
+    AnnotationAnchor, AnnotationKind, AnnotationNode, AnnotationTextRange, CapabilityReason,
+    DocumentModel, DocumentObject, EditCapability, GroupNode, ImageNode, ModelError, ObjectKind,
+    OcrLayer, PageNode, SourceBinding, TextBlock, VectorNode,
 };
 pub use page_service::{
     MemoryPressureLevel, PageImportState, PageIndexTask, PageScene, PageSceneError,
