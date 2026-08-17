@@ -13,6 +13,15 @@ import 'font_fallback_dialog.dart';
 import 'native_text_editor.dart';
 import 'object_transform_handles.dart';
 import 'overflow_indicator.dart';
+import '../../agent/presentation/selection_ai_toolbar.dart';
+
+typedef PageSelectionAiCallback =
+    void Function(
+      SelectionAiAction action,
+      EditorSelection selection,
+      EditorSceneObject object,
+      int pageNumber,
+    );
 
 class EditorCompositionRange {
   const EditorCompositionRange({required this.objectId, required this.range});
@@ -30,6 +39,8 @@ class PageEditScene extends StatelessWidget {
     this.session,
     this.composition,
     this.observer,
+    this.onSelectionAiAction,
+    this.selectionAiSharingEnabled = true,
     super.key,
   });
 
@@ -40,6 +51,8 @@ class PageEditScene extends StatelessWidget {
   final EditorSessionController? session;
   final EditorCompositionRange? composition;
   final EditorLayerObserver? observer;
+  final PageSelectionAiCallback? onSelectionAiAction;
+  final bool selectionAiSharingEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -166,6 +179,23 @@ class PageEditScene extends StatelessWidget {
                 object: activeObject,
                 pageSize: pageSize,
                 displaySize: displaySize,
+              ),
+            if (activeObject != null &&
+                selection != null &&
+                selection.range.end > selection.range.start &&
+                onSelectionAiAction != null)
+              Align(
+                alignment: Alignment.topCenter,
+                child: SelectionAiToolbar(
+                  hasValidatedSelection: true,
+                  sharingEnabled: selectionAiSharingEnabled,
+                  onAction: (action) => onSelectionAiAction!(
+                    action,
+                    selection,
+                    activeObject,
+                    scene.pageNumber,
+                  ),
+                ),
               ),
             if (session == null)
               if (document.selection case final EditorSelection selection)

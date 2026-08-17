@@ -54,6 +54,7 @@ class NativeAgentEventWire {
 }
 
 abstract interface class NativeAgentPort {
+  Future<AgentSelectionContext> selectionContext(AgentSelection selection);
   Future<NativeAgentRunWire> start(AgentStartRequest request);
   Stream<NativeAgentEventWire> events(String runId);
   Future<NativeAgentRunWire> approve(String runId, String approvalId);
@@ -98,6 +99,18 @@ class AgentBridgeSession {
 
   Stream<AgentRunEvent> get events => _events.stream;
   String? get activeRunId => _activeRunId;
+
+  Future<AgentSelectionContext> selectionContext(
+    AgentSelection selection,
+  ) async {
+    _ensureOpen();
+    final context = await _native.selectionContext(selection);
+    _canonical(context.documentId, 'documentId');
+    if (context.revision < 0 || context.disclosureSha256.isEmpty) {
+      throw const AgentProtocolViolation('invalid native selection context');
+    }
+    return context;
+  }
 
   Future<AgentRunView> start(AgentStartRequest request) async {
     _ensureOpen();
@@ -225,6 +238,38 @@ class FrbNativeAgentPort implements NativeAgentPort {
   FrbNativeAgentPort(this._session);
 
   final native_editor.NativeEditorSession _session;
+
+  @override
+  Future<AgentSelectionContext> selectionContext(
+    AgentSelection selection,
+  ) async {
+    final value = await _session.selectionContext(
+      selection: _selection(selection),
+      beforeUtf16: 512,
+      afterUtf16: 512,
+      maxRanges: 8,
+    );
+    return AgentSelectionContext(
+      documentId: value.documentId,
+      revision: _safeInt(value.revision, 'revision'),
+      ranges: value.ranges
+          .map(
+            (range) => AgentSelectionRange(
+              objectId: range.objectId,
+              pageId: range.pageId,
+              pageNumber: range.pageNumber,
+              startUtf16: range.startUtf16,
+              endUtf16: range.endUtf16,
+              quotedText: range.quotedText,
+            ),
+          )
+          .toList(growable: false),
+      pageNumbers: value.pageNumbers.toList(growable: false),
+      nearbyTextBefore: value.nearbyTextBefore,
+      nearbyTextAfter: value.nearbyTextAfter,
+      disclosureSha256: value.disclosureSha256,
+    );
+  }
 
   @override
   Future<NativeAgentRunWire> start(AgentStartRequest request) async => _wireRun(

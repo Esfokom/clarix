@@ -13,6 +13,19 @@ class FakeNativeAgentPort implements NativeAgentPort {
   final List<NativeAgentEventWire> wireEvents;
 
   @override
+  Future<AgentSelectionContext> selectionContext(
+    AgentSelection selection,
+  ) async => const AgentSelectionContext(
+    documentId: sessionId,
+    revision: 4,
+    ranges: <AgentSelectionRange>[],
+    pageNumbers: <int>[1],
+    nearbyTextBefore: '',
+    nearbyTextAfter: '',
+    disclosureSha256: 'digest',
+  );
+
+  @override
   Stream<NativeAgentEventWire> events(String ignoredRunId) =>
       Stream<NativeAgentEventWire>.fromIterable(wireEvents);
 

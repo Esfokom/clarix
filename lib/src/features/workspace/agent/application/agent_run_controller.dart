@@ -61,6 +61,9 @@ class AgentRunController {
   AgentRunControllerState get state => _state;
   Stream<AgentRunControllerState> get changes => _changes.stream;
 
+  Future<AgentSelectionContext> selectionContext(AgentSelection selection) =>
+      _bridge.selectionContext(selection);
+
   Future<AgentRunView> start(AgentStartRequest request) async {
     _ensureActive();
     if (_state.activeRunId != null && !(_state.status?.isTerminal ?? true)) {

@@ -13,6 +13,7 @@ import 'package:smooth_corner/smooth_corner.dart';
 
 import '../../../../core/models.dart';
 import '../../../../core/editing/editor_bridge_types.dart';
+import '../../../../core/agent/agent_bridge_types.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
@@ -22,10 +23,14 @@ import '../../editing/presentation/recovery_banner.dart';
 import '../../editing/presentation/save_conflict_dialog.dart';
 import '../../editing/presentation/save_progress_dialog.dart';
 import '../../editing/domain/editor_save_state.dart';
+import '../../editing/domain/editor_selection.dart';
 import '../../editing/presentation/page_edit_scene.dart';
 import '../../editing/presentation/pdfrx_page_surface.dart';
 import '../../domain/pdf_edit_session.dart';
 import '../../domain/workspace_feature_state.dart';
+import '../../domain/ai_provider.dart';
+import '../../agent/presentation/agent_disclosure_dialog.dart';
+import '../../agent/presentation/selection_ai_toolbar.dart';
 import 'pdf_viewer_interaction_math.dart';
 import 'workspace_common.dart';
 
@@ -493,6 +498,109 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
 
+  AiProviderProfile? _selectedProvider() {
+    final workspace = ref.read(workspaceNotifierProvider).value;
+    final selected = workspace?.aiState.selectedProviderId;
+    if (selected == null) return null;
+    return workspace?.providerProfiles
+        .where((profile) => profile.id == selected)
+        .firstOrNull;
+  }
+
+  Future<void> _runSelectionAction(
+    SelectionAiAction action,
+    EditorSelection selection,
+    EditorSceneObject object,
+    int pageNumber,
+  ) async {
+    final profile = _selectedProvider();
+    final controller = ref
+        .read(editorSessionRegistryProvider)
+        .agent(widget.tab.id);
+    final text = object.text ?? '';
+    if (profile == null || controller == null) return;
+    if (!profile.shareRetrievedPassages) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Enable document sharing for this provider to use selected text.',
+            ),
+          ),
+        );
+      }
+      return;
+    }
+    if (selection.range.end <= selection.range.start ||
+        selection.range.end > text.length) {
+      return;
+    }
+    final selectedText = text.substring(
+      selection.range.start,
+      selection.range.end,
+    );
+    final selected = AgentSelection(
+      revision: _pageSceneLifecycle?.controller.state.revision ?? 0,
+      ranges: <AgentSelectionRange>[
+        AgentSelectionRange(
+          objectId: object.objectId,
+          pageId: object.pageId,
+          pageNumber: pageNumber,
+          startUtf16: selection.range.start,
+          endUtf16: selection.range.end,
+          quotedText: selectedText,
+        ),
+      ],
+      objectIds: const <String>[],
+      primaryIndex: 0,
+    );
+    final nativeContext = await controller.selectionContext(selected);
+    if (!mounted) return;
+    var confirmed = false;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AgentDisclosureDialog(
+        disclosure: AgentDisclosure(
+          providerLabel: profile.label,
+          selectedText: nativeContext.ranges
+              .map((range) => range.quotedText)
+              .join('\n'),
+          nearbyTextBefore: nativeContext.nearbyTextBefore,
+          nearbyTextAfter: nativeContext.nearbyTextAfter,
+          pageNumbers: nativeContext.pageNumbers,
+          sha256: nativeContext.disclosureSha256,
+        ),
+        includesConversationHistory: true,
+        onConfirm: () => confirmed = true,
+      ),
+    );
+    if (!confirmed || !mounted) return;
+    final apiKey = await ref
+        .read(providerProfileStoreProvider)
+        .readApiKey(profile.id);
+    if (apiKey == null || apiKey.isEmpty) return;
+    await controller.start(
+      AgentStartRequest(
+        providerEndpoint: profile.baseUrl,
+        modelId: profile.modelId,
+        headers: profile.headers,
+        apiKey: apiKey,
+        userPrompt: _selectionPrompt(action),
+        selection: selected,
+        disclosureSha256: nativeContext.disclosureSha256,
+      ),
+    );
+  }
+
+  String _selectionPrompt(SelectionAiAction action) => switch (action) {
+    SelectionAiAction.rewrite => 'Rewrite the selected text for clarity.',
+    SelectionAiAction.shorten => 'Shorten the selected text.',
+    SelectionAiAction.expand => 'Expand the selected text with useful detail.',
+    SelectionAiAction.translate => 'Translate the selected text.',
+    SelectionAiAction.summarize => 'Summarize the selected text.',
+    SelectionAiAction.ask => 'Help with the selected text.',
+  };
+
   @override
   void initState() {
     super.initState();
@@ -750,6 +858,12 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                                   .cleanPatchesFor(
                                                     page.pageNumber,
                                                   ),
+                                              selectionAiSharingEnabled:
+                                                  _selectedProvider()
+                                                      ?.shareRetrievedPassages ??
+                                                  false,
+                                              onSelectionAiAction:
+                                                  _runSelectionAction,
                                             ),
                                       ),
                                     ),

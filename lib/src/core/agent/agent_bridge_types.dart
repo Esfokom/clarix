@@ -45,6 +45,26 @@ class AgentSelection {
   final int? primaryIndex;
 }
 
+class AgentSelectionContext {
+  const AgentSelectionContext({
+    required this.documentId,
+    required this.revision,
+    required this.ranges,
+    required this.pageNumbers,
+    required this.nearbyTextBefore,
+    required this.nearbyTextAfter,
+    required this.disclosureSha256,
+  });
+
+  final String documentId;
+  final int revision;
+  final List<AgentSelectionRange> ranges;
+  final List<int> pageNumbers;
+  final String nearbyTextBefore;
+  final String nearbyTextAfter;
+  final String disclosureSha256;
+}
+
 class AgentStartRequest {
   const AgentStartRequest({
     required this.providerEndpoint,
