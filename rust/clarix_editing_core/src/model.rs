@@ -220,6 +220,30 @@ pub struct AnnotationNode {
 }
 
 impl AnnotationNode {
+    pub fn new(
+        id: ObjectId,
+        page_id: PageId,
+        bounds: PdfBox,
+        kind: AnnotationKind,
+        anchor: AnnotationAnchor,
+        title: impl Into<String>,
+        body: impl Into<String>,
+        color_rgba: [u8; 4],
+        opacity: f32,
+        resolved: bool,
+    ) -> Self {
+        Self {
+            base: NodeBase::new(id, page_id, bounds, EditCapability::Editable),
+            kind,
+            anchor,
+            title: title.into(),
+            body: body.into(),
+            color_rgba,
+            opacity,
+            resolved,
+        }
+    }
+
     pub fn comment(
         id: ObjectId,
         page_id: PageId,
@@ -227,16 +251,18 @@ impl AnnotationNode {
         anchor: AnnotationAnchor,
         body: impl Into<String>,
     ) -> Self {
-        Self {
-            base: NodeBase::new(id, page_id, bounds, EditCapability::Editable),
-            kind: AnnotationKind::Comment,
+        Self::new(
+            id,
+            page_id,
+            bounds,
+            AnnotationKind::Comment,
             anchor,
-            title: String::new(),
-            body: body.into(),
-            color_rgba: [255, 212, 59, 255],
-            opacity: 1.0,
-            resolved: false,
-        }
+            "",
+            body,
+            [255, 212, 59, 255],
+            1.0,
+            false,
+        )
     }
 
     pub fn range_count(&self) -> usize {
@@ -252,6 +278,10 @@ impl AnnotationNode {
 
     pub fn page_id(&self) -> PageId {
         self.base.page_id
+    }
+
+    pub fn bounds(&self) -> PdfBox {
+        self.base.bounds
     }
 }
 
