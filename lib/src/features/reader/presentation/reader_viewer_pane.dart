@@ -20,34 +20,6 @@ import 'package:clarix/src/features/workspace/presentation/widgets/workspace_com
 import 'reader_interaction_math.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
-class _ToolbarButton extends StatelessWidget {
-  const _ToolbarButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-    this.active = false,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-  final bool active;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: ShadIconButton.ghost(
-        width: 32,
-        height: 32,
-        padding: EdgeInsets.zero,
-        backgroundColor: active ? WorkspaceColors.accentSoft : null,
-        icon: Icon(icon, size: 15),
-        onPressed: onPressed,
-      ),
-    );
-  }
-}
 class ReaderViewerPane extends ConsumerStatefulWidget {
   const ReaderViewerPane({
     required this.tab,
