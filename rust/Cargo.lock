@@ -717,11 +717,13 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "crossbeam-channel",
+ "regex",
  "serde",
  "serde_json",
  "sha2 0.10.9",
  "tempfile",
  "thiserror",
+ "unicode-normalization",
  "unicode-segmentation",
  "uuid",
 ]
