@@ -12,6 +12,7 @@ mod persistence;
 mod ports;
 mod save;
 mod search;
+mod selection;
 mod session;
 mod text;
 mod tools;
@@ -51,6 +52,7 @@ pub use search::{
     ReplaceAllPreview, SearchError, SearchIndex, SearchMode, SearchPage, SearchRequest,
     TextRangeRef,
 };
+pub use selection::{SelectionKind, SelectionSet};
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontFallbackApproval, FontRef, FontSource, OverflowPolicy,

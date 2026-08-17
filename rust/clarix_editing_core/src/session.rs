@@ -7,8 +7,8 @@ use crate::{
     AffineTransform, AtomicEdit, CommandEnvelope, CommandId, CommandResult, DocumentModel,
     DocumentObject, DocumentRevision, EditCapability, EditingError, EditorCommand, FontSource,
     InverseOperation, ObjectId, ObjectPatch, OverflowPolicy, PageNode, PdfBox, PreparedCommand,
-    RecoveredCommand, ReplaceAllPreview, SearchIndex, SearchRequest, SelectionRebase, SessionId,
-    TextCharacterBox, TextRun, Utf16Range, WritingDirection,
+    RecoveredCommand, ReplaceAllPreview, SearchIndex, SearchRequest, SelectionRebase, SelectionSet,
+    SessionId, TextCharacterBox, TextRun, Utf16Range, WritingDirection,
 };
 
 #[derive(Debug, Clone)]
@@ -285,6 +285,14 @@ impl EditorSessionState {
             typing_group: None,
             payload: EditorCommand::ApplyTransaction { edits },
         })
+    }
+
+    pub fn validate_selection(
+        &self,
+        selection: SelectionSet,
+    ) -> Result<SelectionSet, EditingError> {
+        self.ensure_open()?;
+        crate::selection::validate_selection(&self.model, selection)
     }
 
     pub(crate) fn hydrate_page(
