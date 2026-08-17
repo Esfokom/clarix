@@ -1,6 +1,8 @@
 use std::{collections::BTreeMap, fmt, str::FromStr};
 
-use clarix_editing_core::{CommandId, DocumentId, DocumentRevision, SelectionContext};
+use clarix_editing_core::{
+    CommandId, DocumentId, DocumentRevision, ObjectId, PageId, SelectionContext,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -257,8 +259,7 @@ pub enum AgentRunEventKind {
         success: bool,
     },
     ApprovalRequested {
-        proposal_id: ProposalId,
-        approval_id: ApprovalId,
+        proposal: AgentProposalView,
     },
     ApprovalResolved {
         approval_id: ApprovalId,
@@ -276,6 +277,30 @@ pub enum AgentRunEventKind {
     Finished {
         outcome: AgentRunOutcome,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentProposalTarget {
+    pub object_id: ObjectId,
+    pub page_id: PageId,
+    pub page_number: u32,
+    pub start_utf16: u32,
+    pub end_utf16: u32,
+    pub before_text: String,
+    pub after_text: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AgentProposalView {
+    pub proposal_id: ProposalId,
+    pub approval_id: ApprovalId,
+    pub run_id: AgentRunId,
+    pub tool_call_id: ToolCallId,
+    pub base_revision: DocumentRevision,
+    pub digest_sha256: String,
+    pub tool_name: String,
+    pub targets: Vec<AgentProposalTarget>,
+    pub reasons: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

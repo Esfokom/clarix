@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 
 import '../../../../core/editing/editor_bridge_types.dart';
+import '../../../../core/agent/agent_bridge_types.dart';
 import '../application/editor_session_controller.dart';
 import '../domain/editor_document_state.dart';
 import '../domain/editor_selection.dart';
@@ -14,6 +15,7 @@ import 'native_text_editor.dart';
 import 'object_transform_handles.dart';
 import 'overflow_indicator.dart';
 import '../../agent/presentation/selection_ai_toolbar.dart';
+import '../../agent/presentation/agent_diff_overlay.dart';
 
 typedef PageSelectionAiCallback =
     void Function(
@@ -41,6 +43,7 @@ class PageEditScene extends StatelessWidget {
     this.observer,
     this.onSelectionAiAction,
     this.selectionAiSharingEnabled = true,
+    this.agentProposal,
     super.key,
   });
 
@@ -53,6 +56,7 @@ class PageEditScene extends StatelessWidget {
   final EditorLayerObserver? observer;
   final PageSelectionAiCallback? onSelectionAiAction;
   final bool selectionAiSharingEnabled;
+  final AgentProposal? agentProposal;
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +248,14 @@ class PageEditScene extends StatelessWidget {
                   onReject: session!.rejectFontFallback,
                 ),
               ),
+            if (agentProposal case final proposal?)
+              if (proposal.targets.any(
+                (target) => target.pageNumber == scene.pageNumber,
+              ))
+                Align(
+                  alignment: Alignment.topRight,
+                  child: AgentDiffOverlay(proposal: proposal),
+                ),
           ],
         ),
       ),

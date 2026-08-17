@@ -16,9 +16,10 @@ pub use audit::{
 };
 pub use cancellation::CancellationToken;
 pub use model::{
-    AgentError, AgentProviderConfig, AgentRunEvent, AgentRunEventKind, AgentRunId, AgentRunOutcome,
-    AgentRunRequest, AgentRunRequestAudit, AgentRunStatus, ApprovalId, ConversationId, ProposalId,
-    ProviderRoundId, RunBudgets, SecretString, ToolCallId,
+    AgentError, AgentProposalTarget, AgentProposalView, AgentProviderConfig, AgentRunEvent,
+    AgentRunEventKind, AgentRunId, AgentRunOutcome, AgentRunRequest, AgentRunRequestAudit,
+    AgentRunStatus, ApprovalId, ConversationId, ProposalId, ProviderRoundId, RunBudgets,
+    SecretString, ToolCallId,
 };
 pub use openai_stream::OpenAiStreamDecoder;
 pub use policy::{PermissionDecision, PermissionPolicy};

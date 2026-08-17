@@ -31,6 +31,7 @@ import '../../domain/workspace_feature_state.dart';
 import '../../domain/ai_provider.dart';
 import '../../agent/presentation/agent_disclosure_dialog.dart';
 import '../../agent/presentation/selection_ai_toolbar.dart';
+import '../../agent/application/agent_run_controller.dart';
 import 'pdf_viewer_interaction_math.dart';
 import 'workspace_common.dart';
 
@@ -847,24 +848,45 @@ class _PdfViewerPaneState extends ConsumerState<_PdfViewerPane> {
                                       child: PageSceneHost(
                                         lifecycle: lifecycle,
                                         pageNumber: page.pageNumber,
-                                        builder: (context, scene) =>
-                                            PageEditScene(
-                                              scene: scene,
-                                              document:
-                                                  lifecycle.controller.state,
-                                              session: lifecycle.controller,
-                                              displaySize: pageRect.size,
-                                              cleanPatches: lifecycle
-                                                  .cleanPatchesFor(
-                                                    page.pageNumber,
-                                                  ),
-                                              selectionAiSharingEnabled:
-                                                  _selectedProvider()
-                                                      ?.shareRetrievedPassages ??
-                                                  false,
-                                              onSelectionAiAction:
-                                                  _runSelectionAction,
-                                            ),
+                                        builder: (context, scene) {
+                                          final agent = ref
+                                              .read(
+                                                editorSessionRegistryProvider,
+                                              )
+                                              .agent(widget.tab.id);
+                                          Widget sceneWidget(
+                                            AgentRunControllerState? agentState,
+                                          ) => PageEditScene(
+                                            scene: scene,
+                                            document:
+                                                lifecycle.controller.state,
+                                            session: lifecycle.controller,
+                                            displaySize: pageRect.size,
+                                            cleanPatches: lifecycle
+                                                .cleanPatchesFor(
+                                                  page.pageNumber,
+                                                ),
+                                            selectionAiSharingEnabled:
+                                                _selectedProvider()
+                                                    ?.shareRetrievedPassages ??
+                                                false,
+                                            onSelectionAiAction:
+                                                _runSelectionAction,
+                                            agentProposal:
+                                                agentState?.pendingProposal,
+                                          );
+                                          if (agent == null) {
+                                            return sceneWidget(null);
+                                          }
+                                          return StreamBuilder<
+                                            AgentRunControllerState
+                                          >(
+                                            stream: agent.changes,
+                                            initialData: agent.state,
+                                            builder: (context, snapshot) =>
+                                                sceneWidget(snapshot.data),
+                                          );
+                                        },
                                       ),
                                     ),
                                 ],

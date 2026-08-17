@@ -11,6 +11,8 @@ class AgentRunControllerState {
     this.pendingProposal,
     this.committedRevision,
     this.error,
+    this.assistantText = '',
+    this.progressLabel = '',
   });
 
   final String? activeRunId;
@@ -19,6 +21,8 @@ class AgentRunControllerState {
   final AgentProposal? pendingProposal;
   final int? committedRevision;
   final Object? error;
+  final String assistantText;
+  final String progressLabel;
 
   AgentRunControllerState copyWith({
     String? activeRunId,
@@ -28,6 +32,8 @@ class AgentRunControllerState {
     bool clearProposal = false,
     int? committedRevision,
     Object? error,
+    String? assistantText,
+    String? progressLabel,
   }) => AgentRunControllerState(
     activeRunId: activeRunId ?? this.activeRunId,
     status: status ?? this.status,
@@ -37,6 +43,8 @@ class AgentRunControllerState {
         : pendingProposal ?? this.pendingProposal,
     committedRevision: committedRevision ?? this.committedRevision,
     error: error,
+    assistantText: assistantText ?? this.assistantText,
+    progressLabel: progressLabel ?? this.progressLabel,
   );
 }
 
@@ -109,6 +117,8 @@ class AgentRunController {
       return;
     }
     final status = _statusFromEvent(event) ?? _state.status;
+    final proposal = AgentBridgeSession.proposalFromEvent(event);
+    final delta = _textDelta(event);
     _emit(
       _state.copyWith(
         status: status,
@@ -116,17 +126,38 @@ class AgentRunController {
         committedRevision: event.kind == 'commandCommitted'
             ? event.documentRevision
             : null,
+        pendingProposal: proposal,
+        clearProposal: event.kind == 'approvalResolved',
+        assistantText: delta == null ? null : '${_state.assistantText}$delta',
+        progressLabel: _progressLabel(event, status),
       ),
     );
   }
+
+  String? _textDelta(AgentRunEvent event) {
+    if (event.kind != 'textDelta') return null;
+    final outer = event.payload['TextDelta'];
+    return outer is Map<String, dynamic> ? outer['text'] as String? : null;
+  }
+
+  String _progressLabel(AgentRunEvent event, AgentRunStatus? status) =>
+      switch (event.kind) {
+        'toolStarted' => 'Using an editing tool…',
+        'approvalRequested' => 'Waiting for approval',
+        'commandCommitted' => 'Edit committed',
+        'finished' => 'Finished',
+        _ => status?.name ?? _state.progressLabel,
+      };
 
   AgentRunStatus? _statusFromEvent(AgentRunEvent event) {
     if (event.kind != 'statusChanged') return null;
     final outer = event.payload['StatusChanged'];
     if (outer is! Map<String, dynamic>) return null;
     final raw = outer['status'];
+    if (raw is! String || raw.isEmpty) return null;
+    final normalized = '${raw[0].toLowerCase()}${raw.substring(1)}';
     return AgentRunStatus.values
-        .where((value) => value.name == raw)
+        .where((value) => value.name == normalized)
         .firstOrNull;
   }
 

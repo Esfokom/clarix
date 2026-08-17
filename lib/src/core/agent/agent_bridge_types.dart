@@ -129,6 +129,9 @@ class AgentProposal {
     required this.approvalId,
     required this.baseRevision,
     required this.digestSha256,
+    this.toolName = '',
+    this.targets = const <AgentProposalTarget>[],
+    this.reasons = const <String>[],
   });
 
   final String runId;
@@ -136,6 +139,29 @@ class AgentProposal {
   final String approvalId;
   final int baseRevision;
   final String digestSha256;
+  final String toolName;
+  final List<AgentProposalTarget> targets;
+  final List<String> reasons;
+}
+
+class AgentProposalTarget {
+  const AgentProposalTarget({
+    required this.objectId,
+    required this.pageId,
+    required this.pageNumber,
+    required this.startUtf16,
+    required this.endUtf16,
+    required this.beforeText,
+    required this.afterText,
+  });
+
+  final String objectId;
+  final String pageId;
+  final int pageNumber;
+  final int startUtf16;
+  final int endUtf16;
+  final String beforeText;
+  final String afterText;
 }
 
 class AgentDisclosure {

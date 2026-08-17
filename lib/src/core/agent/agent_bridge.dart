@@ -205,6 +205,53 @@ class AgentBridgeSession {
     }
   }
 
+  static AgentProposal? proposalFromEvent(AgentRunEvent event) {
+    if (event.kind != 'approvalRequested') return null;
+    final outer = event.payload['ApprovalRequested'];
+    if (outer is! Map<String, dynamic>) {
+      throw const AgentProtocolViolation('approval payload is missing');
+    }
+    final raw = outer['proposal'];
+    if (raw is! Map<String, dynamic>) {
+      throw const AgentProtocolViolation('approval proposal is missing');
+    }
+    final digest = raw['digest_sha256'];
+    if (digest is! String || !RegExp(r'^[0-9a-f]{64}$').hasMatch(digest)) {
+      throw const AgentProtocolViolation('proposal digest is invalid');
+    }
+    final targets = raw['targets'];
+    if (targets is! List<dynamic>) {
+      throw const AgentProtocolViolation('proposal targets are invalid');
+    }
+    final proposal = AgentProposal(
+      runId: raw['run_id']! as String,
+      proposalId: raw['proposal_id']! as String,
+      approvalId: raw['approval_id']! as String,
+      baseRevision: raw['base_revision']! as int,
+      digestSha256: digest,
+      toolName: raw['tool_name']! as String,
+      targets: targets
+          .map((value) {
+            final target = value! as Map<String, dynamic>;
+            return AgentProposalTarget(
+              objectId: target['object_id']! as String,
+              pageId: target['page_id']! as String,
+              pageNumber: target['page_number']! as int,
+              startUtf16: target['start_utf16']! as int,
+              endUtf16: target['end_utf16']! as int,
+              beforeText: target['before_text']! as String,
+              afterText: target['after_text']! as String,
+            );
+          })
+          .toList(growable: false),
+      reasons: (raw['reasons']! as List<dynamic>).cast<String>(),
+    );
+    _canonical(proposal.runId, 'proposal.runId');
+    _canonical(proposal.proposalId, 'proposal.proposalId');
+    _canonical(proposal.approvalId, 'proposal.approvalId');
+    return proposal;
+  }
+
   AgentRunView _run(NativeAgentRunWire wire) {
     _schema(wire.schemaVersion);
     _canonical(wire.runId, 'runId');

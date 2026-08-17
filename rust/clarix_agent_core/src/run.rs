@@ -7,13 +7,14 @@ use clarix_editing_core::{
     ToolObservation, ToolRequest,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 use crate::{
-    AgentError, AgentRunEvent, AgentRunEventKind, AgentRunId, AgentRunOutcome, AgentRunRepository,
-    AgentRunRequest, AgentRunStatus, ApprovalId, CancellationToken, CommandAuditLink,
-    ModelProvider, PermissionDecision, PermissionPolicy, ProposalId, ProviderEvent,
-    ProviderEventSink, ProviderMessage, ProviderRequest, ProviderRole, ToolCallId, ToolExecution,
-    ToolRegistry, ToolValidationContext, ValidatedToolCall,
+    AgentError, AgentProposalTarget, AgentProposalView, AgentRunEvent, AgentRunEventKind,
+    AgentRunId, AgentRunOutcome, AgentRunRepository, AgentRunRequest, AgentRunStatus, ApprovalId,
+    CancellationToken, CommandAuditLink, ModelProvider, PermissionDecision, PermissionPolicy,
+    ProposalId, ProviderEvent, ProviderEventSink, ProviderMessage, ProviderRequest, ProviderRole,
+    ToolCallId, ToolExecution, ToolRegistry, ToolValidationContext, ValidatedToolCall,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -22,6 +23,8 @@ pub struct ActiveApproval {
     pub approval_id: ApprovalId,
     pub tool_call_id: ToolCallId,
     pub reasons: Vec<String>,
+    pub base_revision: DocumentRevision,
+    pub digest_sha256: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -228,21 +231,22 @@ where
                         )?;
                     }
                     PermissionDecision::ApprovalRequired { reasons } => {
-                        let approval = ActiveApproval {
+                        let mut approval = ActiveApproval {
                             proposal_id: ProposalId::new(),
                             approval_id: ApprovalId::new(),
                             tool_call_id,
                             reasons,
+                            base_revision: state.current_revision,
+                            digest_sha256: String::new(),
                         };
+                        let proposal = proposal_view(request.run_id, &approval, &validated)?;
+                        approval.digest_sha256 = proposal.digest_sha256.clone();
                         state.transition(
                             AgentRunStatus::AwaitingApproval,
                             self.repository.as_ref(),
                         )?;
                         state.emit(
-                            AgentRunEventKind::ApprovalRequested {
-                                proposal_id: approval.proposal_id,
-                                approval_id: approval.approval_id,
-                            },
+                            AgentRunEventKind::ApprovalRequested { proposal },
                             self.repository.as_ref(),
                         )?;
                         self.approvals.lock().expect("approval mutex").insert(
@@ -404,12 +408,13 @@ where
             approval_id: ApprovalId::new(),
             tool_call_id: pending.snapshot.tool_call_id,
             reasons: pending.snapshot.reasons.clone(),
+            base_revision: current_revision,
+            digest_sha256: String::new(),
         };
+        let proposal = proposal_view(run_id, &pending.snapshot, &pending.call)?;
+        pending.snapshot.digest_sha256 = proposal.digest_sha256.clone();
         pending.state.emit(
-            AgentRunEventKind::ApprovalRequested {
-                proposal_id: pending.snapshot.proposal_id,
-                approval_id: pending.snapshot.approval_id,
-            },
+            AgentRunEventKind::ApprovalRequested { proposal },
             self.repository.as_ref(),
         )?;
         Ok(pending.state.snapshot(Some(pending.snapshot.clone())))
@@ -640,6 +645,70 @@ fn tool_message(
         })?,
         tool_call_id: Some(call.provider_call_id.clone()),
         tool_calls: vec![],
+    })
+}
+
+fn proposal_view(
+    run_id: AgentRunId,
+    approval: &ActiveApproval,
+    call: &ValidatedToolCall,
+) -> Result<AgentProposalView, AgentError> {
+    let targets = match &call.execution {
+        ToolExecution::ReplaceTextRange {
+            selection,
+            replacement,
+            ..
+        } => selection
+            .ranges
+            .iter()
+            .map(|range| AgentProposalTarget {
+                object_id: range.object_id,
+                page_id: range.page_id,
+                page_number: range.page_number,
+                start_utf16: range.start_utf16,
+                end_utf16: range.end_utf16,
+                before_text: range.quoted_text.clone(),
+                after_text: replacement.clone(),
+            })
+            .collect(),
+        ToolExecution::ApplyTextStyle { selection, .. } => selection
+            .ranges
+            .iter()
+            .map(|range| AgentProposalTarget {
+                object_id: range.object_id,
+                page_id: range.page_id,
+                page_number: range.page_number,
+                start_utf16: range.start_utf16,
+                end_utf16: range.end_utf16,
+                before_text: range.quoted_text.clone(),
+                after_text: range.quoted_text.clone(),
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    let digest_material = serde_json::to_vec(&(
+        approval.proposal_id,
+        approval.approval_id,
+        run_id,
+        approval.tool_call_id,
+        approval.base_revision,
+        call,
+        &approval.reasons,
+    ))
+    .map_err(|error| AgentError::ProposalOperation {
+        code: "proposal_digest".into(),
+        message: error.to_string(),
+    })?;
+    Ok(AgentProposalView {
+        proposal_id: approval.proposal_id,
+        approval_id: approval.approval_id,
+        run_id,
+        tool_call_id: approval.tool_call_id,
+        base_revision: approval.base_revision,
+        digest_sha256: format!("{:x}", Sha256::digest(digest_material)),
+        tool_name: call.manifest.name.clone(),
+        targets,
+        reasons: approval.reasons.clone(),
     })
 }
 

@@ -265,10 +265,7 @@ fn apply_event_links(
                 )
                 .map_err(map_sqlite)?;
         }
-        AgentRunEventKind::ApprovalRequested {
-            proposal_id,
-            approval_id,
-        } => {
+        AgentRunEventKind::ApprovalRequested { proposal } => {
             let tool_call_id: String = transaction
                 .query_row(
                     "SELECT tool_call_id FROM agent_tool_calls WHERE run_id = ?1 ORDER BY rowid DESC LIMIT 1",
@@ -278,20 +275,20 @@ fn apply_event_links(
                 .map_err(map_sqlite)?;
             transaction
                 .execute(
-                    "INSERT INTO agent_proposals (proposal_id, run_id, tool_call_id) VALUES (?1, ?2, ?3)",
-                    params![proposal_id.to_string(), event.run_id.to_string(), tool_call_id],
+                    "INSERT INTO agent_proposals (proposal_id, run_id, tool_call_id, digest_sha256, payload_json) VALUES (?1, ?2, ?3, ?4, ?5)",
+                    params![proposal.proposal_id.to_string(), event.run_id.to_string(), tool_call_id, proposal.digest_sha256, serde_json::to_string(proposal).map_err(map_json)?],
                 )
                 .map_err(map_sqlite)?;
             transaction
                 .execute(
                     "INSERT INTO agent_approvals (approval_id, proposal_id, run_id, status) VALUES (?1, ?2, ?3, 'pending')",
-                    params![approval_id.to_string(), proposal_id.to_string(), event.run_id.to_string()],
+                    params![proposal.approval_id.to_string(), proposal.proposal_id.to_string(), event.run_id.to_string()],
                 )
                 .map_err(map_sqlite)?;
             transaction
                 .execute(
                     "UPDATE agent_tool_calls SET proposal_id = ?3, approval_id = ?4 WHERE run_id = ?1 AND tool_call_id = ?2",
-                    params![event.run_id.to_string(), tool_call_id, proposal_id.to_string(), approval_id.to_string()],
+                    params![event.run_id.to_string(), tool_call_id, proposal.proposal_id.to_string(), proposal.approval_id.to_string()],
                 )
                 .map_err(map_sqlite)?;
         }

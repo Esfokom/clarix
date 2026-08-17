@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 
 use clarix_agent_core::{
-    AgentProviderConfig, AgentRunEvent, AgentRunEventKind, AgentRunId, AgentRunRepository,
-    AgentRunRequest, AgentRunStatus, ApprovalId, CommandAuditLink, ConversationId, ProposalId,
-    RunBudgets, SecretString, ToolCallId,
+    AgentProposalView, AgentProviderConfig, AgentRunEvent, AgentRunEventKind, AgentRunId,
+    AgentRunRepository, AgentRunRequest, AgentRunStatus, ApprovalId, CommandAuditLink,
+    ConversationId, ProposalId, RunBudgets, SecretString, ToolCallId,
 };
 use clarix_editing_core::{CommandId, DocumentId, DocumentRevision};
 use clarix_editing_store::SqliteAgentRunRepository;
@@ -63,8 +63,17 @@ fn audit_reopens_with_complete_tool_approval_command_links() {
                     2,
                     DocumentRevision::from_value(4),
                     AgentRunEventKind::ApprovalRequested {
-                        proposal_id,
-                        approval_id,
+                        proposal: AgentProposalView {
+                            proposal_id,
+                            approval_id,
+                            run_id,
+                            tool_call_id,
+                            base_revision: DocumentRevision::from_value(4),
+                            digest_sha256: "digest".into(),
+                            tool_name: "undo".into(),
+                            targets: vec![],
+                            reasons: vec!["history".into()],
+                        },
                     },
                 )
                 .unwrap(),
