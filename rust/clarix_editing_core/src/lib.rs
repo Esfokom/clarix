@@ -14,6 +14,7 @@ mod ports;
 mod save;
 mod search;
 mod selection;
+mod selection_context;
 mod session;
 mod text;
 mod tools;
@@ -56,6 +57,9 @@ pub use search::{
     TextRangeRef,
 };
 pub use selection::{SelectionKind, SelectionSet};
+pub use selection_context::{
+    ContextLimits, SelectionContext, SelectionContextBuilder, SelectionQuad, SelectionStyleSummary,
+};
 pub use session::EditorSessionState;
 pub use text::{
     validate_utf16_range, FontFallbackApproval, FontRef, FontSource, OverflowPolicy,

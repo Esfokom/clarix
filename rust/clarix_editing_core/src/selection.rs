@@ -125,9 +125,9 @@ fn validate_text_range(
     )
     .map_err(|_| EditingError::InvalidTextBoundary)?;
     if byte_range.is_empty() || text.text[byte_range.clone()] != range.quoted_text {
-        return Err(EditingError::InvalidCommand(
-            "selection range no longer matches quoted text".into(),
-        ));
+        return Err(EditingError::SelectionQuoteMismatch {
+            object_id: range.object_id,
+        });
     }
     range.quoted_text = text.text[byte_range].to_owned();
     Ok(range)

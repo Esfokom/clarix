@@ -7,9 +7,9 @@ use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CommandEnvelope, CommandResult, DocumentModel, DocumentRevision, DurableCommit, EditingError,
-    EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SearchIndex, SearchPage,
-    SearchRequest, SelectionSet, SessionId,
+    CommandEnvelope, CommandResult, ContextLimits, DocumentModel, DocumentRevision, DurableCommit,
+    EditingError, EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SearchIndex,
+    SearchPage, SearchRequest, SelectionContext, SelectionContextBuilder, SelectionSet, SessionId,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -38,6 +38,11 @@ enum ActorRequest {
     ValidateSelection {
         selection: SelectionSet,
         reply: Sender<Result<SelectionSet, EditingError>>,
+    },
+    SelectionContext {
+        selection: SelectionSet,
+        limits: ContextLimits,
+        reply: Sender<Result<SelectionContext, EditingError>>,
     },
     Subscribe {
         capacity: usize,
@@ -202,6 +207,26 @@ impl EditorSessionActor {
             .map_err(|_| EditingError::ActorUnavailable)?
     }
 
+    pub fn selection_context(
+        &self,
+        selection: SelectionSet,
+        limits: ContextLimits,
+    ) -> Result<SelectionContext, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::SelectionContext {
+                selection,
+                limits,
+                reply,
+            })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
     pub fn subscribe(&self) -> Result<Receiver<EditorEvent>, EditingError> {
         self.subscribe_with_capacity(DEFAULT_SUBSCRIBER_CAPACITY)
     }
@@ -330,6 +355,16 @@ fn run_actor(
             }
             ActorRequest::ValidateSelection { selection, reply } => {
                 let _ = reply.send(session.validate_selection(selection));
+            }
+            ActorRequest::SelectionContext {
+                selection,
+                limits,
+                reply,
+            } => {
+                let result = session
+                    .snapshot()
+                    .and_then(|model| SelectionContextBuilder::build(&model, selection, limits));
+                let _ = reply.send(result);
             }
             ActorRequest::Subscribe { capacity, reply } => {
                 let (sender, events) = bounded(capacity);

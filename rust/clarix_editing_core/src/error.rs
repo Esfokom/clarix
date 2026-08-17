@@ -13,6 +13,10 @@ pub enum EditingError {
     DuplicateCommand,
     #[error("text range is not on valid UTF-16 boundaries")]
     InvalidTextBoundary,
+    #[error("selection range for object {object_id} no longer matches quoted text")]
+    SelectionQuoteMismatch { object_id: ObjectId },
+    #[error("selection contains {actual} targets, exceeding limit {limit}")]
+    SelectionLimitExceeded { limit: u32, actual: usize },
     #[error("object {0} was not found")]
     ObjectNotFound(ObjectId),
     #[error("object {0} has the wrong kind for this command")]
@@ -54,6 +58,8 @@ impl EditingError {
             Self::RevisionConflict { .. } => "revision_conflict",
             Self::DuplicateCommand => "duplicate_command",
             Self::InvalidTextBoundary => "invalid_text_boundary",
+            Self::SelectionQuoteMismatch { .. } => "selection_quote_mismatch",
+            Self::SelectionLimitExceeded { .. } => "selection_limit_exceeded",
             Self::ObjectNotFound(_) => "object_not_found",
             Self::WrongObjectKind(_) => "wrong_object_kind",
             Self::ReadOnly(_) => "read_only",
