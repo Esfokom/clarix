@@ -44,8 +44,41 @@ abstract interface class EditorFontFallbackGateway {
   });
 }
 
+abstract interface class EditorPhaseTwoGateway {
+  Future<EditorSearchResult> search(EditorSearchRequest request);
+
+  Future<EditorSelectionSet> validateSelection(EditorSelectionSet selection);
+
+  Future<EditorCompatibilityReport> compatibilityReport(int expectedRevision);
+
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level);
+
+  Future<EditorAnnotation> annotationDetails(String objectId);
+
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  });
+
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  });
+
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  });
+}
+
 class BridgeEditorSessionGateway
-    implements EditorSessionGateway, EditorFontFallbackGateway {
+    implements
+        EditorSessionGateway,
+        EditorFontFallbackGateway,
+        EditorPhaseTwoGateway {
   factory BridgeEditorSessionGateway({
     EditorBridge bridge = const EditorBridge(),
     String? projectRoot,
@@ -123,6 +156,59 @@ class BridgeEditorSessionGateway
   @override
   Future<EditorSaveResult> save(EditorSaveRequest request) =>
       _required().save(request);
+
+  @override
+  Future<EditorSearchResult> search(EditorSearchRequest request) =>
+      _required().search(request);
+
+  @override
+  Future<EditorSelectionSet> validateSelection(EditorSelectionSet selection) =>
+      _required().validateSelection(selection);
+
+  @override
+  Future<EditorCompatibilityReport> compatibilityReport(int expectedRevision) =>
+      _required().compatibilityReport(expectedRevision);
+
+  @override
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) =>
+      _required().reportMemoryPressure(level);
+
+  @override
+  Future<EditorAnnotation> annotationDetails(String objectId) =>
+      _required().annotationDetails(objectId);
+
+  @override
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) => _required().createAnnotation(
+    commandId: commandId,
+    baseRevision: baseRevision,
+    annotation: annotation,
+  );
+
+  @override
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) => _required().updateAnnotation(
+    commandId: commandId,
+    baseRevision: baseRevision,
+    annotation: annotation,
+  );
+
+  @override
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  }) => _required().deleteAnnotation(
+    commandId: commandId,
+    baseRevision: baseRevision,
+    objectId: objectId,
+  );
 
   @override
   Future<void> close() async {

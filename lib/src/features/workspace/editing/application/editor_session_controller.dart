@@ -8,6 +8,12 @@ import '../domain/editor_selection.dart';
 import '../infrastructure/editor_session_gateway.dart';
 
 typedef EditorCommandIdFactory = String Function();
+typedef EditorPhaseTwoMutation =
+    Future<EditorCommandResult> Function(
+      EditorPhaseTwoGateway gateway,
+      String commandId,
+      int baseRevision,
+    );
 
 class EditorSessionController {
   factory EditorSessionController({
@@ -43,12 +49,22 @@ class EditorSessionController {
   Future<void> Function()? _commitComposition;
   bool _saveCancelled = false;
   int _fontFallbackEpoch = 0;
+  Completer<void>? _phaseTwoMutationCompletion;
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
-  bool get canUndo => _state.undoDepth > 0 && _state.pendingCommand == null;
-  bool get canRedo => _state.redoDepth > 0 && _state.pendingCommand == null;
-  bool get commandOutstanding => _state.pendingCommand != null;
+  bool get canUndo =>
+      _state.undoDepth > 0 &&
+      _state.pendingCommand == null &&
+      !_phaseTwoMutationOutstanding;
+  bool get canRedo =>
+      _state.redoDepth > 0 &&
+      _state.pendingCommand == null &&
+      !_phaseTwoMutationOutstanding;
+  bool get commandOutstanding =>
+      _state.pendingCommand != null || _phaseTwoMutationOutstanding;
+
+  bool get _phaseTwoMutationOutstanding => _phaseTwoMutationCompletion != null;
 
   Future<void> open(String sourcePath) async {
     _ensureActive();
@@ -178,6 +194,73 @@ class EditorSessionController {
     return _gateway.releaseCleanPatchMemory();
   }
 
+  Future<EditorSearchResult> searchDocument({
+    required String query,
+    EditorSearchMode mode = EditorSearchMode.exact,
+    bool wholeWord = false,
+    int offset = 0,
+    int limit = 100,
+  }) {
+    _ensureActive();
+    return _phaseTwoGateway.search(
+      EditorSearchRequest(
+        expectedRevision: _state.revision,
+        query: query,
+        mode: mode,
+        wholeWord: wholeWord,
+        offset: offset,
+        limit: limit,
+      ),
+    );
+  }
+
+  Future<EditorSelectionSet> validateSelection(EditorSelectionSet selection) {
+    _ensureActive();
+    return _phaseTwoGateway.validateSelection(selection);
+  }
+
+  Future<EditorCompatibilityReport> compatibilityReport() {
+    _ensureActive();
+    return _phaseTwoGateway.compatibilityReport(_state.revision);
+  }
+
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) {
+    _ensureActive();
+    return _phaseTwoGateway.reportMemoryPressure(level);
+  }
+
+  Future<EditorAnnotation> annotationDetails(String objectId) {
+    _ensureActive();
+    return _phaseTwoGateway.annotationDetails(objectId);
+  }
+
+  Future<EditorCommandResult> createAnnotation(EditorAnnotation annotation) =>
+      _submitPhaseTwoMutation(
+        (gateway, commandId, baseRevision) => gateway.createAnnotation(
+          commandId: commandId,
+          baseRevision: baseRevision,
+          annotation: annotation,
+        ),
+      );
+
+  Future<EditorCommandResult> updateAnnotation(EditorAnnotation annotation) =>
+      _submitPhaseTwoMutation(
+        (gateway, commandId, baseRevision) => gateway.updateAnnotation(
+          commandId: commandId,
+          baseRevision: baseRevision,
+          annotation: annotation,
+        ),
+      );
+
+  Future<EditorCommandResult> deleteAnnotation(String objectId) =>
+      _submitPhaseTwoMutation(
+        (gateway, commandId, baseRevision) => gateway.deleteAnnotation(
+          commandId: commandId,
+          baseRevision: baseRevision,
+          objectId: objectId,
+        ),
+      );
+
   void updateSelection(EditorSelection? selection) {
     _ensureActive();
     _emit(
@@ -219,7 +302,13 @@ class EditorSessionController {
     _ensureActive();
     while (_state.optimisticEdit != null ||
         _state.queuedEdit != null ||
-        _state.pendingCommand != null) {
+        _state.pendingCommand != null ||
+        _phaseTwoMutationOutstanding) {
+      final phaseTwoCompletion = _phaseTwoMutationCompletion;
+      if (phaseTwoCompletion != null) {
+        await phaseTwoCompletion.future;
+        continue;
+      }
       await changes.firstWhere(
         (state) =>
             state.optimisticEdit == null &&
@@ -321,7 +410,7 @@ class EditorSessionController {
     if (_state.fontFallbackProposal != null) {
       _emit(_state.copyWith(clearFontFallbackProposal: true));
     }
-    if (_state.pendingCommand != null) {
+    if (_state.pendingCommand != null || _phaseTwoMutationOutstanding) {
       throw StateError('an editor command is already outstanding');
     }
     if (!_state.objects.containsKey(objectId)) {
@@ -390,7 +479,9 @@ class EditorSessionController {
 
   Future<EditorCommandResult> submitCommand(EditorCommand command) async {
     _ensureActive();
-    if (_state.optimisticEdit != null || _state.pendingCommand != null) {
+    if (_state.optimisticEdit != null ||
+        _state.pendingCommand != null ||
+        _phaseTwoMutationOutstanding) {
       throw StateError('an editor command is already outstanding');
     }
     final commandId = _commandIds();
@@ -481,6 +572,9 @@ class EditorSessionController {
 
   Future<void> approveFontFallback(String proposalToken) async {
     _ensureActive();
+    if (_state.pendingCommand != null || _phaseTwoMutationOutstanding) {
+      throw StateError('an editor command is already outstanding');
+    }
     final proposal = _state.fontFallbackProposal;
     if (proposal == null || proposal.token != proposalToken) {
       throw StateError('font fallback proposal is no longer pending');
@@ -646,6 +740,65 @@ class EditorSessionController {
     }
   }
 
+  Future<EditorCommandResult> _submitPhaseTwoMutation(
+    EditorPhaseTwoMutation mutation,
+  ) async {
+    _ensureActive();
+    if (_state.optimisticEdit != null ||
+        _state.pendingCommand != null ||
+        _phaseTwoMutationOutstanding) {
+      throw StateError('an editor command is already outstanding');
+    }
+    final commandId = _commandIds();
+    final baseRevision = _state.revision;
+    final completion = Completer<void>();
+    _phaseTwoMutationCompletion = completion;
+    try {
+      final result = await mutation(_phaseTwoGateway, commandId, baseRevision);
+      if (_disposed ||
+          result.commandId != commandId ||
+          result.previousRevision != baseRevision ||
+          !result.durable) {
+        throw const EditorProtocolViolation(
+          'Phase 2 command acknowledgement mismatch',
+        );
+      }
+      final scenes = _removeObjectsFromScenes(
+        _patchScenes(_state.scenes, result.objectPatches),
+        result.removedObjectIds,
+      );
+      final objects = _patchObjects(_state.objects, result.objectPatches)
+        ..removeWhere(
+          (objectId, _) => result.removedObjectIds.contains(objectId),
+        );
+      _emit(
+        _state.copyWith(
+          revision: result.committedRevision,
+          scenes: scenes,
+          objects: objects,
+          save: _state.save.copyWith(
+            phase: EditorSavePhase.dirty,
+            clearError: true,
+          ),
+          undoDepth: _state.undoDepth + 1,
+          redoDepth: 0,
+          clearError: true,
+        ),
+      );
+      return result;
+    } catch (error) {
+      if (!_disposed) {
+        _emit(_state.copyWith(errorCode: _errorCode(error)));
+      }
+      rethrow;
+    } finally {
+      if (identical(_phaseTwoMutationCompletion, completion)) {
+        _phaseTwoMutationCompletion = null;
+        completion.complete();
+      }
+    }
+  }
+
   void _onEvent(EditorEvent event) {
     if (_disposed || event.sessionId != _state.sessionId) return;
     if (event.kind == EditorEventKind.lagged) {
@@ -680,6 +833,16 @@ class EditorSessionController {
       throw UnsupportedError('font fallback is unavailable for this session');
     }
     return gateway as EditorFontFallbackGateway;
+  }
+
+  EditorPhaseTwoGateway get _phaseTwoGateway {
+    final gateway = _gateway;
+    if (gateway is! EditorPhaseTwoGateway) {
+      throw UnsupportedError(
+        'Phase 2 workflows are unavailable for this session',
+      );
+    }
+    return gateway as EditorPhaseTwoGateway;
   }
 }
 
@@ -742,6 +905,28 @@ Map<int, EditorPageScene> _patchScenes(
                     patch.fontAssetHandle ?? object.fontAssetHandle,
               );
             })
+            .toList(growable: false),
+      ),
+  };
+}
+
+Map<int, EditorPageScene> _removeObjectsFromScenes(
+  Map<int, EditorPageScene> current,
+  List<String> removedObjectIds,
+) {
+  if (removedObjectIds.isEmpty) return current;
+  final removed = removedObjectIds.toSet();
+  return <int, EditorPageScene>{
+    for (final entry in current.entries)
+      entry.key: EditorPageScene(
+        schemaVersion: entry.value.schemaVersion,
+        pageId: entry.value.pageId,
+        pageNumber: entry.value.pageNumber,
+        width: entry.value.width,
+        height: entry.value.height,
+        revision: entry.value.revision,
+        objects: entry.value.objects
+            .where((object) => !removed.contains(object.objectId))
             .toList(growable: false),
       ),
   };

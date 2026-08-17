@@ -69,7 +69,8 @@ class NativeEditorTestHarness {
   );
 }
 
-class NativeEditorGateway implements EditorSessionGateway {
+class NativeEditorGateway
+    implements EditorSessionGateway, EditorPhaseTwoGateway {
   NativeEditorGateway({required this.text, required String capability})
     : object = _object(text, capability);
 
@@ -78,6 +79,7 @@ class NativeEditorGateway implements EditorSessionGateway {
   final List<EditorCommandRequest> requests = <EditorCommandRequest>[];
   final List<String> calls = <String>[];
   Object? saveError;
+  EditorAnnotation? annotation;
   final StreamController<EditorEvent> _events =
       StreamController<EditorEvent>.broadcast();
 
@@ -172,6 +174,99 @@ class NativeEditorGateway implements EditorSessionGateway {
 
   @override
   Future<void> close() => _events.close();
+
+  @override
+  Future<EditorSearchResult> search(EditorSearchRequest request) async =>
+      EditorSearchResult(
+        schemaVersion: 1,
+        revision: request.expectedRevision,
+        matches: <EditorSearchMatch>[
+          EditorSearchMatch(
+            objectId: harnessObjectId,
+            pageId: 'page-1',
+            pageNumber: 1,
+            startUtf16: 0,
+            endUtf16: text.codeUnits.length,
+            quotedText: text,
+          ),
+        ],
+        totalMatches: 1,
+        indexedPages: 1,
+        pageCount: 1,
+        isComplete: true,
+      );
+
+  @override
+  Future<EditorSelectionSet> validateSelection(
+    EditorSelectionSet selection,
+  ) async => selection;
+
+  @override
+  Future<EditorCompatibilityReport> compatibilityReport(
+    int expectedRevision,
+  ) async => EditorCompatibilityReport(
+    schemaVersion: 1,
+    revision: expectedRevision,
+    editableCount: 1,
+    overlayOnlyCount: 0,
+    readOnlyCount: 0,
+    issues: const <EditorCompatibilityIssue>[],
+  );
+
+  @override
+  Future<void> reportMemoryPressure(EditorMemoryPressureLevel level) async {}
+
+  @override
+  Future<EditorAnnotation> annotationDetails(String objectId) async =>
+      annotation!;
+
+  @override
+  Future<EditorCommandResult> createAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) async {
+    this.annotation = annotation;
+    return _annotationResult(commandId, baseRevision);
+  }
+
+  @override
+  Future<EditorCommandResult> updateAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required EditorAnnotation annotation,
+  }) async {
+    this.annotation = annotation;
+    return _annotationResult(commandId, baseRevision);
+  }
+
+  @override
+  Future<EditorCommandResult> deleteAnnotation({
+    required String commandId,
+    required int baseRevision,
+    required String objectId,
+  }) async {
+    annotation = null;
+    return EditorCommandResult(
+      commandId: commandId,
+      previousRevision: baseRevision,
+      committedRevision: baseRevision + 1,
+      durable: true,
+      warnings: const <String>[],
+      objectPatches: const <EditorObjectPatch>[],
+      removedObjectIds: <String>[objectId],
+    );
+  }
+
+  EditorCommandResult _annotationResult(String commandId, int baseRevision) =>
+      EditorCommandResult(
+        commandId: commandId,
+        previousRevision: baseRevision,
+        committedRevision: baseRevision + 1,
+        durable: true,
+        warnings: const <String>[],
+        objectPatches: const <EditorObjectPatch>[],
+      );
 }
 
 EditorSceneObject _object(String text, String capability) => EditorSceneObject(
