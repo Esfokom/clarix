@@ -1,35 +1,9 @@
 part of 'reader_viewer_pane.dart';
 
-mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
-  dynamic get _controller;
-  dynamic get _pageSurface;
-  dynamic get _metrics;
-  dynamic get _pageSceneLifecycle;
-  dynamic get _searcher;
-  dynamic get _searchListener;
-  dynamic get _pendingSearchQuery;
-  dynamic get _viewerStateDebounce;
-  dynamic get _lastPointerGlobalPosition;
-  dynamic get _colorInspectorOpen;
-  dynamic get _customHighlightColor;
-  dynamic get _annotationHitAreas;
-  dynamic get _selectionDragStart;
-  dynamic get _selectionMenuPosition;
-  dynamic get _selectionAutoPanPointer;
-  dynamic get _selectionAutoPanTimer;
-  dynamic get _page;
-  dynamic get _zoom;
-  set _searcher(PdfTextSearcher? value);
-  set _searchListener(VoidCallback? value);
-  set _pendingSearchQuery(String? value);
-  set _viewerStateDebounce(Timer? value);
-  set _lastPointerGlobalPosition(Offset? value);
-  set _colorInspectorOpen(bool value);
-  set _customHighlightColor(int value);
-  set _selectionDragStart(Offset? value);
-  set _selectionMenuPosition(Offset? value);
-  set _selectionAutoPanPointer(Offset? value);
-  set _selectionAutoPanTimer(Timer? value);
+bool annotationHitAreaContains(Iterable<Rect> areas, Offset documentPosition) =>
+    areas.any((Rect area) => area.inflate(3).contains(documentPosition));
+
+extension _ReaderViewerInteractions on _PdfViewerPaneState {
   void _onPageChanged(int? page) {
     if (page == null) {
       return;
@@ -46,20 +20,17 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
     PdfViewerController controller,
   ) async {
     _pageSurface.refresh();
-    unawaited(_openNativeEditor(widget.tab.id, widget.tab.filePath));
     final PdfTextSearcher searcher = PdfTextSearcher(controller);
     if (widget.tab.searchQuery.trim().isNotEmpty) {
       _pendingSearchQuery = widget.tab.searchQuery;
       searcher.startTextSearch(widget.tab.searchQuery, searchImmediately: true);
     }
     _searchListener = () {
-      if (mounted) {
-        setState(() {
-          if (!searcher.isSearching) {
-            _pendingSearchQuery = null;
-          }
-        });
-      }
+      _updateState(() {
+        if (!searcher.isSearching) {
+          _pendingSearchQuery = null;
+        }
+      });
     };
     searcher.addListener(_searchListener!);
     final List<PdfOutlineNode> outline = await document.loadOutline();
@@ -77,7 +48,7 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
           zoomScale: controller.currentZoom,
         );
     if (mounted) {
-      setState(() => _searcher = searcher);
+      _updateState(() => _searcher = searcher);
       _metrics.value = _ReaderViewportMetrics(
         page: controller.pageNumber ?? widget.tab.currentPage,
         zoom: controller.currentZoom,
@@ -87,30 +58,54 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
     }
   }
 
-  Future<void> _openNativeEditor(String tabId, String sourcePath) async {
+  Future<EditorSessionController?> _openNativeEditor(
+    String tabId,
+    String sourcePath,
+  ) async {
     try {
       final controller = await ref
           .read(editorSessionRegistryProvider)
           .open(tabId: tabId, sourcePath: sourcePath);
       if (!mounted || widget.tab.id != tabId) {
         await ref.read(editorSessionRegistryProvider).close(tabId);
-        return;
+        return null;
       }
       _pageSceneLifecycle?.dispose();
       _pageSceneLifecycle = PageSceneLifecycle(
         surface: _pageSurface,
         controller: controller,
       )..start();
-      setState(() {});
-    } catch (_) {
-      // The reader remains available if the optional native editor cannot open.
+      _updateState();
+      return controller;
+    } catch (error) {
+      ref.read(workspaceNotifierProvider.notifier).reportPdfEditFailure(error);
+      return null;
     }
   }
 
   Future<void> _toggleTextEditing() async {
-    if (ref.read(editorSessionRegistryProvider)[widget.tab.id] == null) {
-      await _openNativeEditor(widget.tab.id, widget.tab.filePath);
+    final notifier = ref.read(workspaceNotifierProvider.notifier);
+    final currentTool = ref
+        .read(workspaceNotifierProvider)
+        .value
+        ?.session
+        .rightToolWindow;
+    final isCurrentlyEditing = currentTool == RightToolWindow.textFormat;
+
+    if (!isCurrentlyEditing) {
+      final controller =
+          ref.read(editorSessionRegistryProvider)[widget.tab.id] ??
+          await _openNativeEditor(widget.tab.id, widget.tab.filePath);
+      if (controller == null) return;
+      await notifier.selectRightToolWindow(RightToolWindow.textFormat);
+    } else {
+      final controller = ref.read(editorSessionRegistryProvider)[widget.tab.id];
+      if (controller != null && controller.state.selection != null) {
+        controller.updateSelection(null);
+      }
+      await notifier.selectRightToolWindow(RightToolWindow.document);
     }
+    _updateState();
   }
 
   bool get _shouldShowSearchOverlay =>
@@ -136,16 +131,12 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
 
   Future<void> _goToPreviousSearchMatch() async {
     await _searcher?.goToPrevMatch();
-    if (mounted) {
-      setState(() {});
-    }
+    _updateState();
   }
 
   Future<void> _goToNextSearchMatch() async {
     await _searcher?.goToNextMatch();
-    if (mounted) {
-      setState(() {});
-    }
+    _updateState();
   }
 
   List<Widget> _buildViewerOverlay(
@@ -204,8 +195,9 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
     if (details.type != PdfViewerGeneralTapType.tap) return false;
     for (final DocumentAnnotation annotation in widget.annotations) {
       if (annotation.kind == AnnotationKind.highlight &&
-          (_annotationHitAreas[annotation.id] ?? const <Rect>[]).any(
-            (area) => area.inflate(3).contains(details.documentPosition),
+          annotationHitAreaContains(
+            _annotationHitAreas[annotation.id] ?? const <Rect>[],
+            details.documentPosition,
           )) {
         unawaited(_showHighlightEditor(annotation));
         return true;
@@ -264,7 +256,7 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
     final ranges = await _controller.textSelectionDelegate
         .getSelectedTextRanges();
     if (!mounted || ranges.isEmpty) return;
-    setState(
+    _updateState(
       () => _selectionMenuPosition = event.localPosition.translate(8, 8),
     );
   }
@@ -396,7 +388,7 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
               ),
             TextButton(
               onPressed: () {
-                setState(() => _colorInspectorOpen = true);
+                _updateState(() => _colorInspectorOpen = true);
                 params.dismissContextMenu();
               },
               child: const Text('More colours'),
@@ -472,7 +464,7 @@ mixin _ReaderViewerInteractions on ConsumerState<ReaderViewerPane> {
       }
     }
     await _controller.textSelectionDelegate.clearTextSelection();
-    if (mounted) setState(() => _selectionMenuPosition = null);
+    _updateState(() => _selectionMenuPosition = null);
   }
 
   List<PdfRect> _selectionLineRects(PdfPageTextRange range) {

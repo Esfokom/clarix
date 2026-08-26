@@ -1,7 +1,4 @@
-import 'package:clarix/src/features/ai/application/action_permission_service.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-import 'package:clarix/src/features/pdf_editor/domain/pdf_page_object.dart';
-import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

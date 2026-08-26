@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:clarix/src/core/models.dart';
 import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
@@ -106,6 +107,20 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       },
       child: DesktopWindowChrome(
         showDocumentActions: activeTabId != null,
+        isTextEditingActive:
+            asyncState.value?.session.rightToolWindow == RightToolWindow.textFormat ||
+            (nativeState?.selection != null),
+        onToggleEditText: activeTabId == null
+            ? null
+            : () {
+                final notifier = ref.read(workspaceNotifierProvider.notifier);
+                final current = asyncState.value?.session.rightToolWindow;
+                if (current != RightToolWindow.textFormat) {
+                  notifier.selectRightToolWindow(RightToolWindow.textFormat);
+                } else {
+                  notifier.selectRightToolWindow(RightToolWindow.document);
+                }
+              },
         onImport: () =>
             ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
         onOpenSettings: () => showAppSettingsDialog(context),

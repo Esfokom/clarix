@@ -3,8 +3,8 @@ import 'dart:math' as math;
 
 import 'package:clarix/src/core/clarix_rust_runtime.dart';
 import 'package:clarix/src/core/editing/editor_command_id.dart';
-import 'package:clarix/src/features/workspace/editing/application/editor_session_controller.dart';
-import 'package:clarix/src/features/workspace/editing/infrastructure/editor_session_gateway.dart';
+import 'package:clarix/src/features/pdf_editor/application/editor_session_controller.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/editor_session_gateway.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -8,6 +8,7 @@ import 'package:markdown/markdown.dart' as markdown;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import 'package:clarix/src/features/ai/ai.dart';
+import '../../../core/clarix_logger.dart';
 import '../../../core/theme_controller.dart';
 import '../../../core/theme_profile.dart';
 import '../../../core/workspace_surface_tokens.dart';
@@ -50,6 +51,13 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     );
     final AiWorkspaceState ai = widget.aiState.chat;
     final agentController = widget.documentContext?.agentController;
+    final composerEnabled =
+        ai.providerReady && !ai.chatBusy && widget.documentContext != null;
+    final composerHint = !ai.providerReady
+        ? 'Add a provider first'
+        : widget.documentContext == null
+        ? 'Opening document editor…'
+        : 'Ask anything about this document…';
     final editorRevision = widget.documentContext?.editorRevision ?? 0;
     final int contextLimit =
         widget.aiState.providerProfiles
@@ -176,8 +184,9 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
           if (ai.chatBusy) _ComposerLoadingIndicator(colors: colors),
           _DocumentComposer(
             controller: _controller,
-            enabled: ai.providerReady && !ai.chatBusy,
+            enabled: composerEnabled,
             isBusy: ai.chatBusy,
+            hintText: composerHint,
             onSend: _send,
             colors: colors,
             onStop: () =>
@@ -191,10 +200,20 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
   void _send() {
     final String prompt = _controller.text.trim();
     if (prompt.isEmpty) {
+      clarixLog.t('AI composer send ignored: empty prompt.');
       return;
     }
     final context = widget.documentContext;
-    if (context == null) return;
+    if (context == null) {
+      clarixLog.w(
+        'AI composer send ignored: native document context is unavailable.',
+      );
+      return;
+    }
+    clarixLog.i(
+      'AI composer send requested for tab ${context.tabId} '
+      '(${prompt.length} characters).',
+    );
     ref.read(aiNotifierProvider.notifier).sendPrompt(prompt, context);
     _controller.clear();
   }
@@ -360,6 +379,7 @@ class _DocumentComposer extends StatelessWidget {
     required this.controller,
     required this.enabled,
     required this.isBusy,
+    required this.hintText,
     required this.onSend,
     required this.onStop,
     required this.colors,
@@ -368,6 +388,7 @@ class _DocumentComposer extends StatelessWidget {
   final TextEditingController controller;
   final bool enabled;
   final bool isBusy;
+  final String hintText;
   final VoidCallback onSend;
   final VoidCallback onStop;
   final WorkspaceSurfaceTokens colors;
@@ -403,9 +424,7 @@ class _DocumentComposer extends StatelessWidget {
                 ),
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: enabled
-                      ? 'Ask anything about this document…'
-                      : 'Add a provider first',
+                  hintText: hintText,
                   hintStyle: TextStyle(color: colors.textFaint, fontSize: 12.5),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,

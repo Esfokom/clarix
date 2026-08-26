@@ -11,7 +11,6 @@ import 'package:clarix/src/core/agent/agent_bridge_types.dart';
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/theme_controller.dart';
-import 'package:clarix/src/core/workspace_surface_tokens.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
@@ -20,8 +19,10 @@ import 'package:clarix/src/features/workspace/presentation/widgets/workspace_com
 import 'reader_interaction_math.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
+
 class ReaderViewerPane extends ConsumerStatefulWidget {
   const ReaderViewerPane({
+    super.key,
     required this.tab,
     required this.documentRef,
     required this.annotations,
@@ -44,8 +45,7 @@ class _ReaderViewportMetrics {
   final double zoom;
 }
 
-class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane>
-    with _ReaderViewerInteractions {
+class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   late PdfViewerController _controller;
   late PdfrxPageSurface _pageSurface;
   late ValueNotifier<_ReaderViewportMetrics> _metrics;
@@ -66,6 +66,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane>
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
+
+  void _updateState([VoidCallback? fn]) {
+    if (mounted) {
+      setState(fn ?? () {});
+    }
+  }
 
   AiProviderProfile? _selectedProvider() {
     final ai = ref.read(aiNotifierProvider).value;
@@ -324,6 +330,20 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane>
       );
     }
 
+    final workspaceSession = ref
+        .watch(workspaceNotifierProvider)
+        .value
+        ?.session;
+    final editorState = ref
+        .watch(editorDocumentStateProvider(widget.tab.id))
+        .value;
+    final isEditingMode =
+        workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
+        (editorState?.selection != null);
+    final interaction = isEditingMode
+        ? PdfEditingInteraction.textEditing
+        : PdfEditingInteraction.reading;
+
     return DecoratedBox(
       decoration: BoxDecoration(color: widget.colors.canvas),
       child: Theme(
@@ -388,11 +408,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane>
                             scaleEnabled: input.pdfrxScaleEnabled,
                             scaleByPointerScale: readerPointerZoomSensitivity,
                             textSelectionParams: textSelectionParamsFor(
-                              PdfEditingInteraction.reading,
+                              interaction,
                             ),
-                            onKey: viewerKeyHandlerFor(
-                              PdfEditingInteraction.reading,
-                            ),
+                            onKey: viewerKeyHandlerFor(interaction),
                             buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
                                 input.interactionDelegateProvider,
@@ -427,6 +445,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane>
                                             document:
                                                 lifecycle.controller.state,
                                             session: lifecycle.controller,
+                                            editingEnabled: isEditingMode,
                                             displaySize: pageRect.size,
                                             cleanPatches: lifecycle
                                                 .cleanPatchesFor(
@@ -628,7 +647,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane>
                             onHighlightSelection: _controller.isReady
                                 ? _highlightSelection
                                 : null,
-                            textEditing: registeredNative != null,
+                            textEditing: isEditingMode,
                             onToggleTextEditing: _controller.isReady
                                 ? _toggleTextEditing
                                 : null,

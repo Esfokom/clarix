@@ -104,28 +104,31 @@ class _NativeTextEditorState extends State<NativeTextEditor> {
         },
         onUndo: widget.onUndo,
         onRedo: widget.onRedo,
-        child: DefaultSelectionStyle(
-          selectionColor: const Color(0x553b82f6),
-          cursorColor: const Color(0xff2f80ed),
-          child: TextField(
-            key: const Key('clarix-native-editor'),
-            controller: _textController,
-            focusNode: _focusNode,
-            style: style,
+        child: Container(
+          color: Colors.white,
+          child: DefaultSelectionStyle(
+            selectionColor: const Color(0x553b82f6),
             cursorColor: const Color(0xff2f80ed),
-            textDirection: widget.object.layout?.direction == 'rtl'
-                ? TextDirection.rtl
-                : TextDirection.ltr,
-            keyboardType: TextInputType.multiline,
-            textInputAction: TextInputAction.newline,
-            readOnly: widget.object.capability != 'editable',
-            maxLines: null,
-            minLines: null,
-            expands: true,
-            autofocus: widget.autofocus,
-            selectionControls: materialTextSelectionControls,
-            enableInteractiveSelection: true,
-            decoration: const InputDecoration.collapsed(hintText: null),
+            child: TextField(
+              key: const Key('clarix-native-editor'),
+              controller: _textController,
+              focusNode: _focusNode,
+              style: style,
+              cursorColor: const Color(0xff2f80ed),
+              textDirection: widget.object.layout?.direction == 'rtl'
+                  ? TextDirection.rtl
+                  : TextDirection.ltr,
+              keyboardType: TextInputType.multiline,
+              textInputAction: TextInputAction.newline,
+              readOnly: widget.object.capability != 'editable',
+              maxLines: null,
+              minLines: null,
+              expands: true,
+              autofocus: widget.autofocus,
+              selectionControls: materialTextSelectionControls,
+              enableInteractiveSelection: true,
+              decoration: const InputDecoration.collapsed(hintText: null),
+            ),
           ),
         ),
       ),

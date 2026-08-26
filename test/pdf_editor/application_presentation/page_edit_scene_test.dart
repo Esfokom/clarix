@@ -9,8 +9,119 @@ import 'package:clarix/src/features/pdf_editor/presentation/editor_text_painter.
 import 'package:clarix/src/features/pdf_editor/presentation/page_edit_scene.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pdfrx/pdfrx.dart';
+
+import 'support/native_editor_harness.dart';
 
 void main() {
+  testWidgets('native text input is dormant until edit mode is enabled', (
+    tester,
+  ) async {
+    final harness = NativeEditorTestHarness(text: 'Before');
+    await harness.open(selectionOffset: 0);
+    final scene = EditorPageScene(
+      schemaVersion: 1,
+      pageId: 'page-1',
+      pageNumber: 1,
+      width: 420,
+      height: 72,
+      revision: 0,
+      objects: <EditorSceneObject>[harness.gateway.object],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 420,
+            height: 72,
+            child: PageEditScene(
+              scene: scene,
+              document: harness.controller.state,
+              session: harness.controller,
+              displaySize: const Size(420, 72),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byKey(const Key('clarix-native-editor')), findsNothing);
+  });
+
+  testWidgets(
+    'native text input is available as soon as edit mode is enabled',
+    (tester) async {
+      final harness = NativeEditorTestHarness(text: 'Before');
+      await harness.open(selectionOffset: 0);
+      final scene = EditorPageScene(
+        schemaVersion: 1,
+        pageId: 'page-1',
+        pageNumber: 1,
+        width: 420,
+        height: 72,
+        revision: 0,
+        objects: <EditorSceneObject>[harness.gateway.object],
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 420,
+              height: 72,
+              child: PageEditScene(
+                scene: scene,
+                document: harness.controller.state,
+                session: harness.controller,
+                editingEnabled: true,
+                displaySize: const Size(420, 72),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byKey(const Key('clarix-native-editor')), findsOneWidget);
+    },
+  );
+
+  testWidgets('edit targets use the pdfrx overlay interaction bridge', (
+    tester,
+  ) async {
+    final harness = NativeEditorTestHarness(text: 'Before');
+    await harness.open(selectionOffset: 0);
+    final scene = EditorPageScene(
+      schemaVersion: 1,
+      pageId: 'page-1',
+      pageNumber: 1,
+      width: 420,
+      height: 72,
+      revision: 0,
+      objects: <EditorSceneObject>[harness.gateway.object],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 420,
+            height: 72,
+            child: PageEditScene(
+              scene: scene,
+              document: harness.controller.state.copyWith(clearSelection: true),
+              session: harness.controller,
+              editingEnabled: true,
+              displaySize: const Size(420, 72),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(PdfOverlayInteractionRegion), findsOneWidget);
+  });
+
   testWidgets('edited source is covered before replacement glyphs paint', (
     tester,
   ) async {

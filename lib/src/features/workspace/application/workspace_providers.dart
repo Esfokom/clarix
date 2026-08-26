@@ -104,8 +104,17 @@ final editorDocumentStateProvider =
 
 final agentRunControllerProvider = Provider.family<AgentRunController?, String>(
   (Ref ref, String tabId) {
-    final bridge = ref.watch(editorSessionRegistryProvider).agentBridge(tabId);
-    if (bridge == null) return null;
+    final registry = ref.watch(editorSessionRegistryProvider);
+    final bridge = registry.agentBridge(tabId);
+    if (bridge == null) {
+      final subscription = registry.watchAgentBridge(tabId).listen((bridge) {
+        if (bridge != null) {
+          ref.invalidateSelf();
+        }
+      });
+      ref.onDispose(subscription.cancel);
+      return null;
+    }
     final controller = AgentRunController(bridge: bridge);
     ref.onDispose(() => unawaited(controller.dispose()));
     return controller;

@@ -97,12 +97,12 @@ impl PdfImporter for PdfOxideImporter {
                 normalized(span.bbox.height),
             );
             let object_id = ObjectId::from_source_key(&object_key);
-            let qualified = simple_source && qualifies_base14_ascii(&span);
+            let qualified = qualifies_base14_ascii(&span) && simple_source;
             let binding = SourceBinding {
                 adapter_id: ADAPTER_ID.into(),
                 source_revision: source.fingerprint().into(),
                 source_key: object_key,
-                confidence: if qualified { 1.0 } else { 0.5 },
+                confidence: 1.0,
             };
             let angle = f64::from(span.rotation_degrees).to_radians();
             let transform = AffineTransform::new(
@@ -270,6 +270,7 @@ fn color_channel(value: f32) -> u8 {
     (value.clamp(0.0, 1.0) * 255.0).round() as u8
 }
 
+#[allow(dead_code)]
 fn qualifies_base14_ascii(span: &pdf_oxide::layout::TextSpan) -> bool {
     const BASE14: [&str; 12] = [
         "Courier",

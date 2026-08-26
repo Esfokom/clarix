@@ -2,6 +2,7 @@ import 'dart:async';
 
 import '../../../core/agent/agent_bridge.dart';
 import '../../../core/agent/agent_bridge_types.dart';
+import '../../../core/clarix_logger.dart';
 
 class AgentRunControllerState {
   const AgentRunControllerState({
@@ -53,6 +54,7 @@ class AgentRunController {
     _subscription = bridge.events.listen(
       _onEvent,
       onError: (Object error) {
+        clarixLog.w('AI agent event stream failed.', error: error);
         _emit(_state.copyWith(error: error));
       },
     );
@@ -82,6 +84,7 @@ class AgentRunController {
       throw StateError('one agent run is already active for this tab');
     }
     final run = await _bridge.start(request);
+    clarixLog.i('AI agent run ${run.runId} started with ${run.status.name}.');
     _emit(AgentRunControllerState(activeRunId: run.runId, status: run.status));
     return run;
   }
@@ -116,6 +119,7 @@ class AgentRunController {
   }
 
   void _onEvent(AgentRunEvent event) {
+    clarixLog.t('AI agent event ${event.kind} #${event.sequence}.');
     if (event.runId != _state.activeRunId) {
       _emit(_state.copyWith(error: StateError('cross-run event')));
       return;

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/widgets.dart';
+import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
@@ -40,6 +41,7 @@ class PageEditScene extends StatelessWidget {
     required this.displaySize,
     this.cleanPatches = const <String, CleanPatchAsset>{},
     this.session,
+    this.editingEnabled = false,
     this.composition,
     this.observer,
     this.selectionActionsBuilder,
@@ -52,6 +54,11 @@ class PageEditScene extends StatelessWidget {
   final Size displaySize;
   final Map<String, CleanPatchAsset> cleanPatches;
   final EditorSessionController? session;
+
+  /// The native session may have already inspected the PDF.  It must not
+  /// capture the page or expose editable controls until the user enters text
+  /// editing mode.
+  final bool editingEnabled;
   final EditorCompositionRange? composition;
   final EditorLayerObserver? observer;
   final PageSelectionActionsBuilder? selectionActionsBuilder;
@@ -59,10 +66,10 @@ class PageEditScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final activeSession = editingEnabled ? session : null;
     final pageSize = Size(scene.width, scene.height);
     final interactive = scene.objects
         .where((object) => object.capability == 'editable')
-        .where((object) => cleanPatches.containsKey(object.objectId))
         .toList(growable: false);
     final hitTestIndex = EditorHitTestIndex(
       pageSize: pageSize,
@@ -70,14 +77,13 @@ class PageEditScene extends StatelessWidget {
       objects: interactive.map(EditorObjectHitGeometry.fromObject),
     );
     final selection = document.selection;
-    final activeObject = session == null || selection == null
+    final activeObject = activeSession == null || selection == null
         ? null
         : interactive
               .where((object) => object.objectId == selection.objectId)
               .firstOrNull;
     final edited = scene.objects
         .where((object) => _isEdited(object.objectId))
-        .where((object) => cleanPatches.containsKey(object.objectId))
         .toList(growable: false);
     final overlayObjects = <EditorSceneObject>[
       ...edited,
@@ -87,7 +93,7 @@ class PageEditScene extends StatelessWidget {
     ];
     final fallbackProposal = document.fontFallbackProposal;
     final showFallbackProposal =
-        session != null &&
+        activeSession != null &&
         fallbackProposal != null &&
         scene.objects.any(
           (object) => object.objectId == fallbackProposal.objectId,
@@ -115,12 +121,23 @@ class PageEditScene extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             for (final object in overlayObjects)
-              CleanPatchLayer(
-                asset: cleanPatches[object.objectId]!,
-                pageSize: pageSize,
-                displaySize: displaySize,
-                observer: observer,
-              ),
+              if (cleanPatches.containsKey(object.objectId))
+                CleanPatchLayer(
+                  asset: cleanPatches[object.objectId]!,
+                  pageSize: pageSize,
+                  displaySize: displaySize,
+                  observer: observer,
+                )
+              else
+                Positioned.fromRect(
+                  rect: EditorPageGeometry.rectForBox(
+                    object.bounds,
+                    pageSize: pageSize,
+                    displaySize: displaySize,
+                    bleedPoints: 1.0,
+                  ),
+                  child: const ColoredBox(color: Color(0xFFFFFFFF)),
+                ),
             for (final object in overlayObjects)
               if (object.objectId != activeObject?.objectId)
                 EditorTextObjectLayer(
@@ -133,7 +150,7 @@ class PageEditScene extends StatelessWidget {
                   displaySize: displaySize,
                   observer: observer,
                 ),
-            if (session != null)
+            if (activeSession != null)
               for (final object in interactive)
                 if (object.objectId != activeObject?.objectId)
                   Positioned.fromRect(
@@ -142,9 +159,29 @@ class PageEditScene extends StatelessWidget {
                       pageSize: pageSize,
                       displaySize: displaySize,
                     ),
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTapDown: (details) {
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: const Color(0x332F80ED),
+                            width: 1,
+                          ),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                  ),
+            if (activeSession != null)
+              for (final object in interactive)
+                if (object.objectId != activeObject?.objectId)
+                  Positioned.fromRect(
+                    rect: EditorPageGeometry.rectForBox(
+                      object.bounds,
+                      pageSize: pageSize,
+                      displaySize: displaySize,
+                    ),
+                    child: PdfOverlayInteractionRegion(
+                      onTap: (details) {
                         final objectRect = EditorPageGeometry.rectForBox(
                           object.bounds,
                           pageSize: pageSize,
@@ -153,8 +190,8 @@ class PageEditScene extends StatelessWidget {
                         final hit = hitTestIndex.hitTest(
                           details.localPosition + objectRect.topLeft,
                         );
-                        if (hit == null) return;
-                        session!.updateSelection(
+                        if (hit == null) return false;
+                        activeSession.updateSelection(
                           EditorSelection(
                             objectId: hit.objectId,
                             range: EditorTextRange(
@@ -164,10 +201,14 @@ class PageEditScene extends StatelessWidget {
                             affinity: hit.affinity,
                           ),
                         );
+                        return true;
                       },
+                      child: const SizedBox.expand(),
                     ),
                   ),
-            if (activeObject != null && selection != null && session != null)
+            if (activeObject != null &&
+                selection != null &&
+                activeSession != null)
               Positioned.fromRect(
                 rect: EditorPageGeometry.rectForBox(
                   activeObject.bounds,
@@ -175,7 +216,7 @@ class PageEditScene extends StatelessWidget {
                   displaySize: displaySize,
                 ),
                 child: NativeTextEditor(
-                  session: session!,
+                  session: activeSession,
                   object: activeObject,
                   text:
                       document.visibleText(activeObject.objectId) ??
@@ -183,24 +224,24 @@ class PageEditScene extends StatelessWidget {
                       '',
                   selection: selection,
                   scale: displaySize.width / pageSize.width,
-                  onUndo: session!.canUndo
-                      ? () => unawaited(session!.undo())
+                  onUndo: activeSession.canUndo
+                      ? () => unawaited(activeSession.undo())
                       : null,
-                  onRedo: session!.canRedo
-                      ? () => unawaited(session!.redo())
+                  onRedo: activeSession.canRedo
+                      ? () => unawaited(activeSession.redo())
                       : null,
                 ),
               ),
-            if (activeObject != null && session != null)
+            if (activeObject != null && activeSession != null)
               ObjectTransformHandles(
-                session: session!,
+                session: activeSession,
                 object: activeObject,
                 pageSize: pageSize,
                 displaySize: displaySize,
               ),
             if (selectionActions != null)
               Align(alignment: Alignment.topCenter, child: selectionActions),
-            if (session == null)
+            if (activeSession == null)
               if (document.selection case final EditorSelection selection)
                 if (edited.any(
                   (object) => object.objectId == selection.objectId,
@@ -221,7 +262,7 @@ class PageEditScene extends StatelessWidget {
                       ),
                     ),
                   ),
-            if (session != null &&
+            if (activeSession != null &&
                 document.errorCode == 'text_overflow' &&
                 activeObject != null)
               Positioned(
@@ -234,7 +275,7 @@ class PageEditScene extends StatelessWidget {
                     message:
                         'Text does not fit this object. Shorten it or cancel the edit.',
                     canIncreaseBounds: false,
-                    onCancel: session!.clearError,
+                    onCancel: activeSession.clearError,
                   ),
                 ),
               ),
@@ -243,8 +284,8 @@ class PageEditScene extends StatelessWidget {
                 child: FontFallbackDialog(
                   proposal: fallbackProposal,
                   onApprove: (token) =>
-                      unawaited(session!.approveFontFallback(token)),
-                  onReject: session!.rejectFontFallback,
+                      unawaited(activeSession.approveFontFallback(token)),
+                  onReject: activeSession.rejectFontFallback,
                 ),
               ),
             if (pageOverlay != null)

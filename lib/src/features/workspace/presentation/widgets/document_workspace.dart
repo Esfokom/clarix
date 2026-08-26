@@ -132,15 +132,6 @@ class _TabStrip extends ConsumerStatefulWidget {
 class _TabStripState extends ConsumerState<_TabStrip> {
   @override
   Widget build(BuildContext context) {
-    final DocumentMetadata? metadata =
-        widget.state.documentMetadata[widget.activeTab.documentId];
-    final bool bookmarked =
-        metadata?.bookmarks.any(
-          (DocumentBookmark item) =>
-              item.pageNumber == widget.activeTab.currentPage,
-        ) ??
-        false;
-
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool compact = constraints.maxWidth < 760;
@@ -286,47 +277,6 @@ class _TabStripState extends ConsumerState<_TabStrip> {
     }
     if (choice == 'save' || choice == 'discard') {
       await notifier.closeTab(tab.id);
-    }
-  }
-
-  Future<void> _showNoteDialog() async {
-    final TextEditingController controller = TextEditingController();
-    final String? note = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        backgroundColor: WorkspaceColors.panel,
-        title: Text(
-          'Note on page ${widget.activeTab.currentPage}',
-          style: const TextStyle(color: WorkspaceColors.textStrong),
-        ),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 4,
-          style: const TextStyle(color: WorkspaceColors.textStrong),
-          decoration: const InputDecoration(hintText: 'Write a local note'),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(controller.text),
-            child: const Text('Save note'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (note != null) {
-      await ref
-          .read(workspaceNotifierProvider.notifier)
-          .addNote(
-            tabId: widget.activeTab.id,
-            pageNumber: widget.activeTab.currentPage,
-            note: note,
-          );
     }
   }
 }

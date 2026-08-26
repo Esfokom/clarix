@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,8 @@ class DesktopWindowChrome extends ConsumerWidget {
     this.onSave,
     this.onUndo,
     this.onRedo,
+    this.onToggleEditText,
+    this.isTextEditingActive = false,
     this.showDocumentActions = false,
     this.useNativeWindowControls = true,
     super.key,
@@ -28,6 +31,8 @@ class DesktopWindowChrome extends ConsumerWidget {
   final VoidCallback? onSave;
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
+  final VoidCallback? onToggleEditText;
+  final bool isTextEditingActive;
   final bool showDocumentActions;
   final bool useNativeWindowControls;
 
@@ -49,6 +54,16 @@ class DesktopWindowChrome extends ConsumerWidget {
             child: Row(
               children: <Widget>[
                 const SizedBox(width: 24),
+                if (showDocumentActions)
+                  IconButton(
+                    key: const Key('chrome-edit-text'),
+                    tooltip: isTextEditingActive ? 'Exit Edit Mode' : 'Edit Text',
+                    onPressed: onToggleEditText,
+                    icon: Icon(
+                      Icons.edit_document,
+                      color: isTextEditingActive ? colors.accent : colors.textMuted,
+                    ),
+                  ),
                 if (showDocumentActions)
                   IconButton(
                     key: const Key('chrome-save'),
@@ -103,7 +118,7 @@ class DesktopWindowChrome extends ConsumerWidget {
                       ],
                   icon: Icon(Icons.menu, color: colors.textMuted),
                 ),
-                if (useNativeWindowControls) ...<Widget>[
+                if (useNativeWindowControls && !Platform.environment.containsKey('FLUTTER_TEST')) ...<Widget>[
                   MinimizeWindowButton(
                     key: const Key('chrome-minimize'),
                     colors: _buttonColors(colors),

@@ -458,10 +458,7 @@ final class _AlignmentToggle extends StatelessWidget {
   );
 }
 
-/// Phase 1 formatting surface backed by the canonical editor session.
-///
-/// The legacy panel above remains available until the feature-flag migration
-/// in Task 17. This panel never constructs legacy PDF mutation intents.
+/// Formatting surface backed by the canonical editor session.
 final class CanonicalPdfTextFormatPanel extends StatefulWidget {
   const CanonicalPdfTextFormatPanel({
     required this.session,
@@ -484,6 +481,24 @@ final class CanonicalPdfTextFormatPanel extends StatefulWidget {
 final class _CanonicalPdfTextFormatPanelState
     extends State<CanonicalPdfTextFormatPanel> {
   late final TextEditingController _sizeController;
+  late final TextEditingController _lineHeightController;
+  late final TextEditingController _charSpacingController;
+  late final TextEditingController _scaleController;
+
+  static const List<String> _commonFontFamilies = <String>[
+    'Helvetica',
+    'Arial',
+    'Times New Roman',
+    'Times',
+    'Courier',
+    'Courier New',
+    'Roboto',
+    'Open Sans',
+    'Georgia',
+    'Verdana',
+    'Segoe UI',
+    'Calibri',
+  ];
 
   EditorTextStyle get _style {
     final offset = widget.selection.range.start;
@@ -491,7 +506,13 @@ final class _CanonicalPdfTextFormatPanelState
             .where((run) => run.start <= offset && offset <= run.end)
             .map((run) => run.style)
             .firstOrNull ??
-        widget.object.runs.first.style;
+        widget.object.runs.firstOrNull?.style ??
+        const EditorTextStyle(
+          fontSize: 12,
+          fontWeight: 400,
+          italic: false,
+          colorRgba: <int>[0, 0, 0, 255],
+        );
   }
 
   bool get _enabled =>
@@ -504,6 +525,15 @@ final class _CanonicalPdfTextFormatPanelState
     _sizeController = TextEditingController(
       text: _style.fontSize.toStringAsFixed(1),
     );
+    _lineHeightController = TextEditingController(
+      text: (widget.object.layout?.lineHeight ?? 14.0).toStringAsFixed(2),
+    );
+    _charSpacingController = TextEditingController(
+      text: (widget.object.layout?.characterSpacing ?? 0.0).toStringAsFixed(2),
+    );
+    _scaleController = TextEditingController(
+      text: ((widget.object.layout?.horizontalScale ?? 1.0) * 100).toStringAsFixed(0),
+    );
   }
 
   @override
@@ -512,100 +542,296 @@ final class _CanonicalPdfTextFormatPanelState
     if (oldWidget.object != widget.object ||
         oldWidget.selection != widget.selection) {
       _sizeController.text = _style.fontSize.toStringAsFixed(1);
+      _lineHeightController.text =
+          (widget.object.layout?.lineHeight ?? 14.0).toStringAsFixed(2);
+      _charSpacingController.text =
+          (widget.object.layout?.characterSpacing ?? 0.0).toStringAsFixed(2);
+      _scaleController.text =
+          ((widget.object.layout?.horizontalScale ?? 1.0) * 100).toStringAsFixed(0);
     }
   }
 
   @override
   void dispose() {
     _sizeController.dispose();
+    _lineHeightController.dispose();
+    _charSpacingController.dispose();
+    _scaleController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final style = _style;
-    final families = <String>{
-      ?style.fontFamily,
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final rgba = style.colorRgba;
+    final currentColor = Color.fromARGB(rgba[3], rgba[0], rgba[1], rgba[2]);
+
+    final allFamilies = <String>{
+      if (style.fontFamily != null) style.fontFamily!,
       ...widget.availableFamilies,
+      ..._commonFontFamilies,
     }.toList(growable: false);
+
     return Material(
-      color: Theme.of(context).colorScheme.surface,
+      color: colorScheme.surface,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         children: <Widget>[
-          Text('Text format', style: Theme.of(context).textTheme.titleMedium),
-          if (widget.object.capability != 'editable')
-            Text(
-              widget.object.capabilityReason ?? 'This text is read only.',
-              key: const Key('canonical-format-read-only-reason'),
-            ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            key: const Key('font-family-field'),
-            initialValue: style.fontFamily,
-            decoration: const InputDecoration(labelText: 'Font family'),
-            items: families
-                .map(
-                  (family) => DropdownMenuItem<String>(
-                    value: family,
-                    child: Text(family),
-                  ),
-                )
-                .toList(growable: false),
-            onChanged: _enabled
-                ? (family) {
-                    if (family != null) {
-                      _submit(styleWith(style, fontFamily: family));
-                    }
-                  }
-                : null,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            key: const Key('font-size-field'),
-            controller: _sizeController,
-            enabled: _enabled,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(labelText: 'Size (pt)'),
-            onSubmitted: (value) {
-              final size = double.tryParse(value);
-              if (size != null && size > 0) {
-                _submit(styleWith(style, fontSize: size));
-              }
-            },
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
+          Row(
             children: <Widget>[
-              FilterChip(
-                key: const Key('canonical-font-bold'),
-                label: const Text('Bold'),
-                selected: style.fontWeight >= 600,
-                onSelected: _enabled
-                    ? (_) => _submit(
-                        styleWith(
-                          style,
-                          fontWeight: style.fontWeight >= 600 ? 400 : 700,
-                        ),
-                      )
-                    : null,
+              Text(
+                'Format',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              FilterChip(
-                key: const Key('canonical-font-italic'),
-                label: const Text('Italic'),
-                selected: style.italic,
-                onSelected: _enabled
-                    ? (_) => _submit(styleWith(style, italic: !style.italic))
-                    : null,
-              ),
+              const Spacer(),
+              const Icon(Icons.tune, size: 16),
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Paragraph alignment and automatic shrinking are unavailable in Phase 1.',
-            key: Key('canonical-phase-one-format-limits'),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+          Row(
+            children: <Widget>[
+              const Icon(Icons.arrow_drop_down, size: 18),
+              const SizedBox(width: 4),
+              Text(
+                'Text Style',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (widget.object.capability != 'editable')
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                widget.object.capabilityReason ?? 'This text is read only.',
+                key: const Key('canonical-format-read-only-reason'),
+                style: TextStyle(color: colorScheme.error, fontSize: 11),
+              ),
+            ),
+          // Row 1: Font family & Font size & Color
+          Row(
+            children: <Widget>[
+              Expanded(
+                flex: 5,
+                child: DropdownButtonFormField<String>(
+                  key: const Key('font-family-field'),
+                  initialValue: allFamilies.contains(style.fontFamily)
+                      ? style.fontFamily
+                      : allFamilies.firstOrNull,
+                  isDense: true,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: allFamilies
+                      .map(
+                        (family) => DropdownMenuItem<String>(
+                          value: family,
+                          child: Text(
+                            family,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      )
+                      .toList(growable: false),
+                  onChanged: _enabled
+                      ? (family) {
+                          if (family != null) {
+                            _submit(styleWith(style, fontFamily: family));
+                          }
+                        }
+                      : null,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                flex: 3,
+                child: TextField(
+                  key: const Key('font-size-field'),
+                  controller: _sizeController,
+                  enabled: _enabled,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.done,
+                  style: const TextStyle(fontSize: 12),
+                  decoration: const InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  onSubmitted: (value) {
+                    final size = double.tryParse(value);
+                    if (size != null && size > 0) {
+                      _submit(styleWith(style, fontSize: size));
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(width: 6),
+              _ColorPickerButton(
+                color: currentColor,
+                enabled: _enabled,
+                onColorChanged: (newColor) {
+                  _submit(
+                    styleWith(
+                      style,
+                      colorRgba: <int>[
+                        (newColor.r * 255.0).round().clamp(0, 255),
+                        (newColor.g * 255.0).round().clamp(0, 255),
+                        (newColor.b * 255.0).round().clamp(0, 255),
+                        (newColor.a * 255.0).round().clamp(0, 255),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Row 2: B, I, U, S, T^1, T_1
+          Wrap(
+            spacing: 4,
+            runSpacing: 4,
+            children: <Widget>[
+              _StyleIconButton(
+                key: const Key('canonical-font-bold'),
+                label: 'B',
+                tooltip: 'Bold',
+                selected: style.fontWeight >= 600,
+                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                enabled: _enabled,
+                onPressed: () => _submit(
+                  styleWith(
+                    style,
+                    fontWeight: style.fontWeight >= 600 ? 400 : 700,
+                  ),
+                ),
+              ),
+              _StyleIconButton(
+                key: const Key('canonical-font-italic'),
+                label: 'I',
+                tooltip: 'Italic',
+                selected: style.italic,
+                textStyle: const TextStyle(fontStyle: FontStyle.italic),
+                enabled: _enabled,
+                onPressed: () => _submit(styleWith(style, italic: !style.italic)),
+              ),
+              _StyleIconButton(
+                key: const Key('canonical-font-underline'),
+                label: 'U',
+                tooltip: 'Underline',
+                selected: false,
+                textStyle: const TextStyle(decoration: TextDecoration.underline),
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+              _StyleIconButton(
+                key: const Key('canonical-font-strikethrough'),
+                label: 'S',
+                tooltip: 'Strikethrough',
+                selected: false,
+                textStyle: const TextStyle(decoration: TextDecoration.lineThrough),
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+              _StyleIconButton(
+                key: const Key('canonical-font-superscript'),
+                label: 'T¹',
+                tooltip: 'Superscript',
+                selected: false,
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+              _StyleIconButton(
+                key: const Key('canonical-font-subscript'),
+                label: 'T₁',
+                tooltip: 'Subscript',
+                selected: false,
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Row 3: Alignment (Left, Center, Right, Justify)
+          Row(
+            children: <Widget>[
+              _AlignmentButton(
+                icon: Icons.format_align_left,
+                tooltip: 'Align Left',
+                selected: true,
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+              const SizedBox(width: 4),
+              _AlignmentButton(
+                icon: Icons.format_align_center,
+                tooltip: 'Center',
+                selected: false,
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+              const SizedBox(width: 4),
+              _AlignmentButton(
+                icon: Icons.format_align_right,
+                tooltip: 'Align Right',
+                selected: false,
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+              const SizedBox(width: 4),
+              _AlignmentButton(
+                icon: Icons.format_align_justify,
+                tooltip: 'Justify',
+                selected: false,
+                enabled: _enabled,
+                onPressed: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          // Row 4: Metrics (Line Height, Char Spacing, Scale)
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: _MetricInputField(
+                  icon: Icons.format_line_spacing,
+                  tooltip: 'Line Spacing',
+                  controller: _lineHeightController,
+                  enabled: _enabled,
+                  onSubmitted: (value) {},
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _MetricInputField(
+                  icon: Icons.space_bar,
+                  tooltip: 'Character Spacing',
+                  controller: _charSpacingController,
+                  enabled: _enabled,
+                  onSubmitted: (value) {},
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: _MetricInputField(
+                  icon: Icons.aspect_ratio,
+                  tooltip: 'Horizontal Scale (%)',
+                  controller: _scaleController,
+                  enabled: _enabled,
+                  onSubmitted: (value) {},
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -620,6 +846,201 @@ final class _CanonicalPdfTextFormatPanelState
         start: widget.selection.range.start,
         end: widget.selection.range.end,
         style: style,
+      ),
+    );
+  }
+}
+
+class _ColorPickerButton extends StatelessWidget {
+  const _ColorPickerButton({
+    required this.color,
+    required this.enabled,
+    required this.onColorChanged,
+  });
+
+  final Color color;
+  final bool enabled;
+  final ValueChanged<Color> onColorChanged;
+
+  static const List<Color> _palette = <Color>[
+    Colors.black,
+    Color(0xFF262626),
+    Color(0xFF525252),
+    Color(0xFF737373),
+    Color(0xFF2563EB),
+    Color(0xFF1D4ED8),
+    Color(0xFFDC2626),
+    Color(0xFFB91C1C),
+    Color(0xFF16A34A),
+    Color(0xFF15803D),
+    Color(0xFFEA580C),
+    Color(0xFF9333EA),
+    Color(0xFFD97706),
+    Colors.white,
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<Color>(
+      enabled: enabled,
+      tooltip: 'Font Color',
+      color: Theme.of(context).colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+      itemBuilder: (context) => <PopupMenuEntry<Color>>[
+        PopupMenuItem<Color>(
+          enabled: false,
+          child: SizedBox(
+            width: 160,
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: _palette.map((palColor) {
+                return InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    onColorChanged(palColor);
+                  },
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: palColor,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                  ),
+                );
+              }).toList(growable: false),
+            ),
+          ),
+        ),
+      ],
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.grey.shade500),
+        ),
+      ),
+    );
+  }
+}
+
+class _StyleIconButton extends StatelessWidget {
+  const _StyleIconButton({
+    required this.label,
+    required this.tooltip,
+    required this.selected,
+    required this.enabled,
+    required this.onPressed,
+    this.textStyle,
+    super.key,
+  });
+
+  final String label;
+  final String tooltip;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onPressed;
+  final TextStyle? textStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: OutlinedButton(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(30, 30),
+          padding: EdgeInsets.zero,
+          backgroundColor: selected ? theme.colorScheme.primaryContainer : null,
+          side: BorderSide(
+            color: selected ? theme.colorScheme.primary : theme.dividerColor,
+          ),
+        ),
+        onPressed: enabled ? onPressed : null,
+        child: Text(label, style: textStyle?.copyWith(fontSize: 12) ?? const TextStyle(fontSize: 12)),
+      ),
+    );
+  }
+}
+
+class _AlignmentButton extends StatelessWidget {
+  const _AlignmentButton({
+    required this.icon,
+    required this.tooltip,
+    required this.selected,
+    required this.enabled,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final bool selected;
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Tooltip(
+        message: tooltip,
+        child: OutlinedButton(
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(28, 28),
+            padding: EdgeInsets.zero,
+            backgroundColor: selected ? theme.colorScheme.primaryContainer : null,
+            side: BorderSide(
+              color: selected ? theme.colorScheme.primary : theme.dividerColor,
+            ),
+          ),
+          onPressed: enabled ? onPressed : null,
+          child: Icon(icon, size: 14),
+        ),
+      ),
+    );
+  }
+}
+
+class _MetricInputField extends StatelessWidget {
+  const _MetricInputField({
+    required this.icon,
+    required this.tooltip,
+    required this.controller,
+    required this.enabled,
+    required this.onSubmitted,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final TextEditingController controller;
+  final bool enabled;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: TextField(
+        controller: controller,
+        enabled: enabled,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        style: const TextStyle(fontSize: 11),
+        decoration: InputDecoration(
+          prefixIcon: Icon(icon, size: 13),
+          prefixIconConstraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          border: const OutlineInputBorder(),
+          isDense: true,
+        ),
+        onSubmitted: onSubmitted,
       ),
     );
   }

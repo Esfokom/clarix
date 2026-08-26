@@ -67,6 +67,7 @@ class _ObjectTransformHandlesState extends State<ObjectTransformHandles> {
         focusNode: _focusNode,
         child: Stack(
           children: <Widget>[
+            // Selection border
             Positioned.fromRect(
               rect: previewRect,
               child: Transform.rotate(
@@ -75,42 +76,41 @@ class _ObjectTransformHandlesState extends State<ObjectTransformHandles> {
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: Theme.of(context).colorScheme.primary,
+                        color: const Color(0xFF2F80ED),
+                        width: 1.2,
                       ),
                     ),
                   ),
                 ),
               ),
             ),
+            // Move bar along top
             Positioned(
               left: previewRect.left + 20,
               top: math.max(0, previewRect.top - 6),
               width: math.max(20, previewRect.width - 40),
               height: 12,
-              child: GestureDetector(
-                key: const Key('move-object-handle'),
-                behavior: HitTestBehavior.opaque,
-                onPanStart: (_) => _beginGesture(),
-                onPanUpdate: (details) =>
-                    setState(() => _movePreview += details.delta),
-                onPanEnd: (_) => _commitMove(),
-                onPanCancel: () => _resetPreview(cancelGesture: true),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.move,
+                child: GestureDetector(
+                  key: const Key('move-object-handle'),
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: (_) => _beginGesture(),
+                  onPanUpdate: (details) =>
+                      setState(() => _movePreview += details.delta),
+                  onPanEnd: (_) => _commitMove(),
+                  onPanCancel: () => _resetPreview(cancelGesture: true),
+                ),
               ),
             ),
+            // Top Center Rotation Stem (vertical line + circular handle)
             Positioned(
-              left: previewRect.right - 10,
-              top: previewRect.bottom - 10,
-              width: 20,
+              left: previewRect.center.dx - 0.75,
+              top: math.max(0, previewRect.top - 20),
+              width: 1.5,
               height: 20,
-              child: GestureDetector(
-                key: const Key('resize-object-handle'),
-                behavior: HitTestBehavior.opaque,
-                onPanStart: (_) => _beginGesture(),
-                onPanUpdate: (details) =>
-                    setState(() => _resizePreview += details.delta),
-                onPanEnd: (_) => _commitResize(),
-                onPanCancel: () => _resetPreview(cancelGesture: true),
-                child: const _HandleDot(),
+              child: const IgnorePointer(
+                child: ColoredBox(color: Color(0xFF2F80ED)),
               ),
             ),
             Positioned(
@@ -118,29 +118,120 @@ class _ObjectTransformHandlesState extends State<ObjectTransformHandles> {
               top: math.max(0, previewRect.top - 30),
               width: 20,
               height: 20,
-              child: GestureDetector(
-                key: const Key('rotate-object-handle'),
-                behavior: HitTestBehavior.opaque,
-                onPanStart: (details) {
-                  _beginGesture();
-                  _rotationStart = _angle(
-                    _local(details.globalPosition),
-                    previewRect,
-                  );
-                },
-                onPanUpdate: (details) {
-                  final start = _rotationStart;
-                  if (start == null) return;
-                  setState(() {
-                    _rotationPreview =
-                        _angle(_local(details.globalPosition), previewRect) -
-                        start;
-                  });
-                },
-                onPanEnd: (_) => _commitRotation(rect),
-                onPanCancel: () => _resetPreview(cancelGesture: true),
-                child: const Icon(Icons.rotate_right, size: 18),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  key: const Key('rotate-object-handle'),
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: (details) {
+                    _beginGesture();
+                    _rotationStart = _angle(
+                      _local(details.globalPosition),
+                      previewRect,
+                    );
+                  },
+                  onPanUpdate: (details) {
+                    final start = _rotationStart;
+                    if (start == null) return;
+                    setState(() {
+                      _rotationPreview =
+                          _angle(_local(details.globalPosition), previewRect) -
+                          start;
+                    });
+                  },
+                  onPanEnd: (_) => _commitRotation(rect),
+                  onPanCancel: () => _resetPreview(cancelGesture: true),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF2F80ED), width: 1.5),
+                    ),
+                    child: const Icon(
+                      Icons.refresh,
+                      size: 11,
+                      color: Color(0xFF2F80ED),
+                    ),
+                  ),
+                ),
               ),
+            ),
+            // Corner & Edge Resize Handles
+            // Top-Left
+            Positioned(
+              left: previewRect.left - 4,
+              top: previewRect.top - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
+            ),
+            // Top-Right
+            Positioned(
+              left: previewRect.right - 4,
+              top: previewRect.top - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
+            ),
+            // Bottom-Left
+            Positioned(
+              left: previewRect.left - 4,
+              top: previewRect.bottom - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
+            ),
+            // Bottom-Right (Interactive Resize Handle)
+            Positioned(
+              left: previewRect.right - 8,
+              top: previewRect.bottom - 8,
+              width: 16,
+              height: 16,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeDownRight,
+                child: GestureDetector(
+                  key: const Key('resize-object-handle'),
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: (_) => _beginGesture(),
+                  onPanUpdate: (details) =>
+                      setState(() => _resizePreview += details.delta),
+                  onPanEnd: (_) => _commitResize(),
+                  onPanCancel: () => _resetPreview(cancelGesture: true),
+                  child: const Center(child: _HandleDot()),
+                ),
+              ),
+            ),
+            // Top-Center
+            Positioned(
+              left: previewRect.center.dx - 4,
+              top: previewRect.top - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
+            ),
+            // Bottom-Center
+            Positioned(
+              left: previewRect.center.dx - 4,
+              top: previewRect.bottom - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
+            ),
+            // Left-Center
+            Positioned(
+              left: previewRect.left - 4,
+              top: previewRect.center.dy - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
+            ),
+            // Right-Center
+            Positioned(
+              left: previewRect.right - 4,
+              top: previewRect.center.dy - 4,
+              width: 8,
+              height: 8,
+              child: const _HandleDot(),
             ),
           ],
         ),
@@ -248,9 +339,9 @@ class _HandleDot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
-      color: Theme.of(context).colorScheme.primary,
-      shape: BoxShape.circle,
-      border: Border.all(color: Theme.of(context).colorScheme.surface),
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(1.5),
+      border: Border.all(color: const Color(0xFF2F80ED), width: 1.2),
     ),
   );
 }

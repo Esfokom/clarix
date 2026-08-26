@@ -1,4 +1,5 @@
 part of 'pdfium_text_engine_native.dart';
+
 mixin _PdfiumTextInspection {
   PdfTextObjectSnapshot? _readTextObject(
     FPDF_PAGEOBJECT object,
@@ -175,4 +176,5 @@ mixin _PdfiumTextInspection {
       readOnlyReason: readOnlyReason,
       objectPaths: group.objectPaths,
     );
+  }
 }

@@ -254,12 +254,25 @@ class _TextFormatPane extends ConsumerWidget {
             }
           }
           if (selection == null || object == null) {
+            for (final scene in document.scenes.values) {
+              object = scene.objects
+                  .where((candidate) => candidate.capability == 'editable')
+                  .firstOrNull;
+              if (object != null) break;
+            }
+          }
+          if (object == null) {
             return const _NoEditableTextSelection();
           }
+          final effectiveSelection = selection ??
+              EditorSelection(
+                objectId: object.objectId,
+                range: const EditorTextRange(start: 0, end: 0),
+              );
           return CanonicalPdfTextFormatPanel(
             session: native,
             object: object,
-            selection: selection,
+            selection: effectiveSelection,
             availableFamilies:
                 catalog.value?.families ??
                 <String>[?object.runs.firstOrNull?.style.fontFamily],

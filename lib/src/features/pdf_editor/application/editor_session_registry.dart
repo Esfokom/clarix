@@ -32,6 +32,15 @@ class EditorSessionRegistry {
   EditorSessionController? operator [](String tabId) => _sessions[tabId];
   AgentBridgeSession? agentBridge(String tabId) => _agentBridges[tabId];
 
+  Stream<AgentBridgeSession?> watchAgentBridge(String tabId) =>
+      Stream<AgentBridgeSession?>.multi((controller) {
+        controller.add(_agentBridges[tabId]);
+        final subscription = _changes.stream
+            .where((changedTabId) => changedTabId == tabId)
+            .listen((_) => controller.add(_agentBridges[tabId]));
+        controller.onCancel = subscription.cancel;
+      }, isBroadcast: true);
+
   Stream<EditorDocumentState?> watch(String tabId) async* {
     yield _sessions[tabId]?.state;
     await for (final changedTabId in _changes.stream) {

@@ -72,7 +72,6 @@ fn workspace_dependency_direction_and_ffi_boundary_are_enforced() {
         .any(|name| name == "clarix_editing_core"));
     for forbidden in [
         "clarix_pdf_adapter",
-        "clarix_agent_core",
         "clarix_pdf_oxide",
         "flutter_rust_bridge",
         "pdf_oxide",

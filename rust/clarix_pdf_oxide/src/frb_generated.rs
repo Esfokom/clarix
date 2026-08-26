@@ -1961,11 +1961,11 @@ fn wire__crate__api__local_rag_index_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_index(api__request))?;
+                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_index(api_request))?;
                     Ok(output_ok)
                 })())
             }
@@ -1994,11 +1994,11 @@ fn wire__crate__api__local_rag_query_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__request = <crate::api::NativeRagQueryRequest>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::NativeRagQueryRequest>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_query(api__request))?;
+                    let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_query(api_request))?;
                     Ok(output_ok)
                 })())
             }
@@ -2027,14 +2027,14 @@ fn wire__crate__api__local_rag_status_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__storage_directory = <String>::sse_decode(&mut deserializer);
-            let api__document_fingerprint = <String>::sse_decode(&mut deserializer);
+            let api_storage_directory = <String>::sse_decode(&mut deserializer);
+            let api_document_fingerprint = <String>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok = Result::<_, ()>::Ok(crate::api::local_rag_status(
-                        api__storage_directory,
-                        api__document_fingerprint,
+                        api_storage_directory,
+                        api_document_fingerprint,
                     ))?;
                     Ok(output_ok)
                 })())
@@ -2064,12 +2064,12 @@ fn wire__crate__api__local_rag_validate_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
+            let api_request = <crate::api::NativeRagIndexRequest>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
                     let output_ok =
-                        Result::<_, ()>::Ok(crate::api::local_rag_validate(api__request))?;
+                        Result::<_, ()>::Ok(crate::api::local_rag_validate(api_request))?;
                     Ok(output_ok)
                 })())
             }

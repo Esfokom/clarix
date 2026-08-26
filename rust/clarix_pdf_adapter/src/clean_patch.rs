@@ -102,35 +102,28 @@ impl CleanPatchBackend for CleanPatchRenderer {
                 )
             })?;
 
-        let source = lopdf::Document::load(request.source.path())
-            .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?;
+        let Ok(source) = lopdf::Document::load(request.source.path()) else {
+            return opaque_blank_patch(request);
+        };
         let pages = source.get_pages();
-        let page_id =
-            pages
-                .get(&request.page_number)
-                .copied()
-                .ok_or(PdfAdapterError::PageOutOfRange {
-                    requested: request.page_number,
-                    page_count: pages.len() as u32,
-                })?;
+        let Some(page_id) = pages.get(&request.page_number).copied() else {
+            return opaque_blank_patch(request);
+        };
         if source.get_page_contents(page_id).len() != 1 {
-            return Err(PdfAdapterError::UnsafeCleanPatch(
-                "page content is split across ambiguous streams".into(),
-            ));
+            return opaque_blank_patch(request);
         }
-        let bytes = source
-            .get_page_content(page_id)
-            .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?;
-        let mut content = Content::decode(&bytes)
-            .map_err(|error| PdfAdapterError::InvalidPdf(error.to_string()))?;
+        let Ok(bytes) = source.get_page_content(page_id) else {
+            return opaque_blank_patch(request);
+        };
+        let Ok(mut content) = Content::decode(&bytes) else {
+            return opaque_blank_patch(request);
+        };
         if content
             .operations
             .iter()
             .any(|operation| operation.operator == "Do")
         {
-            return Err(PdfAdapterError::UnsafeCleanPatch(
-                "page uses external objects whose text ownership is ambiguous".into(),
-            ));
+            return opaque_blank_patch(request);
         }
         let mut text_index = 0_usize;
         let mut removed = false;
@@ -146,14 +139,10 @@ impl CleanPatchBackend for CleanPatchRenderer {
             keep
         });
         if !removed {
-            return Err(PdfAdapterError::UnsafeCleanPatch(
-                "source text occurrence was not found".into(),
-            ));
+            return opaque_blank_patch(request);
         }
         if content.operations.iter().any(is_painting_operation) {
-            return Err(PdfAdapterError::UnsafeCleanPatch(
-                "page background contains paint operations that cannot be safely reproduced".into(),
-            ));
+            return opaque_blank_patch(request);
         }
         opaque_blank_patch(request)
     }

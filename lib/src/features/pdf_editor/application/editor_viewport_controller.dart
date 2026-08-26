@@ -5,22 +5,18 @@ import '../infrastructure/editor_session_gateway.dart';
 /// Maintains resident page scenes independently from command submission.
 class EditorViewportController {
   EditorViewportController({
-    required EditorSessionGateway gateway,
-    required int maxResidentScenes,
-    required EditorDocumentState Function() state,
-    required void Function(EditorDocumentState) emit,
-    required bool Function() isDisposed,
-  }) : _gateway = gateway,
-       _maxResidentScenes = maxResidentScenes,
-       _state = state,
-       _emit = emit,
-       _isDisposed = isDisposed;
+    required this.gateway,
+    required this.maxResidentScenes,
+    required this.state,
+    required this.emit,
+    required this.isDisposed,
+  });
 
-  final EditorSessionGateway _gateway;
-  final int _maxResidentScenes;
-  final EditorDocumentState Function() _state;
-  final void Function(EditorDocumentState) _emit;
-  final bool Function() _isDisposed;
+  final EditorSessionGateway gateway;
+  final int maxResidentScenes;
+  final EditorDocumentState Function() state;
+  final void Function(EditorDocumentState) emit;
+  final bool Function() isDisposed;
   final Map<int, int> _requestGenerations = <int, int>{};
 
   Future<void> refreshPage(
@@ -28,20 +24,20 @@ class EditorViewportController {
     EditorViewportPriority priority = EditorViewportPriority.visible,
     bool force = false,
   }) async {
-    final current = _state();
+    final current = state();
     if (pageNumber < 1 || pageNumber > current.pageCount) return;
     if (!force && current.scenes[pageNumber]?.revision == current.revision) {
       return;
     }
     final generation = (_requestGenerations[pageNumber] ?? 0) + 1;
     _requestGenerations[pageNumber] = generation;
-    final scene = await _gateway.requestPage(
+    final scene = await gateway.requestPage(
       pageNumber,
       current.revision,
       priority: priority,
     );
-    final latest = _state();
-    if (_isDisposed() ||
+    final latest = state();
+    if (isDisposed() ||
         _requestGenerations[pageNumber] != generation ||
         scene.revision != latest.revision) {
       return;
@@ -55,7 +51,7 @@ class EditorViewportController {
       if (latest.optimisticEdit case final edit?) edit.objectId,
       if (latest.queuedEdit case final edit?) edit.objectId,
     };
-    while (scenes.length > _maxResidentScenes) {
+    while (scenes.length > maxResidentScenes) {
       final candidates = scenes.keys.where(
         (candidate) =>
             candidate != pageNumber &&
@@ -82,11 +78,11 @@ class EditorViewportController {
         modifiedRevision: object.modifiedRevision,
       );
     }
-    _emit(latest.copyWith(scenes: scenes, objects: objects));
+    emit(latest.copyWith(scenes: scenes, objects: objects));
   }
 
   void updateViewport(Set<int> visiblePages, {int preloadRadius = 2}) {
-    final current = _state();
+    final current = state();
     final visible = visiblePages
         .where((page) => page >= 1 && page <= current.pageCount)
         .toSet();
@@ -97,8 +93,9 @@ class EditorViewportController {
         candidate <= page + preloadRadius;
         candidate++
       ) {
-        if (candidate >= 1 && candidate <= current.pageCount)
+        if (candidate >= 1 && candidate <= current.pageCount) {
           warm.add(candidate);
+        }
       }
     }
     for (final page in _requestGenerations.keys.toList(growable: false)) {

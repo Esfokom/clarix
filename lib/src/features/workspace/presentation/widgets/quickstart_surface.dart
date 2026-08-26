@@ -71,7 +71,9 @@ class QuickstartSurface extends ConsumerWidget {
                     crossAxisCount: 4,
                     mainAxisSpacing: 14,
                     crossAxisSpacing: 14,
-                    childAspectRatio: 1,
+                    // At the narrow supported width, a square tile is slightly
+                    // taller than this fixed-height grid after its gutters.
+                    childAspectRatio: 1.02,
                     children: <Widget>[
                       _UtilityCard(
                         icon: LucideIcons.files,

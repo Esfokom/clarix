@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../../core/agent/agent_bridge_types.dart';
+import '../../../core/clarix_logger.dart';
 import '../../../core/ffi/agent_api.dart' as native_agent;
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
@@ -38,12 +39,20 @@ class AiRuntimeService {
     final profiles = await providerProfiles.readProfiles();
     final profile = profiles.where((item) => item.id == profileId).firstOrNull;
     if (profile == null) {
+      clarixLog.w('AI runtime rejected prompt: selected provider is missing.');
       throw StateError('Select a remote AI provider to chat.');
     }
     final key = await providerProfiles.readApiKey(profile.id);
     if (key == null || key.isEmpty) {
+      clarixLog.w(
+        'AI runtime rejected prompt: ${profile.label} has no API key.',
+      );
       throw StateError('Add an API key for ${profile.label}.');
     }
+    clarixLog.i(
+      'AI runtime prepared ${profile.label} streaming request '
+      '(model=${profile.modelId}, endpoint=${profile.baseUrl}).',
+    );
     _activeController = controller;
     var delivered = 0;
     final terminal = Completer<AgentRunControllerState>();
@@ -65,6 +74,7 @@ class AiRuntimeService {
     );
     try {
       onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
+      clarixLog.i('AI native agent run start requested.');
       await controller.start(
         AgentStartRequest(
           providerEndpoint: profile.baseUrl,
@@ -76,6 +86,9 @@ class AiRuntimeService {
         ),
       );
       final result = await terminal.future;
+      clarixLog.i(
+        'AI native agent run reached ${result.status?.name ?? 'unknown'} status.',
+      );
       if (result.error != null || result.status == AgentRunStatus.failed) {
         throw StateError(
           'Native agent run failed: ${result.error ?? 'provider error'}',

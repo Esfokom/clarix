@@ -127,7 +127,6 @@ WorkspaceFeatureState _workspaceState() => WorkspaceFeatureState(
     restorePreviousSession: false,
     recentFiles: const <String>['C:/documents/report.pdf'],
   ),
-  aiState: AiWorkspaceState.initial(),
   outlines: const <String, List<OutlineNodeState>>{},
   documentMetadata: const <String, DocumentMetadata>{},
   composerExpanded: false,

@@ -1,5 +1,4 @@
 import 'package:clarix/src/features/ai/ai.dart';
-import 'package:clarix/src/features/ai/presentation/ai_side_pane.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
@@ -33,6 +32,34 @@ void main() {
     );
     expect(input.minLines, 3);
     expect(input.maxLines, 6);
+  });
+
+  testWidgets('disables sending until native document context is ready', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: ShadApp(
+          home: Scaffold(
+            body: AiSidePane(
+              aiState: _state(const <ComposerMessage>[]),
+              documentContext: null,
+              onCollapse: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final TextField input = tester.widget<TextField>(
+      find.byKey(const Key('document-composer-input')),
+    );
+    final IconButton send = tester.widget<IconButton>(
+      find.byKey(const Key('document-composer-send')),
+    );
+
+    expect(input.enabled, isFalse);
+    expect(send.onPressed, isNull);
   });
 
   testWidgets('renders Markdown and math in both chat roles', (tester) async {

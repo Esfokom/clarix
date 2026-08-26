@@ -176,8 +176,18 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
         current.chat.chatBusy ||
         !current.chat.providerReady ||
         current.chat.selectedProviderId == null) {
+      clarixLog.w(
+        'AI prompt rejected: empty=${prompt.trim().isEmpty}, '
+        'busy=${current.chat.chatBusy}, '
+        'providerReady=${current.chat.providerReady}, '
+        'providerSelected=${current.chat.selectedProviderId != null}.',
+      );
       return;
     }
+    clarixLog.i(
+      'AI prompt accepted for document ${context.documentId} '
+      'using provider ${current.chat.selectedProviderId}.',
+    );
     final user = ComposerMessage(
       id: 'user_${DateTime.now().microsecondsSinceEpoch}',
       role: 'user',
@@ -206,6 +216,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     );
     final buffer = StringBuffer();
     try {
+      clarixLog.i('AI conversation migration started.');
       final store = await ref.read(conversationStoreProvider.future);
       await NativeConversationMigrator(
         legacy: store,
@@ -213,6 +224,9 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
         documentId: context.documentId,
       ).run();
       final threads = await store.listThreads(context.documentId);
+      clarixLog.i(
+        'AI provider run starting with ${threads.length} persisted thread(s).',
+      );
       final reply = await ref
           .read(aiRuntimeServiceProvider)
           .sendPrompt(
