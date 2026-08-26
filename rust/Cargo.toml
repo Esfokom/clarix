@@ -1,10 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-  "clarix_editing_core",
-  "clarix_editing_store",
-  "clarix_pdf_adapter",
-  "clarix_agent_core",
   "clarix_pdf_oxide",
 ]
 

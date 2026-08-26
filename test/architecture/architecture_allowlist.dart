@@ -1,5 +1,4 @@
 const Set<String> oversizedProductionDartAllowlist = <String>{
-  'lib/src/features/pdf_editor/presentation/pdf_text_format_panel.dart',
   'lib/src/features/workspace/application/workspace_notifier.dart',
 };
 

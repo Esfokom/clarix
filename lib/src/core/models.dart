@@ -6,7 +6,7 @@ import 'ocr_models.dart';
 
 enum SidebarPane { thumbnails, outline }
 
-enum RightToolWindow { none, document, textFormat, ai }
+enum RightToolWindow { none, document, ai }
 
 const double minWorkspacePaneWidth = 200;
 const double maxWorkspacePaneWidth = 480;

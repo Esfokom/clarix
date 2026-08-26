@@ -7,7 +7,6 @@ import '../../../../core/models.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
 
@@ -543,15 +542,8 @@ class _SidebarTabTile extends ConsumerWidget {
               height: 24,
               padding: EdgeInsets.zero,
               icon: const Icon(LucideIcons.x, size: 13),
-              onPressed: () async {
-                final notifier = ref.read(workspaceNotifierProvider.notifier);
-                if (await notifier.closeTab(tab.id)) return;
-                if (!context.mounted) return;
-                final choice = await showDirtyCloseDialog(context);
-                if (choice != null) {
-                  await notifier.closeTab(tab.id, nativeDirtyChoice: choice);
-                }
-              },
+              onPressed: () =>
+                  ref.read(workspaceNotifierProvider.notifier).closeTab(tab.id),
             ),
           ],
         ),

@@ -3,13 +3,11 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
-import 'agent_api.dart';
 import 'api.dart';
 import 'chat_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
-import 'editing_api.dart';
 import 'frb_generated.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
@@ -23,21 +21,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   });
 
   CrossPlatformFinalizerArg
-  get rust_arc_decrement_strong_count_NativeEditorSessionPtr => wire
-      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr;
-
-  CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_NativePdfSessionPtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSessionPtr;
 
   @protected
   AnyhowException dco_decode_AnyhowException(dynamic raw);
-
-  @protected
-  NativeEditorSession
-  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    dynamic raw,
-  );
 
   @protected
   NativePdfSession
@@ -52,12 +40,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeEditorSession
-  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    dynamic raw,
-  );
-
-  @protected
   NativePdfSession
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     dynamic raw,
@@ -65,12 +47,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
-
-  @protected
-  NativeEditorSession
-  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    dynamic raw,
-  );
 
   @protected
   NativePdfSession
@@ -82,18 +58,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
 
   @protected
-  RustStreamSink<NativeAgentEvent> dco_decode_StreamSink_native_agent_event_Sse(
-    dynamic raw,
-  );
-
-  @protected
   RustStreamSink<NativeChatEvent> dco_decode_StreamSink_native_chat_event_Sse(
     dynamic raw,
   );
-
-  @protected
-  RustStreamSink<NativeEditorEvent>
-  dco_decode_StreamSink_native_editor_event_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -102,74 +69,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool dco_decode_bool(dynamic raw);
 
   @protected
-  double dco_decode_box_autoadd_f_64(dynamic raw);
-
-  @protected
-  NativeAffineTransform dco_decode_box_autoadd_native_affine_transform(
-    dynamic raw,
-  );
-
-  @protected
-  NativeAnnotationCommandRequest
-  dco_decode_box_autoadd_native_annotation_command_request(dynamic raw);
-
-  @protected
-  NativeApproveFontFallbackRequest
-  dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw);
-
-  @protected
   NativeChatEvent dco_decode_box_autoadd_native_chat_event(dynamic raw);
 
   @protected
   NativeChatRequest dco_decode_box_autoadd_native_chat_request(dynamic raw);
-
-  @protected
-  NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeCleanPatchRequest dco_decode_box_autoadd_native_clean_patch_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw);
-
-  @protected
-  NativeConversationImport dco_decode_box_autoadd_native_conversation_import(
-    dynamic raw,
-  );
-
-  @protected
-  NativeDeleteAnnotationRequest
-  dco_decode_box_autoadd_native_delete_annotation_request(dynamic raw);
-
-  @protected
-  NativeEditorSaveRequest dco_decode_box_autoadd_native_editor_save_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeFontFallbackProposalRequest
-  dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw);
-
-  @protected
-  NativeObjectDetailsRequest
-  dco_decode_box_autoadd_native_object_details_request(dynamic raw);
-
-  @protected
-  NativeOpenEditorRequest dco_decode_box_autoadd_native_open_editor_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativePageSceneRequest dco_decode_box_autoadd_native_page_scene_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativePdfBox dco_decode_box_autoadd_native_pdf_box(dynamic raw);
 
   @protected
   NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(
@@ -178,11 +81,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSaveRequest dco_decode_box_autoadd_native_pdf_save_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeProviderTestRequest dco_decode_box_autoadd_native_provider_test_request(
     dynamic raw,
   );
 
@@ -197,73 +95,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeSearchRequest dco_decode_box_autoadd_native_search_request(dynamic raw);
-
-  @protected
-  NativeSelectionRebase dco_decode_box_autoadd_native_selection_rebase(
-    dynamic raw,
-  );
-
-  @protected
-  NativeSelectionSet dco_decode_box_autoadd_native_selection_set(dynamic raw);
-
-  @protected
-  NativeStartAgentRunRequest
-  dco_decode_box_autoadd_native_start_agent_run_request(dynamic raw);
-
-  @protected
-  NativeSubmitCommandRequest
-  dco_decode_box_autoadd_native_submit_command_request(dynamic raw);
-
-  @protected
-  NativeTextLayoutRecipe dco_decode_box_autoadd_native_text_layout_recipe(
-    dynamic raw,
-  );
-
-  @protected
-  NativeTextStyle dco_decode_box_autoadd_native_text_style(dynamic raw);
-
-  @protected
-  int dco_decode_box_autoadd_u_32(dynamic raw);
-
-  @protected
-  BigInt dco_decode_box_autoadd_u_64(dynamic raw);
-
-  @protected
   double dco_decode_f_32(dynamic raw);
-
-  @protected
-  double dco_decode_f_64(dynamic raw);
-
-  @protected
-  int dco_decode_i_32(dynamic raw);
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
-  List<NativeAgentEvent> dco_decode_list_native_agent_event(dynamic raw);
-
-  @protected
-  List<NativeAnnotationRange> dco_decode_list_native_annotation_range(
-    dynamic raw,
-  );
-
-  @protected
   List<NativeChatMessage> dco_decode_list_native_chat_message(dynamic raw);
-
-  @protected
-  List<NativeCompatibilityIssue> dco_decode_list_native_compatibility_issue(
-    dynamic raw,
-  );
-
-  @protected
-  List<NativeConversationMessage> dco_decode_list_native_conversation_message(
-    dynamic raw,
-  );
-
-  @protected
-  List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw);
 
   @protected
   List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw);
@@ -283,32 +121,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw);
-
-  @protected
-  List<NativeSearchMatch> dco_decode_list_native_search_match(dynamic raw);
-
-  @protected
-  List<NativeSelectionRange> dco_decode_list_native_selection_range(
-    dynamic raw,
-  );
-
-  @protected
-  List<NativeTextCharacterBox> dco_decode_list_native_text_character_box(
-    dynamic raw,
-  );
-
-  @protected
-  List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw);
-
-  @protected
   List<PdfSearchMatch> dco_decode_list_pdf_search_match(dynamic raw);
 
   @protected
   Float32List dco_decode_list_prim_f_32_strict(dynamic raw);
-
-  @protected
-  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -320,41 +136,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<(String, String)> dco_decode_list_record_string_string(dynamic raw);
 
   @protected
-  NativeAffineTransform dco_decode_native_affine_transform(dynamic raw);
-
-  @protected
-  NativeAgentAudit dco_decode_native_agent_audit(dynamic raw);
-
-  @protected
-  NativeAgentEvent dco_decode_native_agent_event(dynamic raw);
-
-  @protected
-  NativeAgentRun dco_decode_native_agent_run(dynamic raw);
-
-  @protected
-  NativeAnnotation dco_decode_native_annotation(dynamic raw);
-
-  @protected
-  NativeAnnotationAnchorKind dco_decode_native_annotation_anchor_kind(
-    dynamic raw,
-  );
-
-  @protected
-  NativeAnnotationCommandRequest dco_decode_native_annotation_command_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeAnnotationKind dco_decode_native_annotation_kind(dynamic raw);
-
-  @protected
-  NativeAnnotationRange dco_decode_native_annotation_range(dynamic raw);
-
-  @protected
-  NativeApproveFontFallbackRequest
-  dco_decode_native_approve_font_fallback_request(dynamic raw);
-
-  @protected
   NativeChatEvent dco_decode_native_chat_event(dynamic raw);
 
   @protected
@@ -364,102 +145,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeChatRequest dco_decode_native_chat_request(dynamic raw);
 
   @protected
-  NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw);
-
-  @protected
-  NativeCleanPatchAsset dco_decode_native_clean_patch_asset(dynamic raw);
-
-  @protected
-  NativeCleanPatchRequest dco_decode_native_clean_patch_request(dynamic raw);
-
-  @protected
-  NativeCommandResult dco_decode_native_command_result(dynamic raw);
-
-  @protected
-  NativeCompatibilityIssue dco_decode_native_compatibility_issue(dynamic raw);
-
-  @protected
-  NativeCompatibilityReport dco_decode_native_compatibility_report(dynamic raw);
-
-  @protected
-  NativeConversationImport dco_decode_native_conversation_import(dynamic raw);
-
-  @protected
-  NativeConversationImportReceipt dco_decode_native_conversation_import_receipt(
-    dynamic raw,
-  );
-
-  @protected
-  NativeConversationMessage dco_decode_native_conversation_message(dynamic raw);
-
-  @protected
-  NativeDeleteAnnotationRequest dco_decode_native_delete_annotation_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeEditorCommand dco_decode_native_editor_command(dynamic raw);
-
-  @protected
-  NativeEditorCommandKind dco_decode_native_editor_command_kind(dynamic raw);
-
-  @protected
-  NativeEditorEvent dco_decode_native_editor_event(dynamic raw);
-
-  @protected
-  NativeEditorEventKind dco_decode_native_editor_event_kind(dynamic raw);
-
-  @protected
-  NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw);
-
-  @protected
-  NativeEditorSaveMode dco_decode_native_editor_save_mode(dynamic raw);
-
-  @protected
-  NativeEditorSaveRequest dco_decode_native_editor_save_request(dynamic raw);
-
-  @protected
-  NativeEditorSaveResult dco_decode_native_editor_save_result(dynamic raw);
-
-  @protected
-  NativeFontFallbackProposal dco_decode_native_font_fallback_proposal(
-    dynamic raw,
-  );
-
-  @protected
-  NativeFontFallbackProposalRequest
-  dco_decode_native_font_fallback_proposal_request(dynamic raw);
-
-  @protected
-  NativeMemoryPressureLevel dco_decode_native_memory_pressure_level(
-    dynamic raw,
-  );
-
-  @protected
-  NativeObjectDetailsRequest dco_decode_native_object_details_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeObjectPatch dco_decode_native_object_patch(dynamic raw);
-
-  @protected
-  NativeOpenEditorRequest dco_decode_native_open_editor_request(dynamic raw);
-
-  @protected
-  NativePageScene dco_decode_native_page_scene(dynamic raw);
-
-  @protected
-  NativePageSceneRequest dco_decode_native_page_scene_request(dynamic raw);
-
-  @protected
   NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw);
 
   @protected
   NativePdfBookmark dco_decode_native_pdf_bookmark(dynamic raw);
-
-  @protected
-  NativePdfBox dco_decode_native_pdf_box(dynamic raw);
 
   @protected
   NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw);
@@ -475,11 +164,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSource dco_decode_native_pdf_source(dynamic raw);
-
-  @protected
-  NativeProviderTestRequest dco_decode_native_provider_test_request(
-    dynamic raw,
-  );
 
   @protected
   NativeRagChunk dco_decode_native_rag_chunk(dynamic raw);
@@ -500,122 +184,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativeRagQueryResult dco_decode_native_rag_query_result(dynamic raw);
 
   @protected
-  NativeSaveAssociation dco_decode_native_save_association(dynamic raw);
-
-  @protected
-  NativeSceneObject dco_decode_native_scene_object(dynamic raw);
-
-  @protected
-  NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw);
-
-  @protected
-  NativeSearchMatch dco_decode_native_search_match(dynamic raw);
-
-  @protected
-  NativeSearchMode dco_decode_native_search_mode(dynamic raw);
-
-  @protected
-  NativeSearchRequest dco_decode_native_search_request(dynamic raw);
-
-  @protected
-  NativeSearchResult dco_decode_native_search_result(dynamic raw);
-
-  @protected
-  NativeSelectionContext dco_decode_native_selection_context(dynamic raw);
-
-  @protected
-  NativeSelectionKind dco_decode_native_selection_kind(dynamic raw);
-
-  @protected
-  NativeSelectionRange dco_decode_native_selection_range(dynamic raw);
-
-  @protected
-  NativeSelectionRebase dco_decode_native_selection_rebase(dynamic raw);
-
-  @protected
-  NativeSelectionSet dco_decode_native_selection_set(dynamic raw);
-
-  @protected
-  NativeStartAgentRunRequest dco_decode_native_start_agent_run_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeSubmitCommandRequest dco_decode_native_submit_command_request(
-    dynamic raw,
-  );
-
-  @protected
-  NativeTextCharacterBox dco_decode_native_text_character_box(dynamic raw);
-
-  @protected
-  NativeTextLayoutRecipe dco_decode_native_text_layout_recipe(dynamic raw);
-
-  @protected
-  NativeTextRun dco_decode_native_text_run(dynamic raw);
-
-  @protected
-  NativeTextStyle dco_decode_native_text_style(dynamic raw);
-
-  @protected
-  NativeValidatedSelection dco_decode_native_validated_selection(dynamic raw);
-
-  @protected
-  NativeViewportPriority dco_decode_native_viewport_priority(dynamic raw);
-
-  @protected
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
-  double? dco_decode_opt_box_autoadd_f_64(dynamic raw);
-
-  @protected
-  NativeAffineTransform? dco_decode_opt_box_autoadd_native_affine_transform(
-    dynamic raw,
-  );
-
-  @protected
   NativeChatEvent? dco_decode_opt_box_autoadd_native_chat_event(dynamic raw);
-
-  @protected
-  NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(
-    dynamic raw,
-  );
-
-  @protected
-  NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw);
-
-  @protected
-  NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(
-    dynamic raw,
-  );
-
-  @protected
-  NativeSelectionSet? dco_decode_opt_box_autoadd_native_selection_set(
-    dynamic raw,
-  );
-
-  @protected
-  NativeTextLayoutRecipe? dco_decode_opt_box_autoadd_native_text_layout_recipe(
-    dynamic raw,
-  );
-
-  @protected
-  NativeTextStyle? dco_decode_opt_box_autoadd_native_text_style(dynamic raw);
-
-  @protected
-  int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
-
-  @protected
-  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw);
-
-  @protected
-  List<NativeTextCharacterBox>? dco_decode_opt_list_native_text_character_box(
-    dynamic raw,
-  );
-
-  @protected
-  List<NativeTextRun>? dco_decode_opt_list_native_text_run(dynamic raw);
 
   @protected
   PdfDocumentMetadata dco_decode_pdf_document_metadata(dynamic raw);
@@ -632,15 +204,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   (String, String) dco_decode_record_string_string(dynamic raw);
 
   @protected
-  int dco_decode_u_16(dynamic raw);
-
-  @protected
-  int dco_decode_u_32(dynamic raw);
-
-  @protected
-  BigInt dco_decode_u_64(dynamic raw);
-
-  @protected
   int dco_decode_u_8(dynamic raw);
 
   @protected
@@ -653,12 +216,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer);
 
   @protected
-  NativeEditorSession
-  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativePdfSession
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     SseDeserializer deserializer,
@@ -667,12 +224,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativePdfSession
   sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorSession
-  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
     SseDeserializer deserializer,
   );
 
@@ -688,12 +239,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeEditorSession
-  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativePdfSession
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     SseDeserializer deserializer,
@@ -705,18 +250,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  RustStreamSink<NativeAgentEvent> sse_decode_StreamSink_native_agent_event_Sse(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   RustStreamSink<NativeChatEvent> sse_decode_StreamSink_native_chat_event_Sse(
     SseDeserializer deserializer,
   );
-
-  @protected
-  RustStreamSink<NativeEditorEvent>
-  sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer);
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
@@ -725,90 +261,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   bool sse_decode_bool(SseDeserializer deserializer);
 
   @protected
-  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
-
-  @protected
-  NativeAffineTransform sse_decode_box_autoadd_native_affine_transform(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeAnnotationCommandRequest
-  sse_decode_box_autoadd_native_annotation_command_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeApproveFontFallbackRequest
-  sse_decode_box_autoadd_native_approve_font_fallback_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativeChatEvent sse_decode_box_autoadd_native_chat_event(
     SseDeserializer deserializer,
   );
 
   @protected
   NativeChatRequest sse_decode_box_autoadd_native_chat_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCleanPatchRequest sse_decode_box_autoadd_native_clean_patch_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCommandResult sse_decode_box_autoadd_native_command_result(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeConversationImport sse_decode_box_autoadd_native_conversation_import(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeDeleteAnnotationRequest
-  sse_decode_box_autoadd_native_delete_annotation_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorSaveRequest sse_decode_box_autoadd_native_editor_save_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeFontFallbackProposalRequest
-  sse_decode_box_autoadd_native_font_fallback_proposal_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeObjectDetailsRequest
-  sse_decode_box_autoadd_native_object_details_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeOpenEditorRequest sse_decode_box_autoadd_native_open_editor_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativePageSceneRequest sse_decode_box_autoadd_native_page_scene_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativePdfBox sse_decode_box_autoadd_native_pdf_box(
     SseDeserializer deserializer,
   );
 
@@ -823,11 +281,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeProviderTestRequest sse_decode_box_autoadd_native_provider_test_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(
     SseDeserializer deserializer,
   );
@@ -838,87 +291,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeSearchRequest sse_decode_box_autoadd_native_search_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionRebase sse_decode_box_autoadd_native_selection_rebase(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionSet sse_decode_box_autoadd_native_selection_set(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeStartAgentRunRequest
-  sse_decode_box_autoadd_native_start_agent_run_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSubmitCommandRequest
-  sse_decode_box_autoadd_native_submit_command_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextLayoutRecipe sse_decode_box_autoadd_native_text_layout_recipe(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextStyle sse_decode_box_autoadd_native_text_style(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer);
-
-  @protected
   double sse_decode_f_32(SseDeserializer deserializer);
-
-  @protected
-  double sse_decode_f_64(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
-  List<NativeAgentEvent> sse_decode_list_native_agent_event(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeAnnotationRange> sse_decode_list_native_annotation_range(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   List<NativeChatMessage> sse_decode_list_native_chat_message(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeCompatibilityIssue> sse_decode_list_native_compatibility_issue(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeConversationMessage> sse_decode_list_native_conversation_message(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeObjectPatch> sse_decode_list_native_object_patch(
     SseDeserializer deserializer,
   );
 
@@ -948,40 +327,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  List<NativeSceneObject> sse_decode_list_native_scene_object(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeSearchMatch> sse_decode_list_native_search_match(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeSelectionRange> sse_decode_list_native_selection_range(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeTextCharacterBox> sse_decode_list_native_text_character_box(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeTextRun> sse_decode_list_native_text_run(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   List<PdfSearchMatch> sse_decode_list_pdf_search_match(
     SseDeserializer deserializer,
   );
 
   @protected
   Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer);
-
-  @protected
-  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -993,47 +344,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<(String, String)> sse_decode_list_record_string_string(
     SseDeserializer deserializer,
   );
-
-  @protected
-  NativeAffineTransform sse_decode_native_affine_transform(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeAgentAudit sse_decode_native_agent_audit(SseDeserializer deserializer);
-
-  @protected
-  NativeAgentEvent sse_decode_native_agent_event(SseDeserializer deserializer);
-
-  @protected
-  NativeAgentRun sse_decode_native_agent_run(SseDeserializer deserializer);
-
-  @protected
-  NativeAnnotation sse_decode_native_annotation(SseDeserializer deserializer);
-
-  @protected
-  NativeAnnotationAnchorKind sse_decode_native_annotation_anchor_kind(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeAnnotationCommandRequest sse_decode_native_annotation_command_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeAnnotationKind sse_decode_native_annotation_kind(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeAnnotationRange sse_decode_native_annotation_range(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeApproveFontFallbackRequest
-  sse_decode_native_approve_font_fallback_request(SseDeserializer deserializer);
 
   @protected
   NativeChatEvent sse_decode_native_chat_event(SseDeserializer deserializer);
@@ -1049,135 +359,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeCheckpointRequest sse_decode_native_checkpoint_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCleanPatchAsset sse_decode_native_clean_patch_asset(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCleanPatchRequest sse_decode_native_clean_patch_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCommandResult sse_decode_native_command_result(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCompatibilityIssue sse_decode_native_compatibility_issue(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCompatibilityReport sse_decode_native_compatibility_report(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeConversationImport sse_decode_native_conversation_import(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeConversationImportReceipt sse_decode_native_conversation_import_receipt(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeConversationMessage sse_decode_native_conversation_message(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeDeleteAnnotationRequest sse_decode_native_delete_annotation_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorCommand sse_decode_native_editor_command(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorCommandKind sse_decode_native_editor_command_kind(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorEvent sse_decode_native_editor_event(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorEventKind sse_decode_native_editor_event_kind(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorMetadata sse_decode_native_editor_metadata(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorSaveMode sse_decode_native_editor_save_mode(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorSaveRequest sse_decode_native_editor_save_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeEditorSaveResult sse_decode_native_editor_save_result(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeFontFallbackProposal sse_decode_native_font_fallback_proposal(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeFontFallbackProposalRequest
-  sse_decode_native_font_fallback_proposal_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeMemoryPressureLevel sse_decode_native_memory_pressure_level(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeObjectDetailsRequest sse_decode_native_object_details_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeObjectPatch sse_decode_native_object_patch(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeOpenEditorRequest sse_decode_native_open_editor_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativePageScene sse_decode_native_page_scene(SseDeserializer deserializer);
-
-  @protected
-  NativePageSceneRequest sse_decode_native_page_scene_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativePdfAnnotations sse_decode_native_pdf_annotations(
     SseDeserializer deserializer,
   );
@@ -1186,9 +367,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfBookmark sse_decode_native_pdf_bookmark(
     SseDeserializer deserializer,
   );
-
-  @protected
-  NativePdfBox sse_decode_native_pdf_box(SseDeserializer deserializer);
 
   @protected
   NativePdfComposeRequest sse_decode_native_pdf_compose_request(
@@ -1212,11 +390,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer);
-
-  @protected
-  NativeProviderTestRequest sse_decode_native_provider_test_request(
-    SseDeserializer deserializer,
-  );
 
   @protected
   NativeRagChunk sse_decode_native_rag_chunk(SseDeserializer deserializer);
@@ -1247,158 +420,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  NativeSaveAssociation sse_decode_native_save_association(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSceneObject sse_decode_native_scene_object(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSceneObjectKind sse_decode_native_scene_object_kind(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSearchMatch sse_decode_native_search_match(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSearchMode sse_decode_native_search_mode(SseDeserializer deserializer);
-
-  @protected
-  NativeSearchRequest sse_decode_native_search_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSearchResult sse_decode_native_search_result(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionContext sse_decode_native_selection_context(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionKind sse_decode_native_selection_kind(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionRange sse_decode_native_selection_range(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionRebase sse_decode_native_selection_rebase(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionSet sse_decode_native_selection_set(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeStartAgentRunRequest sse_decode_native_start_agent_run_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSubmitCommandRequest sse_decode_native_submit_command_request(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextCharacterBox sse_decode_native_text_character_box(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextLayoutRecipe sse_decode_native_text_layout_recipe(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextRun sse_decode_native_text_run(SseDeserializer deserializer);
-
-  @protected
-  NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer);
-
-  @protected
-  NativeValidatedSelection sse_decode_native_validated_selection(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeViewportPriority sse_decode_native_viewport_priority(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
-  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer);
-
-  @protected
-  NativeAffineTransform? sse_decode_opt_box_autoadd_native_affine_transform(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativeChatEvent? sse_decode_opt_box_autoadd_native_chat_event(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionRebase? sse_decode_opt_box_autoadd_native_selection_rebase(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeSelectionSet? sse_decode_opt_box_autoadd_native_selection_set(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextLayoutRecipe? sse_decode_opt_box_autoadd_native_text_layout_recipe(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeTextStyle? sse_decode_opt_box_autoadd_native_text_style(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
-
-  @protected
-  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer);
-
-  @protected
-  List<NativeTextCharacterBox>? sse_decode_opt_list_native_text_character_box(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  List<NativeTextRun>? sse_decode_opt_list_native_text_run(
     SseDeserializer deserializer,
   );
 
@@ -1421,15 +446,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  int sse_decode_u_16(SseDeserializer deserializer);
-
-  @protected
-  int sse_decode_u_32(SseDeserializer deserializer);
-
-  @protected
-  BigInt sse_decode_u_64(SseDeserializer deserializer);
-
-  @protected
   int sse_decode_u_8(SseDeserializer deserializer);
 
   @protected
@@ -1439,15 +455,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   BigInt sse_decode_usize(SseDeserializer deserializer);
 
   @protected
-  void sse_encode_AnyhowException(
-    AnyhowException self,
-    SseSerializer serializer,
-  );
+  int sse_decode_i_32(SseDeserializer deserializer);
 
   @protected
-  void
-  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    NativeEditorSession self,
+  void sse_encode_AnyhowException(
+    AnyhowException self,
     SseSerializer serializer,
   );
 
@@ -1467,13 +479,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
-  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    NativeEditorSession self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     NativePdfSession self,
     SseSerializer serializer,
@@ -1482,13 +487,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_Map_String_String_None(
     Map<String, String> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void
-  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    NativeEditorSession self,
     SseSerializer serializer,
   );
 
@@ -1506,20 +504,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_StreamSink_native_agent_event_Sse(
-    RustStreamSink<NativeAgentEvent> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_StreamSink_native_chat_event_Sse(
     RustStreamSink<NativeChatEvent> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_StreamSink_native_editor_event_Sse(
-    RustStreamSink<NativeEditorEvent> self,
     SseSerializer serializer,
   );
 
@@ -1530,27 +516,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_bool(bool self, SseSerializer serializer);
 
   @protected
-  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_native_affine_transform(
-    NativeAffineTransform self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_annotation_command_request(
-    NativeAnnotationCommandRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_approve_font_fallback_request(
-    NativeApproveFontFallbackRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_box_autoadd_native_chat_event(
     NativeChatEvent self,
     SseSerializer serializer,
@@ -1559,72 +524,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_chat_request(
     NativeChatRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_checkpoint_request(
-    NativeCheckpointRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_clean_patch_request(
-    NativeCleanPatchRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_command_result(
-    NativeCommandResult self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_conversation_import(
-    NativeConversationImport self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_delete_annotation_request(
-    NativeDeleteAnnotationRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_editor_save_request(
-    NativeEditorSaveRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_font_fallback_proposal_request(
-    NativeFontFallbackProposalRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_object_details_request(
-    NativeObjectDetailsRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_open_editor_request(
-    NativeOpenEditorRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_page_scene_request(
-    NativePageSceneRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_pdf_box(
-    NativePdfBox self,
     SseSerializer serializer,
   );
 
@@ -1641,12 +540,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_box_autoadd_native_provider_test_request(
-    NativeProviderTestRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_box_autoadd_native_rag_index_request(
     NativeRagIndexRequest self,
     SseSerializer serializer,
@@ -1659,98 +552,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_box_autoadd_native_search_request(
-    NativeSearchRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_selection_rebase(
-    NativeSelectionRebase self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_selection_set(
-    NativeSelectionSet self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_start_agent_run_request(
-    NativeStartAgentRunRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_submit_command_request(
-    NativeSubmitCommandRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_text_layout_recipe(
-    NativeTextLayoutRecipe self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_text_style(
-    NativeTextStyle self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer);
-
-  @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_f_64(double self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_i_32(int self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_native_agent_event(
-    List<NativeAgentEvent> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_annotation_range(
-    List<NativeAnnotationRange> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_native_chat_message(
     List<NativeChatMessage> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_compatibility_issue(
-    List<NativeCompatibilityIssue> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_conversation_message(
-    List<NativeConversationMessage> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_object_patch(
-    List<NativeObjectPatch> self,
     SseSerializer serializer,
   );
 
@@ -1785,36 +594,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_list_native_scene_object(
-    List<NativeSceneObject> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_search_match(
-    List<NativeSearchMatch> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_selection_range(
-    List<NativeSelectionRange> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_text_character_box(
-    List<NativeTextCharacterBox> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_native_text_run(
-    List<NativeTextRun> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_list_pdf_search_match(
     List<PdfSearchMatch> self,
     SseSerializer serializer,
@@ -1823,12 +602,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_f_32_strict(
     Float32List self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_prim_u_32_strict(
-    Uint32List self,
     SseSerializer serializer,
   );
 
@@ -1851,66 +624,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_native_affine_transform(
-    NativeAffineTransform self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_agent_audit(
-    NativeAgentAudit self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_agent_event(
-    NativeAgentEvent self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_agent_run(
-    NativeAgentRun self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_annotation(
-    NativeAnnotation self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_annotation_anchor_kind(
-    NativeAnnotationAnchorKind self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_annotation_command_request(
-    NativeAnnotationCommandRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_annotation_kind(
-    NativeAnnotationKind self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_annotation_range(
-    NativeAnnotationRange self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_approve_font_fallback_request(
-    NativeApproveFontFallbackRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_native_chat_event(
     NativeChatEvent self,
     SseSerializer serializer,
@@ -1929,162 +642,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_native_checkpoint_request(
-    NativeCheckpointRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_clean_patch_asset(
-    NativeCleanPatchAsset self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_clean_patch_request(
-    NativeCleanPatchRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_command_result(
-    NativeCommandResult self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_compatibility_issue(
-    NativeCompatibilityIssue self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_compatibility_report(
-    NativeCompatibilityReport self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_conversation_import(
-    NativeConversationImport self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_conversation_import_receipt(
-    NativeConversationImportReceipt self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_conversation_message(
-    NativeConversationMessage self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_delete_annotation_request(
-    NativeDeleteAnnotationRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_command(
-    NativeEditorCommand self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_command_kind(
-    NativeEditorCommandKind self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_event(
-    NativeEditorEvent self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_event_kind(
-    NativeEditorEventKind self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_metadata(
-    NativeEditorMetadata self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_save_mode(
-    NativeEditorSaveMode self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_save_request(
-    NativeEditorSaveRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_editor_save_result(
-    NativeEditorSaveResult self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_font_fallback_proposal(
-    NativeFontFallbackProposal self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_font_fallback_proposal_request(
-    NativeFontFallbackProposalRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_memory_pressure_level(
-    NativeMemoryPressureLevel self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_object_details_request(
-    NativeObjectDetailsRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_object_patch(
-    NativeObjectPatch self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_open_editor_request(
-    NativeOpenEditorRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_page_scene(
-    NativePageScene self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_page_scene_request(
-    NativePageSceneRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_native_pdf_annotations(
     NativePdfAnnotations self,
     SseSerializer serializer,
@@ -2095,9 +652,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     NativePdfBookmark self,
     SseSerializer serializer,
   );
-
-  @protected
-  void sse_encode_native_pdf_box(NativePdfBox self, SseSerializer serializer);
 
   @protected
   void sse_encode_native_pdf_compose_request(
@@ -2126,12 +680,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_pdf_source(
     NativePdfSource self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_provider_test_request(
-    NativeProviderTestRequest self,
     SseSerializer serializer,
   );
 
@@ -2172,191 +720,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_native_save_association(
-    NativeSaveAssociation self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_scene_object(
-    NativeSceneObject self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_scene_object_kind(
-    NativeSceneObjectKind self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_search_match(
-    NativeSearchMatch self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_search_mode(
-    NativeSearchMode self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_search_request(
-    NativeSearchRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_search_result(
-    NativeSearchResult self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_selection_context(
-    NativeSelectionContext self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_selection_kind(
-    NativeSelectionKind self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_selection_range(
-    NativeSelectionRange self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_selection_rebase(
-    NativeSelectionRebase self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_selection_set(
-    NativeSelectionSet self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_start_agent_run_request(
-    NativeStartAgentRunRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_submit_command_request(
-    NativeSubmitCommandRequest self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_text_character_box(
-    NativeTextCharacterBox self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_text_layout_recipe(
-    NativeTextLayoutRecipe self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_text_run(NativeTextRun self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_native_text_style(
-    NativeTextStyle self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_validated_selection(
-    NativeValidatedSelection self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_viewport_priority(
-    NativeViewportPriority self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_opt_String(String? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_affine_transform(
-    NativeAffineTransform? self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_opt_box_autoadd_native_chat_event(
     NativeChatEvent? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_command_result(
-    NativeCommandResult? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_pdf_box(
-    NativePdfBox? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_selection_rebase(
-    NativeSelectionRebase? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_selection_set(
-    NativeSelectionSet? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_text_layout_recipe(
-    NativeTextLayoutRecipe? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_native_text_style(
-    NativeTextStyle? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_list_native_text_character_box(
-    List<NativeTextCharacterBox>? self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_opt_list_native_text_run(
-    List<NativeTextRun>? self,
     SseSerializer serializer,
   );
 
@@ -2385,15 +753,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_u_16(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_32(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_u_64(BigInt self, SseSerializer serializer);
-
-  @protected
   void sse_encode_u_8(int self, SseSerializer serializer);
 
   @protected
@@ -2401,6 +760,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize(BigInt self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer);
 }
 
 // Section: wire_class
@@ -2416,40 +778,6 @@ class RustLibWire implements BaseWire {
   /// The symbols are looked up in [dynamicLibrary].
   RustLibWire(ffi.DynamicLibrary dynamicLibrary)
     : _lookup = dynamicLibrary.lookup;
-
-  void
-  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_clarix_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession',
-      );
-  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession =
-      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
-
-  void
-  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-    ffi.Pointer<ffi.Void> ptr,
-  ) {
-    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-      ptr,
-    );
-  }
-
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr =
-      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
-        'frbgen_clarix_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession',
-      );
-  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession =
-      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSessionPtr
-          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void
   rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(

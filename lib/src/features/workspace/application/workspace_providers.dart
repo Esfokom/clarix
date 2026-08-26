@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -8,12 +7,10 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/pdf_oxide_bridge.dart';
-import '../../../core/editing/editor_command_id.dart';
 import '../../../core/session_store.dart';
 import '../../utilities/application/pdf_utility_service.dart';
 import '../infrastructure/document_metadata_store.dart';
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-import 'package:clarix/src/features/ai/ai.dart';
+import '../../annotations/infrastructure/annotation_sidecar_store.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
 
@@ -23,15 +20,6 @@ final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
 
 final sessionStoreProvider = Provider<ClarixSessionStore>(
   (Ref ref) => ClarixSessionStore(ref.watch(sharedPreferencesProvider)),
-);
-
-final actionPermissionServiceProvider = Provider<ActionPermissionService>(
-  (Ref ref) => ActionPermissionService(
-    store: SharedPreferencesActionPermissionStore(
-      ref.watch(sharedPreferencesProvider),
-    ),
-    defaultPolicy: ActionPermissionPolicy.askAlways,
-  ),
 );
 
 final pdfExtractionServiceProvider = Provider<HybridPdfExtractionService>(
@@ -81,46 +69,11 @@ final documentMetadataStoreProvider = FutureProvider<DocumentMetadataStore>((
   return DocumentMetadataStore(root: root);
 });
 
+final annotationSidecarStoreProvider = Provider<AnnotationSidecarStore>(
+  (Ref ref) => AnnotationSidecarStore(),
+);
+
 final workspaceNotifierProvider =
     AsyncNotifierProvider<WorkspaceNotifier, WorkspaceFeatureState>(
       WorkspaceNotifier.new,
     );
-
-final editorSessionRegistryProvider = Provider<EditorSessionRegistry>((
-  Ref ref,
-) {
-  final EditorSessionRegistry registry = EditorSessionRegistry(
-    gateways: BridgeEditorSessionGateway.new,
-    commandIds: newEditorCommandId,
-  );
-  ref.onDispose(() => unawaited(registry.closeAll()));
-  return registry;
-});
-
-final editorDocumentStateProvider =
-    StreamProvider.family<EditorDocumentState?, String>((ref, tabId) {
-      return ref.watch(editorSessionRegistryProvider).watch(tabId);
-    });
-
-final agentRunControllerProvider = Provider.family<AgentRunController?, String>(
-  (Ref ref, String tabId) {
-    final registry = ref.watch(editorSessionRegistryProvider);
-    final bridge = registry.agentBridge(tabId);
-    if (bridge == null) {
-      final subscription = registry.watchAgentBridge(tabId).listen((bridge) {
-        if (bridge != null) {
-          ref.invalidateSelf();
-        }
-      });
-      ref.onDispose(subscription.cancel);
-      return null;
-    }
-    final controller = AgentRunController(bridge: bridge);
-    ref.onDispose(() => unawaited(controller.dispose()));
-    return controller;
-  },
-);
-
-final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(
-  (Ref ref) => InstalledFontCatalog.scan(),
-);

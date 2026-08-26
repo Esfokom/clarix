@@ -1,19 +1,4 @@
 import '../../../core/models.dart';
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
-
-enum PdfRecoveryAction { reload, saveCopy, selectBlock, rediscover }
-
-final class PdfFailurePresentation {
-  PdfFailurePresentation({
-    required this.message,
-    required List<PdfRecoveryAction> actions,
-    this.locator,
-  }) : actions = List<PdfRecoveryAction>.unmodifiable(actions);
-
-  final String message;
-  final List<PdfRecoveryAction> actions;
-  final PdfTextBlockLocator? locator;
-}
 
 class OutlineNodeState {
   const OutlineNodeState({
@@ -35,7 +20,6 @@ class WorkspaceFeatureState {
     required this.composerExpanded,
     required this.bannerMessage,
     this.dirtyDocumentIds = const <String>{},
-    this.pdfFailure,
     this.pdfSaveInProgress = false,
   });
 
@@ -45,7 +29,6 @@ class WorkspaceFeatureState {
   final bool composerExpanded;
   final String? bannerMessage;
   final Set<String> dirtyDocumentIds;
-  final PdfFailurePresentation? pdfFailure;
   final bool pdfSaveInProgress;
 
   WorkspaceFeatureState copyWith({
@@ -56,8 +39,6 @@ class WorkspaceFeatureState {
     String? bannerMessage,
     bool clearBannerMessage = false,
     Set<String>? dirtyDocumentIds,
-    PdfFailurePresentation? pdfFailure,
-    bool clearPdfFailure = false,
     bool? pdfSaveInProgress,
   }) {
     return WorkspaceFeatureState(
@@ -69,7 +50,6 @@ class WorkspaceFeatureState {
           ? null
           : bannerMessage ?? this.bannerMessage,
       dirtyDocumentIds: dirtyDocumentIds ?? this.dirtyDocumentIds,
-      pdfFailure: clearPdfFailure ? null : pdfFailure ?? this.pdfFailure,
       pdfSaveInProgress: pdfSaveInProgress ?? this.pdfSaveInProgress,
     );
   }

@@ -33,6 +33,7 @@ class AiRuntimeService {
   Future<AiReply> sendPrompt({
     required String prompt,
     required String profileId,
+    required List<CitationSnippet> documentSnippets,
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
   }) async {
@@ -62,6 +63,11 @@ class AiRuntimeService {
         headers: profile.headers,
         apiKey: key,
         messages: <native_chat.NativeChatMessage>[
+          if (documentSnippets.isNotEmpty)
+            native_chat.NativeChatMessage(
+              role: 'system',
+              content: _documentContext(documentSnippets),
+            ),
           native_chat.NativeChatMessage(role: 'user', content: prompt),
         ],
       ),
@@ -84,6 +90,17 @@ class AiRuntimeService {
 
   Future<void> stopGeneration() async {}
   Future<void> dispose() async {}
+}
+
+String _documentContext(List<CitationSnippet> snippets) {
+  final String excerpts = snippets
+      .map(
+        (CitationSnippet snippet) =>
+            '[${snippet.label}, page ${snippet.pageNumber}]\n${snippet.snippet}',
+      )
+      .join('\n\n');
+  return 'Answer using the supplied PDF excerpts when relevant. '
+      'Mention page numbers when you rely on an excerpt.\n\n$excerpts';
 }
 
 class AiReply {

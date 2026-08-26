@@ -168,7 +168,7 @@ class _TabStripState extends ConsumerState<_TabStrip> {
       builder: (BuildContext context) => AlertDialog(
         backgroundColor: WorkspaceColors.panel,
         title: const Text(
-          'Save PDF edits?',
+          'Save annotations?',
           style: TextStyle(color: WorkspaceColors.textStrong),
         ),
         content: Text(
@@ -193,7 +193,7 @@ class _TabStripState extends ConsumerState<_TabStrip> {
     );
     if (choice == 'save') {
       await notifier.setActiveTab(tab.id);
-      await notifier.saveActivePdfEdits();
+      await notifier.saveActiveAnnotations();
       if (notifier.hasUnsavedEditsFor(tab.id)) return;
     }
     if (choice == 'save' || choice == 'discard') {

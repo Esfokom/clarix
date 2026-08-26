@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clarix_logger.dart';
+import '../../../core/models.dart';
 import '../domain/ai_feature_state.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
@@ -215,6 +216,28 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     );
     final buffer = StringBuffer();
     try {
+      final List<CitationSnippet> snippets;
+      if (current.chat.useCurrentDocumentScope && !context.isMissingFile) {
+        _setActivity(
+          AiRuntimePhase.retrieving,
+          'Finding relevant PDF passages.',
+        );
+        final List<PdfChunkRecord> chunks = await ref
+            .read(localRagServiceProvider)
+            .retrieve(context.documentId, prompt.trim());
+        snippets = chunks
+            .map(
+              (PdfChunkRecord chunk) => CitationSnippet(
+                documentId: chunk.documentId,
+                label: chunk.title,
+                pageNumber: chunk.pageNumber,
+                snippet: chunk.text,
+              ),
+            )
+            .toList(growable: false);
+      } else {
+        snippets = const <CitationSnippet>[];
+      }
       final store = await ref.read(conversationStoreProvider.future);
       final threads = await store.listThreads(context.documentId);
       clarixLog.i(
@@ -225,6 +248,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           .sendPrompt(
             prompt: prompt.trim(),
             profileId: current.chat.selectedProviderId!,
+            documentSnippets: snippets,
             onStatus: _setActivity,
             onToken: (token) {
               buffer.write(token);
@@ -233,7 +257,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           );
       _replaceLastAssistant(
         reply.text,
-        citations: reply.citations,
+        citations: snippets,
         busy: false,
         phase: AiRuntimePhase.idle,
         status: 'Ready to chat with your remote provider.',

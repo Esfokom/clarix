@@ -6,7 +6,6 @@ import 'architecture_allowlist.dart';
 
 const Set<String> _publicFeatures = <String>{
   'ai',
-  'pdf_editor',
   'reader',
   'settings',
   'utilities',
@@ -80,12 +79,7 @@ bool _isAllowedCrossFeatureImport({
   final bool targetsBarrel = uri.endsWith('/$targetFeature.dart');
   if (!targetsBarrel) return false;
 
-  if (sourceFeature == 'pdf_editor' &&
-      (targetFeature == 'ai' || targetFeature == 'workspace')) {
-    return false;
-  }
-  if (sourceFeature == 'ai' &&
-      (targetFeature == 'workspace' || targetFeature == 'pdf_editor')) {
+  if (sourceFeature == 'ai' && targetFeature == 'workspace') {
     return false;
   }
   if ((sourceFeature == 'reader' || sourceFeature == 'utilities') &&

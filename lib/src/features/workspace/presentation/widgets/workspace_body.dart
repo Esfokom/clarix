@@ -42,10 +42,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             showInspector &&
             activeTab != null &&
             widget.state.session.rightToolWindow == RightToolWindow.document;
-        final bool showTextFormatInline =
-            showInspector &&
-            activeTab != null &&
-            widget.state.session.rightToolWindow == RightToolWindow.textFormat;
         final bool showAiOverlay =
             !showInspector &&
             activeTab != null &&
@@ -74,9 +70,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             ),
                     ),
                   ),
-                  if (showAiInline ||
-                      showDocumentInline ||
-                      showTextFormatInline)
+                  if (showAiInline || showDocumentInline)
                     _PaneHandle(
                       key: const Key('right-pane-resizer'),
                       onDrag: (double delta) => ref
@@ -85,16 +79,12 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             widget.state.session.rightPaneWidth - delta,
                           ),
                     ),
-                  if ((showAiInline ||
-                          showDocumentInline ||
-                          showTextFormatInline) &&
+                  if ((showAiInline || showDocumentInline) &&
                       !widget.state.session.rightPaneCollapsed)
                     SizedBox(
                       width: widget.state.session.rightPaneWidth,
                       child: showAiInline
                           ? _aiPane(aiState, activeTab)
-                          : showTextFormatInline
-                          ? _TextFormatPane(activeTab: activeTab)
                           : ReaderInspector(
                               state: widget.state,
                               activeTab: activeTab,
@@ -157,16 +147,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             ),
                           ),
                         ),
-                        for (final action
-                            in widget.state.pdfFailure?.actions ??
-                                const <PdfRecoveryAction>[])
-                          TextButton(
-                            key: Key('pdf-recovery-${action.name}'),
-                            onPressed: () => ref
-                                .read(workspaceNotifierProvider.notifier)
-                                .recoverPdfFailure(action),
-                            child: Text(_recoveryLabel(action)),
-                          ),
                       ],
                     ),
                   ),
@@ -207,84 +187,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
     }
     return null;
   }
-}
-
-String _recoveryLabel(PdfRecoveryAction action) => switch (action) {
-  PdfRecoveryAction.reload => 'Reload',
-  PdfRecoveryAction.saveCopy => 'Save a Copy',
-  PdfRecoveryAction.selectBlock => 'Show block',
-  PdfRecoveryAction.rediscover => 'Rediscover',
-};
-
-class _TextFormatPane extends ConsumerWidget {
-  const _TextFormatPane({required this.activeTab});
-
-  final DocumentTabState activeTab;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final native = ref.read(editorSessionRegistryProvider)[activeTab.id];
-    if (native != null) {
-      final catalog = ref.watch(installedFontCatalogProvider);
-      return StreamBuilder<EditorDocumentState>(
-        stream: native.changes,
-        initialData: native.state,
-        builder: (context, snapshot) {
-          final document = snapshot.data ?? native.state;
-          final selection = document.selection;
-          EditorSceneObject? object;
-          if (selection != null) {
-            for (final scene in document.scenes.values) {
-              object = scene.objects
-                  .where(
-                    (candidate) => candidate.objectId == selection.objectId,
-                  )
-                  .firstOrNull;
-              if (object != null) break;
-            }
-          }
-          if (selection == null || object == null) {
-            for (final scene in document.scenes.values) {
-              object = scene.objects
-                  .where((candidate) => candidate.capability == 'editable')
-                  .firstOrNull;
-              if (object != null) break;
-            }
-          }
-          if (object == null) {
-            return const _NoEditableTextSelection();
-          }
-          final effectiveSelection =
-              selection ??
-              EditorSelection(
-                objectId: object.objectId,
-                range: const EditorTextRange(start: 0, end: 0),
-              );
-          return CanonicalPdfTextFormatPanel(
-            session: native,
-            object: object,
-            selection: effectiveSelection,
-            availableFamilies:
-                catalog.value?.families ??
-                <String>[?object.runs.firstOrNull?.style.fontFamily],
-          );
-        },
-      );
-    }
-    return const _NoEditableTextSelection();
-  }
-}
-
-class _NoEditableTextSelection extends StatelessWidget {
-  const _NoEditableTextSelection();
-
-  @override
-  Widget build(BuildContext context) => const Center(
-    child: Padding(
-      padding: EdgeInsets.all(24),
-      child: Text('Select editable PDF text to format it.'),
-    ),
-  );
 }
 
 class _PaneHandle extends StatelessWidget {
@@ -333,13 +235,6 @@ class _RightToolRail extends ConsumerWidget {
             RightToolWindow.document,
             'Document inspector',
             LucideIcons.panelRight,
-          ),
-          _tool(
-            context,
-            ref,
-            RightToolWindow.textFormat,
-            'Text format',
-            LucideIcons.type,
           ),
           _tool(
             context,

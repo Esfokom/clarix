@@ -15,10 +15,6 @@ class DesktopWindowChrome extends ConsumerWidget {
     required this.onOpenSettings,
     required this.onSearch,
     this.onSave,
-    this.onUndo,
-    this.onRedo,
-    this.onToggleEditText,
-    this.isTextEditingActive = false,
     this.showDocumentActions = false,
     this.useNativeWindowControls = true,
     super.key,
@@ -29,10 +25,6 @@ class DesktopWindowChrome extends ConsumerWidget {
   final VoidCallback onOpenSettings;
   final ValueChanged<String> onSearch;
   final VoidCallback? onSave;
-  final VoidCallback? onUndo;
-  final VoidCallback? onRedo;
-  final VoidCallback? onToggleEditText;
-  final bool isTextEditingActive;
   final bool showDocumentActions;
   final bool useNativeWindowControls;
 
@@ -56,34 +48,10 @@ class DesktopWindowChrome extends ConsumerWidget {
                 const SizedBox(width: 24),
                 if (showDocumentActions)
                   IconButton(
-                    key: const Key('chrome-edit-text'),
-                    tooltip: isTextEditingActive ? 'Exit Edit Mode' : 'Edit Text',
-                    onPressed: onToggleEditText,
-                    icon: Icon(
-                      Icons.edit_document,
-                      color: isTextEditingActive ? colors.accent : colors.textMuted,
-                    ),
-                  ),
-                if (showDocumentActions)
-                  IconButton(
                     key: const Key('chrome-save'),
                     tooltip: 'Save PDF (Ctrl+S)',
                     onPressed: onSave,
                     icon: Icon(Icons.save_outlined, color: colors.textMuted),
-                  ),
-                if (showDocumentActions)
-                  IconButton(
-                    key: const Key('chrome-undo'),
-                    tooltip: 'Undo (Ctrl+Z)',
-                    onPressed: onUndo,
-                    icon: Icon(Icons.undo, color: colors.textMuted),
-                  ),
-                if (showDocumentActions)
-                  IconButton(
-                    key: const Key('chrome-redo'),
-                    tooltip: 'Redo (Ctrl+Shift+Z)',
-                    onPressed: onRedo,
-                    icon: Icon(Icons.redo, color: colors.textMuted),
                   ),
                 Expanded(
                   child: _SearchShell(
@@ -118,7 +86,10 @@ class DesktopWindowChrome extends ConsumerWidget {
                       ],
                   icon: Icon(Icons.menu, color: colors.textMuted),
                 ),
-                if (useNativeWindowControls && !Platform.environment.containsKey('FLUTTER_TEST')) ...<Widget>[
+                if (useNativeWindowControls &&
+                    !Platform.environment.containsKey(
+                      'FLUTTER_TEST',
+                    )) ...<Widget>[
                   MinimizeWindowButton(
                     key: const Key('chrome-minimize'),
                     colors: _buttonColors(colors),

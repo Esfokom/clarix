@@ -3,9 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:clarix/src/core/models.dart';
 import '../../application/workspace_providers.dart';
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../widgets/workspace_body.dart';
 import '../widgets/workspace_common.dart';
@@ -45,14 +43,12 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     }
 
     final notifier = ref.read(workspaceNotifierProvider.notifier);
-    if (notifier.hasUnsavedPdfEdits) {
+    if (notifier.hasUnsavedAnnotations) {
       final choice = await _showUnsavedPdfDialog();
       if (choice == _CloseChoice.cancel || !mounted) return;
       if (choice == _CloseChoice.saveAll) {
-        final saved = await notifier.saveAllPdfEdits();
+        final saved = await notifier.saveAllAnnotations();
         if (!saved || !mounted) return;
-      } else if (choice == _CloseChoice.discard) {
-        await notifier.checkpointAllNativeForRecovery();
       }
     } else if (!state.session.restorePreviousSession &&
         state.session.tabs.isNotEmpty) {
@@ -75,52 +71,23 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       workspaceNotifierProvider,
     );
     final activeTabId = asyncState.value?.session.activeTabId;
-    final nativeState = activeTabId == null
-        ? null
-        : ref.watch(editorDocumentStateProvider(activeTabId)).value;
-    final activeIsDirty =
-        activeTabId != null &&
-        (nativeState?.save.phase != EditorSavePhase.clean ||
-            (nativeState == null &&
-                (asyncState.value?.dirtyDocumentIds.contains(activeTabId) ??
-                    false)));
     final canSave =
-        activeIsDirty &&
-        nativeState?.save.phase != EditorSavePhase.saving &&
+        activeTabId != null &&
+        (asyncState.value?.dirtyDocumentIds.contains(activeTabId) ?? false) &&
         !(asyncState.value?.pdfSaveInProgress ?? false);
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
           if (canSave) {
-            ref.read(workspaceNotifierProvider.notifier).saveActivePdfEdits();
+            ref
+                .read(workspaceNotifierProvider.notifier)
+                .saveActiveAnnotations();
           }
         },
-        const SingleActivator(LogicalKeyboardKey.keyZ, control: true): () =>
-            ref.read(workspaceNotifierProvider.notifier).undoPdfEdit(),
-        const SingleActivator(
-          LogicalKeyboardKey.keyZ,
-          control: true,
-          shift: true,
-        ): () =>
-            ref.read(workspaceNotifierProvider.notifier).redoPdfEdit(),
       },
       child: DesktopWindowChrome(
         showDocumentActions: activeTabId != null,
-        isTextEditingActive:
-            asyncState.value?.session.rightToolWindow == RightToolWindow.textFormat ||
-            (nativeState?.selection != null),
-        onToggleEditText: activeTabId == null
-            ? null
-            : () {
-                final notifier = ref.read(workspaceNotifierProvider.notifier);
-                final current = asyncState.value?.session.rightToolWindow;
-                if (current != RightToolWindow.textFormat) {
-                  notifier.selectRightToolWindow(RightToolWindow.textFormat);
-                } else {
-                  notifier.selectRightToolWindow(RightToolWindow.document);
-                }
-              },
         onImport: () =>
             ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
         onOpenSettings: () => showAppSettingsDialog(context),
@@ -128,13 +95,7 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
             ? null
             : () => ref
                   .read(workspaceNotifierProvider.notifier)
-                  .saveActivePdfEdits(),
-        onUndo: ref.read(workspaceNotifierProvider.notifier).canUndoActive
-            ? () => ref.read(workspaceNotifierProvider.notifier).undoPdfEdit()
-            : null,
-        onRedo: ref.read(workspaceNotifierProvider.notifier).canRedoActive
-            ? () => ref.read(workspaceNotifierProvider.notifier).redoPdfEdit()
-            : null,
+                  .saveActiveAnnotations(),
         onSearch: (String query) {
           final String? tabId = asyncState.value?.session.activeTabId;
           if (tabId != null) {
@@ -226,11 +187,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       builder: (BuildContext context) => AlertDialog(
         backgroundColor: WorkspaceColors.panel,
         title: const Text(
-          'Unsaved PDF edits',
+          'Unsaved annotations',
           style: TextStyle(color: WorkspaceColors.textStrong),
         ),
         content: const Text(
-          'Save every edited PDF, or close while keeping durable recovery projects.',
+          'Save every document’s annotations, or close without saving them.',
           style: TextStyle(color: WorkspaceColors.textMuted),
         ),
         actions: <Widget>[
@@ -240,10 +201,10 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(_CloseChoice.discard),
-            child: const Text('Keep recoverable projects'),
+            child: const Text('Discard'),
           ),
           FilledButton(
-            key: const Key('save-all-pdf-edits'),
+            key: const Key('save-all-annotations'),
             onPressed: () => Navigator.of(context).pop(_CloseChoice.saveAll),
             child: const Text('Save all'),
           ),
