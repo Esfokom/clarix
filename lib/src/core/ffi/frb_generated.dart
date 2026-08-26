@@ -5,6 +5,7 @@
 
 import 'agent_api.dart';
 import 'api.dart';
+import 'chat_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'editing_api.dart';
@@ -67,7 +68,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -310016601;
+  int get rustContentHash => -1858750110;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -284,12 +285,18 @@ abstract class RustLibApi extends BaseApi {
     required NativeRagIndexRequest request,
   });
 
+  Future<NativeChatEvent?> crateChatApiParseChatSseData({required String data});
+
   Future<NativePdfAnnotations> crateApiReadPdfAnnotations({
     required String path,
   });
 
   Future<void> crateApiSavePdfAnnotations({
     required NativePdfSaveRequest request,
+  });
+
+  Stream<NativeChatEvent> crateChatApiStreamChat({
+    required NativeChatRequest request,
   });
 
   Future<void> crateAgentApiTestAgentProvider({
@@ -1903,6 +1910,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Future<NativeChatEvent?> crateChatApiParseChatSseData({
+    required String data,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(data, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_native_chat_event,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateChatApiParseChatSseDataConstMeta,
+        argValues: [data],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateChatApiParseChatSseDataConstMeta =>
+      const TaskConstMeta(debugName: "parse_chat_sse_data", argNames: ["data"]);
+
+  @override
   Future<NativePdfAnnotations> crateApiReadPdfAnnotations({
     required String path,
   }) {
@@ -1914,7 +1951,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 41,
+            funcId: 42,
             port: port_,
           );
         },
@@ -1946,7 +1983,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 43,
             port: port_,
           );
         },
@@ -1967,6 +2004,43 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   );
 
   @override
+  Stream<NativeChatEvent> crateChatApiStreamChat({
+    required NativeChatRequest request,
+  }) {
+    final sink = RustStreamSink<NativeChatEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_box_autoadd_native_chat_request(request, serializer);
+            sse_encode_StreamSink_native_chat_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 44,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateChatApiStreamChatConstMeta,
+          argValues: [request, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateChatApiStreamChatConstMeta => const TaskConstMeta(
+    debugName: "stream_chat",
+    argNames: ["request", "sink"],
+  );
+
+  @override
   Future<void> crateAgentApiTestAgentProvider({
     required NativeProviderTestRequest request,
   }) {
@@ -1981,7 +2055,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 45,
             port: port_,
           );
         },
@@ -2112,6 +2186,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<NativeChatEvent> dco_decode_StreamSink_native_chat_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
   RustStreamSink<NativeEditorEvent>
   dco_decode_StreamSink_native_editor_event_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -2156,6 +2238,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_native_approve_font_fallback_request(raw);
+  }
+
+  @protected
+  NativeChatEvent dco_decode_box_autoadd_native_chat_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_chat_event(raw);
+  }
+
+  @protected
+  NativeChatRequest dco_decode_box_autoadd_native_chat_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_chat_request(raw);
   }
 
   @protected
@@ -2381,6 +2475,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return (raw as List<dynamic>)
         .map(dco_decode_native_annotation_range)
         .toList();
+  }
+
+  @protected
+  List<NativeChatMessage> dco_decode_list_native_chat_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_chat_message).toList();
   }
 
   @protected
@@ -2657,6 +2757,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       commandId: dco_decode_String(arr[1]),
       baseRevision: dco_decode_u_64(arr[2]),
       proposalToken: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  NativeChatEvent dco_decode_native_chat_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return NativeChatEvent_TextDelta(text: dco_decode_String(raw[1]));
+      case 1:
+        return NativeChatEvent_Error(message: dco_decode_String(raw[1]));
+      case 2:
+        return NativeChatEvent_Done();
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  NativeChatMessage dco_decode_native_chat_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeChatMessage(
+      role: dco_decode_String(arr[0]),
+      content: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativeChatRequest dco_decode_native_chat_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeChatRequest(
+      providerEndpoint: dco_decode_String(arr[0]),
+      modelId: dco_decode_String(arr[1]),
+      headers: dco_decode_Map_String_String_None(arr[2]),
+      apiKey: dco_decode_String(arr[3]),
+      messages: dco_decode_list_native_chat_message(arr[4]),
     );
   }
 
@@ -3555,6 +3697,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeChatEvent? dco_decode_opt_box_autoadd_native_chat_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_native_chat_event(raw);
+  }
+
+  @protected
   NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(
     dynamic raw,
   ) {
@@ -3839,6 +3987,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  RustStreamSink<NativeChatEvent> sse_decode_StreamSink_native_chat_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
   RustStreamSink<NativeEditorEvent>
   sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -3888,6 +4044,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_native_approve_font_fallback_request(deserializer));
+  }
+
+  @protected
+  NativeChatEvent sse_decode_box_autoadd_native_chat_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_chat_event(deserializer));
+  }
+
+  @protected
+  NativeChatRequest sse_decode_box_autoadd_native_chat_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_chat_request(deserializer));
   }
 
   @protected
@@ -4145,6 +4317,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <NativeAnnotationRange>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_native_annotation_range(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeChatMessage> sse_decode_list_native_chat_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeChatMessage>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_chat_message(deserializer));
     }
     return ans_;
   }
@@ -4559,6 +4745,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       commandId: var_commandId,
       baseRevision: var_baseRevision,
       proposalToken: var_proposalToken,
+    );
+  }
+
+  @protected
+  NativeChatEvent sse_decode_native_chat_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_text = sse_decode_String(deserializer);
+        return NativeChatEvent_TextDelta(text: var_text);
+      case 1:
+        var var_message = sse_decode_String(deserializer);
+        return NativeChatEvent_Error(message: var_message);
+      case 2:
+        return NativeChatEvent_Done();
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  NativeChatMessage sse_decode_native_chat_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_role = sse_decode_String(deserializer);
+    var var_content = sse_decode_String(deserializer);
+    return NativeChatMessage(role: var_role, content: var_content);
+  }
+
+  @protected
+  NativeChatRequest sse_decode_native_chat_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_providerEndpoint = sse_decode_String(deserializer);
+    var var_modelId = sse_decode_String(deserializer);
+    var var_headers = sse_decode_Map_String_String_None(deserializer);
+    var var_apiKey = sse_decode_String(deserializer);
+    var var_messages = sse_decode_list_native_chat_message(deserializer);
+    return NativeChatRequest(
+      providerEndpoint: var_providerEndpoint,
+      modelId: var_modelId,
+      headers: var_headers,
+      apiKey: var_apiKey,
+      messages: var_messages,
     );
   }
 
@@ -5689,6 +5923,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativeChatEvent? sse_decode_opt_box_autoadd_native_chat_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_chat_event(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(
     SseDeserializer deserializer,
   ) {
@@ -6048,6 +6295,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_StreamSink_native_chat_event_Sse(
+    RustStreamSink<NativeChatEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_chat_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_StreamSink_native_editor_event_Sse(
     RustStreamSink<NativeEditorEvent> self,
     SseSerializer serializer,
@@ -6107,6 +6371,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_approve_font_fallback_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_chat_event(
+    NativeChatEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_chat_event(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_chat_request(
+    NativeChatRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_chat_request(self, serializer);
   }
 
   @protected
@@ -6376,6 +6658,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_i_32(self.length, serializer);
     for (final item in self) {
       sse_encode_native_annotation_range(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_chat_message(
+    List<NativeChatMessage> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_chat_message(item, serializer);
     }
   }
 
@@ -6725,6 +7019,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.commandId, serializer);
     sse_encode_u_64(self.baseRevision, serializer);
     sse_encode_String(self.proposalToken, serializer);
+  }
+
+  @protected
+  void sse_encode_native_chat_event(
+    NativeChatEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case NativeChatEvent_TextDelta(text: final text):
+        sse_encode_i_32(0, serializer);
+        sse_encode_String(text, serializer);
+      case NativeChatEvent_Error(message: final message):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(message, serializer);
+      case NativeChatEvent_Done():
+        sse_encode_i_32(2, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_native_chat_message(
+    NativeChatMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.role, serializer);
+    sse_encode_String(self.content, serializer);
+  }
+
+  @protected
+  void sse_encode_native_chat_request(
+    NativeChatRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.providerEndpoint, serializer);
+    sse_encode_String(self.modelId, serializer);
+    sse_encode_Map_String_String_None(self.headers, serializer);
+    sse_encode_String(self.apiKey, serializer);
+    sse_encode_list_native_chat_message(self.messages, serializer);
   }
 
   @protected
@@ -7543,6 +7878,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_native_affine_transform(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_chat_event(
+    NativeChatEvent? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_chat_event(self, serializer);
     }
   }
 

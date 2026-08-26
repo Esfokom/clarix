@@ -4,6 +4,7 @@ flutter_rust_bridge::frb_generated_sse_codec!();
 pub mod agent_api;
 pub mod agent_provider;
 pub mod api;
+pub mod chat_api;
 pub mod editing_api;
 #[cfg(feature = "ocr")]
 pub mod ocr;

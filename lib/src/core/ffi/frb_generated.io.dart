@@ -5,6 +5,7 @@
 
 import 'agent_api.dart';
 import 'api.dart';
+import 'chat_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
@@ -86,6 +87,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<NativeChatEvent> dco_decode_StreamSink_native_chat_event_Sse(
+    dynamic raw,
+  );
+
+  @protected
   RustStreamSink<NativeEditorEvent>
   dco_decode_StreamSink_native_editor_event_Sse(dynamic raw);
 
@@ -110,6 +116,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeApproveFontFallbackRequest
   dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw);
+
+  @protected
+  NativeChatEvent dco_decode_box_autoadd_native_chat_event(dynamic raw);
+
+  @protected
+  NativeChatRequest dco_decode_box_autoadd_native_chat_request(dynamic raw);
 
   @protected
   NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
@@ -238,6 +250,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeChatMessage> dco_decode_list_native_chat_message(dynamic raw);
+
+  @protected
   List<NativeCompatibilityIssue> dco_decode_list_native_compatibility_issue(
     dynamic raw,
   );
@@ -338,6 +353,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeApproveFontFallbackRequest
   dco_decode_native_approve_font_fallback_request(dynamic raw);
+
+  @protected
+  NativeChatEvent dco_decode_native_chat_event(dynamic raw);
+
+  @protected
+  NativeChatMessage dco_decode_native_chat_message(dynamic raw);
+
+  @protected
+  NativeChatRequest dco_decode_native_chat_request(dynamic raw);
 
   @protected
   NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw);
@@ -551,6 +575,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeChatEvent? dco_decode_opt_box_autoadd_native_chat_event(dynamic raw);
+
+  @protected
   NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(
     dynamic raw,
   );
@@ -683,6 +710,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  RustStreamSink<NativeChatEvent> sse_decode_StreamSink_native_chat_event_Sse(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   RustStreamSink<NativeEditorEvent>
   sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer);
 
@@ -709,6 +741,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeApproveFontFallbackRequest
   sse_decode_box_autoadd_native_approve_font_fallback_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeChatEvent sse_decode_box_autoadd_native_chat_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeChatRequest sse_decode_box_autoadd_native_chat_request(
     SseDeserializer deserializer,
   );
 
@@ -861,6 +903,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeChatMessage> sse_decode_list_native_chat_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<NativeCompatibilityIssue> sse_decode_list_native_compatibility_issue(
     SseDeserializer deserializer,
   );
@@ -987,6 +1034,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeApproveFontFallbackRequest
   sse_decode_native_approve_font_fallback_request(SseDeserializer deserializer);
+
+  @protected
+  NativeChatEvent sse_decode_native_chat_event(SseDeserializer deserializer);
+
+  @protected
+  NativeChatMessage sse_decode_native_chat_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeChatRequest sse_decode_native_chat_request(
+    SseDeserializer deserializer,
+  );
 
   @protected
   NativeCheckpointRequest sse_decode_native_checkpoint_request(
@@ -1292,6 +1352,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeChatEvent? sse_decode_opt_box_autoadd_native_chat_event(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(
     SseDeserializer deserializer,
   );
@@ -1447,6 +1512,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_StreamSink_native_chat_event_Sse(
+    RustStreamSink<NativeChatEvent> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_StreamSink_native_editor_event_Sse(
     RustStreamSink<NativeEditorEvent> self,
     SseSerializer serializer,
@@ -1476,6 +1547,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_approve_font_fallback_request(
     NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_chat_event(
+    NativeChatEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_chat_request(
+    NativeChatRequest self,
     SseSerializer serializer,
   );
 
@@ -1644,6 +1727,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_native_annotation_range(
     List<NativeAnnotationRange> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_chat_message(
+    List<NativeChatMessage> self,
     SseSerializer serializer,
   );
 
@@ -1818,6 +1907,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_approve_font_fallback_request(
     NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_chat_event(
+    NativeChatEvent self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_chat_message(
+    NativeChatMessage self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_chat_request(
+    NativeChatRequest self,
     SseSerializer serializer,
   );
 
@@ -2190,6 +2297,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_native_affine_transform(
     NativeAffineTransform? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_chat_event(
+    NativeChatEvent? self,
     SseSerializer serializer,
   );
 
