@@ -1,17 +1,13 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
-import '../../../../core/editing/editor_bridge_types.dart';
 import '../../../../core/models.dart';
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../../../core/workspace_surface_tokens.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'package:clarix/src/features/reader/presentation/reader_viewer_pane.dart';
 
 class DocumentWorkspace extends ConsumerWidget {
@@ -29,84 +25,17 @@ class DocumentWorkspace extends ConsumerWidget {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
-    final nativeState = ref
-        .watch(editorDocumentStateProvider(activeTab.id))
-        .value;
-    final nativeController = ref.read(
-      editorSessionRegistryProvider,
-    )[activeTab.id];
     return Column(
       children: <Widget>[
         _TabStrip(state: state, activeTab: activeTab, colors: colors),
         Expanded(
-          child: Stack(
-            children: <Widget>[
-              Positioned.fill(
-                child: ReaderViewerPane(
-                  tab: activeTab,
-                  documentRef: ref.watch(
-                    pdfDocumentRefProvider(activeTab.filePath),
-                  ),
-                  annotations:
-                      state
-                          .documentMetadata[activeTab.documentId]
-                          ?.annotations ??
-                      const <DocumentAnnotation>[],
-                  colors: colors,
-                ),
-              ),
-              if (nativeState?.recoveredRevision case final revision?)
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: RecoveryBanner(
-                    revision: revision,
-                    onReview: nativeController?.dismissRecovery ?? () {},
-                    onDismiss: nativeController?.dismissRecovery ?? () {},
-                  ),
-                ),
-              if (nativeState?.save.phase == EditorSavePhase.saving)
-                Center(
-                  child: SaveProgressDialog(
-                    stage: nativeState?.save.stage ?? 'FlushCommands',
-                    onCancel:
-                        nativeState?.save.stage == 'CommitComposition' ||
-                            nativeState?.save.stage == 'FlushCommands'
-                        ? nativeController?.cancelSave
-                        : null,
-                  ),
-                ),
-              if (nativeState?.save.phase == EditorSavePhase.failed)
-                Center(
-                  child: SaveConflictDialog(
-                    errorCode:
-                        nativeState?.save.errorCode ?? 'editor_save_failed',
-                    onRetry: () => unawaited(
-                      ref
-                          .read(workspaceNotifierProvider.notifier)
-                          .saveActivePdfEdits(),
-                    ),
-                    onSaveAs: () => unawaited(() async {
-                      final followCopy = await showSaveAsAssociationDialog(
-                        context,
-                      );
-                      if (followCopy == null) return;
-                      await ref
-                          .read(workspaceNotifierProvider.notifier)
-                          .saveActivePdfEditsAsCopy(
-                            association: followCopy
-                                ? EditorSaveAssociation.followNewSource
-                                : EditorSaveAssociation.keepOriginalAssociation,
-                          );
-                    }()),
-                    onRebase: () => unawaited(
-                      ref
-                          .read(workspaceNotifierProvider.notifier)
-                          .rebaseActiveNativeEditor(),
-                    ),
-                    onCancel: nativeController?.dismissSaveFailure ?? () {},
-                  ),
-                ),
-            ],
+          child: ReaderViewerPane(
+            tab: activeTab,
+            documentRef: ref.watch(pdfDocumentRefProvider(activeTab.filePath)),
+            annotations:
+                state.documentMetadata[activeTab.documentId]?.annotations ??
+                const <DocumentAnnotation>[],
+            colors: colors,
           ),
         ),
       ],
@@ -230,14 +159,6 @@ class _TabStripState extends ConsumerState<_TabStrip> {
 
   Future<void> _confirmCloseTab(DocumentTabState tab) async {
     final notifier = ref.read(workspaceNotifierProvider.notifier);
-    final native = ref.read(editorSessionRegistryProvider)[tab.id];
-    if (native != null && notifier.hasUnsavedEditsFor(tab.id)) {
-      final choice = await showDirtyCloseDialog(context);
-      if (choice != null) {
-        await notifier.closeTab(tab.id, nativeDirtyChoice: choice);
-      }
-      return;
-    }
     if (!notifier.hasUnsavedEditsFor(tab.id)) {
       await notifier.closeTab(tab.id);
       return;
