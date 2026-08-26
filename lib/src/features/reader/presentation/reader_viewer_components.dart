@@ -1,4 +1,5 @@
 part of 'reader_viewer_pane.dart';
+
 class _DocumentSearchOverlay extends StatelessWidget {
   const _DocumentSearchOverlay({
     required this.query,
@@ -262,68 +263,6 @@ class _PdfScrollbarThumb extends StatefulWidget {
   State<_PdfScrollbarThumb> createState() => _PdfScrollbarThumbState();
 }
 
-class _QuickSelectionMenu extends StatelessWidget {
-  const _QuickSelectionMenu({
-    required this.colors,
-    required this.onCopy,
-    required this.onBookmark,
-    required this.onHighlight,
-    required this.onDismiss,
-  });
-
-  final WorkspaceSurfaceTokens colors;
-  final Future<void> Function() onCopy;
-  final Future<void> Function() onBookmark;
-  final Future<void> Function(int color) onHighlight;
-  final VoidCallback onDismiss;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: colors.panelRaised,
-    borderRadius: BorderRadius.circular(8),
-    child: Padding(
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          TextButton.icon(
-            onPressed: () async {
-              await onCopy();
-              onDismiss();
-            },
-            icon: const Icon(LucideIcons.copy, size: 14),
-            label: const Text('Copy'),
-          ),
-          TextButton.icon(
-            onPressed: () async {
-              await onBookmark();
-              onDismiss();
-            },
-            icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
-            label: const Text('Bookmark'),
-          ),
-          for (final color in const <int>[0x66FFD54F, 0x6686EFAC, 0x668EC5FF])
-            IconButton(
-              tooltip: 'Highlight',
-              onPressed: () async {
-                await onHighlight(color);
-                onDismiss();
-              },
-              icon: Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: Color(color),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  );
-}
-
 class _ColourWheel extends StatelessWidget {
   const _ColourWheel({required this.color, required this.onChanged});
 
@@ -434,8 +373,6 @@ class _ViewerHud extends StatelessWidget {
     required this.onZoomIn,
     required this.onSelectZoomPreset,
     required this.onHighlightSelection,
-    required this.textEditing,
-    required this.onToggleTextEditing,
   });
 
   final int page;
@@ -447,8 +384,6 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onZoomIn;
   final ValueChanged<_ZoomPreset>? onSelectZoomPreset;
   final VoidCallback? onHighlightSelection;
-  final bool textEditing;
-  final VoidCallback? onToggleTextEditing;
 
   @override
   Widget build(BuildContext context) {
@@ -529,18 +464,6 @@ class _ViewerHud extends StatelessWidget {
                 onPressed: onHighlightSelection,
               ),
             ),
-            const SizedBox(width: 6),
-            Tooltip(
-              message: textEditing
-                  ? 'Leave PDF object editing'
-                  : 'Edit PDF objects',
-              child: _HudIcon(
-                key: const Key('pdf-text-edit-toggle'),
-                icon: LucideIcons.textCursorInput,
-                onPressed: onToggleTextEditing,
-                active: textEditing,
-              ),
-            ),
           ],
         ),
       ),
@@ -564,16 +487,10 @@ enum _ZoomPreset {
 }
 
 class _HudIcon extends StatelessWidget {
-  const _HudIcon({
-    required this.icon,
-    required this.onPressed,
-    this.active = false,
-    super.key,
-  });
+  const _HudIcon({required this.icon, required this.onPressed});
 
   final IconData icon;
   final VoidCallback? onPressed;
-  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -581,7 +498,6 @@ class _HudIcon extends StatelessWidget {
       width: 24,
       height: 24,
       padding: EdgeInsets.zero,
-      backgroundColor: active ? WorkspaceColors.accentSoft : null,
       icon: Icon(icon, size: 12),
       onPressed: onPressed,
     );
@@ -597,13 +513,4 @@ class _HudDivider extends StatelessWidget {
   }
 }
 
-PdfTextSelectionParams textSelectionParamsFor(
-  PdfEditingInteraction interaction,
-) => PdfTextSelectionParams(
-  enabled: interaction == PdfEditingInteraction.reading,
-  showContextMenuAutomatically: interaction == PdfEditingInteraction.reading,
-);
-
-PdfViewerOnKeyCallback viewerKeyHandlerFor(PdfEditingInteraction interaction) =>
-    (_, _, _) => interaction == PdfEditingInteraction.textEditing ? true : null;
 // reader-components-anchor

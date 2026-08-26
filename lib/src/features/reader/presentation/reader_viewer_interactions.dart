@@ -19,7 +19,6 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     PdfDocument document,
     PdfViewerController controller,
   ) async {
-    _pageSurface.refresh();
     final PdfTextSearcher searcher = PdfTextSearcher(controller);
     if (widget.tab.searchQuery.trim().isNotEmpty) {
       _pendingSearchQuery = widget.tab.searchQuery;
@@ -56,56 +55,6 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     } else {
       searcher.dispose();
     }
-  }
-
-  Future<EditorSessionController?> _openNativeEditor(
-    String tabId,
-    String sourcePath,
-  ) async {
-    try {
-      final controller = await ref
-          .read(editorSessionRegistryProvider)
-          .open(tabId: tabId, sourcePath: sourcePath);
-      if (!mounted || widget.tab.id != tabId) {
-        await ref.read(editorSessionRegistryProvider).close(tabId);
-        return null;
-      }
-      _pageSceneLifecycle?.dispose();
-      _pageSceneLifecycle = PageSceneLifecycle(
-        surface: _pageSurface,
-        controller: controller,
-      )..start();
-      _updateState();
-      return controller;
-    } catch (error) {
-      ref.read(workspaceNotifierProvider.notifier).reportPdfEditFailure(error);
-      return null;
-    }
-  }
-
-  Future<void> _toggleTextEditing() async {
-    final notifier = ref.read(workspaceNotifierProvider.notifier);
-    final currentTool = ref
-        .read(workspaceNotifierProvider)
-        .value
-        ?.session
-        .rightToolWindow;
-    final isCurrentlyEditing = currentTool == RightToolWindow.textFormat;
-
-    if (!isCurrentlyEditing) {
-      final controller =
-          ref.read(editorSessionRegistryProvider)[widget.tab.id] ??
-          await _openNativeEditor(widget.tab.id, widget.tab.filePath);
-      if (controller == null) return;
-      await notifier.selectRightToolWindow(RightToolWindow.textFormat);
-    } else {
-      final controller = ref.read(editorSessionRegistryProvider)[widget.tab.id];
-      if (controller != null && controller.state.selection != null) {
-        controller.updateSelection(null);
-      }
-      await notifier.selectRightToolWindow(RightToolWindow.document);
-    }
-    _updateState();
   }
 
   bool get _shouldShowSearchOverlay =>
@@ -248,83 +197,6 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     _lastPointerGlobalPosition = event.position;
   }
 
-  Future<void> _showSelectionMenuAfterDrag(PointerUpEvent event) async {
-    final Offset? start = _selectionDragStart;
-    _selectionDragStart = null;
-    if (start == null || (event.localPosition - start).distance < 4) return;
-    if (!_controller.isReady) return;
-    final ranges = await _controller.textSelectionDelegate
-        .getSelectedTextRanges();
-    if (!mounted || ranges.isEmpty) return;
-    _updateState(
-      () => _selectionMenuPosition = event.localPosition.translate(8, 8),
-    );
-  }
-
-  void _updateSelectionAutoPan(PointerMoveEvent event) {
-    if (_selectionDragStart == null ||
-        event.buttons == 0 ||
-        !_controller.isReady) {
-      _stopSelectionAutoPan();
-      return;
-    }
-    _selectionAutoPanPointer = event.localPosition;
-    const edge = 32.0;
-    final Size size = _controller.viewSize;
-    final Offset point = event.localPosition;
-    final bool nearEdge =
-        point.dx < edge ||
-        point.dx > size.width - edge ||
-        point.dy < edge ||
-        point.dy > size.height - edge;
-    if (nearEdge && _selectionAutoPanTimer == null) {
-      _selectionAutoPanTimer = Timer.periodic(
-        const Duration(milliseconds: 16),
-        (_) => _autoPanSelection(),
-      );
-    } else if (!nearEdge) {
-      _stopSelectionAutoPan();
-    }
-  }
-
-  void _autoPanSelection() {
-    final Offset? point = _selectionAutoPanPointer;
-    if (point == null || !_controller.isReady) return;
-    const edge = 32.0;
-    const maxSpeed = 12.0;
-    final Size size = _controller.viewSize;
-    double velocity(double value, double extent) {
-      if (value < edge) return maxSpeed * (1 - value / edge);
-      if (value > extent - edge) {
-        return -maxSpeed * (1 - (extent - value) / edge);
-      }
-      return 0;
-    }
-
-    final double dx = velocity(point.dx, size.width);
-    final double dy = velocity(point.dy, size.height);
-    if (dx == 0 && dy == 0) return;
-    final matrix = _controller.value.clone()
-      ..setEntry(0, 3, _controller.value.entry(0, 3) + dx)
-      ..setEntry(1, 3, _controller.value.entry(1, 3) + dy);
-    _controller.value = _controller.makeMatrixInSafeRange(
-      matrix,
-      forceClamp: true,
-    );
-  }
-
-  void _stopSelectionAutoPan() {
-    _selectionAutoPanTimer?.cancel();
-    _selectionAutoPanTimer = null;
-    _selectionAutoPanPointer = null;
-  }
-
-  Future<void> _copyCurrentSelection() async {
-    final String text = await _controller.textSelectionDelegate
-        .getSelectedText();
-    await Clipboard.setData(ClipboardData(text: text));
-  }
-
   void _rememberTrackpadZoomStart(PointerPanZoomStartEvent event) {
     _lastPointerGlobalPosition = event.position;
   }
@@ -333,97 +205,6 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     // PointerPanZoomUpdateEvent.position is the stationary mouse cursor.
     // event.pan is two-finger content translation, not cursor movement.
     _lastPointerGlobalPosition = event.position;
-  }
-
-  Widget? _buildSelectionContextMenu(
-    BuildContext context,
-    PdfViewerContextMenuBuilderParams params,
-  ) {
-    if (params.contextMenuFor != PdfViewerPart.selectedText) return null;
-    return Material(
-      color: widget.colors.panelRaised,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            TextButton.icon(
-              onPressed: () async {
-                final text = await params.textSelectionDelegate
-                    .getSelectedText();
-                await Clipboard.setData(ClipboardData(text: text));
-                params.dismissContextMenu();
-              },
-              icon: const Icon(LucideIcons.copy, size: 14),
-              label: const Text('Copy'),
-            ),
-            TextButton.icon(
-              onPressed: () async {
-                await _addNamedBookmark();
-                params.dismissContextMenu();
-              },
-              icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
-              label: const Text('Bookmark'),
-            ),
-            for (final int color in const <int>[
-              0x66FFD54F,
-              0x6686EFAC,
-              0x668EC5FF,
-            ])
-              IconButton(
-                tooltip: 'Highlight',
-                onPressed: () async {
-                  await _highlightSelection(colorValue: color);
-                  params.dismissContextMenu();
-                },
-                icon: Container(
-                  width: 14,
-                  height: 14,
-                  decoration: BoxDecoration(
-                    color: Color(color),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-            TextButton(
-              onPressed: () {
-                _updateState(() => _colorInspectorOpen = true);
-                params.dismissContextMenu();
-              },
-              child: const Text('More colours'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _addNamedBookmark() async {
-    final controller = TextEditingController(text: 'Page $_page');
-    final String? label = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Add bookmark'),
-        content: TextField(controller: controller, autofocus: true),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Add'),
-          ),
-        ],
-      ),
-    );
-    controller.dispose();
-    if (label != null) {
-      await ref
-          .read(workspaceNotifierProvider.notifier)
-          .addBookmark(tabId: widget.tab.id, pageNumber: _page, label: label);
-    }
   }
 
   Future<void> _highlightSelection({int? colorValue}) async {
@@ -464,7 +245,6 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
       }
     }
     await _controller.textSelectionDelegate.clearTextSelection();
-    _updateState(() => _selectionMenuPosition = null);
   }
 
   List<PdfRect> _selectionLineRects(PdfPageTextRange range) {
