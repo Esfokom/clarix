@@ -3,9 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
-import '../../../../core/editing/editor_bridge_types.dart';
 import '../../application/workspace_providers.dart';
-import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'document_workspace.dart';
@@ -181,23 +179,15 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
   }
 
   Widget _aiPane(AiFeatureState aiState, DocumentTabState? tab) {
-    final controller = tab == null
-        ? null
-        : ref.watch(agentRunControllerProvider(tab.id));
-    final revision = tab == null
-        ? 0
-        : ref.watch(editorDocumentStateProvider(tab.id)).value?.revision ?? 0;
     return AiSidePane(
       aiState: aiState,
-      documentContext: tab == null || controller == null
+      documentContext: tab == null
           ? null
           : AiDocumentContext(
               tabId: tab.id,
               documentId: tab.documentId,
               title: tab.title,
               filePath: tab.filePath,
-              editorRevision: revision,
-              agentController: controller,
               isMissingFile: tab.isMissingFile,
             ),
       onCollapse: () =>
@@ -264,7 +254,8 @@ class _TextFormatPane extends ConsumerWidget {
           if (object == null) {
             return const _NoEditableTextSelection();
           }
-          final effectiveSelection = selection ??
+          final effectiveSelection =
+              selection ??
               EditorSelection(
                 objectId: object.objectId,
                 range: const EditorTextRange(start: 0, end: 0),

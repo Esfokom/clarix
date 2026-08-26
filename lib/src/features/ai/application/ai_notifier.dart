@@ -4,7 +4,6 @@ import '../../../core/clarix_logger.dart';
 import '../domain/ai_feature_state.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
-import '../infrastructure/native_conversation_migrator.dart';
 import 'ai_document_context.dart';
 import 'ai_providers.dart';
 
@@ -216,13 +215,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     );
     final buffer = StringBuffer();
     try {
-      clarixLog.i('AI conversation migration started.');
       final store = await ref.read(conversationStoreProvider.future);
-      await NativeConversationMigrator(
-        legacy: store,
-        importConversation: context.agentController.importConversation,
-        documentId: context.documentId,
-      ).run();
       final threads = await store.listThreads(context.documentId);
       clarixLog.i(
         'AI provider run starting with ${threads.length} persisted thread(s).',
@@ -232,10 +225,6 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           .sendPrompt(
             prompt: prompt.trim(),
             profileId: current.chat.selectedProviderId!,
-            conversationId: threads.isEmpty
-                ? 'native:${context.documentId}'
-                : threads.first.id,
-            controller: context.agentController,
             onStatus: _setActivity,
             onToken: (token) {
               buffer.write(token);

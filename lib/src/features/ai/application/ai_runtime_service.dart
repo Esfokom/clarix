@@ -1,38 +1,38 @@
-import 'dart:async';
-
-import '../../../core/agent/agent_bridge_types.dart';
 import '../../../core/clarix_logger.dart';
-import '../../../core/ffi/agent_api.dart' as native_agent;
+import '../../../core/ffi/chat_api.dart' as native_chat;
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
-import 'agent_run_controller.dart';
 
 class AiRuntimeService {
   AiRuntimeService({required this.providerProfiles});
 
   final ProviderProfileStore providerProfiles;
-  AgentRunController? _activeController;
-
-  Future<void> testProvider(AiProviderProfile profile, String apiKey) {
+  Future<void> testProvider(AiProviderProfile profile, String apiKey) async {
     if (apiKey.trim().isEmpty) {
       throw ArgumentError('Enter an API key before testing this provider.');
     }
-    return native_agent.testAgentProvider(
-      request: native_agent.NativeProviderTestRequest(
-        providerEndpoint: profile.baseUrl,
-        modelId: profile.modelId,
-        headers: profile.headers,
-        apiKey: apiKey.trim(),
-      ),
-    );
+    await native_chat
+        .streamChat(
+          request: native_chat.NativeChatRequest(
+            providerEndpoint: profile.baseUrl,
+            modelId: profile.modelId,
+            headers: profile.headers,
+            apiKey: apiKey.trim(),
+            messages: const <native_chat.NativeChatMessage>[
+              native_chat.NativeChatMessage(
+                role: 'user',
+                content: 'Reply with OK.',
+              ),
+            ],
+          ),
+        )
+        .first;
   }
 
   Future<AiReply> sendPrompt({
     required String prompt,
     required String profileId,
-    required String conversationId,
-    required AgentRunController controller,
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
   }) async {
@@ -53,66 +53,37 @@ class AiRuntimeService {
       'AI runtime prepared ${profile.label} streaming request '
       '(model=${profile.modelId}, endpoint=${profile.baseUrl}).',
     );
-    _activeController = controller;
-    var delivered = 0;
-    final terminal = Completer<AgentRunControllerState>();
-    late final StreamSubscription<AgentRunControllerState> subscription;
-    subscription = controller.changes.listen(
-      (state) {
-        if (state.assistantText.length > delivered) {
-          onToken(state.assistantText.substring(delivered));
-          delivered = state.assistantText.length;
-        }
-        onStatus?.call(_phase(state.status), state.progressLabel);
-        if ((state.status?.isTerminal ?? false) && !terminal.isCompleted) {
-          terminal.complete(state);
-        }
-      },
-      onError: (Object error, StackTrace stack) {
-        if (!terminal.isCompleted) terminal.completeError(error, stack);
-      },
-    );
-    try {
-      onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
-      clarixLog.i('AI native agent run start requested.');
-      await controller.start(
-        AgentStartRequest(
-          providerEndpoint: profile.baseUrl,
-          modelId: profile.modelId,
-          headers: profile.headers,
-          apiKey: key,
-          conversationId: conversationId,
-          userPrompt: prompt,
-        ),
-      );
-      final result = await terminal.future;
-      clarixLog.i(
-        'AI native agent run reached ${result.status?.name ?? 'unknown'} status.',
-      );
-      if (result.error != null || result.status == AgentRunStatus.failed) {
-        throw StateError(
-          'Native agent run failed: ${result.error ?? 'provider error'}',
-        );
+    onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
+    final buffer = StringBuffer();
+    await for (final event in native_chat.streamChat(
+      request: native_chat.NativeChatRequest(
+        providerEndpoint: profile.baseUrl,
+        modelId: profile.modelId,
+        headers: profile.headers,
+        apiKey: key,
+        messages: <native_chat.NativeChatMessage>[
+          native_chat.NativeChatMessage(role: 'user', content: prompt),
+        ],
+      ),
+    )) {
+      switch (event) {
+        case native_chat.NativeChatEvent_TextDelta(:final text):
+          buffer.write(text);
+          onToken(text);
+        case native_chat.NativeChatEvent_Error(:final message):
+          throw StateError(message);
+        case native_chat.NativeChatEvent_Done():
+          break;
       }
-      return AiReply(
-        text: result.assistantText,
-        citations: const <CitationSnippet>[],
-      );
-    } finally {
-      await subscription.cancel();
-      if (identical(_activeController, controller)) _activeController = null;
     }
+    return AiReply(
+      text: buffer.toString(),
+      citations: const <CitationSnippet>[],
+    );
   }
 
-  Future<void> stopGeneration() async => _activeController?.cancel();
-  Future<void> dispose() async => stopGeneration();
-
-  AiRuntimePhase _phase(AgentRunStatus? status) => switch (status) {
-    AgentRunStatus.callingProvider => AiRuntimePhase.generating,
-    AgentRunStatus.executingTool => AiRuntimePhase.executingTool,
-    AgentRunStatus.failed => AiRuntimePhase.failed,
-    _ => AiRuntimePhase.loadingInference,
-  };
+  Future<void> stopGeneration() async {}
+  Future<void> dispose() async {}
 }
 
 class AiReply {
