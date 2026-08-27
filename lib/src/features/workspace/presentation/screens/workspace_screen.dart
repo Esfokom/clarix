@@ -75,6 +75,11 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       workspaceNotifierProvider,
     );
     final activeTabId = asyncState.value?.session.activeTabId;
+    final activeTab = activeTabId == null
+        ? null
+        : asyncState.value?.session.tabs
+              .where((tab) => tab.id == activeTabId)
+              .firstOrNull;
     final nativeState = activeTabId == null
         ? null
         : ref.watch(editorDocumentStateProvider(activeTabId)).value;
@@ -108,17 +113,38 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
       child: DesktopWindowChrome(
         showDocumentActions: activeTabId != null,
         isTextEditingActive:
-            asyncState.value?.session.rightToolWindow == RightToolWindow.textFormat ||
-            (nativeState?.selection != null),
-        onToggleEditText: activeTabId == null
+            nativeState?.isOpen == true &&
+            (asyncState.value?.session.rightToolWindow ==
+                    RightToolWindow.textFormat ||
+                nativeState?.selection != null),
+        onToggleEditText: activeTab == null
             ? null
-            : () {
+            : () async {
                 final notifier = ref.read(workspaceNotifierProvider.notifier);
                 final current = asyncState.value?.session.rightToolWindow;
                 if (current != RightToolWindow.textFormat) {
-                  notifier.selectRightToolWindow(RightToolWindow.textFormat);
+                  try {
+                    await ref
+                        .read(editorSessionRegistryProvider)
+                        .open(
+                          tabId: activeTab.id,
+                          sourcePath: activeTab.filePath,
+                        );
+                    if (!mounted) return;
+                    await notifier.selectRightToolWindow(
+                      RightToolWindow.textFormat,
+                    );
+                  } catch (error) {
+                    notifier.reportPdfEditFailure(error);
+                  }
                 } else {
-                  notifier.selectRightToolWindow(RightToolWindow.document);
+                  final controller = ref.read(
+                    editorSessionRegistryProvider,
+                  )[activeTab.id];
+                  controller?.updateSelection(null);
+                  await notifier.selectRightToolWindow(
+                    RightToolWindow.document,
+                  );
                 }
               },
         onImport: () =>

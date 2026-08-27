@@ -55,13 +55,45 @@ class DesktopWindowChrome extends ConsumerWidget {
               children: <Widget>[
                 const SizedBox(width: 24),
                 if (showDocumentActions)
-                  IconButton(
-                    key: const Key('chrome-edit-text'),
-                    tooltip: isTextEditingActive ? 'Exit Edit Mode' : 'Edit Text',
-                    onPressed: onToggleEditText,
-                    icon: Icon(
-                      Icons.edit_document,
-                      color: isTextEditingActive ? colors.accent : colors.textMuted,
+                  Tooltip(
+                    message: isTextEditingActive
+                        ? 'Editing on — return to reading'
+                        : 'Enter PDF edit mode',
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      curve: Curves.easeOutCubic,
+                      decoration: BoxDecoration(
+                        color: isTextEditingActive
+                            ? colors.accent
+                            : Colors.transparent,
+                        border: Border.all(
+                          color: isTextEditingActive
+                              ? colors.accent
+                              : colors.border,
+                        ),
+                        borderRadius: BorderRadius.circular(9),
+                        boxShadow: isTextEditingActive
+                            ? <BoxShadow>[
+                                BoxShadow(
+                                  color: colors.accent.withValues(alpha: 0.32),
+                                  blurRadius: 12,
+                                  spreadRadius: 1,
+                                ),
+                              ]
+                            : const <BoxShadow>[],
+                      ),
+                      child: IconButton(
+                        key: const Key('chrome-edit-text'),
+                        onPressed: onToggleEditText,
+                        icon: Icon(
+                          isTextEditingActive
+                              ? Icons.edit_document
+                              : Icons.edit_document,
+                          color: isTextEditingActive
+                              ? colors.canvas
+                              : colors.textMuted,
+                        ),
+                      ),
                     ),
                   ),
                 if (showDocumentActions)
@@ -118,7 +150,10 @@ class DesktopWindowChrome extends ConsumerWidget {
                       ],
                   icon: Icon(Icons.menu, color: colors.textMuted),
                 ),
-                if (useNativeWindowControls && !Platform.environment.containsKey('FLUTTER_TEST')) ...<Widget>[
+                if (useNativeWindowControls &&
+                    !Platform.environment.containsKey(
+                      'FLUTTER_TEST',
+                    )) ...<Widget>[
                   MinimizeWindowButton(
                     key: const Key('chrome-minimize'),
                     colors: _buttonColors(colors),

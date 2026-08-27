@@ -337,9 +337,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
     final editorState = ref
         .watch(editorDocumentStateProvider(widget.tab.id))
         .value;
+    // A persisted inspector selection is not an editor session. Only expose
+    // edit interaction after the native session has actually opened.
     final isEditingMode =
-        workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
-        (editorState?.selection != null);
+        editorState?.isOpen == true &&
+        (workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
+            editorState?.selection != null);
     final interaction = isEditingMode
         ? PdfEditingInteraction.textEditing
         : PdfEditingInteraction.reading;
