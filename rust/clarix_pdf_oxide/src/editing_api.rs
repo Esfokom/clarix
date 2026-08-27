@@ -328,6 +328,36 @@ pub struct NativeSceneObject {
     pub layout: Option<NativeTextLayoutRecipe>,
     pub font_fingerprint: Option<String>,
     pub font_asset_handle: Option<String>,
+    /// Populated only by the live PDFium backend. Legacy adapter scenes do
+    /// not have a physical PDFium object path and must remain explicit about
+    /// that absence.
+    pub physical_locator: Option<NativePhysicalLocator>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePhysicalLocator {
+    pub page_number: u32,
+    pub object_path: Vec<u32>,
+    pub object_type: String,
+    pub source_fingerprint: String,
+    pub object_revision: u64,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeDirtyTile {
+    pub page_number: u32,
+    pub revision: u64,
+    pub bounds: NativePdfBox,
+    pub width: u32,
+    pub height: u32,
+    pub rgba_bytes: Vec<u8>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeTileInvalidation {
+    pub page_number: u32,
+    pub bounds: NativePdfBox,
+    pub revision: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -1496,6 +1526,7 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
             }),
             font_fingerprint: block.font().map(|font| font.bytes_sha256.clone()),
             font_asset_handle: block.font().and_then(|font| font.asset_id.clone()),
+            physical_locator: None,
         },
         _ => NativeSceneObject {
             kind: NativeSceneObjectKind::Unsupported,
@@ -1512,6 +1543,7 @@ fn native_scene_object(object: &DocumentObject) -> NativeSceneObject {
             layout: None,
             font_fingerprint: None,
             font_asset_handle: None,
+            physical_locator: None,
         },
     }
 }

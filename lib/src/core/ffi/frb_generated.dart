@@ -2258,6 +2258,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePhysicalLocator dco_decode_box_autoadd_native_physical_locator(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_physical_locator(raw);
+  }
+
+  @protected
   NativeProviderTestRequest dco_decode_box_autoadd_native_provider_test_request(
     dynamic raw,
   ) {
@@ -3157,6 +3165,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativePhysicalLocator(
+      pageNumber: dco_decode_u_32(arr[0]),
+      objectPath: dco_decode_list_prim_u_32_strict(arr[1]),
+      objectType: dco_decode_String(arr[2]),
+      sourceFingerprint: dco_decode_String(arr[3]),
+      objectRevision: dco_decode_u_64(arr[4]),
+    );
+  }
+
+  @protected
   NativeProviderTestRequest dco_decode_native_provider_test_request(
     dynamic raw,
   ) {
@@ -3262,8 +3285,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativeSceneObject dco_decode_native_scene_object(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
     return NativeSceneObject(
       kind: dco_decode_native_scene_object_kind(arr[0]),
       objectId: dco_decode_String(arr[1]),
@@ -3279,6 +3302,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       layout: dco_decode_opt_box_autoadd_native_text_layout_recipe(arr[11]),
       fontFingerprint: dco_decode_opt_String(arr[12]),
       fontAssetHandle: dco_decode_opt_String(arr[13]),
+      physicalLocator: dco_decode_opt_box_autoadd_native_physical_locator(
+        arr[14],
+      ),
     );
   }
 
@@ -3568,6 +3594,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_box_autoadd_native_pdf_box(raw);
+  }
+
+  @protected
+  NativePhysicalLocator? dco_decode_opt_box_autoadd_native_physical_locator(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_physical_locator(raw);
   }
 
   @protected
@@ -3995,6 +4031,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_native_pdf_save_request(deserializer));
+  }
+
+  @protected
+  NativePhysicalLocator sse_decode_box_autoadd_native_physical_locator(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_physical_locator(deserializer));
   }
 
   @protected
@@ -5183,6 +5227,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePhysicalLocator sse_decode_native_physical_locator(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_objectPath = sse_decode_list_prim_u_32_strict(deserializer);
+    var var_objectType = sse_decode_String(deserializer);
+    var var_sourceFingerprint = sse_decode_String(deserializer);
+    var var_objectRevision = sse_decode_u_64(deserializer);
+    return NativePhysicalLocator(
+      pageNumber: var_pageNumber,
+      objectPath: var_objectPath,
+      objectType: var_objectType,
+      sourceFingerprint: var_sourceFingerprint,
+      objectRevision: var_objectRevision,
+    );
+  }
+
+  @protected
   NativeProviderTestRequest sse_decode_native_provider_test_request(
     SseDeserializer deserializer,
   ) {
@@ -5317,6 +5380,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     var var_fontFingerprint = sse_decode_opt_String(deserializer);
     var var_fontAssetHandle = sse_decode_opt_String(deserializer);
+    var var_physicalLocator =
+        sse_decode_opt_box_autoadd_native_physical_locator(deserializer);
     return NativeSceneObject(
       kind: var_kind,
       objectId: var_objectId,
@@ -5332,6 +5397,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       layout: var_layout,
       fontFingerprint: var_fontFingerprint,
       fontAssetHandle: var_fontAssetHandle,
+      physicalLocator: var_physicalLocator,
     );
   }
 
@@ -5709,6 +5775,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
     if (sse_decode_bool(deserializer)) {
       return (sse_decode_box_autoadd_native_pdf_box(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativePhysicalLocator? sse_decode_opt_box_autoadd_native_physical_locator(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_physical_locator(deserializer));
     } else {
       return null;
     }
@@ -6224,6 +6303,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_native_pdf_save_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_physical_locator(
+    NativePhysicalLocator self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_physical_locator(self, serializer);
   }
 
   @protected
@@ -7170,6 +7258,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_physical_locator(
+    NativePhysicalLocator self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_list_prim_u_32_strict(self.objectPath, serializer);
+    sse_encode_String(self.objectType, serializer);
+    sse_encode_String(self.sourceFingerprint, serializer);
+    sse_encode_u_64(self.objectRevision, serializer);
+  }
+
+  @protected
   void sse_encode_native_provider_test_request(
     NativeProviderTestRequest self,
     SseSerializer serializer,
@@ -7281,6 +7382,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     );
     sse_encode_opt_String(self.fontFingerprint, serializer);
     sse_encode_opt_String(self.fontAssetHandle, serializer);
+    sse_encode_opt_box_autoadd_native_physical_locator(
+      self.physicalLocator,
+      serializer,
+    );
   }
 
   @protected
@@ -7569,6 +7674,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self != null, serializer);
     if (self != null) {
       sse_encode_box_autoadd_native_pdf_box(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_physical_locator(
+    NativePhysicalLocator? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_physical_locator(self, serializer);
     }
   }
 

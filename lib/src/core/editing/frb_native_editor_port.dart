@@ -420,6 +420,20 @@ EditorSceneObject _sceneObjectFromNative(native.NativeSceneObject value) =>
             ),
       fontFingerprint: value.fontFingerprint,
       fontAssetHandle: value.fontAssetHandle,
+      physicalLocator: value.physicalLocator == null
+          ? null
+          : EditorPhysicalLocator(
+              pageNumber: value.physicalLocator!.pageNumber,
+              objectPath: List<int>.unmodifiable(
+                value.physicalLocator!.objectPath,
+              ),
+              objectType: value.physicalLocator!.objectType,
+              sourceFingerprint: value.physicalLocator!.sourceFingerprint,
+              objectRevision: _intFromBigInt(
+                value.physicalLocator!.objectRevision,
+                'object.physicalLocator.objectRevision',
+              ),
+            ),
     );
 
 EditorTextRun _textRunFromNative(native.NativeTextRun value) => EditorTextRun(

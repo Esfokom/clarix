@@ -117,6 +117,57 @@ class EditorPdfBox {
   final double top;
 }
 
+/// A stable route from a semantic editor object to the physical PDFium object
+/// that produces its content. The recursive path supports objects nested in
+/// Form XObjects without leaking native handles across the bridge.
+class EditorPhysicalLocator {
+  const EditorPhysicalLocator({
+    required this.pageNumber,
+    required this.objectPath,
+    required this.objectType,
+    required this.sourceFingerprint,
+    required this.objectRevision,
+  });
+
+  final int pageNumber;
+  final List<int> objectPath;
+  final String objectType;
+  final String sourceFingerprint;
+  final int objectRevision;
+}
+
+/// A raster tile rendered from the live PDFium document at one revision.
+class EditorDirtyTile {
+  const EditorDirtyTile({
+    required this.pageNumber,
+    required this.revision,
+    required this.bounds,
+    required this.width,
+    required this.height,
+    required this.rgbaBytes,
+  });
+
+  final int pageNumber;
+  final int revision;
+  final EditorPdfBox bounds;
+  final int width;
+  final int height;
+  final List<int> rgbaBytes;
+}
+
+/// Identifies the PDF-space region that must be rerendered after a command.
+class EditorTileInvalidation {
+  const EditorTileInvalidation({
+    required this.pageNumber,
+    required this.bounds,
+    required this.revision,
+  });
+
+  final int pageNumber;
+  final EditorPdfBox bounds;
+  final int revision;
+}
+
 class EditorSearchRequest {
   const EditorSearchRequest({
     required this.expectedRevision,
@@ -367,6 +418,7 @@ class EditorSceneObject {
     this.layout,
     this.fontFingerprint,
     this.fontAssetHandle,
+    this.physicalLocator,
   });
 
   final EditorSceneObjectKind kind;
@@ -383,6 +435,7 @@ class EditorSceneObject {
   final EditorTextLayoutRecipe? layout;
   final String? fontFingerprint;
   final String? fontAssetHandle;
+  final EditorPhysicalLocator? physicalLocator;
 }
 
 class EditorTextLayoutRecipe {

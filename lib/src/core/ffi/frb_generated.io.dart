@@ -170,6 +170,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativePhysicalLocator dco_decode_box_autoadd_native_physical_locator(
+    dynamic raw,
+  );
+
+  @protected
   NativeProviderTestRequest dco_decode_box_autoadd_native_provider_test_request(
     dynamic raw,
   );
@@ -453,6 +458,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfSource dco_decode_native_pdf_source(dynamic raw);
 
   @protected
+  NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw);
+
+  @protected
   NativeProviderTestRequest dco_decode_native_provider_test_request(
     dynamic raw,
   );
@@ -557,6 +565,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw);
+
+  @protected
+  NativePhysicalLocator? dco_decode_opt_box_autoadd_native_physical_locator(
+    dynamic raw,
+  );
 
   @protected
   NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(
@@ -777,6 +790,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfSaveRequest sse_decode_box_autoadd_native_pdf_save_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePhysicalLocator sse_decode_box_autoadd_native_physical_locator(
     SseDeserializer deserializer,
   );
 
@@ -1154,6 +1172,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer);
 
   @protected
+  NativePhysicalLocator sse_decode_native_physical_locator(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeProviderTestRequest sse_decode_native_provider_test_request(
     SseDeserializer deserializer,
   );
@@ -1298,6 +1321,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePhysicalLocator? sse_decode_opt_box_autoadd_native_physical_locator(
     SseDeserializer deserializer,
   );
 
@@ -1554,6 +1582,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_native_pdf_save_request(
     NativePdfSaveRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_box_autoadd_native_physical_locator(
+    NativePhysicalLocator self,
     SseSerializer serializer,
   );
 
@@ -2023,6 +2057,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_physical_locator(
+    NativePhysicalLocator self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_provider_test_request(
     NativeProviderTestRequest self,
     SseSerializer serializer,
@@ -2202,6 +2242,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_native_pdf_box(
     NativePdfBox? self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_physical_locator(
+    NativePhysicalLocator? self,
     SseSerializer serializer,
   );
 

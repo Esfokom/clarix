@@ -8,8 +8,8 @@ import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PendingFontFallback`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `NativeDirtyTile`, `NativeTileInvalidation`, `PendingFontFallback`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
@@ -1061,6 +1061,41 @@ class NativePdfBox {
           top == other.top;
 }
 
+class NativePhysicalLocator {
+  final int pageNumber;
+  final Uint32List objectPath;
+  final String objectType;
+  final String sourceFingerprint;
+  final BigInt objectRevision;
+
+  const NativePhysicalLocator({
+    required this.pageNumber,
+    required this.objectPath,
+    required this.objectType,
+    required this.sourceFingerprint,
+    required this.objectRevision,
+  });
+
+  @override
+  int get hashCode =>
+      pageNumber.hashCode ^
+      objectPath.hashCode ^
+      objectType.hashCode ^
+      sourceFingerprint.hashCode ^
+      objectRevision.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePhysicalLocator &&
+          runtimeType == other.runtimeType &&
+          pageNumber == other.pageNumber &&
+          objectPath == other.objectPath &&
+          objectType == other.objectType &&
+          sourceFingerprint == other.sourceFingerprint &&
+          objectRevision == other.objectRevision;
+}
+
 enum NativeSaveAssociation { keepOriginalAssociation, followNewSource }
 
 class NativeSceneObject {
@@ -1079,6 +1114,11 @@ class NativeSceneObject {
   final String? fontFingerprint;
   final String? fontAssetHandle;
 
+  /// Populated only by the live PDFium backend. Legacy adapter scenes do
+  /// not have a physical PDFium object path and must remain explicit about
+  /// that absence.
+  final NativePhysicalLocator? physicalLocator;
+
   const NativeSceneObject({
     required this.kind,
     required this.objectId,
@@ -1094,6 +1134,7 @@ class NativeSceneObject {
     this.layout,
     this.fontFingerprint,
     this.fontAssetHandle,
+    this.physicalLocator,
   });
 
   @override
@@ -1111,7 +1152,8 @@ class NativeSceneObject {
       characterBoxes.hashCode ^
       layout.hashCode ^
       fontFingerprint.hashCode ^
-      fontAssetHandle.hashCode;
+      fontAssetHandle.hashCode ^
+      physicalLocator.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -1131,7 +1173,8 @@ class NativeSceneObject {
           characterBoxes == other.characterBoxes &&
           layout == other.layout &&
           fontFingerprint == other.fontFingerprint &&
-          fontAssetHandle == other.fontAssetHandle;
+          fontAssetHandle == other.fontAssetHandle &&
+          physicalLocator == other.physicalLocator;
 }
 
 enum NativeSceneObjectKind { text, unsupported }

@@ -3400,6 +3400,24 @@ impl SseDecode for crate::api::NativePdfSource {
     }
 }
 
+impl SseDecode for crate::editing_api::NativePhysicalLocator {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_pageNumber = <u32>::sse_decode(deserializer);
+        let mut var_objectPath = <Vec<u32>>::sse_decode(deserializer);
+        let mut var_objectType = <String>::sse_decode(deserializer);
+        let mut var_sourceFingerprint = <String>::sse_decode(deserializer);
+        let mut var_objectRevision = <u64>::sse_decode(deserializer);
+        return crate::editing_api::NativePhysicalLocator {
+            page_number: var_pageNumber,
+            object_path: var_objectPath,
+            object_type: var_objectType,
+            source_fingerprint: var_sourceFingerprint,
+            object_revision: var_objectRevision,
+        };
+    }
+}
+
 impl SseDecode for crate::agent_api::NativeProviderTestRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3536,6 +3554,8 @@ impl SseDecode for crate::editing_api::NativeSceneObject {
             <Option<crate::editing_api::NativeTextLayoutRecipe>>::sse_decode(deserializer);
         let mut var_fontFingerprint = <Option<String>>::sse_decode(deserializer);
         let mut var_fontAssetHandle = <Option<String>>::sse_decode(deserializer);
+        let mut var_physicalLocator =
+            <Option<crate::editing_api::NativePhysicalLocator>>::sse_decode(deserializer);
         return crate::editing_api::NativeSceneObject {
             kind: var_kind,
             object_id: var_objectId,
@@ -3551,6 +3571,7 @@ impl SseDecode for crate::editing_api::NativeSceneObject {
             layout: var_layout,
             font_fingerprint: var_fontFingerprint,
             font_asset_handle: var_fontAssetHandle,
+            physical_locator: var_physicalLocator,
         };
     }
 }
@@ -3941,6 +3962,19 @@ impl SseDecode for Option<crate::editing_api::NativePdfBox> {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         if (<bool>::sse_decode(deserializer)) {
             return Some(<crate::editing_api::NativePdfBox>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
+impl SseDecode for Option<crate::editing_api::NativePhysicalLocator> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::editing_api::NativePhysicalLocator>::sse_decode(
+                deserializer,
+            ));
         } else {
             return None;
         }
@@ -5442,6 +5476,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfSource>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePhysicalLocator {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.page_number.into_into_dart().into_dart(),
+            self.object_path.into_into_dart().into_dart(),
+            self.object_type.into_into_dart().into_dart(),
+            self.source_fingerprint.into_into_dart().into_dart(),
+            self.object_revision.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativePhysicalLocator
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePhysicalLocator>
+    for crate::editing_api::NativePhysicalLocator
+{
+    fn into_into_dart(self) -> crate::editing_api::NativePhysicalLocator {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::agent_api::NativeProviderTestRequest {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -5632,6 +5690,7 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeSceneObject {
             self.layout.into_into_dart().into_dart(),
             self.font_fingerprint.into_into_dart().into_dart(),
             self.font_asset_handle.into_into_dart().into_dart(),
+            self.physical_locator.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -6994,6 +7053,17 @@ impl SseEncode for crate::api::NativePdfSource {
     }
 }
 
+impl SseEncode for crate::editing_api::NativePhysicalLocator {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.page_number, serializer);
+        <Vec<u32>>::sse_encode(self.object_path, serializer);
+        <String>::sse_encode(self.object_type, serializer);
+        <String>::sse_encode(self.source_fingerprint, serializer);
+        <u64>::sse_encode(self.object_revision, serializer);
+    }
+}
+
 impl SseEncode for crate::agent_api::NativeProviderTestRequest {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7096,6 +7166,10 @@ impl SseEncode for crate::editing_api::NativeSceneObject {
         <Option<crate::editing_api::NativeTextLayoutRecipe>>::sse_encode(self.layout, serializer);
         <Option<String>>::sse_encode(self.font_fingerprint, serializer);
         <Option<String>>::sse_encode(self.font_asset_handle, serializer);
+        <Option<crate::editing_api::NativePhysicalLocator>>::sse_encode(
+            self.physical_locator,
+            serializer,
+        );
     }
 }
 
@@ -7379,6 +7453,16 @@ impl SseEncode for Option<crate::editing_api::NativePdfBox> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::editing_api::NativePdfBox>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::editing_api::NativePhysicalLocator> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::editing_api::NativePhysicalLocator>::sse_encode(value, serializer);
         }
     }
 }

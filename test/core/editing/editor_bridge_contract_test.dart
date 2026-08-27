@@ -195,6 +195,30 @@ class FakePhaseTwoPort extends FakeNativeEditorPort
 const _sessionId = '00000000-0000-4000-8000-000000000001';
 
 void main() {
+  test('preserves a recursive physical locator and dirty tile identity', () {
+    const locator = EditorPhysicalLocator(
+      pageNumber: 4,
+      objectPath: <int>[5, 12, 3],
+      objectType: 'text',
+      sourceFingerprint:
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+      objectRevision: 7,
+    );
+    const tile = EditorDirtyTile(
+      pageNumber: 4,
+      revision: 7,
+      bounds: EditorPdfBox(left: 12, bottom: 24, right: 48, top: 72),
+      width: 72,
+      height: 96,
+      rgbaBytes: <int>[0, 1, 2, 3],
+    );
+
+    expect(locator.objectPath, <int>[5, 12, 3]);
+    expect(locator.objectRevision, 7);
+    expect(tile.revision, locator.objectRevision);
+    expect(tile.rgbaBytes, <int>[0, 1, 2, 3]);
+  });
+
   test('editor bridge rejects requests and events after close', () async {
     final native = FakeNativeEditorPort();
     final session = EditorBridgeSession.forTest(native);
