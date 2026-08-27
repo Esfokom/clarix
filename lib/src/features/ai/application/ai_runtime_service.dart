@@ -1,17 +1,25 @@
 import '../../../core/clarix_logger.dart';
+import '../../../core/clarix_rust_runtime.dart';
 import '../../../core/ffi/chat_api.dart' as native_chat;
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
 
 class AiRuntimeService {
-  AiRuntimeService({required this.providerProfiles});
+  AiRuntimeService({
+    required this.providerProfiles,
+    Future<void> Function()? ensureNativeReady,
+  }) : _ensureNativeReady =
+           ensureNativeReady ?? ClarixRustRuntime.requireInitialized;
 
   final ProviderProfileStore providerProfiles;
+  final Future<void> Function() _ensureNativeReady;
+
   Future<void> testProvider(AiProviderProfile profile, String apiKey) async {
     if (apiKey.trim().isEmpty) {
       throw ArgumentError('Enter an API key before testing this provider.');
     }
+    await _ensureNativeReady();
     await native_chat
         .streamChat(
           request: native_chat.NativeChatRequest(
@@ -50,6 +58,7 @@ class AiRuntimeService {
       );
       throw StateError('Add an API key for ${profile.label}.');
     }
+    await _ensureNativeReady();
     clarixLog.i(
       'AI runtime prepared ${profile.label} streaming request '
       '(model=${profile.modelId}, endpoint=${profile.baseUrl}).',
