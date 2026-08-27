@@ -127,6 +127,18 @@ void main() {
       openLivePdfiumSession: (_) async => liveSession,
     );
     await gateway.open('fixture.pdf');
+    gateway.registerLivePdfiumBinding(
+      objectId: _objectId,
+      sourceKey: 'manifest/page/1/object/0',
+      sourceRevision: 'source',
+      locator: const EditorPhysicalLocator(
+        pageNumber: 1,
+        objectPath: <int>[0],
+        objectType: 'text',
+        sourceFingerprint: 'source',
+        objectRevision: 0,
+      ),
+    );
 
     await gateway.submit(
       const EditorCommandRequest(
@@ -146,6 +158,30 @@ void main() {
     expect(native.published, isFalse);
     expect(native.legacySubmissions, 1);
     expect(liveSession.appliedPlans, isEmpty);
+  });
+
+  test('routes undo through the live PDFium transaction', () async {
+    final liveSession = _FakeLivePdfiumSession();
+    final native = _NativePort();
+    final gateway = BridgeEditorSessionGateway.forTest(
+      openBridgeSession: (_, {String? projectRoot}) async =>
+          EditorBridgeSession.forTest(native),
+      openLivePdfiumSession: (_) async => liveSession,
+    );
+    await gateway.open('fixture.pdf');
+
+    await gateway.submit(
+      const EditorCommandRequest(
+        commandId: _commandId,
+        baseRevision: 0,
+        payload: EditorCommand(kind: EditorCommandKind.undo),
+      ),
+    );
+
+    expect(native.prepared, isTrue);
+    expect(native.published, isTrue);
+    expect(native.legacySubmissions, isZero);
+    expect(liveSession.appliedPlans, hasLength(1));
   });
 
   test(
