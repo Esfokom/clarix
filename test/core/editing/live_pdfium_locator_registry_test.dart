@@ -42,4 +42,31 @@ void main() {
       throwsA(isA<StateError>()),
     );
   });
+
+  test('retains an explicit semantic object identity for a live binding', () {
+    final registry = LivePdfiumLocatorRegistry()
+      ..register(
+        objectId: 'object-1',
+        sourceKey: 'page/1/text/3',
+        sourceRevision: 'revision-a',
+        locator: locator,
+      );
+
+    expect(registry.hasObject('object-1'), isTrue);
+    expect(registry.hasObject('object-2'), isFalse);
+    expect(
+      registry.resolveForObject(
+        objectId: 'object-1',
+        sourceRevision: 'revision-a',
+      ),
+      same(locator),
+    );
+    expect(
+      () => registry.resolveForObject(
+        objectId: 'object-1',
+        sourceRevision: 'revision-b',
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
 }

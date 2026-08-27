@@ -7,15 +7,34 @@ final class LivePdfiumLocatorRegistry {
   final Map<String, ({EditorPhysicalLocator locator, String sourceRevision})>
   _entries =
       <String, ({EditorPhysicalLocator locator, String sourceRevision})>{};
+  final Map<String, String> _sourceKeysByObjectId = <String, String>{};
 
   void register({
+    String? objectId,
     required String sourceKey,
     required String sourceRevision,
     required EditorPhysicalLocator locator,
-  }) =>
-      _entries[sourceKey] = (locator: locator, sourceRevision: sourceRevision);
+  }) {
+    _entries[sourceKey] = (locator: locator, sourceRevision: sourceRevision);
+    if (objectId != null) _sourceKeysByObjectId[objectId] = sourceKey;
+  }
 
-  void clear() => _entries.clear();
+  bool hasObject(String objectId) =>
+      _sourceKeysByObjectId.containsKey(objectId);
+
+  void clear() {
+    _entries.clear();
+    _sourceKeysByObjectId.clear();
+  }
+
+  EditorPhysicalLocator resolveForObject({
+    required String objectId,
+    required String sourceRevision,
+  }) {
+    final sourceKey = _sourceKeysByObjectId[objectId];
+    if (sourceKey == null) throw StateError('live_pdfium_locator_not_found');
+    return resolve(sourceKey: sourceKey, sourceRevision: sourceRevision);
+  }
 
   EditorPhysicalLocator resolve({
     required String sourceKey,
