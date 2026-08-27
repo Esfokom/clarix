@@ -6,6 +6,7 @@ import 'package:clarix/src/features/pdf_editor/domain/editor_selection.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/clean_patch_layer.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/editor_hit_test.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/editor_text_painter.dart';
+import 'package:clarix/src/features/pdf_editor/presentation/live_pdfium_tile_layer.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/page_edit_scene.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -142,6 +143,32 @@ void main() {
       'selection-chrome',
     ]);
     patch.image.dispose();
+  });
+
+  testWidgets('renders a live tile instead of clean-patch text overlays', (
+    tester,
+  ) async {
+    final tile = (await tester.runAsync(_liveTile))!;
+    addTearDown(tile.image.dispose);
+    final patch = (await tester.runAsync(() => _patch('object-1')))!;
+    addTearDown(patch.image.dispose);
+
+    await tester.pumpWidget(
+      _harness(
+        scene: _scene(1),
+        document: _document(1, selectedObject: 'object-1'),
+        patches: <String, CleanPatchAsset>{'object-1': patch},
+        liveTiles: <LivePdfiumTileAsset>[tile],
+        observer: RecordingLayerObserver(),
+      ),
+    );
+
+    expect(find.byKey(const Key('live-pdfium-tile')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('clean-patch-object-1')),
+      findsNothing,
+    );
+    expect(find.byType(EditorTextObjectLayer), findsNothing);
   });
 
   testWidgets('typing repaints only the active object boundary', (
@@ -343,6 +370,7 @@ Widget _harness({
   required EditorPageScene scene,
   required EditorDocumentState document,
   required Map<String, CleanPatchAsset> patches,
+  List<LivePdfiumTileAsset> liveTiles = const <LivePdfiumTileAsset>[],
   required EditorLayerObserver observer,
 }) => MaterialApp(
   home: Center(
@@ -351,6 +379,7 @@ Widget _harness({
       document: document,
       displaySize: const Size(300, 200),
       cleanPatches: patches,
+      liveTiles: liveTiles,
       observer: observer,
     ),
   ),
@@ -384,6 +413,34 @@ Future<CleanPatchAsset> _patch(String objectId, {int dpi = 144}) =>
         255,
       ]),
     );
+
+Future<LivePdfiumTileAsset> _liveTile() => LivePdfiumTileDecoder.decode(
+  const EditorDirtyTile(
+    pageNumber: 1,
+    revision: 1,
+    bounds: EditorPdfBox(left: 0, bottom: 0, right: 300, top: 200),
+    width: 2,
+    height: 2,
+    rgbaBytes: <int>[
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+      255,
+    ],
+  ),
+);
 
 EditorPageScene _scene(int objectCount) => EditorPageScene(
   schemaVersion: 1,

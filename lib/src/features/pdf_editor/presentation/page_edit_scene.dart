@@ -12,6 +12,7 @@ import 'clean_patch_layer.dart';
 import 'editor_hit_test.dart';
 import 'editor_text_painter.dart';
 import 'font_fallback_dialog.dart';
+import 'live_pdfium_tile_layer.dart';
 import 'native_text_editor.dart';
 import 'object_transform_handles.dart';
 import 'overflow_indicator.dart';
@@ -40,6 +41,7 @@ class PageEditScene extends StatelessWidget {
     required this.document,
     required this.displaySize,
     this.cleanPatches = const <String, CleanPatchAsset>{},
+    this.liveTiles = const <LivePdfiumTileAsset>[],
     this.session,
     this.editingEnabled = false,
     this.composition,
@@ -53,6 +55,7 @@ class PageEditScene extends StatelessWidget {
   final EditorDocumentState document;
   final Size displaySize;
   final Map<String, CleanPatchAsset> cleanPatches;
+  final List<LivePdfiumTileAsset> liveTiles;
   final EditorSessionController? session;
 
   /// The native session may have already inspected the PDF.  It must not
@@ -91,6 +94,7 @@ class PageEditScene extends StatelessWidget {
           !edited.any((object) => object.objectId == activeObject.objectId))
         activeObject,
     ];
+    final usesLivePdfiumTiles = liveTiles.isNotEmpty;
     final fallbackProposal = document.fontFallbackProposal;
     final showFallbackProposal =
         activeSession != null &&
@@ -120,36 +124,44 @@ class PageEditScene extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: <Widget>[
+            if (usesLivePdfiumTiles)
+              LivePdfiumTileLayer(
+                tiles: liveTiles,
+                pageSize: pageSize,
+                displaySize: displaySize,
+              ),
             for (final object in overlayObjects)
-              if (cleanPatches.containsKey(object.objectId))
-                CleanPatchLayer(
-                  asset: cleanPatches[object.objectId]!,
-                  pageSize: pageSize,
-                  displaySize: displaySize,
-                  observer: observer,
-                )
-              else
-                Positioned.fromRect(
-                  rect: EditorPageGeometry.rectForBox(
-                    object.bounds,
+              if (!usesLivePdfiumTiles)
+                if (cleanPatches.containsKey(object.objectId))
+                  CleanPatchLayer(
+                    asset: cleanPatches[object.objectId]!,
                     pageSize: pageSize,
                     displaySize: displaySize,
-                    bleedPoints: 1.0,
+                    observer: observer,
+                  )
+                else
+                  Positioned.fromRect(
+                    rect: EditorPageGeometry.rectForBox(
+                      object.bounds,
+                      pageSize: pageSize,
+                      displaySize: displaySize,
+                      bleedPoints: 1.0,
+                    ),
+                    child: const ColoredBox(color: Color(0xFFFFFFFF)),
                   ),
-                  child: const ColoredBox(color: Color(0xFFFFFFFF)),
-                ),
             for (final object in overlayObjects)
-              if (object.objectId != activeObject?.objectId)
-                EditorTextObjectLayer(
-                  object: object,
-                  text:
-                      document.visibleText(object.objectId) ??
-                      object.text ??
-                      '',
-                  pageSize: pageSize,
-                  displaySize: displaySize,
-                  observer: observer,
-                ),
+              if (!usesLivePdfiumTiles)
+                if (object.objectId != activeObject?.objectId)
+                  EditorTextObjectLayer(
+                    object: object,
+                    text:
+                        document.visibleText(object.objectId) ??
+                        object.text ??
+                        '',
+                    pageSize: pageSize,
+                    displaySize: displaySize,
+                    observer: observer,
+                  ),
             if (activeSession != null)
               for (final object in interactive)
                 if (object.objectId != activeObject?.objectId)
