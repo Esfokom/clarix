@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import '../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
 import 'clean_patch_layer.dart';
+import 'live_pdfium_tile_layer.dart';
 import 'page_surface.dart';
 
 typedef PageSceneBuilder =
@@ -23,6 +24,8 @@ class PageSceneLifecycle extends ChangeNotifier {
   StreamSubscription<Object?>? _documentChanges;
   final Map<String, CleanPatchAsset> _cleanPatches =
       <String, CleanPatchAsset>{};
+  final Map<int, List<LivePdfiumTileAsset>> _liveTiles =
+      <int, List<LivePdfiumTileAsset>>{};
   final Set<String> _patchesInFlight = <String>{};
   bool _started = false;
 
@@ -43,6 +46,46 @@ class PageSceneLifecycle extends ChangeNotifier {
     );
   }
 
+  List<LivePdfiumTileAsset> liveTilesFor(int pageNumber) =>
+      List<LivePdfiumTileAsset>.unmodifiable(
+        _liveTiles[pageNumber] ?? const <LivePdfiumTileAsset>[],
+      );
+
+  /// Replaces only the affected page's live raster output. Tiles that become
+  /// stale are disposed immediately, while unchanged pages remain resident.
+  Future<void> replaceLiveTiles(List<EditorDirtyTile> tiles) async {
+    if (!_started || tiles.isEmpty) return;
+    final grouped = <int, List<EditorDirtyTile>>{};
+    for (final tile in tiles) {
+      (grouped[tile.pageNumber] ??= <EditorDirtyTile>[]).add(tile);
+    }
+    for (final entry in grouped.entries) {
+      final decoded = <LivePdfiumTileAsset>[];
+      try {
+        for (final tile in entry.value) {
+          decoded.add(await LivePdfiumTileDecoder.decode(tile));
+        }
+      } catch (_) {
+        for (final tile in decoded) {
+          tile.image.dispose();
+        }
+        rethrow;
+      }
+      if (!_started || !visiblePages.contains(entry.key)) {
+        for (final tile in decoded) {
+          tile.image.dispose();
+        }
+        continue;
+      }
+      for (final tile
+          in _liveTiles.remove(entry.key) ?? const <LivePdfiumTileAsset>[]) {
+        tile.image.dispose();
+      }
+      _liveTiles[entry.key] = decoded;
+    }
+    notifyListeners();
+  }
+
   void start() {
     if (_started) return;
     _started = true;
@@ -61,6 +104,7 @@ class PageSceneLifecycle extends ChangeNotifier {
       preloadRadius: preloadRadius,
     );
     _disposeColdPatches();
+    _disposeColdTiles();
     unawaited(_ensureCleanPatches());
     notifyListeners();
   }
@@ -129,11 +173,26 @@ class PageSceneLifecycle extends ChangeNotifier {
     }
   }
 
+  void _disposeColdTiles() {
+    for (final pageNumber in _liveTiles.keys.toList(growable: false)) {
+      if (visiblePages.contains(pageNumber)) continue;
+      for (final tile in _liveTiles.remove(pageNumber)!) {
+        tile.image.dispose();
+      }
+    }
+  }
+
   Future<void> releasePatchMemory() async {
     for (final patch in _cleanPatches.values) {
       patch.image.dispose();
     }
     _cleanPatches.clear();
+    for (final tiles in _liveTiles.values) {
+      for (final tile in tiles) {
+        tile.image.dispose();
+      }
+    }
+    _liveTiles.clear();
     await controller.releaseCleanPatchMemory();
     notifyListeners();
   }
@@ -146,6 +205,12 @@ class PageSceneLifecycle extends ChangeNotifier {
       patch.image.dispose();
     }
     _cleanPatches.clear();
+    for (final tiles in _liveTiles.values) {
+      for (final tile in tiles) {
+        tile.image.dispose();
+      }
+    }
+    _liveTiles.clear();
     _started = false;
     super.dispose();
   }

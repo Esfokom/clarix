@@ -451,6 +451,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                                                 .cleanPatchesFor(
                                                   page.pageNumber,
                                                 ),
+                                            liveTiles: lifecycle.liveTilesFor(
+                                              page.pageNumber,
+                                            ),
                                             selectionActionsBuilder:
                                                 (
                                                   context,
