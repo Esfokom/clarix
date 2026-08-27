@@ -20,6 +20,7 @@ final class LivePdfiumSession {
   final PdfDocument _document;
   late final LivePdfiumTileRenderer _tiles;
   bool _closed = false;
+  int _revision = 0;
 
   static Future<LivePdfiumSession> open(String sourcePath) async =>
       LivePdfiumSession._(await PdfDocument.openFile(sourcePath));
@@ -42,6 +43,34 @@ final class LivePdfiumSession {
     );
   }
 
+  Future<EditorTileInvalidation> replaceTextObject(
+    EditorPhysicalLocator locator,
+    String replacement, {
+    required bool regenerateContent,
+  }) async {
+    _ensureOpen();
+    final bounds = await const PdfiumWorkerExecutor().run(
+      document: _document,
+      callback: _replaceTextOnWorker,
+      message: (
+        locator: locator,
+        replacement: replacement,
+        regenerateContent: regenerateContent,
+      ),
+    );
+    _revision += 1;
+    _tiles.invalidate(
+      pageNumber: locator.pageNumber,
+      bounds: bounds,
+      revision: _revision,
+    );
+    return EditorTileInvalidation(
+      pageNumber: locator.pageNumber,
+      bounds: bounds,
+      revision: _revision,
+    );
+  }
+
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
@@ -58,6 +87,87 @@ final class LivePdfiumSession {
 
   void _ensureOpen() {
     if (_closed) throw StateError('live PDFium session is closed');
+  }
+}
+
+EditorPdfBox _replaceTextOnWorker(
+  PdfiumWorkerInput<
+    ({
+      EditorPhysicalLocator locator,
+      String replacement,
+      bool regenerateContent,
+    })
+  >
+  input,
+) {
+  final locator = input.message.locator;
+  if (locator.objectType != 'text' || locator.objectPath.length != 1) {
+    throw ArgumentError('live replacement currently requires one text object');
+  }
+  final document = FPDF_DOCUMENT.fromAddress(input.documentAddress);
+  final page = pdfiumBindings.FPDF_LoadPage(document, locator.pageNumber - 1);
+  if (page.address == 0) throw StateError('PDFium could not load page');
+  try {
+    final object = pdfiumBindings.FPDFPage_GetObject(
+      page,
+      locator.objectPath.single,
+    );
+    if (object.address == 0 ||
+        pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_TEXT) {
+      throw StateError('locator does not resolve to a text object');
+    }
+    final left = calloc<Float>();
+    final bottom = calloc<Float>();
+    final right = calloc<Float>();
+    final top = calloc<Float>();
+    try {
+      if (pdfiumBindings.FPDFPageObj_GetBounds(
+            object,
+            left,
+            bottom,
+            right,
+            top,
+          ) ==
+          0) {
+        throw StateError('PDFium could not read text bounds');
+      }
+      final buffer = calloc<Uint16>(input.message.replacement.length + 1);
+      try {
+        final units = buffer.asTypedList(input.message.replacement.length + 1);
+        units.setRange(
+          0,
+          input.message.replacement.length,
+          input.message.replacement.codeUnits,
+        );
+        units[input.message.replacement.length] = 0;
+        if (pdfiumBindings.FPDFText_SetText(
+              object,
+              buffer.cast<FPDF_WCHAR>(),
+            ) ==
+            0) {
+          throw StateError('PDFium could not encode replacement text');
+        }
+      } finally {
+        calloc.free(buffer);
+      }
+      if (input.message.regenerateContent &&
+          pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
+        throw StateError('PDFium could not regenerate changed page content');
+      }
+      return EditorPdfBox(
+        left: left.value,
+        bottom: bottom.value,
+        right: right.value,
+        top: top.value,
+      );
+    } finally {
+      calloc.free(left);
+      calloc.free(bottom);
+      calloc.free(right);
+      calloc.free(top);
+    }
+  } finally {
+    pdfiumBindings.FPDF_ClosePage(page);
   }
 }
 

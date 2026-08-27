@@ -27,4 +27,45 @@ void main() {
     expect(tile.rgbaBytes, hasLength(120 * 160 * 4));
     expect(tile.rgbaBytes.any((channel) => channel != 255), isTrue);
   });
+
+  test(
+    'regenerating changed page content updates a live PDFium tile',
+    () async {
+      final file = await PdfTextFixture.singleBlock('Original');
+      addTearDown(() => file.parent.delete(recursive: true));
+      final session = await LivePdfiumSession.open(file.path);
+      addTearDown(session.close);
+      const beforeRequest = LivePdfiumTileRequest(
+        pageNumber: 1,
+        revision: 0,
+        bounds: EditorPdfBox(left: 0, bottom: 0, right: 595, top: 842),
+        width: 240,
+        height: 320,
+      );
+      final before = await session.renderTile(beforeRequest);
+
+      await session.replaceTextObject(
+        const EditorPhysicalLocator(
+          pageNumber: 1,
+          objectPath: <int>[0],
+          objectType: 'text',
+          sourceFingerprint: 'fixture',
+          objectRevision: 0,
+        ),
+        'Changed',
+        regenerateContent: true,
+      );
+      final after = await session.renderTile(
+        const LivePdfiumTileRequest(
+          pageNumber: 1,
+          revision: 1,
+          bounds: EditorPdfBox(left: 0, bottom: 0, right: 595, top: 842),
+          width: 240,
+          height: 320,
+        ),
+      );
+
+      expect(after.rgbaBytes, isNot(orderedEquals(before.rgbaBytes)));
+    },
+  );
 }
