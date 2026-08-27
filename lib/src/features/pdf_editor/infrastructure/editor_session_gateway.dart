@@ -1,6 +1,17 @@
 import '../../../core/editing/editor_bridge.dart';
 import '../../../core/editing/editor_bridge_types.dart';
+import '../../../core/editing/live_pdfium_editor_port.dart';
 import '../../../core/agent/agent_bridge.dart';
+import 'live_pdfium_session.dart';
+
+typedef OpenBridgeEditorSession =
+    Future<EditorBridgeSession> Function(
+      String sourcePath, {
+      String? projectRoot,
+    });
+
+typedef OpenLivePdfiumSession =
+    Future<LivePdfiumSessionOwner> Function(String sourcePath);
 
 abstract class EditorSessionGateway {
   Stream<EditorEvent> get events;
@@ -88,14 +99,39 @@ class BridgeEditorSessionGateway
   factory BridgeEditorSessionGateway({
     EditorBridge bridge = const EditorBridge(),
     String? projectRoot,
-  }) => BridgeEditorSessionGateway._(bridge, projectRoot);
+  }) => BridgeEditorSessionGateway._(
+    (sourcePath, {projectRoot}) =>
+        bridge.open(sourcePath, projectRoot: projectRoot),
+    LivePdfiumSession.open,
+    projectRoot,
+  );
 
-  BridgeEditorSessionGateway._(this._bridge, this._projectRoot);
+  factory BridgeEditorSessionGateway.forTest({
+    required OpenBridgeEditorSession openBridgeSession,
+    required OpenLivePdfiumSession openLivePdfiumSession,
+    String? projectRoot,
+  }) => BridgeEditorSessionGateway._(
+    openBridgeSession,
+    openLivePdfiumSession,
+    projectRoot,
+  );
 
-  final EditorBridge _bridge;
+  BridgeEditorSessionGateway._(
+    this._openBridgeSession,
+    this._openLivePdfiumSession,
+    this._projectRoot,
+  );
+
+  final OpenBridgeEditorSession _openBridgeSession;
+  final OpenLivePdfiumSession _openLivePdfiumSession;
   final String? _projectRoot;
   EditorBridgeSession? _session;
   String? _sessionId;
+  LivePdfiumSessionOwner? _livePdfiumSession;
+  LivePdfiumLocatorRegistry? _livePdfiumLocatorRegistry;
+
+  bool get hasLivePdfiumSession => _livePdfiumSession != null;
+  bool get hasLivePdfiumLocatorRegistry => _livePdfiumLocatorRegistry != null;
 
   @override
   Stream<EditorEvent> get events =>
@@ -103,10 +139,25 @@ class BridgeEditorSessionGateway
 
   @override
   Future<EditorSessionMetadata> open(String sourcePath) async {
-    _session = await _bridge.open(sourcePath, projectRoot: _projectRoot);
-    final metadata = await _session!.metadata();
-    _sessionId = metadata.sessionId;
-    return metadata;
+    if (_session != null || _livePdfiumSession != null) {
+      throw StateError('editor session is already open');
+    }
+    final liveSession = await _openLivePdfiumSession(sourcePath);
+    try {
+      final session = await _openBridgeSession(
+        sourcePath,
+        projectRoot: _projectRoot,
+      );
+      final metadata = await session.metadata();
+      _session = session;
+      _sessionId = metadata.sessionId;
+      _livePdfiumSession = liveSession;
+      _livePdfiumLocatorRegistry = LivePdfiumLocatorRegistry();
+      return metadata;
+    } catch (_) {
+      await liveSession.close();
+      rethrow;
+    }
   }
 
   @override
@@ -229,9 +280,18 @@ class BridgeEditorSessionGateway
   @override
   Future<void> close() async {
     final session = _session;
+    final liveSession = _livePdfiumSession;
+    final locatorRegistry = _livePdfiumLocatorRegistry;
     _session = null;
     _sessionId = null;
-    await session?.close();
+    _livePdfiumSession = null;
+    _livePdfiumLocatorRegistry = null;
+    try {
+      await session?.close();
+    } finally {
+      locatorRegistry?.clear();
+      await liveSession?.close();
+    }
   }
 
   EditorBridgeSession _required() =>

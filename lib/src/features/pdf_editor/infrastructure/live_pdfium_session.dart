@@ -10,10 +10,14 @@ import 'live_pdfium_tile_renderer.dart';
 import 'pdfium_edit_plan_applier.dart';
 import 'pdfium_worker_executor.dart';
 
+abstract interface class LivePdfiumSessionOwner {
+  Future<void> close();
+}
+
 /// Owns the live pdfrx/PDFium document used by editor tiles. Native PDFium
 /// handles remain confined to the pdfrx worker; callers receive copied RGBA
 /// bytes only.
-final class LivePdfiumSession {
+final class LivePdfiumSession implements LivePdfiumSessionOwner {
   LivePdfiumSession._(this._document) {
     _tiles = LivePdfiumTileRenderer(producer: _renderLiveTile);
   }
@@ -102,6 +106,7 @@ final class LivePdfiumSession {
     return _document.encodePdf();
   }
 
+  @override
   Future<void> close() async {
     if (_closed) return;
     _closed = true;
