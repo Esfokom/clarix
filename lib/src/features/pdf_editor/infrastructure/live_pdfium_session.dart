@@ -10,7 +10,8 @@ import 'live_pdfium_tile_renderer.dart';
 import 'pdfium_edit_plan_applier.dart';
 import 'pdfium_worker_executor.dart';
 
-abstract interface class LivePdfiumSessionOwner {
+abstract interface class LivePdfiumSessionOwner
+    implements LivePdfiumPlanApplier {
   Future<void> close();
 }
 
@@ -61,6 +62,7 @@ final class LivePdfiumSession implements LivePdfiumSessionOwner {
 
   /// Applies a same-page text transaction while its native page handle remains
   /// open. This is the safe batching primitive for live typing.
+  @override
   Future<LivePdfiumApplyResult> apply(LivePdfiumEditPlan plan) async {
     _ensureOpen();
     final expectedRevision = plan.expectedRevision;

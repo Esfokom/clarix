@@ -1,4 +1,3 @@
-import '../../features/pdf_editor/infrastructure/live_pdfium_session.dart';
 import '../../features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
 import 'editor_bridge.dart';
 import 'editor_bridge_types.dart';
@@ -59,7 +58,7 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
   });
 
   final NativeLivePdfiumPort _semantic;
-  final LivePdfiumSession _session;
+  final LivePdfiumPlanApplier _session;
   final LivePdfiumLocatorRegistry _locatorRegistry;
 
   @override

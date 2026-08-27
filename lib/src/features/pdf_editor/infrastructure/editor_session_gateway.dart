@@ -129,9 +129,28 @@ class BridgeEditorSessionGateway
   String? _sessionId;
   LivePdfiumSessionOwner? _livePdfiumSession;
   LivePdfiumLocatorRegistry? _livePdfiumLocatorRegistry;
+  LivePdfiumEditorPort? _livePdfiumEditorPort;
 
   bool get hasLivePdfiumSession => _livePdfiumSession != null;
   bool get hasLivePdfiumLocatorRegistry => _livePdfiumLocatorRegistry != null;
+
+  /// Registers a binding supplied by the canonical live import manifest.
+  /// Callers must never derive this association from text, geometry, or order.
+  void registerLivePdfiumBinding({
+    required String objectId,
+    required String sourceKey,
+    required String sourceRevision,
+    required EditorPhysicalLocator locator,
+  }) {
+    final registry = _livePdfiumLocatorRegistry;
+    if (registry == null) throw StateError('editor session is not open');
+    registry.register(
+      objectId: objectId,
+      sourceKey: sourceKey,
+      sourceRevision: sourceRevision,
+      locator: locator,
+    );
+  }
 
   @override
   Stream<EditorEvent> get events =>
@@ -152,7 +171,13 @@ class BridgeEditorSessionGateway
       _session = session;
       _sessionId = metadata.sessionId;
       _livePdfiumSession = liveSession;
-      _livePdfiumLocatorRegistry = LivePdfiumLocatorRegistry();
+      final locatorRegistry = LivePdfiumLocatorRegistry();
+      _livePdfiumLocatorRegistry = locatorRegistry;
+      _livePdfiumEditorPort = LivePdfiumEditorPort(
+        semantic: _BridgeLivePdfiumPort(session),
+        session: liveSession,
+        locatorRegistry: locatorRegistry,
+      );
       return metadata;
     } catch (_) {
       await liveSession.close();
@@ -180,7 +205,21 @@ class BridgeEditorSessionGateway
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
-      _required().submit(request);
+      _submitRouted(request);
+
+  Future<EditorCommandResult> _submitRouted(EditorCommandRequest request) {
+    final objectId = request.payload.objectId;
+    final registry = _livePdfiumLocatorRegistry;
+    final livePort = _livePdfiumEditorPort;
+    if (request.payload.kind == EditorCommandKind.replaceTextRange &&
+        objectId != null &&
+        registry != null &&
+        registry.hasObject(objectId) &&
+        livePort != null) {
+      return livePort.submit(request);
+    }
+    return _required().submit(request);
+  }
 
   @override
   Future<EditorFontFallbackProposal> proposeFontFallback({
@@ -286,6 +325,7 @@ class BridgeEditorSessionGateway
     _sessionId = null;
     _livePdfiumSession = null;
     _livePdfiumLocatorRegistry = null;
+    _livePdfiumEditorPort = null;
     try {
       await session?.close();
     } finally {
@@ -296,4 +336,19 @@ class BridgeEditorSessionGateway
 
   EditorBridgeSession _required() =>
       _session ?? (throw StateError('editor session is not open'));
+}
+
+final class _BridgeLivePdfiumPort implements NativeLivePdfiumPort {
+  const _BridgeLivePdfiumPort(this._session);
+
+  final EditorBridgeSession _session;
+
+  @override
+  Future<EditorPreparedLiveCommand> prepareLiveCommand(
+    EditorCommandRequest request,
+  ) => _session.prepareLiveCommand(request);
+
+  @override
+  Future<EditorCommandResult> publishPreparedLiveCommand(String token) =>
+      _session.publishPreparedLiveCommand(token);
 }

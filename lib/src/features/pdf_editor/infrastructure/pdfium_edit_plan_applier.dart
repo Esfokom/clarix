@@ -1,5 +1,9 @@
 import '../../../core/editing/editor_bridge_types.dart';
 
+abstract interface class LivePdfiumPlanApplier {
+  Future<LivePdfiumApplyResult> apply(LivePdfiumEditPlan plan);
+}
+
 /// A physical text replacement issued by the semantic editor layer.
 ///
 /// All operations in a [LivePdfiumEditPlan] must target one page so they can
