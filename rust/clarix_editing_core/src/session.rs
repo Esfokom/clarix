@@ -996,22 +996,22 @@ fn physical_plan_from_changes(
         else {
             return None;
         };
-        let binding = after_text.source_binding()?;
+        let binding = after_object.source_binding()?;
         operations.push(crate::PhysicalEditOperation::ReplaceText {
-            object_id: after_text.id(),
+            object_id: after_object.id(),
             source_key: binding.source_key.clone(),
             source_revision: binding.source_revision.clone(),
             expected_text: before_text.text.clone(),
             replacement: after_text.text.clone(),
-            bounds: after_text.bounds(),
+            bounds: after_object.bounds(),
         });
         inverse_operations.push(crate::PhysicalEditOperation::ReplaceText {
-            object_id: before_text.id(),
+            object_id: before_object.id(),
             source_key: binding.source_key.clone(),
             source_revision: binding.source_revision.clone(),
             expected_text: after_text.text.clone(),
             replacement: before_text.text.clone(),
-            bounds: before_text.bounds(),
+            bounds: before_object.bounds(),
         });
     }
     (!operations.is_empty()).then_some(crate::PhysicalEditPlan {

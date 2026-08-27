@@ -207,33 +207,7 @@ fn replacement_commits_once_and_stale_commands_do_not_mutate() {
 
 #[test]
 fn prepared_text_replacement_emits_forward_and_inverse_physical_plan() {
-    let page_id = PageId::from_source_key("physical-plan/page/1");
-    let object_id = ObjectId::from_source_key("physical-plan/page/1/text/1");
-    let model = DocumentModel::new(
-        DocumentId::from_source_key("physical-plan"),
-        "sha256:physical-plan".into(),
-        vec![PageNode::new(
-            page_id,
-            1,
-            612.0,
-            792.0,
-            vec![DocumentObject::text(
-                TextBlock::plain(
-                    object_id,
-                    page_id,
-                    "Original",
-                    PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
-                )
-                .with_source_binding(SourceBinding {
-                    adapter_id: "pdfium".into(),
-                    source_revision: "sha256:physical-plan".into(),
-                    source_key: "page:1/object:0".into(),
-                    confidence: 1.0,
-                }),
-            )],
-        )],
-    )
-    .unwrap();
+    let (model, object_id) = qualified_text_model(OverflowPolicy::Reject);
     let session = EditorSessionState::new(SessionId::new(), model);
     let prepared = session
         .prepare(CommandEnvelope::user(
@@ -241,8 +215,8 @@ fn prepared_text_replacement_emits_forward_and_inverse_physical_plan() {
             DocumentRevision::INITIAL,
             EditorCommand::ReplaceTextRange {
                 object_id,
-                range: Utf16Range::new(0, 8).unwrap(),
-                replacement: "Changed".into(),
+                range: Utf16Range::new(0, 2).unwrap(),
+                replacement: "C".into(),
             },
         ))
         .unwrap();
@@ -253,7 +227,7 @@ fn prepared_text_replacement_emits_forward_and_inverse_physical_plan() {
     assert!(matches!(
         &plan.operations[0],
         PhysicalEditOperation::ReplaceText { expected_text, replacement, .. }
-            if expected_text == "Original" && replacement == "Changed"
+            if expected_text == "AB" && replacement == "C"
     ));
 }
 
@@ -699,7 +673,13 @@ fn qualified_text_model(overflow: OverflowPolicy) -> (DocumentModel, ObjectId) {
             range: Utf16Range::new(1, 2).unwrap(),
             bounds: PdfBox::new(50.0, 0.0, 100.0, 20.0).unwrap(),
         },
-    ]);
+    ])
+    .with_source_binding(SourceBinding {
+        adapter_id: "pdfium".into(),
+        source_revision: "sha256:qualified-command".into(),
+        source_key: "page:1/object:0".into(),
+        confidence: 1.0,
+    });
     let model = DocumentModel::new(
         DocumentId::from_source_key("qualified-command"),
         "sha256:qualified-command".into(),
