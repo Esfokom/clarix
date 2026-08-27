@@ -127,19 +127,6 @@ void main() {
       openLivePdfiumSession: (_) async => liveSession,
     );
     await gateway.open('fixture.pdf');
-    gateway.registerLivePdfiumBinding(
-      objectId: _objectId,
-      sourceKey: 'manifest/page/1/object/0',
-      sourceRevision: 'source',
-      locator: const EditorPhysicalLocator(
-        pageNumber: 1,
-        objectPath: <int>[0],
-        objectType: 'text',
-        sourceFingerprint: 'source',
-        objectRevision: 0,
-      ),
-    );
-
     await gateway.submit(
       const EditorCommandRequest(
         commandId: _commandId,
@@ -169,6 +156,18 @@ void main() {
       openLivePdfiumSession: (_) async => liveSession,
     );
     await gateway.open('fixture.pdf');
+    gateway.registerLivePdfiumBinding(
+      objectId: _objectId,
+      sourceKey: 'manifest/page/1/object/0',
+      sourceRevision: 'source',
+      locator: const EditorPhysicalLocator(
+        pageNumber: 1,
+        objectPath: <int>[0],
+        objectType: 'text',
+        sourceFingerprint: 'source',
+        objectRevision: 0,
+      ),
+    );
 
     await gateway.submit(
       const EditorCommandRequest(
