@@ -66,9 +66,12 @@ recursive object paths. Do not infer a locator from coordinates or text alone.
 
 The next implementation slice is therefore:
 
-1. Build a live scene/indexing adapter from the PDFium inspector that assigns
-   stable semantic IDs and registers `sourceKey -> (sourceRevision, locator)`
-   in `LivePdfiumLocatorRegistry`.
+1. Build a canonical live scene/indexing adapter. It must assign/retain stable
+   semantic IDs and register `sourceKey -> (sourceRevision, locator)` in
+   `LivePdfiumLocatorRegistry`. The existing Rust importer has span-derived
+   source keys, whereas the PDFium inspector has recursive paths; define this
+   mapping explicitly at import/open time rather than matching geometry, text,
+   or object order.
 2. Extend `BridgeEditorSessionGateway.open(sourcePath)` to own the matching
    `LivePdfiumSession` and registry lifecycle.
 3. Route only commands with a registered, supported text locator through

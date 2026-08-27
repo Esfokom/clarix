@@ -6,6 +6,22 @@
 
 **Architecture:** Dart owns `LivePdfiumSession` and serializes PDFium calls on pdfrx's worker. Rust continues to own semantic commands, transactions, and AI validation, emitting physical edit plans keyed by stable semantic IDs and PDFium locators. Flutter renders dirty tile images from the live session while retaining only interaction chrome as overlays.
 
+## Implementation status — 2026-08-27
+
+Tasks 1–3 have a committed foundation: physical-locator DTOs, a revision-keyed
+live tile path, live text mutation/regeneration/save bytes, and live-tile
+presentation. Task 4's semantic physical plans and the prepare -> apply ->
+publish bridge are also implemented. See
+`2026-08-27-unified-pdfium-editor-handoff.md` for commit-level evidence.
+
+Before Task 4 can be selected in production, introduce one canonical identity
+index. The current Rust legacy importer emits span-derived `source_key` values,
+while the live PDFium inspector owns recursive object paths. The gateway must
+create and retain explicit mappings from semantic object ID/source key to
+`EditorPhysicalLocator` while it inspects the live document. Do not correlate
+objects by coordinates, text, or ordering alone. Unsupported or unmapped
+objects must retain the explicit legacy/compatibility path.
+
 **Tech Stack:** Flutter/Dart, pdfrx, pdfium_dart/pdfium_flutter FFI, Flutter Rust Bridge, Rust editing core, Flutter integration tests.
 
 **Spec:** `docs/superpowers/specs/2026-08-27-unified-pdfium-editor-design.md`
