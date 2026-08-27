@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
+import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_session.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_import_manifest_builder.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_tile_renderer.dart';
@@ -58,10 +59,24 @@ void main() {
       sourceRevision: 'ignored-by-live-manifest',
       pageNumbers: const <int>[1],
     );
+    final inspected = blocks.single;
+    final singleObject = PdfTextBlock(
+      locator: inspected.locator,
+      text: inspected.text,
+      originalText: inspected.originalText,
+      runs: inspected.runs,
+      bounds: inspected.bounds,
+      transform: inspected.transform,
+      baseline: inspected.baseline,
+      writingDirection: inspected.writingDirection,
+      capabilities: inspected.capabilities.toList(growable: false),
+      readOnlyReason: inspected.readOnlyReason,
+      objectPaths: <List<int>>[inspected.locator.objectPath],
+    );
 
     final manifest = const LivePdfiumImportManifestBuilder().build(
       sourceFingerprint: 'source',
-      blocks: blocks,
+      blocks: <PdfTextBlock>[singleObject],
     );
 
     expect(manifest.bindings, hasLength(1));
