@@ -25,6 +25,10 @@ abstract interface class LivePdfiumPageImportSource {
   });
 }
 
+abstract interface class LivePdfiumSaveSource {
+  Future<Uint8List> saveBytes();
+}
+
 final class LivePdfiumPageInspection {
   const LivePdfiumPageInspection({
     required this.pageNumber,
@@ -43,7 +47,10 @@ final class LivePdfiumPageInspection {
 /// handles remain confined to the pdfrx worker; callers receive copied RGBA
 /// bytes only.
 final class LivePdfiumSession
-    implements LivePdfiumSessionOwner, LivePdfiumPageImportSource {
+    implements
+        LivePdfiumSessionOwner,
+        LivePdfiumPageImportSource,
+        LivePdfiumSaveSource {
   LivePdfiumSession._(this._document) {
     _tiles = LivePdfiumTileRenderer(producer: _renderLiveTile);
   }
@@ -167,6 +174,7 @@ final class LivePdfiumSession
     return const <int>{};
   }
 
+  @override
   Future<Uint8List> saveBytes() async {
     _ensureOpen();
     await commit();
