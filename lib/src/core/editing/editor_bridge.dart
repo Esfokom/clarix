@@ -57,6 +57,10 @@ abstract interface class NativeLivePdfiumPort {
   Future<EditorCommandResult> publishPreparedLiveCommand(String token);
 }
 
+abstract interface class NativeLivePageImportPort {
+  Future<void> importLivePage(native.NativeLivePageImport request);
+}
+
 abstract interface class NativeFontFallbackPort {
   Future<EditorFontFallbackProposal> proposeFontFallback({
     required int baseRevision,
@@ -228,6 +232,16 @@ class EditorBridgeSession {
       );
     }
     return value;
+  }
+
+  Future<void> importLivePage(native.NativeLivePageImport request) async {
+    _ensureOpen();
+    final port = _native;
+    if (port is! NativeLivePageImportPort) {
+      throw UnsupportedError('live PDFium page import is unavailable');
+    }
+    await (port as NativeLivePageImportPort).importLivePage(request);
+    _ensureOpen();
   }
 
   Future<EditorCommandResult> publishPreparedLiveCommand(String token) async {

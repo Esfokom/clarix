@@ -143,6 +143,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw);
 
   @protected
+  NativeLivePageImport dco_decode_box_autoadd_native_live_page_import(
+    dynamic raw,
+  );
+
+  @protected
   NativeObjectDetailsRequest
   dco_decode_box_autoadd_native_object_details_request(dynamic raw);
 
@@ -249,6 +254,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NativeConversationMessage> dco_decode_list_native_conversation_message(
+    dynamic raw,
+  );
+
+  @protected
+  List<NativeLiveTextObject> dco_decode_list_native_live_text_object(
     dynamic raw,
   );
 
@@ -414,6 +424,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeFontFallbackProposalRequest
   dco_decode_native_font_fallback_proposal_request(dynamic raw);
+
+  @protected
+  NativeLivePageImport dco_decode_native_live_page_import(dynamic raw);
+
+  @protected
+  NativeLiveTextObject dco_decode_native_live_text_object(dynamic raw);
 
   @protected
   NativeMemoryPressureLevel dco_decode_native_memory_pressure_level(
@@ -780,6 +796,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeLivePageImport sse_decode_box_autoadd_native_live_page_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeObjectDetailsRequest
   sse_decode_box_autoadd_native_object_details_request(
     SseDeserializer deserializer,
@@ -902,6 +923,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NativeConversationMessage> sse_decode_list_native_conversation_message(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  List<NativeLiveTextObject> sse_decode_list_native_live_text_object(
     SseDeserializer deserializer,
   );
 
@@ -1125,6 +1151,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   NativeFontFallbackProposalRequest
   sse_decode_native_font_fallback_proposal_request(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeLivePageImport sse_decode_native_live_page_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeLiveTextObject sse_decode_native_live_text_object(
     SseDeserializer deserializer,
   );
 
@@ -1586,6 +1622,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_live_page_import(
+    NativeLivePageImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_object_details_request(
     NativeObjectDetailsRequest self,
     SseSerializer serializer,
@@ -1726,6 +1768,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_native_conversation_message(
     List<NativeConversationMessage> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_live_text_object(
+    List<NativeLiveTextObject> self,
     SseSerializer serializer,
   );
 
@@ -2014,6 +2062,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_font_fallback_proposal_request(
     NativeFontFallbackProposalRequest self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_live_page_import(
+    NativeLivePageImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_live_text_object(
+    NativeLiveTextObject self,
     SseSerializer serializer,
   );
 

@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 916995737;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1351542148;
 
 // Section: executor
 
@@ -747,6 +747,60 @@ fn wire__crate__editing_api__NativeEditorSession_import_agent_conversation_impl(
                             &*api_that_guard,
                             api_value,
                         )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__editing_api__NativeEditorSession_import_live_page_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_import_live_page",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_request =
+                <crate::editing_api::NativeLivePageImport>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::editing_api::NativeEditorSession::import_live_page(
+                        &*api_that_guard,
+                        api_request,
+                    )?;
                     Ok(output_ok)
                 })())
             }
@@ -2487,6 +2541,20 @@ impl SseDecode for Vec<crate::agent_api::NativeConversationMessage> {
     }
 }
 
+impl SseDecode for Vec<crate::editing_api::NativeLiveTextObject> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::editing_api::NativeLiveTextObject>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::editing_api::NativeObjectPatch> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3285,6 +3353,49 @@ impl SseDecode for crate::editing_api::NativeFontFallbackProposalRequest {
             start: var_start,
             end: var_end,
             replacement: var_replacement,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativeLivePageImport {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_expectedRevision = <u64>::sse_decode(deserializer);
+        let mut var_pageNumber = <u32>::sse_decode(deserializer);
+        let mut var_width = <f64>::sse_decode(deserializer);
+        let mut var_height = <f64>::sse_decode(deserializer);
+        let mut var_objects =
+            <Vec<crate::editing_api::NativeLiveTextObject>>::sse_decode(deserializer);
+        return crate::editing_api::NativeLivePageImport {
+            expected_revision: var_expectedRevision,
+            page_number: var_pageNumber,
+            width: var_width,
+            height: var_height,
+            objects: var_objects,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativeLiveTextObject {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_objectId = <String>::sse_decode(deserializer);
+        let mut var_sourceKey = <String>::sse_decode(deserializer);
+        let mut var_sourceRevision = <String>::sse_decode(deserializer);
+        let mut var_text = <String>::sse_decode(deserializer);
+        let mut var_bounds = <crate::editing_api::NativePdfBox>::sse_decode(deserializer);
+        let mut var_style = <crate::editing_api::NativeTextStyle>::sse_decode(deserializer);
+        let mut var_baseline = <f64>::sse_decode(deserializer);
+        let mut var_editable = <bool>::sse_decode(deserializer);
+        return crate::editing_api::NativeLiveTextObject {
+            object_id: var_objectId,
+            source_key: var_sourceKey,
+            source_revision: var_sourceRevision,
+            text: var_text,
+            bounds: var_bounds,
+            style: var_style,
+            baseline: var_baseline,
+            editable: var_editable,
         };
     }
 }
@@ -4434,133 +4545,139 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        14 => wire__crate__editing_api__NativeEditorSession_metadata_impl(
+        14 => wire__crate__editing_api__NativeEditorSession_import_live_page_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => wire__crate__editing_api__NativeEditorSession_object_details_impl(
+        15 => wire__crate__editing_api__NativeEditorSession_metadata_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        16 => wire__crate__editing_api__NativeEditorSession_open_impl(
+        16 => wire__crate__editing_api__NativeEditorSession_object_details_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        17 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
+        17 => wire__crate__editing_api__NativeEditorSession_open_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__editing_api__NativeEditorSession_prepare_live_command_impl(
+        18 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
+        19 => wire__crate__editing_api__NativeEditorSession_prepare_live_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__editing_api__NativeEditorSession_publish_prepared_live_command_impl(
+        20 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__editing_api__NativeEditorSession_read_agent_audit_impl(
+        21 => wire__crate__editing_api__NativeEditorSession_publish_prepared_live_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__editing_api__NativeEditorSession_rebase_agent_proposal_impl(
+        22 => wire__crate__editing_api__NativeEditorSession_read_agent_audit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__editing_api__NativeEditorSession_reject_agent_proposal_impl(
+        23 => wire__crate__editing_api__NativeEditorSession_rebase_agent_proposal_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
+        24 => wire__crate__editing_api__NativeEditorSession_reject_agent_proposal_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__editing_api__NativeEditorSession_report_memory_pressure_impl(
+        25 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__editing_api__NativeEditorSession_save_impl(
+        26 => wire__crate__editing_api__NativeEditorSession_report_memory_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__editing_api__NativeEditorSession_search_impl(
+        27 => wire__crate__editing_api__NativeEditorSession_save_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__editing_api__NativeEditorSession_selection_context_impl(
+        28 => wire__crate__editing_api__NativeEditorSession_search_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__editing_api__NativeEditorSession_start_agent_run_impl(
+        29 => wire__crate__editing_api__NativeEditorSession_selection_context_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+        30 => wire__crate__editing_api__NativeEditorSession_start_agent_run_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__editing_api__NativeEditorSession_update_annotation_impl(
+        31 => wire__crate__editing_api__NativeEditorSession_submit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__editing_api__NativeEditorSession_validate_selection_impl(
+        32 => wire__crate__editing_api__NativeEditorSession_update_annotation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
+        33 => wire__crate__editing_api__NativeEditorSession_validate_selection_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        34 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5346,6 +5463,57 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeFontFallbackPro
     for crate::editing_api::NativeFontFallbackProposalRequest
 {
     fn into_into_dart(self) -> crate::editing_api::NativeFontFallbackProposalRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeLivePageImport {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.expected_revision.into_into_dart().into_dart(),
+            self.page_number.into_into_dart().into_dart(),
+            self.width.into_into_dart().into_dart(),
+            self.height.into_into_dart().into_dart(),
+            self.objects.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeLivePageImport
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeLivePageImport>
+    for crate::editing_api::NativeLivePageImport
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeLivePageImport {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativeLiveTextObject {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.object_id.into_into_dart().into_dart(),
+            self.source_key.into_into_dart().into_dart(),
+            self.source_revision.into_into_dart().into_dart(),
+            self.text.into_into_dart().into_dart(),
+            self.bounds.into_into_dart().into_dart(),
+            self.style.into_into_dart().into_dart(),
+            self.baseline.into_into_dart().into_dart(),
+            self.editable.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativeLiveTextObject
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeLiveTextObject>
+    for crate::editing_api::NativeLiveTextObject
+{
+    fn into_into_dart(self) -> crate::editing_api::NativeLiveTextObject {
         self
     }
 }
@@ -6601,6 +6769,16 @@ impl SseEncode for Vec<crate::agent_api::NativeConversationMessage> {
     }
 }
 
+impl SseEncode for Vec<crate::editing_api::NativeLiveTextObject> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::editing_api::NativeLiveTextObject>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::editing_api::NativeObjectPatch> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7168,6 +7346,31 @@ impl SseEncode for crate::editing_api::NativeFontFallbackProposalRequest {
         <u32>::sse_encode(self.start, serializer);
         <u32>::sse_encode(self.end, serializer);
         <String>::sse_encode(self.replacement, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativeLivePageImport {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.expected_revision, serializer);
+        <u32>::sse_encode(self.page_number, serializer);
+        <f64>::sse_encode(self.width, serializer);
+        <f64>::sse_encode(self.height, serializer);
+        <Vec<crate::editing_api::NativeLiveTextObject>>::sse_encode(self.objects, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativeLiveTextObject {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.object_id, serializer);
+        <String>::sse_encode(self.source_key, serializer);
+        <String>::sse_encode(self.source_revision, serializer);
+        <String>::sse_encode(self.text, serializer);
+        <crate::editing_api::NativePdfBox>::sse_encode(self.bounds, serializer);
+        <crate::editing_api::NativeTextStyle>::sse_encode(self.style, serializer);
+        <f64>::sse_encode(self.baseline, serializer);
+        <bool>::sse_encode(self.editable, serializer);
     }
 }
 

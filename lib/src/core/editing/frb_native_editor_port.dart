@@ -15,6 +15,7 @@ class FrbNativeEditorPort
     implements
         NativeEditorPort,
         NativeLivePdfiumPort,
+        NativeLivePageImportPort,
         NativeFontFallbackPort,
         NativePhaseTwoPort,
         NativeAgentPortProvider {
@@ -30,6 +31,10 @@ class FrbNativeEditorPort
 
   @override
   Future<void> close() => _session.close();
+
+  @override
+  Future<void> importLivePage(native.NativeLivePageImport request) =>
+      _session.importLivePage(request: request);
 
   @override
   Future<EditorSessionMetadata> metadata() async {

@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_physical_edit_operation`, `native_physical_edit_plan`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `NativeDirtyTile`, `NativeTileInvalidation`, `PendingFontFallback`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
@@ -55,6 +55,8 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   Future<NativeConversationImportReceipt> importAgentConversation({
     required NativeConversationImport value,
   });
+
+  Future<void> importLivePage({required NativeLivePageImport request});
 
   Future<NativeEditorMetadata> metadata();
 
@@ -884,6 +886,90 @@ class NativeFontFallbackProposalRequest {
           start == other.start &&
           end == other.end &&
           replacement == other.replacement;
+}
+
+/// A page inspected by the Dart-owned live PDFium document. Its source keys
+/// are canonical path identities, not matches derived from visual content.
+class NativeLivePageImport {
+  final BigInt expectedRevision;
+  final int pageNumber;
+  final double width;
+  final double height;
+  final List<NativeLiveTextObject> objects;
+
+  const NativeLivePageImport({
+    required this.expectedRevision,
+    required this.pageNumber,
+    required this.width,
+    required this.height,
+    required this.objects,
+  });
+
+  @override
+  int get hashCode =>
+      expectedRevision.hashCode ^
+      pageNumber.hashCode ^
+      width.hashCode ^
+      height.hashCode ^
+      objects.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeLivePageImport &&
+          runtimeType == other.runtimeType &&
+          expectedRevision == other.expectedRevision &&
+          pageNumber == other.pageNumber &&
+          width == other.width &&
+          height == other.height &&
+          objects == other.objects;
+}
+
+class NativeLiveTextObject {
+  final String objectId;
+  final String sourceKey;
+  final String sourceRevision;
+  final String text;
+  final NativePdfBox bounds;
+  final NativeTextStyle style;
+  final double baseline;
+  final bool editable;
+
+  const NativeLiveTextObject({
+    required this.objectId,
+    required this.sourceKey,
+    required this.sourceRevision,
+    required this.text,
+    required this.bounds,
+    required this.style,
+    required this.baseline,
+    required this.editable,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      sourceKey.hashCode ^
+      sourceRevision.hashCode ^
+      text.hashCode ^
+      bounds.hashCode ^
+      style.hashCode ^
+      baseline.hashCode ^
+      editable.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativeLiveTextObject &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          sourceKey == other.sourceKey &&
+          sourceRevision == other.sourceRevision &&
+          text == other.text &&
+          bounds == other.bounds &&
+          style == other.style &&
+          baseline == other.baseline &&
+          editable == other.editable;
 }
 
 enum NativeMemoryPressureLevel { moderate, critical }
