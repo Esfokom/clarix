@@ -172,13 +172,27 @@ class PageEditScene extends StatelessWidget {
                       displaySize: displaySize,
                     ),
                     child: IgnorePointer(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(0x332F80ED),
-                            width: 1,
+                      child: Semantics(
+                        label: 'Editable text region',
+                        child: DecoratedBox(
+                          key: ValueKey<String>(
+                            'clarix-edit-target-${object.objectId}',
                           ),
-                          borderRadius: BorderRadius.circular(2),
+                          decoration: BoxDecoration(
+                            color: const Color(0x142F80ED),
+                            border: Border.all(
+                              color: const Color(0xFF2F80ED),
+                              width: 2,
+                            ),
+                            borderRadius: BorderRadius.circular(3),
+                            boxShadow: const <BoxShadow>[
+                              BoxShadow(
+                                color: Color(0x552F80ED),
+                                blurRadius: 4,
+                                spreadRadius: 0.5,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

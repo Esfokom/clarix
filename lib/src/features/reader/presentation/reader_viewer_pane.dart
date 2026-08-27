@@ -421,7 +421,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
                                 input.interactionDelegateProvider,
-                            onInteractionEnd: (_) => _persistViewerState(),
+                            // pdfrx can finish a gesture after this pane has
+                            // been removed.  Persist through the debounced
+                            // path so dispose can cancel the pending work
+                            // before it notifies the workspace provider.
+                            onInteractionEnd: (_) =>
+                                _queueViewerStatePersistence(),
                             onPageChanged: _onPageChanged,
                             onViewerReady: _onViewerReady,
                             pagePaintCallbacks: <PdfViewerPagePaintCallback>[

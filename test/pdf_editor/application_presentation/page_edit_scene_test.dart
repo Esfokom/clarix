@@ -121,6 +121,10 @@ void main() {
     );
 
     expect(find.byType(PdfOverlayInteractionRegion), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('clarix-edit-target-object-1')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('edited source is covered before replacement glyphs paint', (
