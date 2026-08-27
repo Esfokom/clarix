@@ -59,11 +59,15 @@ final class LivePdfiumSession {
   /// open. This is the safe batching primitive for live typing.
   Future<LivePdfiumApplyResult> apply(LivePdfiumEditPlan plan) async {
     _ensureOpen();
-    final bounds = await const PdfiumWorkerExecutor().run(
+    final outcome = await const PdfiumWorkerExecutor().run(
       document: _document,
       callback: _applyTextPlanOnWorker,
       message: plan,
     );
+    if (outcome.error case final String error) {
+      throw StateError(error);
+    }
+    final bounds = outcome.bounds;
     _revision += 1;
     final invalidations = bounds
         .map((bounds) {
@@ -117,7 +121,17 @@ final class LivePdfiumSession {
   }
 }
 
-List<EditorPdfBox> _applyTextPlanOnWorker(
+({List<EditorPdfBox> bounds, String? error}) _applyTextPlanOnWorker(
+  PdfiumWorkerInput<LivePdfiumEditPlan> input,
+) {
+  try {
+    return (bounds: _applyTextPlanOrThrow(input), error: null);
+  } on Object catch (error) {
+    return (bounds: const <EditorPdfBox>[], error: error.toString());
+  }
+}
+
+List<EditorPdfBox> _applyTextPlanOrThrow(
   PdfiumWorkerInput<LivePdfiumEditPlan> input,
 ) {
   final plan = input.message;
@@ -185,6 +199,13 @@ List<EditorPdfBox> _applyTextPlanOnWorker(
         calloc.free(bottom);
         calloc.free(right);
         calloc.free(top);
+      }
+    }
+    for (var index = 0; index < resolved.length; index += 1) {
+      final expectedText = plan.replacements[index].expectedText;
+      if (expectedText != null &&
+          resolved[index].originalText != expectedText) {
+        throw StateError('locator text no longer matches the prepared plan');
       }
     }
     final changed = <({FPDF_PAGEOBJECT object, String originalText})>[];

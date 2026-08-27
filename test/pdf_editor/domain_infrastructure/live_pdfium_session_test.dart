@@ -149,6 +149,54 @@ void main() {
     );
   });
 
+  test('rejects a stale text plan before mutating its live object', () async {
+    final file = await PdfTextFixture.singleBlock('Original');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+    const locator = EditorPhysicalLocator(
+      pageNumber: 1,
+      objectPath: <int>[0],
+      objectType: 'text',
+      sourceFingerprint: 'fixture',
+      objectRevision: 0,
+    );
+    final before = await session.renderTile(
+      const LivePdfiumTileRequest(
+        pageNumber: 1,
+        revision: 0,
+        bounds: EditorPdfBox(left: 0, bottom: 0, right: 595, top: 842),
+        width: 240,
+        height: 320,
+      ),
+    );
+
+    await expectLater(
+      session.apply(
+        LivePdfiumEditPlan(
+          replacements: const <LivePdfiumTextReplacement>[
+            LivePdfiumTextReplacement(
+              locator: locator,
+              replacement: 'Changed',
+              expectedText: 'Different source text',
+            ),
+          ],
+        ),
+      ),
+      throwsA(isA<StateError>()),
+    );
+    final after = await session.renderTile(
+      const LivePdfiumTileRequest(
+        pageNumber: 1,
+        revision: 1,
+        bounds: EditorPdfBox(left: 0, bottom: 0, right: 595, top: 842),
+        width: 240,
+        height: 320,
+      ),
+    );
+    expect(after.rgbaBytes, orderedEquals(before.rgbaBytes));
+  });
+
   test('saves committed text through the live PDFium document', () async {
     final file = await PdfTextFixture.singleBlock('Original');
     addTearDown(() => file.parent.delete(recursive: true));

@@ -8,10 +8,15 @@ class LivePdfiumTextReplacement {
   const LivePdfiumTextReplacement({
     required this.locator,
     required this.replacement,
+    this.expectedText,
   });
 
   final EditorPhysicalLocator locator;
   final String replacement;
+
+  /// Semantic text observed when the plan was prepared. Supplying it prevents
+  /// a reused physical object index from receiving an unintended edit.
+  final String? expectedText;
 }
 
 /// The currently supported, all-or-nothing physical PDFium edit transaction.
