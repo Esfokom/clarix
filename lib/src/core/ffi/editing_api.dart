@@ -7,9 +7,9 @@ import 'agent_api.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
+// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_physical_edit_operation`, `native_physical_edit_plan`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `NativeDirtyTile`, `NativeTileInvalidation`, `PendingFontFallback`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>
 abstract class NativeEditorSession implements RustOpaqueInterface {
@@ -70,8 +70,20 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
 
   Future<NativePageScene> pageScene({required NativePageSceneRequest request});
 
+  /// Validates a semantic command and exposes its live-PDFium physical plan
+  /// without changing the canonical Rust revision or durable journal.
+  Future<NativePreparedLiveCommand> prepareLiveCommand({
+    required NativeSubmitCommandRequest request,
+  });
+
   Future<NativeFontFallbackProposal> proposeFontFallback({
     required NativeFontFallbackProposalRequest request,
+  });
+
+  /// Publishes the prepared command only after the Dart-owned live PDFium
+  /// document reports that it applied the returned physical edit plan.
+  Future<NativeCommandResult> publishPreparedLiveCommand({
+    required String token,
   });
 
   Future<NativeAgentAudit> readAgentAudit({required String runId});
@@ -1061,6 +1073,78 @@ class NativePdfBox {
           top == other.top;
 }
 
+class NativePhysicalEditOperation {
+  final String objectId;
+
+  /// Stable source key used by the live PDFium scene's locator table.
+  final String sourceKey;
+  final String sourceRevision;
+  final String expectedText;
+  final String replacement;
+  final NativePdfBox bounds;
+
+  const NativePhysicalEditOperation({
+    required this.objectId,
+    required this.sourceKey,
+    required this.sourceRevision,
+    required this.expectedText,
+    required this.replacement,
+    required this.bounds,
+  });
+
+  @override
+  int get hashCode =>
+      objectId.hashCode ^
+      sourceKey.hashCode ^
+      sourceRevision.hashCode ^
+      expectedText.hashCode ^
+      replacement.hashCode ^
+      bounds.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePhysicalEditOperation &&
+          runtimeType == other.runtimeType &&
+          objectId == other.objectId &&
+          sourceKey == other.sourceKey &&
+          sourceRevision == other.sourceRevision &&
+          expectedText == other.expectedText &&
+          replacement == other.replacement &&
+          bounds == other.bounds;
+}
+
+class NativePhysicalEditPlan {
+  final BigInt previousRevision;
+  final BigInt revision;
+  final List<NativePhysicalEditOperation> operations;
+  final List<NativePhysicalEditOperation> inverseOperations;
+
+  const NativePhysicalEditPlan({
+    required this.previousRevision,
+    required this.revision,
+    required this.operations,
+    required this.inverseOperations,
+  });
+
+  @override
+  int get hashCode =>
+      previousRevision.hashCode ^
+      revision.hashCode ^
+      operations.hashCode ^
+      inverseOperations.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePhysicalEditPlan &&
+          runtimeType == other.runtimeType &&
+          previousRevision == other.previousRevision &&
+          revision == other.revision &&
+          operations == other.operations &&
+          inverseOperations == other.inverseOperations;
+}
+
 class NativePhysicalLocator {
   final int pageNumber;
   final Uint32List objectPath;
@@ -1094,6 +1178,44 @@ class NativePhysicalLocator {
           objectType == other.objectType &&
           sourceFingerprint == other.sourceFingerprint &&
           objectRevision == other.objectRevision;
+}
+
+/// A prepared semantic command paired with the physical text changes that the
+/// single live PDFium owner must apply before this command may be published.
+class NativePreparedLiveCommand {
+  /// Opaque, single-use token consumed by `publish_prepared_live_command`.
+  final String token;
+  final String commandId;
+  final BigInt previousRevision;
+  final BigInt committedRevision;
+  final NativePhysicalEditPlan plan;
+
+  const NativePreparedLiveCommand({
+    required this.token,
+    required this.commandId,
+    required this.previousRevision,
+    required this.committedRevision,
+    required this.plan,
+  });
+
+  @override
+  int get hashCode =>
+      token.hashCode ^
+      commandId.hashCode ^
+      previousRevision.hashCode ^
+      committedRevision.hashCode ^
+      plan.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NativePreparedLiveCommand &&
+          runtimeType == other.runtimeType &&
+          token == other.token &&
+          commandId == other.commandId &&
+          previousRevision == other.previousRevision &&
+          committedRevision == other.committedRevision &&
+          plan == other.plan;
 }
 
 enum NativeSaveAssociation { keepOriginalAssociation, followNewSource }

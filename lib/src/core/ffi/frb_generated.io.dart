@@ -265,6 +265,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw);
 
   @protected
+  List<NativePhysicalEditOperation>
+  dco_decode_list_native_physical_edit_operation(dynamic raw);
+
+  @protected
   List<NativeRagChunk> dco_decode_list_native_rag_chunk(dynamic raw);
 
   @protected
@@ -458,7 +462,20 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfSource dco_decode_native_pdf_source(dynamic raw);
 
   @protected
+  NativePhysicalEditOperation dco_decode_native_physical_edit_operation(
+    dynamic raw,
+  );
+
+  @protected
+  NativePhysicalEditPlan dco_decode_native_physical_edit_plan(dynamic raw);
+
+  @protected
   NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw);
+
+  @protected
+  NativePreparedLiveCommand dco_decode_native_prepared_live_command(
+    dynamic raw,
+  );
 
   @protected
   NativeProviderTestRequest dco_decode_native_provider_test_request(
@@ -909,6 +926,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativePhysicalEditOperation>
+  sse_decode_list_native_physical_edit_operation(SseDeserializer deserializer);
+
+  @protected
   List<NativeRagChunk> sse_decode_list_native_rag_chunk(
     SseDeserializer deserializer,
   );
@@ -1172,7 +1193,22 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer);
 
   @protected
+  NativePhysicalEditOperation sse_decode_native_physical_edit_operation(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePhysicalEditPlan sse_decode_native_physical_edit_plan(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativePhysicalLocator sse_decode_native_physical_locator(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePreparedLiveCommand sse_decode_native_prepared_live_command(
     SseDeserializer deserializer,
   );
 
@@ -1718,6 +1754,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_native_physical_edit_operation(
+    List<NativePhysicalEditOperation> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_native_rag_chunk(
     List<NativeRagChunk> self,
     SseSerializer serializer,
@@ -2057,8 +2099,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_physical_edit_operation(
+    NativePhysicalEditOperation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_physical_edit_plan(
+    NativePhysicalEditPlan self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_physical_locator(
     NativePhysicalLocator self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_prepared_live_command(
+    NativePreparedLiveCommand self,
     SseSerializer serializer,
   );
 

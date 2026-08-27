@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -310016601;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 916995737;
 
 // Section: executor
 
@@ -945,6 +945,60 @@ fn wire__crate__editing_api__NativeEditorSession_page_scene_impl(
         },
     )
 }
+fn wire__crate__editing_api__NativeEditorSession_prepare_live_command_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_prepare_live_command",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_request =
+                <crate::editing_api::NativeSubmitCommandRequest>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::editing_api::NativeEditorSession::prepare_live_command(
+                        &*api_that_guard,
+                        api_request,
+                    )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -994,6 +1048,60 @@ fn wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
                         &*api_that_guard,
                         api_request,
                     )?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__editing_api__NativeEditorSession_publish_prepared_live_command_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_publish_prepared_live_command",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>,
+            >>::sse_decode(&mut deserializer);
+            let api_token = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::editing_api::NativeEditorSession::publish_prepared_live_command(
+                            &*api_that_guard,
+                            api_token,
+                        )?;
                     Ok(output_ok)
                 })())
             }
@@ -2429,6 +2537,18 @@ impl SseDecode for Vec<crate::api::NativePdfSource> {
     }
 }
 
+impl SseDecode for Vec<crate::editing_api::NativePhysicalEditOperation> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::editing_api::NativePhysicalEditOperation>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::NativeRagChunk> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3400,6 +3520,44 @@ impl SseDecode for crate::api::NativePdfSource {
     }
 }
 
+impl SseDecode for crate::editing_api::NativePhysicalEditOperation {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_objectId = <String>::sse_decode(deserializer);
+        let mut var_sourceKey = <String>::sse_decode(deserializer);
+        let mut var_sourceRevision = <String>::sse_decode(deserializer);
+        let mut var_expectedText = <String>::sse_decode(deserializer);
+        let mut var_replacement = <String>::sse_decode(deserializer);
+        let mut var_bounds = <crate::editing_api::NativePdfBox>::sse_decode(deserializer);
+        return crate::editing_api::NativePhysicalEditOperation {
+            object_id: var_objectId,
+            source_key: var_sourceKey,
+            source_revision: var_sourceRevision,
+            expected_text: var_expectedText,
+            replacement: var_replacement,
+            bounds: var_bounds,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativePhysicalEditPlan {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_previousRevision = <u64>::sse_decode(deserializer);
+        let mut var_revision = <u64>::sse_decode(deserializer);
+        let mut var_operations =
+            <Vec<crate::editing_api::NativePhysicalEditOperation>>::sse_decode(deserializer);
+        let mut var_inverseOperations =
+            <Vec<crate::editing_api::NativePhysicalEditOperation>>::sse_decode(deserializer);
+        return crate::editing_api::NativePhysicalEditPlan {
+            previous_revision: var_previousRevision,
+            revision: var_revision,
+            operations: var_operations,
+            inverse_operations: var_inverseOperations,
+        };
+    }
+}
+
 impl SseDecode for crate::editing_api::NativePhysicalLocator {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -3414,6 +3572,24 @@ impl SseDecode for crate::editing_api::NativePhysicalLocator {
             object_type: var_objectType,
             source_fingerprint: var_sourceFingerprint,
             object_revision: var_objectRevision,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativePreparedLiveCommand {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_token = <String>::sse_decode(deserializer);
+        let mut var_commandId = <String>::sse_decode(deserializer);
+        let mut var_previousRevision = <u64>::sse_decode(deserializer);
+        let mut var_committedRevision = <u64>::sse_decode(deserializer);
+        let mut var_plan = <crate::editing_api::NativePhysicalEditPlan>::sse_decode(deserializer);
+        return crate::editing_api::NativePreparedLiveCommand {
+            token: var_token,
+            command_id: var_commandId,
+            previous_revision: var_previousRevision,
+            committed_revision: var_committedRevision,
+            plan: var_plan,
         };
     }
 }
@@ -4282,97 +4458,109 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
+        18 => wire__crate__editing_api__NativeEditorSession_prepare_live_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__editing_api__NativeEditorSession_read_agent_audit_impl(
+        19 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__editing_api__NativeEditorSession_rebase_agent_proposal_impl(
+        20 => wire__crate__editing_api__NativeEditorSession_publish_prepared_live_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__editing_api__NativeEditorSession_reject_agent_proposal_impl(
+        21 => wire__crate__editing_api__NativeEditorSession_read_agent_audit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
+        22 => wire__crate__editing_api__NativeEditorSession_rebase_agent_proposal_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__editing_api__NativeEditorSession_report_memory_pressure_impl(
+        23 => wire__crate__editing_api__NativeEditorSession_reject_agent_proposal_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__editing_api__NativeEditorSession_save_impl(
+        24 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__editing_api__NativeEditorSession_search_impl(
+        25 => wire__crate__editing_api__NativeEditorSession_report_memory_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__editing_api__NativeEditorSession_selection_context_impl(
+        26 => wire__crate__editing_api__NativeEditorSession_save_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__editing_api__NativeEditorSession_start_agent_run_impl(
+        27 => wire__crate__editing_api__NativeEditorSession_search_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+        28 => wire__crate__editing_api__NativeEditorSession_selection_context_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__editing_api__NativeEditorSession_update_annotation_impl(
+        29 => wire__crate__editing_api__NativeEditorSession_start_agent_run_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__editing_api__NativeEditorSession_validate_selection_impl(
+        30 => wire__crate__editing_api__NativeEditorSession_submit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
-        34 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
+        31 => wire__crate__editing_api__NativeEditorSession_update_annotation_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        32 => wire__crate__editing_api__NativeEditorSession_validate_selection_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        33 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5476,6 +5664,54 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfSource>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePhysicalEditOperation {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.object_id.into_into_dart().into_dart(),
+            self.source_key.into_into_dart().into_dart(),
+            self.source_revision.into_into_dart().into_dart(),
+            self.expected_text.into_into_dart().into_dart(),
+            self.replacement.into_into_dart().into_dart(),
+            self.bounds.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativePhysicalEditOperation
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePhysicalEditOperation>
+    for crate::editing_api::NativePhysicalEditOperation
+{
+    fn into_into_dart(self) -> crate::editing_api::NativePhysicalEditOperation {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePhysicalEditPlan {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.previous_revision.into_into_dart().into_dart(),
+            self.revision.into_into_dart().into_dart(),
+            self.operations.into_into_dart().into_dart(),
+            self.inverse_operations.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativePhysicalEditPlan
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePhysicalEditPlan>
+    for crate::editing_api::NativePhysicalEditPlan
+{
+    fn into_into_dart(self) -> crate::editing_api::NativePhysicalEditPlan {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePhysicalLocator {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -5496,6 +5732,30 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePhysicalLocator
     for crate::editing_api::NativePhysicalLocator
 {
     fn into_into_dart(self) -> crate::editing_api::NativePhysicalLocator {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePreparedLiveCommand {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.token.into_into_dart().into_dart(),
+            self.command_id.into_into_dart().into_dart(),
+            self.previous_revision.into_into_dart().into_dart(),
+            self.committed_revision.into_into_dart().into_dart(),
+            self.plan.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativePreparedLiveCommand
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePreparedLiveCommand>
+    for crate::editing_api::NativePreparedLiveCommand
+{
+    fn into_into_dart(self) -> crate::editing_api::NativePreparedLiveCommand {
         self
     }
 }
@@ -6381,6 +6641,16 @@ impl SseEncode for Vec<crate::api::NativePdfSource> {
     }
 }
 
+impl SseEncode for Vec<crate::editing_api::NativePhysicalEditOperation> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::editing_api::NativePhysicalEditOperation>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::NativeRagChunk> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7053,6 +7323,34 @@ impl SseEncode for crate::api::NativePdfSource {
     }
 }
 
+impl SseEncode for crate::editing_api::NativePhysicalEditOperation {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.object_id, serializer);
+        <String>::sse_encode(self.source_key, serializer);
+        <String>::sse_encode(self.source_revision, serializer);
+        <String>::sse_encode(self.expected_text, serializer);
+        <String>::sse_encode(self.replacement, serializer);
+        <crate::editing_api::NativePdfBox>::sse_encode(self.bounds, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativePhysicalEditPlan {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u64>::sse_encode(self.previous_revision, serializer);
+        <u64>::sse_encode(self.revision, serializer);
+        <Vec<crate::editing_api::NativePhysicalEditOperation>>::sse_encode(
+            self.operations,
+            serializer,
+        );
+        <Vec<crate::editing_api::NativePhysicalEditOperation>>::sse_encode(
+            self.inverse_operations,
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for crate::editing_api::NativePhysicalLocator {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -7061,6 +7359,17 @@ impl SseEncode for crate::editing_api::NativePhysicalLocator {
         <String>::sse_encode(self.object_type, serializer);
         <String>::sse_encode(self.source_fingerprint, serializer);
         <u64>::sse_encode(self.object_revision, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativePreparedLiveCommand {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.token, serializer);
+        <String>::sse_encode(self.command_id, serializer);
+        <u64>::sse_encode(self.previous_revision, serializer);
+        <u64>::sse_encode(self.committed_revision, serializer);
+        <crate::editing_api::NativePhysicalEditPlan>::sse_encode(self.plan, serializer);
     }
 }
 
@@ -7677,57 +7986,3 @@ mod io {
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
-
-/// cbindgen:ignore
-#[cfg(target_family = "wasm")]
-mod web {
-    // This file is automatically generated, so please do not edit it.
-    // @generated by `flutter_rust_bridge`@ 2.12.0.
-
-    // Section: imports
-
-    use super::*;
-    use crate::api::*;
-    use crate::editing_api::*;
-    use flutter_rust_bridge::for_generated::byteorder::{
-        NativeEndian, ReadBytesExt, WriteBytesExt,
-    };
-    use flutter_rust_bridge::for_generated::wasm_bindgen;
-    use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
-    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
-    use flutter_rust_bridge::{Handler, IntoIntoDart};
-
-    // Section: boilerplate
-
-    flutter_rust_bridge::frb_generated_boilerplate_web!();
-
-    #[wasm_bindgen]
-    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-        ptr: *const std::ffi::c_void,
-    ) {
-        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>::increment_strong_count(ptr as _);
-    }
-
-    #[wasm_bindgen]
-    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
-        ptr: *const std::ffi::c_void,
-    ) {
-        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>::decrement_strong_count(ptr as _);
-    }
-
-    #[wasm_bindgen]
-    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
-        ptr: *const std::ffi::c_void,
-    ) {
-        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativePdfSession>>::increment_strong_count(ptr as _);
-    }
-
-    #[wasm_bindgen]
-    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
-        ptr: *const std::ffi::c_void,
-    ) {
-        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativePdfSession>>::decrement_strong_count(ptr as _);
-    }
-}
-#[cfg(target_family = "wasm")]
-pub use web::*;

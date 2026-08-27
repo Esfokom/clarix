@@ -10,9 +10,10 @@ use clarix_editing_core::{
     CommandEnvelope, CommandId, CommandResult, CompatibilityReporter, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
     FontFallbackApproval, FontRef, FontSource, MemoryPressureLevel, ObjectId, ObjectPatch,
-    PageIndexTask, PageSceneRequest, PageSceneService, PdfBox, RecoveryRequest, SaveAssociation,
-    SaveCoordinator, SaveMode, SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet,
-    SessionId, SourceReference, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
+    PageIndexTask, PageSceneRequest, PageSceneService, PdfBox, PhysicalEditOperation,
+    PhysicalEditPlan, PreparedCommand, RecoveryRequest, SaveAssociation, SaveCoordinator, SaveMode,
+    SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet, SessionId,
+    SourceReference, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{
     ProjectLocation, ProjectSeed, SqliteAgentRunRepository, SqliteProjectRepository,
@@ -458,6 +459,37 @@ pub struct NativeCommandResult {
     pub object_patches: Vec<NativeObjectPatch>,
 }
 
+/// A prepared semantic command paired with the physical text changes that the
+/// single live PDFium owner must apply before this command may be published.
+#[derive(Debug, Clone)]
+pub struct NativePreparedLiveCommand {
+    /// Opaque, single-use token consumed by `publish_prepared_live_command`.
+    pub token: String,
+    pub command_id: String,
+    pub previous_revision: u64,
+    pub committed_revision: u64,
+    pub plan: NativePhysicalEditPlan,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePhysicalEditPlan {
+    pub previous_revision: u64,
+    pub revision: u64,
+    pub operations: Vec<NativePhysicalEditOperation>,
+    pub inverse_operations: Vec<NativePhysicalEditOperation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativePhysicalEditOperation {
+    pub object_id: String,
+    /// Stable source key used by the live PDFium scene's locator table.
+    pub source_key: String,
+    pub source_revision: String,
+    pub expected_text: String,
+    pub replacement: String,
+    pub bounds: NativePdfBox,
+}
+
 #[derive(Debug, Clone)]
 pub struct NativeSelectionRebase {
     pub object_id: String,
@@ -515,6 +547,7 @@ pub struct NativeEditorSession {
     page_count: u32,
     event_sequence: Arc<AtomicU64>,
     fallback_proposals: Mutex<HashMap<String, PendingFontFallback>>,
+    prepared_live_commands: Mutex<HashMap<String, PreparedCommand>>,
     fallback_assets: PathBuf,
     pub(crate) agent_runtime: crate::agent_api::NativeAgentRuntime,
 }
@@ -591,6 +624,7 @@ impl NativeEditorSession {
             page_count: inspection.page_count,
             event_sequence: Arc::new(AtomicU64::new(0)),
             fallback_proposals: Mutex::new(HashMap::new()),
+            prepared_live_commands: Mutex::new(HashMap::new()),
             fallback_assets,
             agent_runtime,
         })
@@ -843,6 +877,68 @@ impl NativeEditorSession {
                 payload,
             ))
             .map_err(editing_error)?;
+        self.fallback_proposals
+            .lock()
+            .map_err(|_| "font_fallback_unavailable: proposal lock poisoned".to_owned())?
+            .clear();
+        self.page_service.set_revision(result.committed_revision);
+        Ok(native_command_result(result))
+    }
+
+    /// Validates a semantic command and exposes its live-PDFium physical plan
+    /// without changing the canonical Rust revision or durable journal.
+    pub fn prepare_live_command(
+        &self,
+        request: NativeSubmitCommandRequest,
+    ) -> Result<NativePreparedLiveCommand, String> {
+        if request.schema_version != EDITOR_SCHEMA_VERSION {
+            return Err(format!(
+                "schema_mismatch: expected {EDITOR_SCHEMA_VERSION}, got {}",
+                request.schema_version
+            ));
+        }
+        let command_id = CommandId::from_str(&request.command_id)
+            .map_err(|error| format!("invalid_command_id: {error}"))?;
+        let payload = editor_command(request.payload)?;
+        let prepared = self
+            .actor
+            .prepare(CommandEnvelope::user(
+                command_id,
+                DocumentRevision::from_value(request.base_revision),
+                payload,
+            ))
+            .map_err(editing_error)?;
+        let plan = prepared.physical_plan.as_ref().ok_or_else(|| {
+            "live_pdfium_unsupported: command has no physical PDFium edit plan".to_owned()
+        })?;
+        let token = CommandId::new().to_string();
+        let response = NativePreparedLiveCommand {
+            token: token.clone(),
+            command_id: prepared.envelope.command_id.to_string(),
+            previous_revision: prepared.previous_revision.value(),
+            committed_revision: prepared.committed_revision.value(),
+            plan: native_physical_edit_plan(plan),
+        };
+        self.prepared_live_commands
+            .lock()
+            .map_err(|_| "prepared_command_unavailable: lock poisoned".to_owned())?
+            .insert(token, prepared);
+        Ok(response)
+    }
+
+    /// Publishes the prepared command only after the Dart-owned live PDFium
+    /// document reports that it applied the returned physical edit plan.
+    pub fn publish_prepared_live_command(
+        &self,
+        token: String,
+    ) -> Result<NativeCommandResult, String> {
+        let prepared = self
+            .prepared_live_commands
+            .lock()
+            .map_err(|_| "prepared_command_unavailable: lock poisoned".to_owned())?
+            .remove(&token)
+            .ok_or_else(|| "prepared_command_not_found".to_owned())?;
+        let result = self.actor.publish(prepared).map_err(editing_error)?;
         self.fallback_proposals
             .lock()
             .map_err(|_| "font_fallback_unavailable: proposal lock poisoned".to_owned())?
@@ -1161,6 +1257,10 @@ impl NativeEditorSession {
 
     pub fn close(&self) -> Result<(), String> {
         self.agent_runtime.close()?;
+        self.prepared_live_commands
+            .lock()
+            .map_err(|_| "prepared_command_unavailable: lock poisoned".to_owned())?
+            .clear();
         self.clean_patches.cancel();
         self.background_indexing
             .cancel_and_wait()
@@ -1575,6 +1675,45 @@ fn native_command_result(result: CommandResult) -> NativeCommandResult {
             .into_iter()
             .map(native_object_patch)
             .collect(),
+    }
+}
+
+fn native_physical_edit_plan(plan: &PhysicalEditPlan) -> NativePhysicalEditPlan {
+    NativePhysicalEditPlan {
+        previous_revision: plan.previous_revision.value(),
+        revision: plan.revision.value(),
+        operations: plan
+            .operations
+            .iter()
+            .map(native_physical_edit_operation)
+            .collect(),
+        inverse_operations: plan
+            .inverse_operations
+            .iter()
+            .map(native_physical_edit_operation)
+            .collect(),
+    }
+}
+
+fn native_physical_edit_operation(
+    operation: &PhysicalEditOperation,
+) -> NativePhysicalEditOperation {
+    match operation {
+        PhysicalEditOperation::ReplaceText {
+            object_id,
+            source_key,
+            source_revision,
+            expected_text,
+            replacement,
+            bounds,
+        } => NativePhysicalEditOperation {
+            object_id: object_id.to_string(),
+            source_key: source_key.clone(),
+            source_revision: source_revision.clone(),
+            expected_text: expected_text.clone(),
+            replacement: replacement.clone(),
+            bounds: native_box(*bounds),
+        },
     }
 }
 

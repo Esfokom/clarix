@@ -14,6 +14,7 @@ final RegExp _uuidPattern = RegExp(
 class FrbNativeEditorPort
     implements
         NativeEditorPort,
+        NativeLivePdfiumPort,
         NativeFontFallbackPort,
         NativePhaseTwoPort,
         NativeAgentPortProvider {
@@ -90,6 +91,39 @@ class FrbNativeEditorPort
     );
     return _commandResultFromNative(value);
   }
+
+  @override
+  Future<EditorPreparedLiveCommand> prepareLiveCommand(
+    EditorCommandRequest request,
+  ) async {
+    final value = await _session.prepareLiveCommand(
+      request: native.NativeSubmitCommandRequest(
+        schemaVersion: request.schemaVersion,
+        commandId: request.commandId,
+        baseRevision: BigInt.from(request.baseRevision),
+        payload: _commandToNative(request.payload),
+      ),
+    );
+    return EditorPreparedLiveCommand(
+      token: value.token,
+      commandId: value.commandId,
+      previousRevision: _intFromBigInt(
+        value.previousRevision,
+        'prepared.previousRevision',
+      ),
+      committedRevision: _intFromBigInt(
+        value.committedRevision,
+        'prepared.committedRevision',
+      ),
+      plan: _physicalEditPlanFromNative(value.plan),
+    );
+  }
+
+  @override
+  Future<EditorCommandResult> publishPreparedLiveCommand(String token) async =>
+      _commandResultFromNative(
+        await _session.publishPreparedLiveCommand(token: token),
+      );
 
   @override
   Future<EditorSearchResult> search(EditorSearchRequest request) async {
@@ -446,6 +480,33 @@ EditorTextRun _textRunFromNative(native.NativeTextRun value) => EditorTextRun(
     italic: value.style.italic,
     colorRgba: _colorFromNative(value.style.colorRgba),
   ),
+);
+
+EditorPhysicalEditPlan _physicalEditPlanFromNative(
+  native.NativePhysicalEditPlan value,
+) => EditorPhysicalEditPlan(
+  previousRevision: _intFromBigInt(
+    value.previousRevision,
+    'physicalPlan.previousRevision',
+  ),
+  revision: _intFromBigInt(value.revision, 'physicalPlan.revision'),
+  operations: value.operations
+      .map(_physicalEditOperationFromNative)
+      .toList(growable: false),
+  inverseOperations: value.inverseOperations
+      .map(_physicalEditOperationFromNative)
+      .toList(growable: false),
+);
+
+EditorPhysicalEditOperation _physicalEditOperationFromNative(
+  native.NativePhysicalEditOperation value,
+) => EditorPhysicalEditOperation(
+  objectId: _canonicalUuid(value.objectId, 'physicalOperation.objectId'),
+  sourceKey: value.sourceKey,
+  sourceRevision: value.sourceRevision,
+  expectedText: value.expectedText,
+  replacement: value.replacement,
+  bounds: _boxFromNative(value.bounds),
 );
 
 EditorCommandResult _commandResultFromNative(

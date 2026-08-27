@@ -46,6 +46,17 @@ abstract class NativeEditorPort {
   Future<void> close();
 }
 
+/// Optional two-phase command boundary for the Dart-owned live PDFium
+/// document. A command is durable only after Dart applies its physical plan
+/// and calls `publishPreparedLiveCommand` with the returned one-use token.
+abstract interface class NativeLivePdfiumPort {
+  Future<EditorPreparedLiveCommand> prepareLiveCommand(
+    EditorCommandRequest request,
+  );
+
+  Future<EditorCommandResult> publishPreparedLiveCommand(String token);
+}
+
 abstract interface class NativeFontFallbackPort {
   Future<EditorFontFallbackProposal> proposeFontFallback({
     required int baseRevision,
@@ -185,6 +196,56 @@ class EditorBridgeSession {
     if (value.previousRevision != request.baseRevision || !value.durable) {
       throw const EditorProtocolViolation(
         'native command acknowledgement is not durably based on the requested revision',
+      );
+    }
+    return value;
+  }
+
+  Future<EditorPreparedLiveCommand> prepareLiveCommand(
+    EditorCommandRequest request,
+  ) async {
+    _ensureOpen();
+    _validateSchema(request.schemaVersion);
+    _canonicalUuid(request.commandId, 'commandId');
+    final native = _native;
+    if (native is! NativeLivePdfiumPort) {
+      throw UnsupportedError('live PDFium command preparation is unavailable');
+    }
+    final value = await (native as NativeLivePdfiumPort).prepareLiveCommand(
+      request,
+    );
+    _ensureOpen();
+    _canonicalUuid(value.token, 'preparedCommandToken');
+    _canonicalUuid(value.commandId, 'commandId');
+    if (value.commandId != request.commandId ||
+        value.previousRevision != request.baseRevision ||
+        value.committedRevision <= value.previousRevision ||
+        value.plan.previousRevision != value.previousRevision ||
+        value.plan.revision != value.committedRevision ||
+        value.plan.operations.isEmpty) {
+      throw const EditorProtocolViolation(
+        'prepared live command does not describe a valid uncommitted revision',
+      );
+    }
+    return value;
+  }
+
+  Future<EditorCommandResult> publishPreparedLiveCommand(String token) async {
+    _ensureOpen();
+    final native = _native;
+    if (native is! NativeLivePdfiumPort) {
+      throw UnsupportedError('live PDFium command publication is unavailable');
+    }
+    final value = await (native as NativeLivePdfiumPort)
+        .publishPreparedLiveCommand(
+          _canonicalUuid(token, 'preparedCommandToken'),
+        );
+    _ensureOpen();
+    _validateSchema(value.schemaVersion);
+    _canonicalUuid(value.commandId, 'commandId');
+    if (!value.durable) {
+      throw const EditorProtocolViolation(
+        'published live command is not durable',
       );
     }
     return value;

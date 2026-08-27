@@ -192,6 +192,55 @@ class FakePhaseTwoPort extends FakeNativeEditorPort
       );
 }
 
+class FakeLivePdfiumPort extends FakeNativeEditorPort
+    implements NativeLivePdfiumPort {
+  static const _token = '00000000-0000-4000-8000-000000000099';
+  EditorCommandRequest? preparedRequest;
+  String? publishedToken;
+
+  @override
+  Future<EditorPreparedLiveCommand> prepareLiveCommand(
+    EditorCommandRequest request,
+  ) async {
+    preparedRequest = request;
+    return EditorPreparedLiveCommand(
+      token: _token,
+      commandId: request.commandId,
+      previousRevision: request.baseRevision,
+      committedRevision: request.baseRevision + 1,
+      plan: EditorPhysicalEditPlan(
+        previousRevision: request.baseRevision,
+        revision: request.baseRevision + 1,
+        operations: <EditorPhysicalEditOperation>[
+          EditorPhysicalEditOperation(
+            objectId: '00000000-0000-4000-8000-000000000010',
+            sourceKey: 'page/1/text/0',
+            sourceRevision: 'source-revision',
+            expectedText: 'Before',
+            replacement: 'After',
+            bounds: const EditorPdfBox(left: 1, bottom: 2, right: 3, top: 4),
+          ),
+        ],
+        inverseOperations: const <EditorPhysicalEditOperation>[],
+      ),
+    );
+  }
+
+  @override
+  Future<EditorCommandResult> publishPreparedLiveCommand(String token) async {
+    publishedToken = token;
+    final request = preparedRequest!;
+    return EditorCommandResult(
+      commandId: request.commandId,
+      previousRevision: request.baseRevision,
+      committedRevision: request.baseRevision + 1,
+      durable: true,
+      warnings: const <String>[],
+      objectPatches: const <EditorObjectPatch>[],
+    );
+  }
+}
+
 const _sessionId = '00000000-0000-4000-8000-000000000001';
 
 void main() {
@@ -217,6 +266,27 @@ void main() {
     expect(locator.objectRevision, 7);
     expect(tile.revision, locator.objectRevision);
     expect(tile.rgbaBytes, <int>[0, 1, 2, 3]);
+  });
+
+  test('prepares a live PDFium plan before publishing it', () async {
+    final native = FakeLivePdfiumPort();
+    final session = EditorBridgeSession.forTest(native);
+    const request = EditorCommandRequest(
+      commandId: '00000000-0000-4000-8000-000000000098',
+      baseRevision: 4,
+      payload: EditorCommand(kind: EditorCommandKind.replaceTextRange),
+    );
+
+    final prepared = await session.prepareLiveCommand(request);
+    expect(prepared.previousRevision, 4);
+    expect(prepared.committedRevision, 5);
+    expect(prepared.plan.operations.single.replacement, 'After');
+    expect(native.preparedRequest, same(request));
+
+    final published = await session.publishPreparedLiveCommand(prepared.token);
+    expect(published.committedRevision, 5);
+    expect(native.publishedToken, prepared.token);
+    await session.close();
   });
 
   test('editor bridge rejects requests and events after close', () async {

@@ -536,6 +536,59 @@ class EditorCommandRequest {
   final EditorCommand payload;
 }
 
+/// A physical mutation that the sole live PDFium document can apply after the
+/// Rust editor core has validated a semantic command, but before that command
+/// becomes durable in the canonical session.
+class EditorPhysicalEditOperation {
+  const EditorPhysicalEditOperation({
+    required this.objectId,
+    required this.sourceKey,
+    required this.sourceRevision,
+    required this.expectedText,
+    required this.replacement,
+    required this.bounds,
+  });
+
+  final String objectId;
+  final String sourceKey;
+  final String sourceRevision;
+  final String expectedText;
+  final String replacement;
+  final EditorPdfBox bounds;
+}
+
+class EditorPhysicalEditPlan {
+  const EditorPhysicalEditPlan({
+    required this.previousRevision,
+    required this.revision,
+    required this.operations,
+    required this.inverseOperations,
+  });
+
+  final int previousRevision;
+  final int revision;
+  final List<EditorPhysicalEditOperation> operations;
+  final List<EditorPhysicalEditOperation> inverseOperations;
+}
+
+class EditorPreparedLiveCommand {
+  const EditorPreparedLiveCommand({
+    required this.token,
+    required this.commandId,
+    required this.previousRevision,
+    required this.committedRevision,
+    required this.plan,
+  });
+
+  /// A one-use opaque token. It may only be published after its plan was
+  /// successfully applied to the live PDFium session.
+  final String token;
+  final String commandId;
+  final int previousRevision;
+  final int committedRevision;
+  final EditorPhysicalEditPlan plan;
+}
+
 class EditorObjectPatch {
   const EditorObjectPatch({
     required this.objectId,

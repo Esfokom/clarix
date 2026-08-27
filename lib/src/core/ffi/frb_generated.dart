@@ -67,7 +67,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -310016601;
+  int get rustContentHash => 916995737;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -167,10 +167,22 @@ abstract class RustLibApi extends BaseApi {
     required NativePageSceneRequest request,
   });
 
+  Future<NativePreparedLiveCommand>
+  crateEditingApiNativeEditorSessionPrepareLiveCommand({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  });
+
   Future<NativeFontFallbackProposal>
   crateEditingApiNativeEditorSessionProposeFontFallback({
     required NativeEditorSession that,
     required NativeFontFallbackProposalRequest request,
+  });
+
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionPublishPreparedLiveCommand({
+    required NativeEditorSession that,
+    required String token,
   });
 
   Future<NativeAgentAudit> crateEditingApiNativeEditorSessionReadAgentAudit({
@@ -1009,6 +1021,50 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<NativePreparedLiveCommand>
+  crateEditingApiNativeEditorSessionPrepareLiveCommand({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_submit_command_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_prepared_live_command,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionPrepareLiveCommandConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionPrepareLiveCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_prepare_live_command",
+        argNames: ["that", "request"],
+      );
+
+  @override
   Future<NativeFontFallbackProposal>
   crateEditingApiNativeEditorSessionProposeFontFallback({
     required NativeEditorSession that,
@@ -1029,7 +1085,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 18,
+            funcId: 19,
             port: port_,
           );
         },
@@ -1053,6 +1109,47 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionPublishPreparedLiveCommand({
+    required NativeEditorSession that,
+    required String token,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(token, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_command_result,
+          decodeErrorData: sse_decode_String,
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionPublishPreparedLiveCommandConstMeta,
+        argValues: [that, token],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionPublishPreparedLiveCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_publish_prepared_live_command",
+        argNames: ["that", "token"],
+      );
+
+  @override
   Future<NativeAgentAudit> crateEditingApiNativeEditorSessionReadAgentAudit({
     required NativeEditorSession that,
     required String runId,
@@ -1069,7 +1166,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 19,
+            funcId: 21,
             port: port_,
           );
         },
@@ -1112,7 +1209,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 20,
+            funcId: 22,
             port: port_,
           );
         },
@@ -1154,7 +1251,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 21,
+            funcId: 23,
             port: port_,
           );
         },
@@ -1192,7 +1289,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 22,
+            funcId: 24,
             port: port_,
           );
         },
@@ -1232,7 +1329,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 23,
+            funcId: 25,
             port: port_,
           );
         },
@@ -1275,7 +1372,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 24,
+            funcId: 26,
             port: port_,
           );
         },
@@ -1313,7 +1410,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 25,
+            funcId: 27,
             port: port_,
           );
         },
@@ -1358,7 +1455,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 26,
+            funcId: 28,
             port: port_,
           );
         },
@@ -1406,7 +1503,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 27,
+            funcId: 29,
             port: port_,
           );
         },
@@ -1447,7 +1544,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 28,
+            funcId: 30,
             port: port_,
           );
         },
@@ -1489,7 +1586,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 29,
+            funcId: 31,
             port: port_,
           );
         },
@@ -1529,7 +1626,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 30,
+            funcId: 32,
             port: port_,
           );
         },
@@ -1574,7 +1671,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             pdeCallFfi(
               generalizedFrbRustBinding,
               serializer,
-              funcId: 31,
+              funcId: 33,
               port: port_,
             );
           },
@@ -1612,7 +1709,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 32,
+            funcId: 34,
             port: port_,
           );
         },
@@ -1645,7 +1742,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 33,
+            funcId: 35,
             port: port_,
           );
         },
@@ -1684,7 +1781,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 34,
+            funcId: 36,
             port: port_,
           );
         },
@@ -1722,7 +1819,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 35,
+            funcId: 37,
             port: port_,
           );
         },
@@ -1758,7 +1855,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 36,
+            funcId: 38,
             port: port_,
           );
         },
@@ -1788,7 +1885,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 37,
+            funcId: 39,
             port: port_,
           );
         },
@@ -1818,7 +1915,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 38,
+            funcId: 40,
             port: port_,
           );
         },
@@ -1850,7 +1947,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 39,
+            funcId: 41,
             port: port_,
           );
         },
@@ -1882,7 +1979,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 40,
+            funcId: 42,
             port: port_,
           );
         },
@@ -1914,7 +2011,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 41,
+            funcId: 43,
             port: port_,
           );
         },
@@ -1946,7 +2043,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 42,
+            funcId: 44,
             port: port_,
           );
         },
@@ -1981,7 +2078,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           pdeCallFfi(
             generalizedFrbRustBinding,
             serializer,
-            funcId: 43,
+            funcId: 45,
             port: port_,
           );
         },
@@ -2433,6 +2530,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_native_pdf_source).toList();
+  }
+
+  @protected
+  List<NativePhysicalEditOperation>
+  dco_decode_list_native_physical_edit_operation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_physical_edit_operation)
+        .toList();
   }
 
   @protected
@@ -3165,6 +3271,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePhysicalEditOperation dco_decode_native_physical_edit_operation(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativePhysicalEditOperation(
+      objectId: dco_decode_String(arr[0]),
+      sourceKey: dco_decode_String(arr[1]),
+      sourceRevision: dco_decode_String(arr[2]),
+      expectedText: dco_decode_String(arr[3]),
+      replacement: dco_decode_String(arr[4]),
+      bounds: dco_decode_native_pdf_box(arr[5]),
+    );
+  }
+
+  @protected
+  NativePhysicalEditPlan dco_decode_native_physical_edit_plan(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativePhysicalEditPlan(
+      previousRevision: dco_decode_u_64(arr[0]),
+      revision: dco_decode_u_64(arr[1]),
+      operations: dco_decode_list_native_physical_edit_operation(arr[2]),
+      inverseOperations: dco_decode_list_native_physical_edit_operation(arr[3]),
+    );
+  }
+
+  @protected
   NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -3176,6 +3314,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       objectType: dco_decode_String(arr[2]),
       sourceFingerprint: dco_decode_String(arr[3]),
       objectRevision: dco_decode_u_64(arr[4]),
+    );
+  }
+
+  @protected
+  NativePreparedLiveCommand dco_decode_native_prepared_live_command(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativePreparedLiveCommand(
+      token: dco_decode_String(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      previousRevision: dco_decode_u_64(arr[2]),
+      committedRevision: dco_decode_u_64(arr[3]),
+      plan: dco_decode_native_physical_edit_plan(arr[4]),
     );
   }
 
@@ -4278,6 +4433,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<NativePhysicalEditOperation>
+  sse_decode_list_native_physical_edit_operation(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePhysicalEditOperation>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_physical_edit_operation(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<NativeRagChunk> sse_decode_list_native_rag_chunk(
     SseDeserializer deserializer,
   ) {
@@ -5227,6 +5395,48 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  NativePhysicalEditOperation sse_decode_native_physical_edit_operation(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_sourceKey = sse_decode_String(deserializer);
+    var var_sourceRevision = sse_decode_String(deserializer);
+    var var_expectedText = sse_decode_String(deserializer);
+    var var_replacement = sse_decode_String(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    return NativePhysicalEditOperation(
+      objectId: var_objectId,
+      sourceKey: var_sourceKey,
+      sourceRevision: var_sourceRevision,
+      expectedText: var_expectedText,
+      replacement: var_replacement,
+      bounds: var_bounds,
+    );
+  }
+
+  @protected
+  NativePhysicalEditPlan sse_decode_native_physical_edit_plan(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_previousRevision = sse_decode_u_64(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_operations = sse_decode_list_native_physical_edit_operation(
+      deserializer,
+    );
+    var var_inverseOperations = sse_decode_list_native_physical_edit_operation(
+      deserializer,
+    );
+    return NativePhysicalEditPlan(
+      previousRevision: var_previousRevision,
+      revision: var_revision,
+      operations: var_operations,
+      inverseOperations: var_inverseOperations,
+    );
+  }
+
+  @protected
   NativePhysicalLocator sse_decode_native_physical_locator(
     SseDeserializer deserializer,
   ) {
@@ -5242,6 +5452,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       objectType: var_objectType,
       sourceFingerprint: var_sourceFingerprint,
       objectRevision: var_objectRevision,
+    );
+  }
+
+  @protected
+  NativePreparedLiveCommand sse_decode_native_prepared_live_command(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_token = sse_decode_String(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_previousRevision = sse_decode_u_64(deserializer);
+    var var_committedRevision = sse_decode_u_64(deserializer);
+    var var_plan = sse_decode_native_physical_edit_plan(deserializer);
+    return NativePreparedLiveCommand(
+      token: var_token,
+      commandId: var_commandId,
+      previousRevision: var_previousRevision,
+      committedRevision: var_committedRevision,
+      plan: var_plan,
     );
   }
 
@@ -6540,6 +6769,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_native_physical_edit_operation(
+    List<NativePhysicalEditOperation> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_physical_edit_operation(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_native_rag_chunk(
     List<NativeRagChunk> self,
     SseSerializer serializer,
@@ -7258,6 +7499,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_native_physical_edit_operation(
+    NativePhysicalEditOperation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.sourceKey, serializer);
+    sse_encode_String(self.sourceRevision, serializer);
+    sse_encode_String(self.expectedText, serializer);
+    sse_encode_String(self.replacement, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+  }
+
+  @protected
+  void sse_encode_native_physical_edit_plan(
+    NativePhysicalEditPlan self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.previousRevision, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_list_native_physical_edit_operation(self.operations, serializer);
+    sse_encode_list_native_physical_edit_operation(
+      self.inverseOperations,
+      serializer,
+    );
+  }
+
+  @protected
   void sse_encode_native_physical_locator(
     NativePhysicalLocator self,
     SseSerializer serializer,
@@ -7268,6 +7538,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.objectType, serializer);
     sse_encode_String(self.sourceFingerprint, serializer);
     sse_encode_u_64(self.objectRevision, serializer);
+  }
+
+  @protected
+  void sse_encode_native_prepared_live_command(
+    NativePreparedLiveCommand self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.token, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.previousRevision, serializer);
+    sse_encode_u_64(self.committedRevision, serializer);
+    sse_encode_native_physical_edit_plan(self.plan, serializer);
   }
 
   @protected
@@ -7999,12 +8282,32 @@ class NativeEditorSessionImpl extends RustOpaque
     request: request,
   );
 
+  /// Validates a semantic command and exposes its live-PDFium physical plan
+  /// without changing the canonical Rust revision or durable journal.
+  Future<NativePreparedLiveCommand> prepareLiveCommand({
+    required NativeSubmitCommandRequest request,
+  }) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionPrepareLiveCommand(
+        that: this,
+        request: request,
+      );
+
   Future<NativeFontFallbackProposal> proposeFontFallback({
     required NativeFontFallbackProposalRequest request,
   }) => RustLib.instance.api
       .crateEditingApiNativeEditorSessionProposeFontFallback(
         that: this,
         request: request,
+      );
+
+  /// Publishes the prepared command only after the Dart-owned live PDFium
+  /// document reports that it applied the returned physical edit plan.
+  Future<NativeCommandResult> publishPreparedLiveCommand({
+    required String token,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionPublishPreparedLiveCommand(
+        that: this,
+        token: token,
       );
 
   Future<NativeAgentAudit> readAgentAudit({required String runId}) =>

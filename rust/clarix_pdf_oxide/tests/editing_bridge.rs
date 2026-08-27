@@ -607,6 +607,76 @@ fn accepted_command_is_durable_before_native_result_returns() {
 }
 
 #[test]
+fn live_command_prepares_a_physical_plan_before_it_is_published() {
+    let session = NativeEditorSession::open(NativeOpenEditorRequest {
+        source_path: fixture_path(),
+        project_root: Some(
+            tempfile::tempdir()
+                .unwrap()
+                .keep()
+                .to_string_lossy()
+                .into_owned(),
+        ),
+    })
+    .unwrap();
+    let scene = session
+        .page_scene(NativePageSceneRequest {
+            page_number: 1,
+            expected_revision: 0,
+            priority: NativeViewportPriority::Visible,
+        })
+        .unwrap();
+    let object = &scene.objects[0];
+    let original = object.text.as_ref().unwrap();
+    let prepared = session
+        .prepare_live_command(NativeSubmitCommandRequest {
+            schema_version: 1,
+            command_id: CommandId::new().to_string(),
+            base_revision: 0,
+            payload: NativeEditorCommand {
+                kind: NativeEditorCommandKind::ReplaceTextRange,
+                object_id: Some(object.object_id.clone()),
+                start: Some(0),
+                end: Some(original.encode_utf16().count() as u32),
+                replacement: Some("Prepared replacement".into()),
+                style: None,
+                transform: None,
+                bounds: None,
+                radians: None,
+                center_x: None,
+                center_y: None,
+                label: None,
+            },
+        })
+        .unwrap();
+
+    assert_eq!(prepared.previous_revision, 0);
+    assert_eq!(prepared.committed_revision, 1);
+    assert_eq!(prepared.plan.operations.len(), 1);
+    assert_eq!(prepared.plan.operations[0].object_id, object.object_id);
+    assert_eq!(prepared.plan.operations[0].expected_text, *original);
+    assert_eq!(
+        prepared.plan.operations[0].replacement,
+        "Prepared replacement"
+    );
+    assert_eq!(session.metadata().unwrap().revision, 0);
+
+    let published = session
+        .publish_prepared_live_command(prepared.token.clone())
+        .unwrap();
+    assert_eq!(published.committed_revision, 1);
+    assert!(published.durable);
+    assert_eq!(session.metadata().unwrap().revision, 1);
+    assert_eq!(
+        session
+            .publish_prepared_live_command(prepared.token)
+            .unwrap_err(),
+        "prepared_command_not_found"
+    );
+    session.close().unwrap();
+}
+
+#[test]
 fn native_save_as_materializes_and_validates_the_current_revision() {
     let directory = tempfile::tempdir().unwrap();
     let session = NativeEditorSession::open(NativeOpenEditorRequest {
