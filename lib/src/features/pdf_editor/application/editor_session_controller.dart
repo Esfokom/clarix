@@ -6,6 +6,7 @@ import '../domain/editor_document_state.dart';
 import '../domain/editor_save_state.dart';
 import '../domain/editor_selection.dart';
 import '../infrastructure/editor_session_gateway.dart';
+import '../infrastructure/live_pdfium_tile_renderer.dart';
 import 'editor_viewport_controller.dart';
 
 typedef EditorCommandIdFactory = String Function();
@@ -60,6 +61,13 @@ class EditorSessionController {
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
+  Stream<List<EditorTileInvalidation>> get liveTileInvalidations {
+    final gateway = _gateway;
+    return gateway is EditorLivePdfiumTileGateway
+        ? (gateway as EditorLivePdfiumTileGateway).liveTileInvalidations
+        : const Stream<List<EditorTileInvalidation>>.empty();
+  }
+
   bool get canUndo =>
       _state.undoDepth > 0 &&
       _state.pendingCommand == null &&
@@ -119,6 +127,17 @@ class EditorSessionController {
   Future<EditorCleanPatchAsset> cleanPatch(String objectId, int dpi) {
     _ensureActive();
     return _gateway.cleanPatch(objectId, dpi);
+  }
+
+  Future<EditorDirtyTile> renderLiveTile(LivePdfiumTileRequest request) {
+    _ensureActive();
+    final gateway = _gateway;
+    if (gateway is! EditorLivePdfiumTileGateway) {
+      return Future<EditorDirtyTile>.error(
+        UnsupportedError('live PDFium tile rendering is unavailable'),
+      );
+    }
+    return (gateway as EditorLivePdfiumTileGateway).renderLiveTile(request);
   }
 
   Future<void> releaseCleanPatchMemory() {

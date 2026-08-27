@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
+import '../infrastructure/live_pdfium_tile_renderer.dart';
 import 'clean_patch_layer.dart';
 import 'live_pdfium_tile_layer.dart';
 import 'page_surface.dart';
@@ -22,6 +24,7 @@ class PageSceneLifecycle extends ChangeNotifier {
   final EditorSessionController controller;
   final int preloadRadius;
   StreamSubscription<Object?>? _documentChanges;
+  StreamSubscription<List<EditorTileInvalidation>>? _liveTileInvalidations;
   final Map<String, CleanPatchAsset> _cleanPatches =
       <String, CleanPatchAsset>{};
   final Map<int, List<LivePdfiumTileAsset>> _liveTiles =
@@ -95,7 +98,51 @@ class PageSceneLifecycle extends ChangeNotifier {
       unawaited(_ensureCleanPatches());
       notifyListeners();
     });
+    _liveTileInvalidations = controller.liveTileInvalidations.listen(
+      (invalidations) => unawaited(_replaceLiveInvalidations(invalidations)),
+    );
     _syncViewport();
+  }
+
+  Future<void> _replaceLiveInvalidations(
+    List<EditorTileInvalidation> invalidations,
+  ) async {
+    if (!_started || invalidations.isEmpty) return;
+    final dpi = (144 * surface.viewport.zoom).round().clamp(72, 576);
+    final visible = invalidations
+        .where((invalidation) => visiblePages.contains(invalidation.pageNumber))
+        .toList(growable: false);
+    if (visible.isEmpty) return;
+    try {
+      final tiles = await Future.wait(
+        visible.map(
+          (invalidation) => controller.renderLiveTile(
+            LivePdfiumTileRequest(
+              pageNumber: invalidation.pageNumber,
+              revision: invalidation.revision,
+              bounds: invalidation.bounds,
+              width: math.max(
+                1,
+                ((invalidation.bounds.right - invalidation.bounds.left) *
+                        dpi /
+                        72)
+                    .ceil(),
+              ),
+              height: math.max(
+                1,
+                ((invalidation.bounds.top - invalidation.bounds.bottom) *
+                        dpi /
+                        72)
+                    .ceil(),
+              ),
+            ),
+          ),
+        ),
+      );
+      await replaceLiveTiles(tiles);
+    } catch (_) {
+      // If a live tile cannot be produced, retain the normal page/patch path.
+    }
   }
 
   void _syncViewport() {
@@ -213,6 +260,7 @@ class PageSceneLifecycle extends ChangeNotifier {
   void dispose() {
     if (_started) surface.removeListener(_syncViewport);
     unawaited(_documentChanges?.cancel());
+    unawaited(_liveTileInvalidations?.cancel());
     for (final patch in _cleanPatches.values) {
       patch.image.dispose();
     }

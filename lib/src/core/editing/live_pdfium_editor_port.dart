@@ -108,11 +108,13 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
     required this._semantic,
     required this._session,
     required this._locatorRegistry,
+    this.onApplied,
   });
 
   final NativeLivePdfiumPort _semantic;
   final LivePdfiumPlanApplier _session;
   final LivePdfiumLocatorRegistry _locatorRegistry;
+  final void Function(LivePdfiumApplyResult result)? onApplied;
 
   @override
   Future<EditorPreparedLiveCommand> prepareLiveCommand(
@@ -135,14 +137,16 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
           ),
         )
         .toList(growable: false);
-    await _session.apply(
+    final applied = await _session.apply(
       LivePdfiumEditPlan(
         replacements: replacements,
         expectedRevision: prepared.plan.previousRevision,
         revision: prepared.plan.revision,
       ),
     );
-    return _semantic.publishPreparedLiveCommand(prepared.token);
+    final result = await _semantic.publishPreparedLiveCommand(prepared.token);
+    onApplied?.call(applied);
+    return result;
   }
 
   @override

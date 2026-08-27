@@ -148,6 +148,61 @@ void main() {
     expect(liveSession.appliedPlans, isEmpty);
   });
 
+  test(
+    'emits live tile invalidations only after the semantic publish',
+    () async {
+      final liveSession = _FakeLivePdfiumSession()
+        ..invalidations = const <EditorTileInvalidation>[
+          EditorTileInvalidation(
+            pageNumber: 1,
+            bounds: EditorPdfBox(left: 10, bottom: 20, right: 30, top: 40),
+            revision: 1,
+          ),
+        ];
+      final gateway = BridgeEditorSessionGateway.forTest(
+        openBridgeSession: (_, {String? projectRoot}) async =>
+            EditorBridgeSession.forTest(_NativePort()),
+        openLivePdfiumSession: (_) async => liveSession,
+        loadLivePdfiumImportManifest: (_) async =>
+            const LivePdfiumImportManifest(
+              sourceFingerprint: 'source',
+              bindings: <LivePdfiumImportBinding>[
+                LivePdfiumImportBinding(
+                  objectId: _objectId,
+                  sourceKey: 'manifest/page/1/object/0',
+                  sourceRevision: 'source',
+                  locator: EditorPhysicalLocator(
+                    pageNumber: 1,
+                    objectPath: <int>[0],
+                    objectType: 'text',
+                    sourceFingerprint: 'source',
+                    objectRevision: 0,
+                  ),
+                ),
+              ],
+            ),
+      );
+      await gateway.open('fixture.pdf');
+      final notification = gateway.liveTileInvalidations.first;
+
+      await gateway.submit(
+        const EditorCommandRequest(
+          commandId: _commandId,
+          baseRevision: 0,
+          payload: EditorCommand(
+            kind: EditorCommandKind.replaceTextRange,
+            objectId: _objectId,
+            start: 0,
+            end: 6,
+            replacement: 'Changed',
+          ),
+        ),
+      );
+
+      expect(await notification, liveSession.invalidations);
+    },
+  );
+
   test('hydrates a visible page from its live PDFium inspection', () async {
     final liveSession = _ImportingLivePdfiumSession();
     final nativePort = _NativePort();
@@ -177,6 +232,7 @@ const _objectId = '00000000-0000-4000-8000-000000000012';
 class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
   final List<String> openedPaths = <String>[];
   final List<LivePdfiumEditPlan> appliedPlans = <LivePdfiumEditPlan>[];
+  List<EditorTileInvalidation> invalidations = const <EditorTileInvalidation>[];
   bool closed = false;
 
   @override
@@ -184,7 +240,7 @@ class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
     appliedPlans.add(plan);
     return LivePdfiumApplyResult(
       revision: plan.revision ?? 1,
-      invalidations: const <EditorTileInvalidation>[],
+      invalidations: invalidations,
     );
   }
 

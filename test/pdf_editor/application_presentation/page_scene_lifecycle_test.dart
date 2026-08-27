@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/pdf_editor/application/editor_session_controller.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/editor_session_gateway.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_tile_renderer.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/page_scene_host.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/page_surface.dart';
 import 'package:flutter/material.dart';
@@ -63,6 +65,42 @@ void main() {
     },
     timeout: const Timeout(Duration(seconds: 10)),
   );
+
+  testWidgets('renders live PDFium invalidations for a visible page', (
+    tester,
+  ) async {
+    final gateway = LifecycleGateway(pageCount: 1);
+    final controller = EditorSessionController(
+      gateway: gateway,
+      commandIds: () => 'unused',
+    );
+    await controller.open('fixture.pdf');
+    final surface = LifecycleSurface()..show(1);
+    final lifecycle = PageSceneLifecycle(
+      surface: surface,
+      controller: controller,
+    )..start();
+
+    gateway.emitLiveInvalidation(
+      const EditorTileInvalidation(
+        pageNumber: 1,
+        bounds: EditorPdfBox(left: 0, bottom: 0, right: 72, top: 72),
+        revision: 1,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
+
+    expect(gateway.liveTileRequests, hasLength(1));
+    expect(lifecycle.liveTilesFor(1), hasLength(1));
+
+    lifecycle.dispose();
+    surface.dispose();
+    await tester.runAsync(controller.close);
+  });
 }
 
 class LifecycleSurface extends ChangeNotifier implements PageSurface {
@@ -102,7 +140,8 @@ class LifecycleSurface extends ChangeNotifier implements PageSurface {
   Future<void> showPage(int pageNumber) async => show(pageNumber);
 }
 
-class LifecycleGateway implements EditorSessionGateway {
+class LifecycleGateway
+    implements EditorSessionGateway, EditorLivePdfiumTileGateway {
   LifecycleGateway({required this.pageCount});
 
   final int pageCount;
@@ -111,9 +150,33 @@ class LifecycleGateway implements EditorSessionGateway {
   final List<int> requestedPages = <int>[];
   final Map<int, EditorViewportPriority> priorities =
       <int, EditorViewportPriority>{};
+  final StreamController<List<EditorTileInvalidation>> _liveInvalidations =
+      StreamController<List<EditorTileInvalidation>>.broadcast(sync: true);
+  final List<LivePdfiumTileRequest> liveTileRequests =
+      <LivePdfiumTileRequest>[];
 
   @override
   Stream<EditorEvent> get events => _events.stream;
+
+  @override
+  Stream<List<EditorTileInvalidation>> get liveTileInvalidations =>
+      _liveInvalidations.stream;
+
+  void emitLiveInvalidation(EditorTileInvalidation invalidation) =>
+      _liveInvalidations.add(<EditorTileInvalidation>[invalidation]);
+
+  @override
+  Future<EditorDirtyTile> renderLiveTile(LivePdfiumTileRequest request) async {
+    liveTileRequests.add(request);
+    return EditorDirtyTile(
+      pageNumber: request.pageNumber,
+      revision: request.revision,
+      bounds: request.bounds,
+      width: request.width,
+      height: request.height,
+      rgbaBytes: Uint8List(request.width * request.height * 4),
+    );
+  }
 
   @override
   Future<EditorSessionMetadata> open(String sourcePath) async =>
@@ -146,7 +209,10 @@ class LifecycleGateway implements EditorSessionGateway {
   }
 
   @override
-  Future<void> close() => _events.close();
+  Future<void> close() async {
+    await _events.close();
+    await _liveInvalidations.close();
+  }
 
   @override
   Future<EditorSceneObject> objectDetails(String objectId) =>

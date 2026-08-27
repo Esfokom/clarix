@@ -1,9 +1,18 @@
+import 'dart:async';
+
 import '../../../core/editing/editor_bridge.dart';
 import '../../../core/editing/editor_bridge_types.dart';
 import '../../../core/editing/live_pdfium_editor_port.dart';
 import '../../../core/agent/agent_bridge.dart';
 import 'live_pdfium_import_manifest_builder.dart';
 import 'live_pdfium_session.dart';
+import 'live_pdfium_tile_renderer.dart';
+
+abstract interface class EditorLivePdfiumTileGateway {
+  Stream<List<EditorTileInvalidation>> get liveTileInvalidations;
+
+  Future<EditorDirtyTile> renderLiveTile(LivePdfiumTileRequest request);
+}
 
 typedef OpenBridgeEditorSession =
     Future<EditorBridgeSession> Function(
@@ -99,7 +108,8 @@ class BridgeEditorSessionGateway
         EditorSessionGateway,
         EditorFontFallbackGateway,
         EditorPhaseTwoGateway,
-        EditorAgentGateway {
+        EditorAgentGateway,
+        EditorLivePdfiumTileGateway {
   factory BridgeEditorSessionGateway({
     EditorBridge bridge = const EditorBridge(),
     String? projectRoot,
@@ -145,6 +155,8 @@ class BridgeEditorSessionGateway
   LivePdfiumEditorPort? _livePdfiumEditorPort;
   final Set<int> _liveImportedPages = <int>{};
   final Map<int, Future<void>> _livePageImports = <int, Future<void>>{};
+  final StreamController<List<EditorTileInvalidation>> _liveTileInvalidations =
+      StreamController<List<EditorTileInvalidation>>.broadcast(sync: true);
 
   bool get hasLivePdfiumSession => _livePdfiumSession != null;
   bool get hasLivePdfiumLocatorRegistry => _livePdfiumLocatorRegistry != null;
@@ -170,6 +182,21 @@ class BridgeEditorSessionGateway
   @override
   Stream<EditorEvent> get events =>
       _session?.events ?? const Stream<EditorEvent>.empty();
+
+  @override
+  Stream<List<EditorTileInvalidation>> get liveTileInvalidations =>
+      _liveTileInvalidations.stream;
+
+  @override
+  Future<EditorDirtyTile> renderLiveTile(LivePdfiumTileRequest request) {
+    final liveSession = _livePdfiumSession;
+    if (liveSession is! LivePdfiumSession) {
+      return Future<EditorDirtyTile>.error(
+        UnsupportedError('live PDFium tile rendering is unavailable'),
+      );
+    }
+    return liveSession.renderTile(request);
+  }
 
   @override
   Future<EditorSessionMetadata> open(String sourcePath) async {
@@ -198,6 +225,11 @@ class BridgeEditorSessionGateway
         semantic: _BridgeLivePdfiumPort(semanticSession),
         session: liveSession,
         locatorRegistry: locatorRegistry,
+        onApplied: (result) {
+          if (result.invalidations.isNotEmpty) {
+            _liveTileInvalidations.add(result.invalidations);
+          }
+        },
       );
       return metadata;
     } catch (_) {
