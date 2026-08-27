@@ -21,7 +21,6 @@ final class LivePdfiumSession {
   late final LivePdfiumTileRenderer _tiles;
   bool _closed = false;
   int _revision = 0;
-  final Set<int> _dirtyPages = <int>{};
 
   static Future<LivePdfiumSession> open(String sourcePath) async =>
       LivePdfiumSession._(await PdfDocument.openFile(sourcePath));
@@ -46,21 +45,15 @@ final class LivePdfiumSession {
 
   Future<EditorTileInvalidation> replaceTextObject(
     EditorPhysicalLocator locator,
-    String replacement, {
-    required bool regenerateContent,
-  }) async {
+    String replacement,
+  ) async {
     _ensureOpen();
     final bounds = await const PdfiumWorkerExecutor().run(
       document: _document,
       callback: _replaceTextOnWorker,
-      message: (
-        locator: locator,
-        replacement: replacement,
-        regenerateContent: regenerateContent,
-      ),
+      message: (locator: locator, replacement: replacement),
     );
     _revision += 1;
-    if (!regenerateContent) _dirtyPages.add(locator.pageNumber);
     _tiles.invalidate(
       pageNumber: locator.pageNumber,
       bounds: bounds,
@@ -75,15 +68,15 @@ final class LivePdfiumSession {
 
   Future<Set<int>> commit() async {
     _ensureOpen();
-    final pages = _dirtyPages.toList(growable: false)..sort();
-    if (pages.isEmpty) return const <int>{};
-    await const PdfiumWorkerExecutor().run(
-      document: _document,
-      callback: _generateContentOnWorker,
-      message: pages,
-    );
-    _dirtyPages.removeAll(pages);
-    return Set<int>.unmodifiable(pages);
+    // Each single-object mutation regenerates before its FPDF_PAGE is closed.
+    // A future same-page batch API will provide debounced regeneration safely.
+    return const <int>{};
+  }
+
+  Future<Uint8List> saveBytes() async {
+    _ensureOpen();
+    await commit();
+    return _document.encodePdf();
   }
 
   Future<void> close() async {
@@ -105,29 +98,8 @@ final class LivePdfiumSession {
   }
 }
 
-void _generateContentOnWorker(PdfiumWorkerInput<List<int>> input) {
-  final document = FPDF_DOCUMENT.fromAddress(input.documentAddress);
-  for (final pageNumber in input.message) {
-    final page = pdfiumBindings.FPDF_LoadPage(document, pageNumber - 1);
-    if (page.address == 0) throw StateError('PDFium could not load dirty page');
-    try {
-      if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
-        throw StateError('PDFium could not regenerate dirty page content');
-      }
-    } finally {
-      pdfiumBindings.FPDF_ClosePage(page);
-    }
-  }
-}
-
 EditorPdfBox _replaceTextOnWorker(
-  PdfiumWorkerInput<
-    ({
-      EditorPhysicalLocator locator,
-      String replacement,
-      bool regenerateContent,
-    })
-  >
+  PdfiumWorkerInput<({EditorPhysicalLocator locator, String replacement})>
   input,
 ) {
   final locator = input.message.locator;
@@ -180,8 +152,7 @@ EditorPdfBox _replaceTextOnWorker(
       } finally {
         calloc.free(buffer);
       }
-      if (input.message.regenerateContent &&
-          pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
+      if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
         throw StateError('PDFium could not regenerate changed page content');
       }
       return EditorPdfBox(
