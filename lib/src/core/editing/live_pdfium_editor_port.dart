@@ -34,8 +34,8 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
   LivePdfiumEditorPort({
     required this._semantic,
     required this._session,
-    required LivePdfiumLocatorRegistry locatorRegistry,
-  }) : _locatorRegistry = locatorRegistry;
+    required this._locatorRegistry,
+  });
 
   final NativeLivePdfiumPort _semantic;
   final LivePdfiumSession _session;
