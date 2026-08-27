@@ -61,6 +61,13 @@ abstract interface class NativeLivePageImportPort {
   Future<void> importLivePage(native.NativeLivePageImport request);
 }
 
+abstract interface class NativeLivePdfiumSavePort {
+  Future<EditorSaveResult> saveLivePdfium(
+    EditorSaveRequest request,
+    List<int> pdfBytes,
+  );
+}
+
 abstract interface class NativeFontFallbackPort {
   Future<EditorFontFallbackProposal> proposeFontFallback({
     required int baseRevision,
@@ -353,6 +360,24 @@ class EditorBridgeSession {
   Future<EditorSaveResult> save(EditorSaveRequest request) async {
     _ensureOpen();
     final value = await _native.save(request);
+    _ensureOpen();
+    _validateSchema(value.schemaVersion);
+    return value;
+  }
+
+  Future<EditorSaveResult> saveLivePdfium(
+    EditorSaveRequest request,
+    List<int> pdfBytes,
+  ) async {
+    _ensureOpen();
+    final port = _native;
+    if (port is! NativeLivePdfiumSavePort) {
+      throw UnsupportedError('live PDFium save is unavailable');
+    }
+    final value = await (port as NativeLivePdfiumSavePort).saveLivePdfium(
+      request,
+      pdfBytes,
+    );
     _ensureOpen();
     _validateSchema(value.schemaVersion);
     return value;

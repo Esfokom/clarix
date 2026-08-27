@@ -16,6 +16,7 @@ class FrbNativeEditorPort
         NativeEditorPort,
         NativeLivePdfiumPort,
         NativeLivePageImportPort,
+        NativeLivePdfiumSavePort,
         NativeFontFallbackPort,
         NativePhaseTwoPort,
         NativeAgentPortProvider {
@@ -35,6 +36,18 @@ class FrbNativeEditorPort
   @override
   Future<void> importLivePage(native.NativeLivePageImport request) =>
       _session.importLivePage(request: request);
+
+  @override
+  Future<EditorSaveResult> saveLivePdfium(
+    EditorSaveRequest request,
+    List<int> pdfBytes,
+  ) async {
+    final value = await _session.saveLivePdfium(
+      request: _nativeSaveRequest(request),
+      pdfBytes: pdfBytes,
+    );
+    return _editorSaveResult(value);
+  }
 
   @override
   Future<EditorSessionMetadata> metadata() async {
@@ -336,34 +349,39 @@ class FrbNativeEditorPort
 
   @override
   Future<EditorSaveResult> save(EditorSaveRequest request) async {
-    final value = await _session.save(
-      request: native.NativeEditorSaveRequest(
-        targetPath: request.targetPath,
-        mode: switch (request.mode) {
-          EditorSaveMode.save => native.NativeEditorSaveMode.save,
-          EditorSaveMode.saveAs => native.NativeEditorSaveMode.saveAs,
-        },
-        association: switch (request.association) {
-          EditorSaveAssociation.keepOriginalAssociation =>
-            native.NativeSaveAssociation.keepOriginalAssociation,
-          EditorSaveAssociation.followNewSource =>
-            native.NativeSaveAssociation.followNewSource,
-        },
-        recoveryDirectory: request.recoveryDirectory,
-      ),
-    );
-    return EditorSaveResult(
-      schemaVersion: value.schemaVersion,
-      targetPath: value.targetPath,
-      materializedRevision: _intFromBigInt(
-        value.materializedRevision,
-        'materializedRevision',
-      ),
-      completedStages: value.completedStages,
-      warnings: value.warnings,
-      followsNewSource: value.followsNewSource,
-    );
+    final value = await _session.save(request: _nativeSaveRequest(request));
+    return _editorSaveResult(value);
   }
+
+  native.NativeEditorSaveRequest _nativeSaveRequest(
+    EditorSaveRequest request,
+  ) => native.NativeEditorSaveRequest(
+    targetPath: request.targetPath,
+    mode: switch (request.mode) {
+      EditorSaveMode.save => native.NativeEditorSaveMode.save,
+      EditorSaveMode.saveAs => native.NativeEditorSaveMode.saveAs,
+    },
+    association: switch (request.association) {
+      EditorSaveAssociation.keepOriginalAssociation =>
+        native.NativeSaveAssociation.keepOriginalAssociation,
+      EditorSaveAssociation.followNewSource =>
+        native.NativeSaveAssociation.followNewSource,
+    },
+    recoveryDirectory: request.recoveryDirectory,
+  );
+
+  EditorSaveResult _editorSaveResult(native.NativeEditorSaveResult value) =>
+      EditorSaveResult(
+        schemaVersion: value.schemaVersion,
+        targetPath: value.targetPath,
+        materializedRevision: _intFromBigInt(
+          value.materializedRevision,
+          'materializedRevision',
+        ),
+        completedStages: value.completedStages,
+        warnings: value.warnings,
+        followsNewSource: value.followsNewSource,
+      );
 
   @override
   Future<EditorCommandResult> checkpoint({

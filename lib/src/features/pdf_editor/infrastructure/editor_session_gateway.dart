@@ -369,8 +369,13 @@ class BridgeEditorSessionGateway
       _required().releaseCleanPatchMemory();
 
   @override
-  Future<EditorSaveResult> save(EditorSaveRequest request) =>
-      _required().save(request);
+  Future<EditorSaveResult> save(EditorSaveRequest request) async {
+    final liveSession = _livePdfiumSession;
+    if (liveSession is LivePdfiumSession) {
+      return _required().saveLivePdfium(request, await liveSession.saveBytes());
+    }
+    return _required().save(request);
+  }
 
   @override
   Future<EditorSearchResult> search(EditorSearchRequest request) =>

@@ -9,10 +9,11 @@ use clarix_editing_core::{
     AffineTransform, AnnotationAnchor, AnnotationKind, AnnotationNode, AnnotationTextRange,
     CommandEnvelope, CommandId, CommandResult, CompatibilityReporter, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    FontFallbackApproval, FontRef, FontSource, MemoryPressureLevel, ObjectId, ObjectPatch, PageId,
-    PageIndexTask, PageSceneRequest, PageSceneService, PdfBox, PhysicalEditOperation,
-    PhysicalEditPlan, PreparedCommand, RecoveryRequest, SaveAssociation, SaveCoordinator, SaveMode,
-    SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet, SessionId, SourceBinding,
+    FontFallbackApproval, FontRef, FontSource, MaterializationPort, MaterializationReport,
+    MemoryPressureLevel, ObjectId, ObjectPatch, PageId, PageIndexTask, PageSceneRequest,
+    PageSceneService, PdfBox, PhysicalEditOperation, PhysicalEditPlan, PreparedCommand,
+    RecoveryRequest, SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveRequest,
+    SearchMode, SearchRequest, SelectionKind, SelectionSet, SessionId, SourceBinding,
     SourceReference, TextBlock, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{
@@ -582,6 +583,31 @@ struct PendingFontFallback {
     range: Utf16Range,
     replacement: String,
     approval: FontFallbackApproval,
+}
+
+struct EncodedPdfMaterializer {
+    bytes: Vec<u8>,
+}
+
+impl MaterializationPort for EncodedPdfMaterializer {
+    fn materialize(
+        &self,
+        _: &DocumentModel,
+        target: &Path,
+    ) -> Result<MaterializationReport, SaveError> {
+        std::fs::write(target, &self.bytes).map_err(|error| {
+            SaveError::new(
+                clarix_editing_core::SaveStage::MaterializeTemp,
+                "live_pdfium_write_failed",
+                error.to_string(),
+            )
+        })?;
+        Ok(MaterializationReport {
+            output_sha256: format!("{:x}", Sha256::digest(&self.bytes)),
+            bytes_written: self.bytes.len() as u64,
+            warnings: Vec::new(),
+        })
+    }
 }
 
 impl NativeEditorSession {
@@ -1260,12 +1286,32 @@ impl NativeEditorSession {
     }
 
     pub fn save(&self, request: NativeEditorSaveRequest) -> Result<NativeEditorSaveResult, String> {
+        let materializer = PdfTextMaterializer::new(self.source.clone());
+        self.save_with_materializer(request, &materializer)
+    }
+
+    pub fn save_live_pdfium(
+        &self,
+        request: NativeEditorSaveRequest,
+        pdf_bytes: Vec<u8>,
+    ) -> Result<NativeEditorSaveResult, String> {
+        if pdf_bytes.is_empty() {
+            return Err("live_pdfium_save_empty".into());
+        }
+        let materializer = EncodedPdfMaterializer { bytes: pdf_bytes };
+        self.save_with_materializer(request, &materializer)
+    }
+
+    fn save_with_materializer(
+        &self,
+        request: NativeEditorSaveRequest,
+        materializer: &dyn MaterializationPort,
+    ) -> Result<NativeEditorSaveResult, String> {
         let snapshot = self.actor.snapshot().map_err(editing_error)?;
         let target = std::path::PathBuf::from(&request.target_path);
-        let materializer = PdfTextMaterializer::new(self.source.clone());
         let validator = IndependentPdfValidator;
         let replacer = WindowsAtomicReplacer;
-        let report = SaveCoordinator::new(&materializer, &validator, &replacer)
+        let report = SaveCoordinator::new(materializer, &validator, &replacer)
             .with_repository(self._repository.as_ref())
             .save(SaveRequest {
                 source: SourceReference::new(self.source.fingerprint(), self.source.path()),
