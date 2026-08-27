@@ -337,6 +337,10 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
     final editorState = ref
         .watch(editorDocumentStateProvider(widget.tab.id))
         .value;
+    // pdfrx invokes page overlay builders outside this widget's synchronous
+    // build. Capture provider values here; calling ref.watch from that deferred
+    // callback can target a disposed ConsumerState after a tab is closed.
+    final agent = ref.watch(agentRunControllerProvider(widget.tab.id));
     // A persisted inspector selection is not an editor session. Only expose
     // edit interaction after the native session has actually opened.
     final isEditingMode =
@@ -436,11 +440,6 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                                         lifecycle: lifecycle,
                                         pageNumber: page.pageNumber,
                                         builder: (context, scene) {
-                                          final agent = ref.watch(
-                                            agentRunControllerProvider(
-                                              widget.tab.id,
-                                            ),
-                                          );
                                           Widget sceneWidget(
                                             AgentRunControllerState? agentState,
                                           ) => PageEditScene(
