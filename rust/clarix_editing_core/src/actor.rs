@@ -8,9 +8,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CommandEnvelope, CommandResult, ContextLimits, DocumentModel, DocumentRevision, DurableCommit,
-    EditingError, EditorSessionState, PageNode, ProjectRepository, RecoveryRequest, SearchIndex,
-    SearchPage, SearchRequest, SelectionContext, SelectionContextBuilder, SelectionSet, SessionId,
-    ToolObservation, ToolRequest,
+    EditingError, EditorSessionState, PageNode, PreparedCommand, ProjectRepository,
+    RecoveryRequest, SearchIndex, SearchPage, SearchRequest, SelectionContext,
+    SelectionContextBuilder, SelectionSet, SessionId, ToolObservation, ToolRequest,
 };
 
 const REQUEST_CAPACITY: usize = 64;
@@ -27,6 +27,14 @@ pub enum EditorEvent {
 enum ActorRequest {
     Submit {
         command: CommandEnvelope,
+        reply: Sender<Result<CommandResult, EditingError>>,
+    },
+    Prepare {
+        command: CommandEnvelope,
+        reply: Sender<Result<PreparedCommand, EditingError>>,
+    },
+    Publish {
+        prepared: PreparedCommand,
         reply: Sender<Result<CommandResult, EditingError>>,
     },
     Snapshot {
@@ -167,6 +175,34 @@ impl EditorSessionActor {
         self.inner
             .sender
             .send(ActorRequest::Submit { command, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
+    /// Validates a command and computes its forward/inverse state without
+    /// publishing a revision or notifying subscribers.
+    pub fn prepare(&self, command: CommandEnvelope) -> Result<PreparedCommand, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::Prepare { command, reply })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
+    /// Publishes a previously prepared command. Durability and events happen
+    /// here, after a live PDFium owner has applied its physical edit plan.
+    pub fn publish(&self, prepared: PreparedCommand) -> Result<CommandResult, EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::Publish { prepared, reply })
             .map_err(|_| EditingError::ActorUnavailable)?;
         response
             .recv()
@@ -350,6 +386,40 @@ fn run_actor(
                     })
                 } else {
                     session.submit(command)
+                };
+                if let Ok(committed) = &result {
+                    broadcast(
+                        &mut subscribers,
+                        EditorEvent::CommandCommitted {
+                            result: committed.clone(),
+                        },
+                        committed.committed_revision,
+                    );
+                }
+                let _ = reply.send(result);
+            }
+            ActorRequest::Prepare { command, reply } => {
+                let _ = reply.send(session.prepare(command));
+            }
+            ActorRequest::Publish { prepared, reply } => {
+                let result = if let Some(repository) = &repository {
+                    if prepared.previous_revision != session.revision() {
+                        Err(EditingError::RevisionConflict {
+                            expected: prepared.previous_revision,
+                            actual: session.revision(),
+                        })
+                    } else {
+                        repository
+                            .append(&DurableCommit::from_prepared(&prepared))
+                            .map_err(|error| EditingError::SidecarCommitFailed(error.to_string()))
+                            .and_then(|_| {
+                                let mut result = session.publish(prepared)?;
+                                result.durable = true;
+                                Ok(result)
+                            })
+                    }
+                } else {
+                    session.publish(prepared)
                 };
                 if let Ok(committed) = &result {
                     broadcast(

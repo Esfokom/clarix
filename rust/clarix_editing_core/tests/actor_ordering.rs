@@ -106,6 +106,33 @@ fn actor_emits_commits_in_revision_order_and_closes_cleanly() {
 }
 
 #[test]
+fn actor_prepares_without_publication_then_publishes_once() {
+    let (model, object_id) = sample_model("Before");
+    let actor = EditorSessionActor::spawn(model);
+    let events = actor.subscribe().unwrap();
+    let _ = events.recv().unwrap();
+
+    let prepared = actor.prepare(replace(object_id, 0, 6, "After")).unwrap();
+    assert_eq!(
+        actor.snapshot().unwrap().revision,
+        DocumentRevision::INITIAL
+    );
+    assert!(matches!(
+        actor.snapshot().unwrap().object(object_id),
+        Some(DocumentObject::Text(block)) if block.text == "Before"
+    ));
+    assert!(events.try_recv().is_err());
+
+    let result = actor.publish(prepared).unwrap();
+    assert_eq!(result.committed_revision.value(), 1);
+    assert!(matches!(
+        events.recv().unwrap(),
+        EditorEvent::CommandCommitted { result } if result.committed_revision.value() == 1
+    ));
+    actor.close().unwrap();
+}
+
+#[test]
 fn concurrent_callers_commit_unique_increasing_revisions() {
     let (model, _) = sample_model("A");
     let actor = EditorSessionActor::spawn(model);
