@@ -124,9 +124,21 @@ List<EditorPdfBox> _applyTextPlanOnWorker(
   final document = FPDF_DOCUMENT.fromAddress(input.documentAddress);
   final page = pdfiumBindings.FPDF_LoadPage(document, plan.pageNumber - 1);
   if (page.address == 0) throw StateError('PDFium could not load page');
+  final textPage = pdfiumBindings.FPDFText_LoadPage(page);
+  if (textPage.address == 0) {
+    pdfiumBindings.FPDF_ClosePage(page);
+    throw StateError('PDFium could not load page text for transaction');
+  }
   try {
     final resolved =
-        <({FPDF_PAGEOBJECT object, String replacement, EditorPdfBox bounds})>[];
+        <
+          ({
+            FPDF_PAGEOBJECT object,
+            String replacement,
+            String originalText,
+            EditorPdfBox bounds,
+          })
+        >[];
     for (final replacement in plan.replacements) {
       final locator = replacement.locator;
       if (locator.objectType != 'text' || locator.objectPath.length != 1) {
@@ -160,6 +172,7 @@ List<EditorPdfBox> _applyTextPlanOnWorker(
         resolved.add((
           object: object,
           replacement: replacement.replacement,
+          originalText: _readTextObjectText(object, textPage),
           bounds: EditorPdfBox(
             left: left.value,
             bottom: bottom.value,
@@ -174,21 +187,51 @@ List<EditorPdfBox> _applyTextPlanOnWorker(
         calloc.free(top);
       }
     }
+    final changed = <({FPDF_PAGEOBJECT object, String originalText})>[];
     try {
       for (final replacement in resolved) {
         _setTextObjectText(replacement.object, replacement.replacement);
+        changed.add((
+          object: replacement.object,
+          originalText: replacement.originalText,
+        ));
       }
       if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
         throw StateError('PDFium could not regenerate changed page content');
       }
       return resolved.map((item) => item.bounds).toList(growable: false);
     } catch (_) {
-      // No page regeneration occurs until every object has been resolved and
-      // changed, so resolution failures cannot leave a partial content stream.
+      for (final original in changed.reversed) {
+        _setTextObjectText(original.object, original.originalText);
+      }
       rethrow;
     }
   } finally {
+    pdfiumBindings.FPDFText_ClosePage(textPage);
     pdfiumBindings.FPDF_ClosePage(page);
+  }
+}
+
+String _readTextObjectText(FPDF_PAGEOBJECT object, FPDF_TEXTPAGE textPage) {
+  final length = pdfiumBindings.FPDFTextObj_GetText(
+    object,
+    textPage,
+    nullptr.cast<FPDF_WCHAR>(),
+    0,
+  );
+  if (length <= 1) return '';
+  final buffer = calloc<Uint16>(length ~/ 2);
+  try {
+    final actual = pdfiumBindings.FPDFTextObj_GetText(
+      object,
+      textPage,
+      buffer.cast<FPDF_WCHAR>(),
+      length,
+    );
+    if (actual <= 1) throw StateError('PDFium could not read original text');
+    return String.fromCharCodes(buffer.asTypedList((actual ~/ 2) - 1));
+  } finally {
+    calloc.free(buffer);
   }
 }
 
