@@ -27,11 +27,14 @@ This ordering is mandatory. Never publish a semantic revision before PDFium
 has applied and regenerated its matching physical operation.
 
 The gateway now owns a `LivePdfiumSession` and `LivePdfiumLocatorRegistry`
-for each open editor tab. It can route a whole-text replacement through
-prepare -> apply -> publish when a canonical import manifest supplies a
-registered semantic object binding. Unbound objects remain on the legacy
-semantic/materializer path. The live session also rejects a physical plan
-prepared for a different revision.
+for each open editor tab. Visible and preloaded pages are inspected from that
+owner, hydrated into Rust with path-based identities, and registered for
+whole-text replacement routing. Rust's span-based background importer is
+disabled for these live sessions so it cannot create a competing identity
+domain. A supported replacement takes prepare -> apply -> publish; after the
+publish succeeds, its PDFium invalidations rerender visible live tiles through
+`PageSceneLifecycle`. Unimported or unsupported objects remain on the legacy
+semantic/materializer path.
 
 ## Completed commits
 
@@ -43,6 +46,10 @@ The most relevant commits, newest first:
   IDs; text, geometry, and object order are not inputs.
 - `c6c41e6` — live session exposes PDFium-owned text inspection for the
   forthcoming Dart-owned page importer.
+- `8635211`, `83aad1b`, `5e7daa5`, `4eb1369` — completed Dart -> Rust live
+  page-import contract, safe live-session open mode, production visible-page
+  hydration, canonical locator registration, and post-publish live-tile
+  refresh.
 - `cc5da01` — validates import-manifest/source-fingerprint consistency and
   cleans up both owners when opening fails.
 - `997c17b` — routes explicitly bound text edits through live PDFium while
@@ -79,32 +86,14 @@ The most relevant commits, newest first:
 
 ## What is not yet wired
 
-The production `BridgeEditorSessionGateway` can select
-`LivePdfiumEditorPort`, but only after a validated canonical manifest registers
-the command target. Its default manifest is intentionally empty. The Rust
-legacy importer still creates semantic objects from span-derived source keys,
-whereas the live PDFium inspector creates path-based source keys. Those are
-not the same identity domain; do not correlate them by coordinates, text, or
-object order.
-
-The next implementation slice is therefore:
-
-1. Add a Dart -> Rust live-page import DTO/API. It must carry a page's
-   path-based source keys, Rust-compatible UUIDv5 object IDs, text/layout
-   metadata, and recursive PDFium locators from one `LivePdfiumSession` scan.
-2. Change the semantic session to hydrate live-backed `PageNode`s from that
-   DTO instead of calling the span-based `PdfOxideImporter` for those pages.
-3. Have `BridgeEditorSessionGateway.requestPage()` inspect the visible page,
-   submit its live import, register the resulting manifest, then request the
-   semantic scene. Index visible and adjacent pages only.
-4. Verify a supported replacement takes prepare -> apply -> publish and emits
-   live-tile invalidations; retain legacy routing only for explicitly
-   unsupported or unimported objects.
-5. Connect successful invalidations to `PageSceneLifecycle`.
+The completed live page route is covered by focused unit/widget tests but has
+not yet been exercised against a full interactive application session. The
+identity rule remains strict: do not correlate legacy span-derived objects and
+live path-derived objects by coordinates, text, or traversal order.
 
 ## Remaining plan work
 
-After production routing, continue the plan in this order:
+Continue the plan in this order:
 
 1. Migrate Save/Save As to encode the live PDFium owner through the existing
    atomic recovery flow.
