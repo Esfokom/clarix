@@ -21,6 +21,7 @@ final class LivePdfiumSession {
   late final LivePdfiumTileRenderer _tiles;
   bool _closed = false;
   int _revision = 0;
+  final Set<int> _dirtyPages = <int>{};
 
   static Future<LivePdfiumSession> open(String sourcePath) async =>
       LivePdfiumSession._(await PdfDocument.openFile(sourcePath));
@@ -59,6 +60,7 @@ final class LivePdfiumSession {
       ),
     );
     _revision += 1;
+    if (!regenerateContent) _dirtyPages.add(locator.pageNumber);
     _tiles.invalidate(
       pageNumber: locator.pageNumber,
       bounds: bounds,
@@ -69,6 +71,19 @@ final class LivePdfiumSession {
       bounds: bounds,
       revision: _revision,
     );
+  }
+
+  Future<Set<int>> commit() async {
+    _ensureOpen();
+    final pages = _dirtyPages.toList(growable: false)..sort();
+    if (pages.isEmpty) return const <int>{};
+    await const PdfiumWorkerExecutor().run(
+      document: _document,
+      callback: _generateContentOnWorker,
+      message: pages,
+    );
+    _dirtyPages.removeAll(pages);
+    return Set<int>.unmodifiable(pages);
   }
 
   Future<void> close() async {
@@ -87,6 +102,21 @@ final class LivePdfiumSession {
 
   void _ensureOpen() {
     if (_closed) throw StateError('live PDFium session is closed');
+  }
+}
+
+void _generateContentOnWorker(PdfiumWorkerInput<List<int>> input) {
+  final document = FPDF_DOCUMENT.fromAddress(input.documentAddress);
+  for (final pageNumber in input.message) {
+    final page = pdfiumBindings.FPDF_LoadPage(document, pageNumber - 1);
+    if (page.address == 0) throw StateError('PDFium could not load dirty page');
+    try {
+      if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
+        throw StateError('PDFium could not regenerate dirty page content');
+      }
+    } finally {
+      pdfiumBindings.FPDF_ClosePage(page);
+    }
   }
 }
 

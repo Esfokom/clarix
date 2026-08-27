@@ -68,4 +68,36 @@ void main() {
       expect(after.rgbaBytes, isNot(orderedEquals(before.rgbaBytes)));
     },
   );
+
+  test(
+    'commits a dirty page once after multiple live text mutations',
+    () async {
+      final file = await PdfTextFixture.singleBlock('Original');
+      addTearDown(() => file.parent.delete(recursive: true));
+      final session = await LivePdfiumSession.open(file.path);
+      addTearDown(session.close);
+      const locator = EditorPhysicalLocator(
+        pageNumber: 1,
+        objectPath: <int>[0],
+        objectType: 'text',
+        sourceFingerprint: 'fixture',
+        objectRevision: 0,
+      );
+
+      await session.replaceTextObject(
+        locator,
+        'First',
+        regenerateContent: false,
+      );
+      await session.replaceTextObject(
+        locator,
+        'Final',
+        regenerateContent: false,
+      );
+      final committed = await session.commit();
+
+      expect(committed, <int>{1});
+      expect(await session.commit(), isEmpty);
+    },
+  );
 }
