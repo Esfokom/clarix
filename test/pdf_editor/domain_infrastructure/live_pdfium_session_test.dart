@@ -122,6 +122,33 @@ void main() {
     expect(result.invalidations.every((item) => item.pageNumber == 1), isTrue);
   });
 
+  test('rejects a plan prepared for a different live revision', () async {
+    final file = await PdfTextFixture.singleBlock('Original');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+    const locator = EditorPhysicalLocator(
+      pageNumber: 1,
+      objectPath: <int>[0],
+      objectType: 'text',
+      sourceFingerprint: 'fixture',
+      objectRevision: 0,
+    );
+
+    await expectLater(
+      session.apply(
+        LivePdfiumEditPlan(
+          expectedRevision: 1,
+          revision: 2,
+          replacements: const <LivePdfiumTextReplacement>[
+            LivePdfiumTextReplacement(locator: locator, replacement: 'Changed'),
+          ],
+        ),
+      ),
+      throwsA(isA<StateError>()),
+    );
+  });
+
   test('rejects a physical edit plan that spans pages', () {
     const pageOne = EditorPhysicalLocator(
       pageNumber: 1,

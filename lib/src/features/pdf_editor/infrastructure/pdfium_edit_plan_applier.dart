@@ -21,8 +21,11 @@ class LivePdfiumTextReplacement {
 
 /// The currently supported, all-or-nothing physical PDFium edit transaction.
 class LivePdfiumEditPlan {
-  LivePdfiumEditPlan({required List<LivePdfiumTextReplacement> replacements})
-    : replacements = List.unmodifiable(replacements) {
+  LivePdfiumEditPlan({
+    required List<LivePdfiumTextReplacement> replacements,
+    this.expectedRevision,
+    this.revision,
+  }) : replacements = List.unmodifiable(replacements) {
     if (replacements.isEmpty) {
       throw ArgumentError.value(
         replacements,
@@ -38,9 +41,26 @@ class LivePdfiumEditPlan {
         'must target exactly one page',
       );
     }
+    if (revision != null &&
+        expectedRevision != null &&
+        revision! <= expectedRevision!) {
+      throw ArgumentError.value(
+        revision,
+        'revision',
+        'must advance the expected revision',
+      );
+    }
   }
 
   final List<LivePdfiumTextReplacement> replacements;
+
+  /// Semantic revision at which this plan was prepared. Omitted only by
+  /// direct local callers that do not participate in the bridge protocol.
+  final int? expectedRevision;
+
+  /// Semantic revision acknowledged after this plan has been applied. Omitted
+  /// only by direct local callers, which advance by one.
+  final int? revision;
 
   int get pageNumber => replacements.first.locator.pageNumber;
 }

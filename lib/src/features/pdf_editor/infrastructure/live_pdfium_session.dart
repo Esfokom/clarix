@@ -63,6 +63,13 @@ final class LivePdfiumSession implements LivePdfiumSessionOwner {
   /// open. This is the safe batching primitive for live typing.
   Future<LivePdfiumApplyResult> apply(LivePdfiumEditPlan plan) async {
     _ensureOpen();
+    final expectedRevision = plan.expectedRevision;
+    if (expectedRevision != null && expectedRevision != _revision) {
+      throw StateError(
+        'live PDFium revision conflict: expected $expectedRevision, '
+        'actual $_revision',
+      );
+    }
     final outcome = await const PdfiumWorkerExecutor().run(
       document: _document,
       callback: _applyTextPlanOnWorker,
@@ -72,7 +79,7 @@ final class LivePdfiumSession implements LivePdfiumSessionOwner {
       throw StateError(error);
     }
     final bounds = outcome.bounds;
-    _revision += 1;
+    _revision = plan.revision ?? _revision + 1;
     final invalidations = bounds
         .map((bounds) {
           _tiles.invalidate(

@@ -83,7 +83,13 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
           ),
         )
         .toList(growable: false);
-    await _session.apply(LivePdfiumEditPlan(replacements: replacements));
+    await _session.apply(
+      LivePdfiumEditPlan(
+        replacements: replacements,
+        expectedRevision: prepared.plan.previousRevision,
+        revision: prepared.plan.revision,
+      ),
+    );
     return _semantic.publishPreparedLiveCommand(prepared.token);
   }
 
