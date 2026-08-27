@@ -19,6 +19,8 @@ class EditorSessionRegistry {
   final EditorCommandIdFactory _commandIds;
   final Map<String, EditorSessionController> _sessions =
       <String, EditorSessionController>{};
+  final Map<String, Future<EditorSessionController>> _opening =
+      <String, Future<EditorSessionController>>{};
   final Map<String, AgentBridgeSession> _agentBridges =
       <String, AgentBridgeSession>{};
   final Map<String, StreamSubscription<EditorDocumentState>> _subscriptions =
@@ -54,14 +56,31 @@ class EditorSessionRegistry {
   }) async {
     final existing = _sessions[tabId];
     if (existing != null) return existing;
+    final pending = _opening[tabId];
+    if (pending != null) return pending;
+    final opening = _openNew(tabId: tabId, sourcePath: sourcePath);
+    _opening[tabId] = opening;
+    try {
+      return await opening;
+    } finally {
+      if (identical(_opening[tabId], opening)) {
+        _opening.remove(tabId);
+      }
+    }
+  }
+
+  Future<EditorSessionController> _openNew({
+    required String tabId,
+    required String sourcePath,
+  }) async {
     final gateway = _gateways();
     final controller = EditorSessionController(
       gateway: gateway,
       commandIds: _commandIds,
     );
-    _sessions[tabId] = controller;
     try {
       await controller.open(sourcePath);
+      _sessions[tabId] = controller;
       if (gateway is EditorAgentGateway) {
         _agentBridges[tabId] = (gateway as EditorAgentGateway)
             .agentBridgeSession();
@@ -72,7 +91,6 @@ class EditorSessionRegistry {
       _changes.add(tabId);
       return controller;
     } catch (_) {
-      _sessions.remove(tabId);
       await _agentBridges.remove(tabId)?.close();
       await controller.close();
       rethrow;
