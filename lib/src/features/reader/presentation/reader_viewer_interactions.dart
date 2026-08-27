@@ -581,10 +581,18 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
 
   void _queueViewerStatePersistence() {
     _viewerStateDebounce?.cancel();
-    _viewerStateDebounce = Timer(
-      const Duration(milliseconds: 180),
-      _persistViewerState,
-    );
+    _viewerStateDebounce = Timer(const Duration(milliseconds: 180), () {
+      // A timer may fire during the frame that removes this reader.  Wait
+      // until that frame is complete so the mounted check observes the
+      // final lifecycle state rather than writing through a defunct
+      // Consumer element.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) {
+          return;
+        }
+        unawaited(_persistViewerState());
+      });
+    });
   }
 
   Future<void> _persistViewerState() async {

@@ -690,6 +690,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     int? pageCountHint,
   }) async {
     final WorkspaceFeatureState current = _requireState();
+    // Reader callbacks can arrive after the user closes their tab.  There is
+    // nothing left to persist in that case, and committing an unchanged
+    // workspace state can notify consumers that are being torn down.
+    if (!current.session.tabs.any((DocumentTabState tab) => tab.id == tabId)) {
+      return;
+    }
     final List<DocumentTabState> tabs = current.session.tabs
         .map(
           (DocumentTabState tab) => tab.id == tabId
