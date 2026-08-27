@@ -6,8 +6,10 @@ import 'package:pdfrx/pdfrx.dart';
 import 'package:pdfium_flutter/pdfium_flutter.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
+import '../domain/pdf_text_types.dart';
 import 'live_pdfium_tile_renderer.dart';
 import 'pdfium_edit_plan_applier.dart';
+import 'pdf_text_engine.dart';
 import 'pdfium_worker_executor.dart';
 
 abstract interface class LivePdfiumSessionOwner
@@ -34,6 +36,20 @@ final class LivePdfiumSession implements LivePdfiumSessionOwner {
   Future<EditorDirtyTile> renderTile(LivePdfiumTileRequest request) {
     _ensureOpen();
     return _tiles.render(request);
+  }
+
+  /// Inspects text through this session's document/worker, never through a
+  /// second PDFium owner. This is the input boundary for the live importer.
+  Future<List<PdfTextBlock>> inspectTextBlocks({
+    required String sourceRevision,
+    required List<int> pageNumbers,
+  }) {
+    _ensureOpen();
+    return createPdfTextEngine().inspectPages(
+      document: _document,
+      sourceRevision: sourceRevision,
+      pageNumbers: pageNumbers,
+    );
   }
 
   void invalidate({

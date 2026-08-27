@@ -31,6 +31,23 @@ void main() {
     expect(tile.rgbaBytes.any((channel) => channel != 255), isTrue);
   });
 
+  test('inspects text from its owned live PDFium document', () async {
+    final file = await PdfTextFixture.singleBlock('Live import text');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+
+    final blocks = await session.inspectTextBlocks(
+      sourceRevision: 'source-revision',
+      pageNumbers: const <int>[1],
+    );
+
+    expect(blocks, hasLength(1));
+    expect(blocks.single.text, 'Live import text');
+    expect(blocks.single.locator.sourceRevision, 'source-revision');
+    expect(blocks.single.locator.objectPath, isNotEmpty);
+  });
+
   test(
     'regenerating changed page content updates a live PDFium tile',
     () async {
