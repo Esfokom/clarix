@@ -24,7 +24,9 @@ part 'pdfium_text_engine_inspection.dart';
 
 PdfTextEngine createPdfTextEngine() => const PdfiumTextEngine();
 
-final class PdfiumTextEngine with _PdfiumTextInspection implements PdfTextEngine {
+final class PdfiumTextEngine
+    with _PdfiumTextInspection
+    implements PdfTextEngine {
   const PdfiumTextEngine({this.fontCatalog});
 
   final InstalledFontCatalog? fontCatalog;
@@ -759,6 +761,4 @@ final class PdfiumTextEngine with _PdfiumTextInspection implements PdfTextEngine
       );
     }
   }
-
-  }
-
+}
