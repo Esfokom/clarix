@@ -45,8 +45,8 @@ pub use persistence::{
 pub use ports::{
     AtomicReplaceRequest, AtomicReplacementPort, CleanPatchRequest, CleanPatchSource, ImportedPage,
     MaterializationPort, MaterializationReport, PageImportRequest, PageImportSource,
-    PageIndexRepository, RasterAsset, SourceReference, ValidationExpectation, ValidationPort,
-    ValidationReport,
+    PageIndexRepository, PhysicalEditOperation, PhysicalEditPlan, RasterAsset, SourceReference,
+    ValidationExpectation, ValidationPort, ValidationReport,
 };
 pub use save::{
     SaveAssociation, SaveCoordinator, SaveError, SaveMode, SaveReport, SaveRequest, SaveStage,

@@ -233,6 +233,9 @@ pub struct PreparedCommand {
     pub before_objects: Vec<crate::DocumentObject>,
     pub after_objects: Vec<crate::DocumentObject>,
     pub inverse: InverseOperation,
+    /// Present only for commands whose semantic object changes can be applied
+    /// by the live PDFium backend without Rust materialization.
+    pub physical_plan: Option<crate::PhysicalEditPlan>,
     pub result: CommandResult,
     pub(crate) next_state: Box<crate::EditorSessionState>,
 }

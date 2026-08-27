@@ -221,6 +221,12 @@ impl EditorSessionState {
         } else {
             InverseOperation::ReplaceObjects(before_objects.clone())
         };
+        let physical_plan = physical_plan_from_changes(
+            previous_revision,
+            result.committed_revision,
+            &before_objects,
+            &after_objects,
+        );
         Ok(PreparedCommand {
             envelope,
             previous_revision,
@@ -228,6 +234,7 @@ impl EditorSessionState {
             before_objects,
             after_objects,
             inverse,
+            physical_plan,
             result,
             next_state: Box::new(next_state),
         })
@@ -970,6 +977,49 @@ impl EditorSessionState {
         self.undo_stack.push(entry);
         Ok(patches)
     }
+}
+
+fn physical_plan_from_changes(
+    previous_revision: DocumentRevision,
+    revision: DocumentRevision,
+    before: &[DocumentObject],
+    after: &[DocumentObject],
+) -> Option<crate::PhysicalEditPlan> {
+    let mut operations = Vec::new();
+    let mut inverse_operations = Vec::new();
+    for after_object in after {
+        let before_object = before
+            .iter()
+            .find(|candidate| candidate.id() == after_object.id())?;
+        let (DocumentObject::Text(before_text), DocumentObject::Text(after_text)) =
+            (before_object, after_object)
+        else {
+            return None;
+        };
+        let binding = after_text.source_binding()?;
+        operations.push(crate::PhysicalEditOperation::ReplaceText {
+            object_id: after_text.id(),
+            source_key: binding.source_key.clone(),
+            source_revision: binding.source_revision.clone(),
+            expected_text: before_text.text.clone(),
+            replacement: after_text.text.clone(),
+            bounds: after_text.bounds(),
+        });
+        inverse_operations.push(crate::PhysicalEditOperation::ReplaceText {
+            object_id: before_text.id(),
+            source_key: binding.source_key.clone(),
+            source_revision: binding.source_revision.clone(),
+            expected_text: after_text.text.clone(),
+            replacement: before_text.text.clone(),
+            bounds: before_text.bounds(),
+        });
+    }
+    (!operations.is_empty()).then_some(crate::PhysicalEditPlan {
+        previous_revision,
+        revision,
+        operations,
+        inverse_operations,
+    })
 }
 
 fn changed_objects(

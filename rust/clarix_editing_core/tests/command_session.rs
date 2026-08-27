@@ -1,8 +1,9 @@
 use clarix_editing_core::{
     AnnotationAnchor, AnnotationNode, CommandEnvelope, CommandId, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditorCommand, EditorSessionState, FontFallbackApproval,
-    FontRef, FontSource, ObjectId, OverflowPolicy, PageId, PageNode, PdfBox, SessionId,
-    SourceGlyph, TextBlock, TextCharacterBox, TextLayoutRecipe, Utf16Range,
+    FontRef, FontSource, ObjectId, OverflowPolicy, PageId, PageNode, PdfBox, PhysicalEditOperation,
+    SessionId, SourceBinding, SourceGlyph, TextBlock, TextCharacterBox, TextLayoutRecipe,
+    Utf16Range,
 };
 
 #[test]
@@ -202,6 +203,58 @@ fn replacement_commits_once_and_stale_commands_do_not_mutate() {
     );
     assert_eq!(session.revision().value(), 1);
     assert_eq!(session.text(object_id).unwrap(), "Hello Rust");
+}
+
+#[test]
+fn prepared_text_replacement_emits_forward_and_inverse_physical_plan() {
+    let page_id = PageId::from_source_key("physical-plan/page/1");
+    let object_id = ObjectId::from_source_key("physical-plan/page/1/text/1");
+    let model = DocumentModel::new(
+        DocumentId::from_source_key("physical-plan"),
+        "sha256:physical-plan".into(),
+        vec![PageNode::new(
+            page_id,
+            1,
+            612.0,
+            792.0,
+            vec![DocumentObject::text(
+                TextBlock::plain(
+                    object_id,
+                    page_id,
+                    "Original",
+                    PdfBox::new(0.0, 0.0, 100.0, 20.0).unwrap(),
+                )
+                .with_source_binding(SourceBinding {
+                    adapter_id: "pdfium".into(),
+                    source_revision: "sha256:physical-plan".into(),
+                    source_key: "page:1/object:0".into(),
+                    confidence: 1.0,
+                }),
+            )],
+        )],
+    )
+    .unwrap();
+    let session = EditorSessionState::new(SessionId::new(), model);
+    let prepared = session
+        .prepare(CommandEnvelope::user(
+            CommandId::new(),
+            DocumentRevision::INITIAL,
+            EditorCommand::ReplaceTextRange {
+                object_id,
+                range: Utf16Range::new(0, 8).unwrap(),
+                replacement: "Changed".into(),
+            },
+        ))
+        .unwrap();
+
+    let plan = prepared.physical_plan.expect("bound text emits a plan");
+    assert_eq!(plan.operations.len(), 1);
+    assert_eq!(plan.inverse_operations.len(), 1);
+    assert!(matches!(
+        &plan.operations[0],
+        PhysicalEditOperation::ReplaceText { expected_text, replacement, .. }
+            if expected_text == "Original" && replacement == "Changed"
+    ));
 }
 
 #[test]

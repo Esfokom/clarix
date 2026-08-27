@@ -3,9 +3,32 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DocumentId, DocumentModel, DocumentRevision, PageId, PageNode, PdfBox, PersistenceError,
-    SaveError,
+    DocumentId, DocumentModel, DocumentRevision, ObjectId, PageId, PageNode, PdfBox,
+    PersistenceError, SaveError,
 };
+
+/// A transport-only operation that a live PDFium owner can resolve against its
+/// scene/object locator table. The editing core intentionally does not hold
+/// PDFium handles or open a PDF while producing this plan.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum PhysicalEditOperation {
+    ReplaceText {
+        object_id: ObjectId,
+        source_key: String,
+        source_revision: String,
+        expected_text: String,
+        replacement: String,
+        bounds: PdfBox,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct PhysicalEditPlan {
+    pub previous_revision: DocumentRevision,
+    pub revision: DocumentRevision,
+    pub operations: Vec<PhysicalEditOperation>,
+    pub inverse_operations: Vec<PhysicalEditOperation>,
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SourceReference {
