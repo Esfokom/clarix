@@ -320,11 +320,15 @@ class BridgeEditorSessionGateway
     final objectId = request.payload.objectId;
     final registry = _livePdfiumLocatorRegistry;
     final livePort = _livePdfiumEditorPort;
-    if (request.payload.kind == EditorCommandKind.replaceTextRange &&
+    final isBoundReplacement =
+        request.payload.kind == EditorCommandKind.replaceTextRange &&
         objectId != null &&
         registry != null &&
-        registry.hasObject(objectId) &&
-        livePort != null) {
+        registry.hasObject(objectId);
+    final isHistoryCommand =
+        request.payload.kind == EditorCommandKind.undo ||
+        request.payload.kind == EditorCommandKind.redo;
+    if ((isBoundReplacement || isHistoryCommand) && livePort != null) {
       return livePort.submit(request);
     }
     return _required().submit(request);
