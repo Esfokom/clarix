@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:clarix/src/core/editing/editor_bridge.dart';
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
+import 'package:clarix/src/core/editing/live_pdfium_editor_port.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/editor_session_gateway.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_session.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
@@ -45,6 +46,24 @@ void main() {
     expect(liveSession.closed, isTrue);
   });
 
+  test('closes both owners when the import manifest is rejected', () async {
+    final liveSession = _FakeLivePdfiumSession();
+    final native = _NativePort();
+    final gateway = BridgeEditorSessionGateway.forTest(
+      openBridgeSession: (_, {String? projectRoot}) async =>
+          EditorBridgeSession.forTest(native),
+      openLivePdfiumSession: (_) async => liveSession,
+      loadLivePdfiumImportManifest: (_) async => const LivePdfiumImportManifest(
+        sourceFingerprint: 'different-source',
+        bindings: <LivePdfiumImportBinding>[],
+      ),
+    );
+
+    await expectLater(gateway.open('fixture.pdf'), throwsStateError);
+    expect(liveSession.closed, isTrue);
+    expect(native.closed, isTrue);
+  });
+
   test(
     'routes an explicitly bound text edit through the live transaction',
     () async {
@@ -54,20 +73,26 @@ void main() {
         openBridgeSession: (_, {String? projectRoot}) async =>
             EditorBridgeSession.forTest(native),
         openLivePdfiumSession: (_) async => liveSession,
+        loadLivePdfiumImportManifest: (_) async =>
+            const LivePdfiumImportManifest(
+              sourceFingerprint: 'source',
+              bindings: <LivePdfiumImportBinding>[
+                LivePdfiumImportBinding(
+                  objectId: _objectId,
+                  sourceKey: 'manifest/page/1/object/0',
+                  sourceRevision: 'source',
+                  locator: EditorPhysicalLocator(
+                    pageNumber: 1,
+                    objectPath: <int>[0],
+                    objectType: 'text',
+                    sourceFingerprint: 'source',
+                    objectRevision: 0,
+                  ),
+                ),
+              ],
+            ),
       );
       await gateway.open('fixture.pdf');
-      gateway.registerLivePdfiumBinding(
-        objectId: _objectId,
-        sourceKey: 'manifest/page/1/object/0',
-        sourceRevision: 'source',
-        locator: const EditorPhysicalLocator(
-          pageNumber: 1,
-          objectPath: <int>[0],
-          objectType: 'text',
-          sourceFingerprint: 'source',
-          objectRevision: 0,
-        ),
-      );
 
       final result = await gateway.submit(
         const EditorCommandRequest(
@@ -149,13 +174,17 @@ final class _NativePort implements NativeEditorPort, NativeLivePdfiumPort {
       StreamController<EditorEvent>.broadcast();
   bool prepared = false;
   bool published = false;
+  bool closed = false;
   int legacySubmissions = 0;
 
   @override
   Stream<EditorEvent> get events => _events.stream;
 
   @override
-  Future<void> close() => _events.close();
+  Future<void> close() async {
+    closed = true;
+    await _events.close();
+  }
 
   @override
   Future<EditorSessionMetadata> metadata() async => const EditorSessionMetadata(

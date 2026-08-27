@@ -13,6 +13,9 @@ typedef OpenBridgeEditorSession =
 typedef OpenLivePdfiumSession =
     Future<LivePdfiumSessionOwner> Function(String sourcePath);
 
+typedef LoadLivePdfiumImportManifest =
+    Future<LivePdfiumImportManifest> Function(String sourcePath);
+
 abstract class EditorSessionGateway {
   Stream<EditorEvent> get events;
 
@@ -99,31 +102,37 @@ class BridgeEditorSessionGateway
   factory BridgeEditorSessionGateway({
     EditorBridge bridge = const EditorBridge(),
     String? projectRoot,
+    LoadLivePdfiumImportManifest? loadLivePdfiumImportManifest,
   }) => BridgeEditorSessionGateway._(
     (sourcePath, {projectRoot}) =>
         bridge.open(sourcePath, projectRoot: projectRoot),
     LivePdfiumSession.open,
+    loadLivePdfiumImportManifest ?? _emptyLivePdfiumImportManifest,
     projectRoot,
   );
 
   factory BridgeEditorSessionGateway.forTest({
     required OpenBridgeEditorSession openBridgeSession,
     required OpenLivePdfiumSession openLivePdfiumSession,
+    LoadLivePdfiumImportManifest? loadLivePdfiumImportManifest,
     String? projectRoot,
   }) => BridgeEditorSessionGateway._(
     openBridgeSession,
     openLivePdfiumSession,
+    loadLivePdfiumImportManifest ?? _emptyLivePdfiumImportManifest,
     projectRoot,
   );
 
   BridgeEditorSessionGateway._(
     this._openBridgeSession,
     this._openLivePdfiumSession,
+    this._loadLivePdfiumImportManifest,
     this._projectRoot,
   );
 
   final OpenBridgeEditorSession _openBridgeSession;
   final OpenLivePdfiumSession _openLivePdfiumSession;
+  final LoadLivePdfiumImportManifest _loadLivePdfiumImportManifest;
   final String? _projectRoot;
   EditorBridgeSession? _session;
   String? _sessionId;
@@ -162,25 +171,35 @@ class BridgeEditorSessionGateway
       throw StateError('editor session is already open');
     }
     final liveSession = await _openLivePdfiumSession(sourcePath);
+    EditorBridgeSession? semanticSession;
     try {
-      final session = await _openBridgeSession(
+      semanticSession = await _openBridgeSession(
         sourcePath,
         projectRoot: _projectRoot,
       );
-      final metadata = await session.metadata();
-      _session = session;
+      final metadata = await semanticSession.metadata();
+      final manifest = await _loadLivePdfiumImportManifest(sourcePath);
+      _session = semanticSession;
       _sessionId = metadata.sessionId;
       _livePdfiumSession = liveSession;
       final locatorRegistry = LivePdfiumLocatorRegistry();
+      locatorRegistry.registerManifest(
+        manifest,
+        sourceFingerprint: metadata.sourceFingerprint,
+      );
       _livePdfiumLocatorRegistry = locatorRegistry;
       _livePdfiumEditorPort = LivePdfiumEditorPort(
-        semantic: _BridgeLivePdfiumPort(session),
+        semantic: _BridgeLivePdfiumPort(semanticSession),
         session: liveSession,
         locatorRegistry: locatorRegistry,
       );
       return metadata;
     } catch (_) {
-      await liveSession.close();
+      try {
+        await semanticSession?.close();
+      } finally {
+        await liveSession.close();
+      }
       rethrow;
     }
   }
@@ -352,3 +371,7 @@ final class _BridgeLivePdfiumPort implements NativeLivePdfiumPort {
   Future<EditorCommandResult> publishPreparedLiveCommand(String token) =>
       _session.publishPreparedLiveCommand(token);
 }
+
+Future<LivePdfiumImportManifest> _emptyLivePdfiumImportManifest(
+  String _,
+) async => const LivePdfiumImportManifest.empty();

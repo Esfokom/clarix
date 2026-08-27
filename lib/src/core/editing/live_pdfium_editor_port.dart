@@ -2,6 +2,37 @@ import '../../features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
 import 'editor_bridge.dart';
 import 'editor_bridge_types.dart';
 
+/// An import-time, canonical association between one semantic object and one
+/// PDFium object path. Its producer must observe both identities directly;
+/// matching text, geometry, or traversal order after import is prohibited.
+final class LivePdfiumImportBinding {
+  const LivePdfiumImportBinding({
+    required this.objectId,
+    required this.sourceKey,
+    required this.sourceRevision,
+    required this.locator,
+  });
+
+  final String objectId;
+  final String sourceKey;
+  final String sourceRevision;
+  final EditorPhysicalLocator locator;
+}
+
+final class LivePdfiumImportManifest {
+  const LivePdfiumImportManifest({
+    required this.sourceFingerprint,
+    required this.bindings,
+  });
+
+  const LivePdfiumImportManifest.empty()
+    : sourceFingerprint = null,
+      bindings = const <LivePdfiumImportBinding>[];
+
+  final String? sourceFingerprint;
+  final List<LivePdfiumImportBinding> bindings;
+}
+
 final class LivePdfiumLocatorRegistry {
   final Map<String, ({EditorPhysicalLocator locator, String sourceRevision})>
   _entries =
@@ -16,6 +47,28 @@ final class LivePdfiumLocatorRegistry {
   }) {
     _entries[sourceKey] = (locator: locator, sourceRevision: sourceRevision);
     if (objectId != null) _sourceKeysByObjectId[objectId] = sourceKey;
+  }
+
+  void registerManifest(
+    LivePdfiumImportManifest manifest, {
+    required String sourceFingerprint,
+  }) {
+    if (manifest.sourceFingerprint != null &&
+        manifest.sourceFingerprint != sourceFingerprint) {
+      throw StateError('live_pdfium_manifest_source_mismatch');
+    }
+    for (final binding in manifest.bindings) {
+      if (binding.sourceRevision != sourceFingerprint ||
+          binding.locator.sourceFingerprint != sourceFingerprint) {
+        throw StateError('live_pdfium_manifest_binding_mismatch');
+      }
+      register(
+        objectId: binding.objectId,
+        sourceKey: binding.sourceKey,
+        sourceRevision: binding.sourceRevision,
+        locator: binding.locator,
+      );
+    }
   }
 
   bool hasObject(String objectId) =>
