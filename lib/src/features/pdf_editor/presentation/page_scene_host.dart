@@ -82,6 +82,7 @@ class PageSceneLifecycle extends ChangeNotifier {
         tile.image.dispose();
       }
       _liveTiles[entry.key] = decoded;
+      _disposePagePatches(entry.key);
     }
     notifyListeners();
   }
@@ -114,7 +115,8 @@ class PageSceneLifecycle extends ChangeNotifier {
     final targetDpi = (144 * surface.viewport.zoom).round().clamp(72, 576);
     final objects = <EditorSceneObject>[
       for (final page in visiblePages)
-        ...?controller.state.scenes[page]?.objects,
+        if (!_liveTiles.containsKey(page))
+          ...?controller.state.scenes[page]?.objects,
     ];
     for (final object in objects) {
       if (object.capability != 'editable' ||
@@ -170,6 +172,16 @@ class PageSceneLifecycle extends ChangeNotifier {
       if (!visibleObjects.contains(objectId)) {
         _cleanPatches.remove(objectId)?.image.dispose();
       }
+    }
+  }
+
+  void _disposePagePatches(int pageNumber) {
+    final objectIds = controller.state.scenes[pageNumber]?.objects
+        .map((object) => object.objectId)
+        .toSet();
+    if (objectIds == null) return;
+    for (final objectId in objectIds) {
+      _cleanPatches.remove(objectId)?.image.dispose();
     }
   }
 
