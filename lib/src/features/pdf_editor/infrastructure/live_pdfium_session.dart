@@ -17,10 +17,33 @@ abstract interface class LivePdfiumSessionOwner
   Future<void> close();
 }
 
+/// Supplies one page scan from the PDFium document that owns live edits.
+abstract interface class LivePdfiumPageImportSource {
+  Future<LivePdfiumPageInspection> inspectPageForImport({
+    required String sourceRevision,
+    required int pageNumber,
+  });
+}
+
+final class LivePdfiumPageInspection {
+  const LivePdfiumPageInspection({
+    required this.pageNumber,
+    required this.width,
+    required this.height,
+    required this.blocks,
+  });
+
+  final int pageNumber;
+  final double width;
+  final double height;
+  final List<PdfTextBlock> blocks;
+}
+
 /// Owns the live pdfrx/PDFium document used by editor tiles. Native PDFium
 /// handles remain confined to the pdfrx worker; callers receive copied RGBA
 /// bytes only.
-final class LivePdfiumSession implements LivePdfiumSessionOwner {
+final class LivePdfiumSession
+    implements LivePdfiumSessionOwner, LivePdfiumPageImportSource {
   LivePdfiumSession._(this._document) {
     _tiles = LivePdfiumTileRenderer(producer: _renderLiveTile);
   }
@@ -49,6 +72,25 @@ final class LivePdfiumSession implements LivePdfiumSessionOwner {
       document: _document,
       sourceRevision: sourceRevision,
       pageNumbers: pageNumbers,
+    );
+  }
+
+  @override
+  Future<LivePdfiumPageInspection> inspectPageForImport({
+    required String sourceRevision,
+    required int pageNumber,
+  }) async {
+    _ensureOpen();
+    final page = _document.pages[pageNumber - 1];
+    final blocks = await inspectTextBlocks(
+      sourceRevision: sourceRevision,
+      pageNumbers: <int>[pageNumber],
+    );
+    return LivePdfiumPageInspection(
+      pageNumber: pageNumber,
+      width: page.width,
+      height: page.height,
+      blocks: List<PdfTextBlock>.unmodifiable(blocks),
     );
   }
 

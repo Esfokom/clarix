@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:clarix/src/core/editing/editor_bridge.dart';
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/core/editing/live_pdfium_editor_port.dart';
+import 'package:clarix/src/core/ffi/editing_api.dart' as native;
+import 'package:clarix/src/features/pdf_editor/domain/pdf_text_types.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/editor_session_gateway.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_session.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
@@ -145,13 +147,34 @@ void main() {
     expect(native.legacySubmissions, 1);
     expect(liveSession.appliedPlans, isEmpty);
   });
+
+  test('hydrates a visible page from its live PDFium inspection', () async {
+    final liveSession = _ImportingLivePdfiumSession();
+    final nativePort = _NativePort();
+    final gateway = BridgeEditorSessionGateway.forTest(
+      openBridgeSession: (_, {String? projectRoot}) async =>
+          EditorBridgeSession.forTest(nativePort),
+      openLivePdfiumSession: (_) async => liveSession,
+    );
+    await gateway.open('fixture.pdf');
+
+    await gateway.requestPage(1, 0);
+
+    expect(nativePort.importedPages, hasLength(1));
+    final page = nativePort.importedPages.single;
+    expect(page.pageNumber, 1);
+    expect(page.width, 595);
+    expect(page.height, 842);
+    expect(page.objects.single.sourceKey, 'source/live-pdfium/page/1/object/0');
+    expect(page.objects.single.objectId, matches(RegExp(r'^[0-9a-f-]{36}$')));
+  });
 }
 
 const _commandId = '00000000-0000-4000-8000-000000000010';
 const _preparedToken = '00000000-0000-4000-8000-000000000011';
 const _objectId = '00000000-0000-4000-8000-000000000012';
 
-final class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
+class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
   final List<String> openedPaths = <String>[];
   final List<LivePdfiumEditPlan> appliedPlans = <LivePdfiumEditPlan>[];
   bool closed = false;
@@ -169,13 +192,33 @@ final class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
   Future<void> close() async => closed = true;
 }
 
-final class _NativePort implements NativeEditorPort, NativeLivePdfiumPort {
+final class _ImportingLivePdfiumSession extends _FakeLivePdfiumSession
+    implements LivePdfiumPageImportSource {
+  @override
+  Future<LivePdfiumPageInspection> inspectPageForImport({
+    required String sourceRevision,
+    required int pageNumber,
+  }) async => LivePdfiumPageInspection(
+    pageNumber: pageNumber,
+    width: 595,
+    height: 842,
+    blocks: <PdfTextBlock>[_importableBlock(sourceRevision)],
+  );
+}
+
+final class _NativePort
+    implements
+        NativeEditorPort,
+        NativeLivePdfiumPort,
+        NativeLivePageImportPort {
   final StreamController<EditorEvent> _events =
       StreamController<EditorEvent>.broadcast();
   bool prepared = false;
   bool published = false;
   bool closed = false;
   int legacySubmissions = 0;
+  final List<native.NativeLivePageImport> importedPages =
+      <native.NativeLivePageImport>[];
 
   @override
   Stream<EditorEvent> get events => _events.stream;
@@ -201,7 +244,20 @@ final class _NativePort implements NativeEditorPort, NativeLivePdfiumPort {
     required int pageNumber,
     required int expectedRevision,
     required EditorViewportPriority priority,
-  }) => throw UnimplementedError();
+  }) async => EditorPageScene(
+    schemaVersion: 1,
+    pageId: '00000000-0000-4000-8000-000000000003',
+    pageNumber: pageNumber,
+    width: 595,
+    height: 842,
+    revision: expectedRevision,
+    objects: const <EditorSceneObject>[],
+  );
+
+  @override
+  Future<void> importLivePage(native.NativeLivePageImport request) async {
+    importedPages.add(request);
+  }
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) async {
@@ -276,3 +332,40 @@ final class _NativePort implements NativeEditorPort, NativeLivePdfiumPort {
         objectPatches: const <EditorObjectPatch>[],
       );
 }
+
+PdfTextBlock _importableBlock(String sourceRevision) => PdfTextBlock(
+  locator: PdfTextBlockLocator(
+    pageNumber: 1,
+    objectPath: const <int>[0],
+    textDigest: 'text',
+    geometryDigest: 'geometry',
+    fontFingerprint: 'font',
+    sourceRevision: sourceRevision,
+  ),
+  text: 'Before',
+  originalText: 'Before',
+  runs: const <PdfTextRun>[
+    PdfTextRun(
+      range: PdfTextRange(0, 6),
+      style: PdfTextStyle(
+        fontFamily: 'Helvetica',
+        fontSize: 12,
+        fillColorValue: 0xff000000,
+        fontWeight: 400,
+        italic: false,
+        underline: false,
+        baselineShift: 0,
+        alignment: PdfTextAlignment.left,
+        characterSpacing: 0,
+        lineSpacing: 0,
+        horizontalScaling: 1,
+      ),
+    ),
+  ],
+  bounds: const PdfBox(10, 10, 50, 20),
+  transform: const PdfTransform(1, 0, 0, 1, 0, 0),
+  baseline: 10,
+  writingDirection: PdfWritingDirection.leftToRight,
+  capabilities: const <PdfTextCapability>[PdfTextCapability.replace],
+  readOnlyReason: null,
+);

@@ -113,18 +113,20 @@ class EditorBridge {
   Future<EditorBridgeSession> open(
     String sourcePath, {
     String? projectRoot,
+    bool livePdfiumImport = false,
   }) async {
     try {
       await ClarixRustRuntime.requireInitialized();
     } catch (error) {
       throw EditorNativeUnavailable(error);
     }
-    final handle = await native.NativeEditorSession.open(
-      request: native.NativeOpenEditorRequest(
-        sourcePath: sourcePath,
-        projectRoot: projectRoot,
-      ),
+    final request = native.NativeOpenEditorRequest(
+      sourcePath: sourcePath,
+      projectRoot: projectRoot,
     );
+    final handle = await (livePdfiumImport
+        ? native.NativeEditorSession.openLivePdfium(request: request)
+        : native.NativeEditorSession.open(request: request));
     return EditorBridgeSession._(FrbNativeEditorPort(handle));
   }
 }

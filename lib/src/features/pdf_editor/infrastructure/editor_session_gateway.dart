@@ -2,6 +2,7 @@ import '../../../core/editing/editor_bridge.dart';
 import '../../../core/editing/editor_bridge_types.dart';
 import '../../../core/editing/live_pdfium_editor_port.dart';
 import '../../../core/agent/agent_bridge.dart';
+import 'live_pdfium_import_manifest_builder.dart';
 import 'live_pdfium_session.dart';
 
 typedef OpenBridgeEditorSession =
@@ -104,8 +105,11 @@ class BridgeEditorSessionGateway
     String? projectRoot,
     LoadLivePdfiumImportManifest? loadLivePdfiumImportManifest,
   }) => BridgeEditorSessionGateway._(
-    (sourcePath, {projectRoot}) =>
-        bridge.open(sourcePath, projectRoot: projectRoot),
+    (sourcePath, {projectRoot}) => bridge.open(
+      sourcePath,
+      projectRoot: projectRoot,
+      livePdfiumImport: true,
+    ),
     LivePdfiumSession.open,
     loadLivePdfiumImportManifest ?? _emptyLivePdfiumImportManifest,
     projectRoot,
@@ -139,6 +143,8 @@ class BridgeEditorSessionGateway
   LivePdfiumSessionOwner? _livePdfiumSession;
   LivePdfiumLocatorRegistry? _livePdfiumLocatorRegistry;
   LivePdfiumEditorPort? _livePdfiumEditorPort;
+  final Set<int> _liveImportedPages = <int>{};
+  final Map<int, Future<void>> _livePageImports = <int, Future<void>>{};
 
   bool get hasLivePdfiumSession => _livePdfiumSession != null;
   bool get hasLivePdfiumLocatorRegistry => _livePdfiumLocatorRegistry != null;
@@ -216,11 +222,63 @@ class BridgeEditorSessionGateway
     int pageNumber,
     int expectedRevision, {
     EditorViewportPriority priority = EditorViewportPriority.visible,
-  }) => _required().pageScene(
-    pageNumber: pageNumber,
-    expectedRevision: expectedRevision,
-    priority: priority,
-  );
+  }) async {
+    await _hydrateLivePageIfAvailable(pageNumber, expectedRevision);
+    return _required().pageScene(
+      pageNumber: pageNumber,
+      expectedRevision: expectedRevision,
+      priority: priority,
+    );
+  }
+
+  Future<void> _hydrateLivePageIfAvailable(
+    int pageNumber,
+    int expectedRevision,
+  ) {
+    if (_liveImportedPages.contains(pageNumber)) return Future<void>.value();
+    final pending = _livePageImports[pageNumber];
+    if (pending != null) return pending;
+    final hydration = _hydrateLivePage(pageNumber, expectedRevision);
+    _livePageImports[pageNumber] = hydration;
+    return hydration.whenComplete(() {
+      if (identical(_livePageImports[pageNumber], hydration)) {
+        _livePageImports.remove(pageNumber);
+      }
+    });
+  }
+
+  Future<void> _hydrateLivePage(int pageNumber, int expectedRevision) async {
+    final liveSession = _livePdfiumSession;
+    if (liveSession is! LivePdfiumPageImportSource) return;
+    final semanticSession = _required();
+    final metadata = await semanticSession.metadata();
+    if (metadata.revision != expectedRevision) return;
+    final inspection = await (liveSession as LivePdfiumPageImportSource)
+        .inspectPageForImport(
+          sourceRevision: metadata.sourceFingerprint,
+          pageNumber: pageNumber,
+        );
+    final builder = const LivePdfiumImportManifestBuilder();
+    final manifest = builder.build(
+      sourceFingerprint: metadata.sourceFingerprint,
+      blocks: inspection.blocks,
+    );
+    await semanticSession.importLivePage(
+      builder.buildPageImport(
+        expectedRevision: expectedRevision,
+        sourceFingerprint: metadata.sourceFingerprint,
+        pageNumber: inspection.pageNumber,
+        width: inspection.width,
+        height: inspection.height,
+        blocks: inspection.blocks,
+      ),
+    );
+    _livePdfiumLocatorRegistry?.registerManifest(
+      manifest,
+      sourceFingerprint: metadata.sourceFingerprint,
+    );
+    _liveImportedPages.add(pageNumber);
+  }
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
@@ -345,6 +403,8 @@ class BridgeEditorSessionGateway
     _livePdfiumSession = null;
     _livePdfiumLocatorRegistry = null;
     _livePdfiumEditorPort = null;
+    _liveImportedPages.clear();
+    _livePageImports.clear();
     try {
       await session?.close();
     } finally {

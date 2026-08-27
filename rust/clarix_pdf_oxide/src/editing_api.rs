@@ -562,7 +562,7 @@ pub struct NativeEditorEvent {
 pub struct NativeEditorSession {
     pub(crate) actor: EditorSessionActor,
     page_service: PageSceneService,
-    background_indexing: PageIndexTask,
+    background_indexing: Option<PageIndexTask>,
     clean_patches: CleanPatchCache,
     _repository: Arc<SqliteProjectRepository>,
     source: SourceRef,
@@ -586,6 +586,20 @@ struct PendingFontFallback {
 
 impl NativeEditorSession {
     pub fn open(request: NativeOpenEditorRequest) -> Result<Self, String> {
+        Self::open_with_background_indexing(request, true)
+    }
+
+    /// Opens a semantic session whose visible pages will be hydrated from the
+    /// Dart-owned live PDFium document. The legacy span importer must stay
+    /// idle: it produces a different source-identity domain.
+    pub fn open_live_pdfium(request: NativeOpenEditorRequest) -> Result<Self, String> {
+        Self::open_with_background_indexing(request, false)
+    }
+
+    fn open_with_background_indexing(
+        request: NativeOpenEditorRequest,
+        start_background_indexing: bool,
+    ) -> Result<Self, String> {
         let source = SourceRef::from_path(request.source_path).map_err(adapter_error)?;
         let importer = PdfOxideImporter;
         let inspection = importer.inspect_document(&source).map_err(adapter_error)?;
@@ -633,7 +647,8 @@ impl NativeEditorSession {
         )
         .map_err(|error| format!("{}: {error}", error.code()))?
         .with_index_repository(repository.clone());
-        let background_indexing = page_service.start_background_indexing();
+        let background_indexing =
+            start_background_indexing.then(|| page_service.start_background_indexing());
         let agent_runtime =
             crate::agent_api::NativeAgentRuntime::new(actor.clone(), agent_repository);
         Ok(Self {
@@ -1330,9 +1345,11 @@ impl NativeEditorSession {
             .map_err(|_| "prepared_command_unavailable: lock poisoned".to_owned())?
             .clear();
         self.clean_patches.cancel();
-        self.background_indexing
-            .cancel_and_wait()
-            .map_err(|error| format!("{}: {error}", error.code()))?;
+        if let Some(background_indexing) = &self.background_indexing {
+            background_indexing
+                .cancel_and_wait()
+                .map_err(|error| format!("{}: {error}", error.code()))?;
+        }
         self.actor.close().map_err(editing_error)
     }
 }

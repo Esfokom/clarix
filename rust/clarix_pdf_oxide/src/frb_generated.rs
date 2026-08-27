@@ -40,7 +40,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1351542148;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1352585320;
 
 // Section: executor
 
@@ -939,6 +939,41 @@ fn wire__crate__editing_api__NativeEditorSession_open_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::editing_api::NativeEditorSession::open(api_request)?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__editing_api__NativeEditorSession_open_live_pdfium_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "NativeEditorSession_open_live_pdfium",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_request =
+                <crate::editing_api::NativeOpenEditorRequest>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok =
+                        crate::editing_api::NativeEditorSession::open_live_pdfium(api_request)?;
                     Ok(output_ok)
                 })())
             }
@@ -4569,115 +4604,121 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        18 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
+        18 => wire__crate__editing_api__NativeEditorSession_open_live_pdfium_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        19 => wire__crate__editing_api__NativeEditorSession_prepare_live_command_impl(
+        19 => wire__crate__editing_api__NativeEditorSession_page_scene_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        20 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
+        20 => wire__crate__editing_api__NativeEditorSession_prepare_live_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        21 => wire__crate__editing_api__NativeEditorSession_publish_prepared_live_command_impl(
+        21 => wire__crate__editing_api__NativeEditorSession_propose_font_fallback_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        22 => wire__crate__editing_api__NativeEditorSession_read_agent_audit_impl(
+        22 => wire__crate__editing_api__NativeEditorSession_publish_prepared_live_command_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        23 => wire__crate__editing_api__NativeEditorSession_rebase_agent_proposal_impl(
+        23 => wire__crate__editing_api__NativeEditorSession_read_agent_audit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        24 => wire__crate__editing_api__NativeEditorSession_reject_agent_proposal_impl(
+        24 => wire__crate__editing_api__NativeEditorSession_rebase_agent_proposal_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        25 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
+        25 => wire__crate__editing_api__NativeEditorSession_reject_agent_proposal_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        26 => wire__crate__editing_api__NativeEditorSession_report_memory_pressure_impl(
+        26 => wire__crate__editing_api__NativeEditorSession_release_clean_patch_memory_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        27 => wire__crate__editing_api__NativeEditorSession_save_impl(
+        27 => wire__crate__editing_api__NativeEditorSession_report_memory_pressure_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        28 => wire__crate__editing_api__NativeEditorSession_search_impl(
+        28 => wire__crate__editing_api__NativeEditorSession_save_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        29 => wire__crate__editing_api__NativeEditorSession_selection_context_impl(
+        29 => wire__crate__editing_api__NativeEditorSession_search_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        30 => wire__crate__editing_api__NativeEditorSession_start_agent_run_impl(
+        30 => wire__crate__editing_api__NativeEditorSession_selection_context_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        31 => wire__crate__editing_api__NativeEditorSession_submit_impl(
+        31 => wire__crate__editing_api__NativeEditorSession_start_agent_run_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        32 => wire__crate__editing_api__NativeEditorSession_update_annotation_impl(
+        32 => wire__crate__editing_api__NativeEditorSession_submit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        33 => wire__crate__editing_api__NativeEditorSession_validate_selection_impl(
+        33 => wire__crate__editing_api__NativeEditorSession_update_annotation_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        34 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
-        35 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        45 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
+        34 => wire__crate__editing_api__NativeEditorSession_validate_selection_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        35 => wire__crate__api__NativePdfSession_index_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__NativePdfSession_metadata_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__NativePdfSession_open_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__NativePdfSession_page_text_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__NativePdfSession_search_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__compose_pdfs_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__local_rag_index_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
+        44 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }

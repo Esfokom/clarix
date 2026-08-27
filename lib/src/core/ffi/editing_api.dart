@@ -7,7 +7,7 @@ import 'agent_api.dart';
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_physical_edit_operation`, `native_physical_edit_plan`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
+// These functions are ignored because they are not marked as `pub`: `adapter_error`, `affine_transform`, `editing_error`, `editor_command`, `native_annotation_from_core`, `native_annotation_request`, `native_annotation`, `native_box`, `native_command_result`, `native_event`, `native_object_patch`, `native_physical_edit_operation`, `native_physical_edit_plan`, `native_scene_object`, `native_search_mode`, `native_selection_kind_to_native`, `native_selection_kind`, `native_selection_range_from_core`, `native_selection_range`, `native_text_run`, `native_transform`, `open_with_background_indexing`, `parse_object_id`, `pdf_box`, `persist_fallback_asset`, `replace_utf16`, `required`, `submit_annotation_command`, `text_style`, `viewport_priority`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `NativeDirtyTile`, `NativeTileInvalidation`, `PendingFontFallback`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
@@ -67,6 +67,15 @@ abstract class NativeEditorSession implements RustOpaqueInterface {
   static Future<NativeEditorSession> open({
     required NativeOpenEditorRequest request,
   }) => RustLib.instance.api.crateEditingApiNativeEditorSessionOpen(
+    request: request,
+  );
+
+  /// Opens a semantic session whose visible pages will be hydrated from the
+  /// Dart-owned live PDFium document. The legacy span importer must stay
+  /// idle: it produces a different source-identity domain.
+  static Future<NativeEditorSession> openLivePdfium({
+    required NativeOpenEditorRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionOpenLivePdfium(
     request: request,
   );
 
