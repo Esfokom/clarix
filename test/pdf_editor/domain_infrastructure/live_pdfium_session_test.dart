@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_session.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_tile_renderer.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/pdf_text_fixture.dart';
@@ -93,6 +94,60 @@ void main() {
       expect(await session.commit(), isEmpty);
     },
   );
+
+  test('applies a same-page text plan in one live revision', () async {
+    final file = await PdfTextFixture.singleBlock('Original');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+    const locator = EditorPhysicalLocator(
+      pageNumber: 1,
+      objectPath: <int>[0],
+      objectType: 'text',
+      sourceFingerprint: 'fixture',
+      objectRevision: 0,
+    );
+
+    final result = await session.apply(
+      LivePdfiumEditPlan(
+        replacements: const <LivePdfiumTextReplacement>[
+          LivePdfiumTextReplacement(locator: locator, replacement: 'First'),
+          LivePdfiumTextReplacement(locator: locator, replacement: 'Final'),
+        ],
+      ),
+    );
+
+    expect(result.revision, 1);
+    expect(result.invalidations, hasLength(2));
+    expect(result.invalidations.every((item) => item.pageNumber == 1), isTrue);
+  });
+
+  test('rejects a physical edit plan that spans pages', () {
+    const pageOne = EditorPhysicalLocator(
+      pageNumber: 1,
+      objectPath: <int>[0],
+      objectType: 'text',
+      sourceFingerprint: 'fixture',
+      objectRevision: 0,
+    );
+    const pageTwo = EditorPhysicalLocator(
+      pageNumber: 2,
+      objectPath: <int>[0],
+      objectType: 'text',
+      sourceFingerprint: 'fixture',
+      objectRevision: 0,
+    );
+
+    expect(
+      () => LivePdfiumEditPlan(
+        replacements: const <LivePdfiumTextReplacement>[
+          LivePdfiumTextReplacement(locator: pageOne, replacement: 'One'),
+          LivePdfiumTextReplacement(locator: pageTwo, replacement: 'Two'),
+        ],
+      ),
+      throwsArgumentError,
+    );
+  });
 
   test('saves committed text through the live PDFium document', () async {
     final file = await PdfTextFixture.singleBlock('Original');
