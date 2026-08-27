@@ -33,5 +33,13 @@ void main() {
       ),
       throwsA(isA<StateError>()),
     );
+    registry.clear();
+    expect(
+      () => registry.resolve(
+        sourceKey: 'page/1/text/3',
+        sourceRevision: 'revision-a',
+      ),
+      throwsA(isA<StateError>()),
+    );
   });
 }

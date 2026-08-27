@@ -15,6 +15,8 @@ final class LivePdfiumLocatorRegistry {
   }) =>
       _entries[sourceKey] = (locator: locator, sourceRevision: sourceRevision);
 
+  void clear() => _entries.clear();
+
   EditorPhysicalLocator resolve({
     required String sourceKey,
     required String sourceRevision,
