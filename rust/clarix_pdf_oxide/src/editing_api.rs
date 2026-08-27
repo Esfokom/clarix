@@ -9,11 +9,11 @@ use clarix_editing_core::{
     AffineTransform, AnnotationAnchor, AnnotationKind, AnnotationNode, AnnotationTextRange,
     CommandEnvelope, CommandId, CommandResult, CompatibilityReporter, DocumentId, DocumentModel,
     DocumentObject, DocumentRevision, EditingError, EditorCommand, EditorEvent, EditorSessionActor,
-    FontFallbackApproval, FontRef, FontSource, MemoryPressureLevel, ObjectId, ObjectPatch,
+    FontFallbackApproval, FontRef, FontSource, MemoryPressureLevel, ObjectId, ObjectPatch, PageId,
     PageIndexTask, PageSceneRequest, PageSceneService, PdfBox, PhysicalEditOperation,
     PhysicalEditPlan, PreparedCommand, RecoveryRequest, SaveAssociation, SaveCoordinator, SaveMode,
-    SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet, SessionId,
-    SourceReference, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
+    SaveRequest, SearchMode, SearchRequest, SelectionKind, SelectionSet, SessionId, SourceBinding,
+    SourceReference, TextBlock, TextRangeRef, TextRun, TextStyle, Utf16Range, ViewportPriority,
 };
 use clarix_editing_store::{
     ProjectLocation, ProjectSeed, SqliteAgentRunRepository, SqliteProjectRepository,
@@ -50,6 +50,29 @@ pub struct NativePageSceneRequest {
     pub page_number: u32,
     pub expected_revision: u64,
     pub priority: NativeViewportPriority,
+}
+
+/// A page inspected by the Dart-owned live PDFium document. Its source keys
+/// are canonical path identities, not matches derived from visual content.
+#[derive(Debug, Clone)]
+pub struct NativeLivePageImport {
+    pub expected_revision: u64,
+    pub page_number: u32,
+    pub width: f64,
+    pub height: f64,
+    pub objects: Vec<NativeLiveTextObject>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NativeLiveTextObject {
+    pub object_id: String,
+    pub source_key: String,
+    pub source_revision: String,
+    pub text: String,
+    pub bounds: NativePdfBox,
+    pub style: NativeTextStyle,
+    pub baseline: f64,
+    pub editable: bool,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -640,6 +663,51 @@ impl NativeEditorSession {
             revision: snapshot.revision.value(),
             page_count: self.page_count,
         })
+    }
+
+    pub fn import_live_page(&self, request: NativeLivePageImport) -> Result<(), String> {
+        let revision = DocumentRevision::from_value(request.expected_revision);
+        let page_id = PageId::from_source_key(&format!(
+            "{}/live-pdfium/page/{}",
+            self.source.fingerprint(),
+            request.page_number
+        ));
+        let mut objects = Vec::with_capacity(request.objects.len());
+        for imported in request.objects {
+            if imported.source_revision != self.source.fingerprint() {
+                return Err("live_pdfium_import_source_mismatch".into());
+            }
+            let object_id = parse_object_id(&imported.object_id)?;
+            let mut block =
+                TextBlock::plain(object_id, page_id, imported.text, pdf_box(imported.bounds)?)
+                    .with_source_binding(SourceBinding {
+                        adapter_id: "live-pdfium".into(),
+                        source_revision: imported.source_revision,
+                        source_key: imported.source_key,
+                        confidence: 1.0,
+                    })
+                    .with_capability(
+                        if imported.editable {
+                            clarix_editing_core::EditCapability::Editable
+                        } else {
+                            clarix_editing_core::EditCapability::ReadOnly
+                        },
+                        None,
+                    );
+            block.runs[0].style = text_style(imported.style)?;
+            block.layout.baseline = imported.baseline;
+            objects.push(DocumentObject::text(block));
+        }
+        let page = clarix_editing_core::PageNode::new(
+            page_id,
+            request.page_number,
+            request.width,
+            request.height,
+            objects,
+        );
+        self.actor
+            .hydrate_page(page, revision)
+            .map_err(editing_error)
     }
 
     pub fn page_scene(&self, request: NativePageSceneRequest) -> Result<NativePageScene, String> {
