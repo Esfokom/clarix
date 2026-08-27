@@ -97,8 +97,9 @@ Continue the plan in this order:
 
 1. Migrate Save/Save As to encode the live PDFium owner through the existing
    atomic recovery flow.
-2. Apply physical inverse/forward plans for undo/redo before semantic
-   publication.
+2. Verify the new live Save/Save As route end to end, including recovery and
+   reopen. Whole-text undo/redo now use the same prepare -> apply -> publish
+   transaction as editing; preserve that ordering as history coverage grows.
 3. Extend the physical plan vocabulary beyond whole text replacement:
    formatting, transforms, partial runs, reflow, font fallback, Form XObjects,
    images, and vectors.
