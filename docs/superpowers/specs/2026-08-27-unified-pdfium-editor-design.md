@@ -43,8 +43,10 @@ The native editing port gains a document-owner implementation exposing:
   the live PDFium document.
 * `apply(command, baseRevision)` — validates with Rust, resolves its locator,
   mutates PDFium, and returns an atomic revision acknowledgement.
-* `commit(revision)` — calls `FPDFPage_GenerateContent` once per dirty page.
-* `save(request)` — commits dirty pages and writes through PDFium save APIs.
+* `commit(revision)` — completes any open same-page transaction and calls
+  `FPDFPage_GenerateContent` before its `FPDF_PAGE` handle is released.
+* `save(request)` — writes the already-regenerated live PDFium document
+  through PDFium save APIs.
 * `undo` and `redo` — replay inverse or forward commands against the live
   document, then invalidate affected tiles.
 
@@ -65,8 +67,12 @@ used as an AI-facing identifier.
    returns updated scene objects plus invalidated tile regions.
 5. Flutter replaces only those regions with `renderTile` output. It does not
    paint replacement PDF text as the durable visual representation.
-6. Commit or save regenerates affected page content. Saving persists PDFium's
-   document state; reopening must preserve searchable/selectable edited text.
+6. The currently bundled PDFium runtime requires content regeneration before
+   the loaded `FPDF_PAGE` handle is closed; a later fresh page handle cannot
+   reliably persist `FPDFText_SetText` changes. Same-page transactions may
+   debounce this work, but single-object edits regenerate immediately. Saving
+   then persists PDFium's document state; reopening must preserve the edited
+   visual content.
 
 ## Rendering Migration
 
