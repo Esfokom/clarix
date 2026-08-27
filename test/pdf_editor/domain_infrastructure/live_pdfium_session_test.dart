@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_session.dart';
+import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_import_manifest_builder.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/live_pdfium_tile_renderer.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +47,28 @@ void main() {
     expect(blocks.single.text, 'Live import text');
     expect(blocks.single.locator.sourceRevision, 'source-revision');
     expect(blocks.single.locator.objectPath, isNotEmpty);
+  });
+
+  test('builds a path-based manifest from a live PDFium inspection', () async {
+    final file = await PdfTextFixture.singleBlock('Live import text');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+    final blocks = await session.inspectTextBlocks(
+      sourceRevision: 'ignored-by-live-manifest',
+      pageNumbers: const <int>[1],
+    );
+
+    final manifest = const LivePdfiumImportManifestBuilder().build(
+      sourceFingerprint: 'source',
+      blocks: blocks,
+    );
+
+    expect(manifest.bindings, hasLength(1));
+    final binding = manifest.bindings.single;
+    expect(binding.sourceKey, 'source/live-pdfium/page/1/object/0');
+    expect(binding.locator.objectPath, <int>[0]);
+    expect(binding.objectId, matches(RegExp(r'^[0-9a-f-]{36}$')));
   });
 
   test(
