@@ -17,11 +17,17 @@ abstract final class EditorPageGeometry {
   }) {
     final sx = displaySize.width / pageSize.width;
     final sy = displaySize.height / pageSize.height;
+    final rawLeft = (bounds.left - bleedPoints) * sx;
+    final rawTop = (pageSize.height - bounds.top - bleedPoints) * sy;
+    final rawRight = (bounds.right + bleedPoints) * sx;
+    final rawBottom = (pageSize.height - bounds.bottom + bleedPoints) * sy;
+    // Normalize: ensure left <= right and top <= bottom regardless of
+    // whether the backend provides bottom-left or top-left coordinates.
     return Rect.fromLTRB(
-      (bounds.left - bleedPoints) * sx,
-      (pageSize.height - bounds.top - bleedPoints) * sy,
-      (bounds.right + bleedPoints) * sx,
-      (pageSize.height - bounds.bottom + bleedPoints) * sy,
+      rawLeft < rawRight ? rawLeft : rawRight,
+      rawTop < rawBottom ? rawTop : rawBottom,
+      rawLeft < rawRight ? rawRight : rawLeft,
+      rawTop < rawBottom ? rawBottom : rawTop,
     );
   }
 
@@ -111,27 +117,37 @@ class EditorTextPainter extends CustomPainter {
 
     canvas.save();
     canvas.clipRect(bounds);
-    final transform = object.transform;
-    final matrix = Float64List.fromList(<double>[
-      transform.a,
-      transform.b,
-      0,
-      0,
-      transform.c,
-      transform.d,
-      0,
-      0,
-      0,
-      0,
-      1,
-      0,
-      transform.e,
-      -transform.f,
-      0,
-      1,
-    ]);
+    // Position at the top-left of the object's display bounds. The
+    // transform matrix carries only rotation/scale components; the
+    // translation (e, f) is already represented by `bounds.topLeft`.
     canvas.translate(bounds.left, bounds.top);
-    canvas.transform(matrix);
+    final transform = object.transform;
+    final hasNonIdentityTransform =
+        transform.a != 1 ||
+        transform.b != 0 ||
+        transform.c != 0 ||
+        transform.d != 1;
+    if (hasNonIdentityTransform) {
+      final matrix = Float64List.fromList(<double>[
+        transform.a,
+        transform.b,
+        0,
+        0,
+        transform.c,
+        transform.d,
+        0,
+        0,
+        0,
+        0,
+        1,
+        0,
+        0, // e zeroed — translate already positions us
+        0, // f zeroed — translate already positions us
+        0,
+        1,
+      ]);
+      canvas.transform(matrix);
+    }
     painter.paint(canvas, Offset.zero);
     canvas.restore();
   }

@@ -94,7 +94,19 @@ class PageEditScene extends StatelessWidget {
           !edited.any((object) => object.objectId == activeObject.objectId))
         activeObject,
     ];
-    final usesLivePdfiumTiles = liveTiles.isNotEmpty;
+    // Only use live tiles when they provide full-page coverage (every
+    // editable object on this page has a corresponding tile). Partial
+    // invalidation patches must not suppress the base PDF + clean-patch
+    // path, otherwise the rest of the page goes blank.
+    final editableObjectIds = interactive
+        .map((object) => object.objectId)
+        .toSet();
+    final liveTileCoveredPages = <int>{
+      for (final tile in liveTiles) tile.pageNumber,
+    };
+    final usesLivePdfiumTiles = liveTiles.isNotEmpty &&
+        liveTileCoveredPages.contains(scene.pageNumber) &&
+        liveTiles.length >= editableObjectIds.length;
     final fallbackProposal = document.fontFallbackProposal;
     final showFallbackProposal =
         activeSession != null &&
@@ -139,7 +151,12 @@ class PageEditScene extends StatelessWidget {
                     displaySize: displaySize,
                     observer: observer,
                   )
-                else
+                else if (_isEdited(object.objectId))
+                  // Only mask objects that have been actively edited, so
+                  // the base PDF remains visible for untouched content.
+                  // Use a nearly-transparent tint instead of opaque white
+                  // so the page content is still readable while the clean
+                  // patch loads.
                   Positioned.fromRect(
                     rect: EditorPageGeometry.rectForBox(
                       object.bounds,
@@ -147,7 +164,7 @@ class PageEditScene extends StatelessWidget {
                       displaySize: displaySize,
                       bleedPoints: 1.0,
                     ),
-                    child: const ColoredBox(color: Color(0xFFFFFFFF)),
+                    child: const ColoredBox(color: Color(0x0A000000)),
                   ),
             for (final object in overlayObjects)
               if (!usesLivePdfiumTiles)
@@ -206,30 +223,33 @@ class PageEditScene extends StatelessWidget {
                       pageSize: pageSize,
                       displaySize: displaySize,
                     ),
-                    child: PdfOverlayInteractionRegion(
-                      onTap: (details) {
-                        final objectRect = EditorPageGeometry.rectForBox(
-                          object.bounds,
-                          pageSize: pageSize,
-                          displaySize: displaySize,
-                        );
-                        final hit = hitTestIndex.hitTest(
-                          details.localPosition + objectRect.topLeft,
-                        );
-                        if (hit == null) return false;
-                        activeSession.updateSelection(
-                          EditorSelection(
-                            objectId: hit.objectId,
-                            range: EditorTextRange(
-                              start: hit.utf16Offset,
-                              end: hit.utf16Offset,
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.text,
+                      child: PdfOverlayInteractionRegion(
+                        onTap: (details) {
+                          final objectRect = EditorPageGeometry.rectForBox(
+                            object.bounds,
+                            pageSize: pageSize,
+                            displaySize: displaySize,
+                          );
+                          final hit = hitTestIndex.hitTest(
+                            details.localPosition + objectRect.topLeft,
+                          );
+                          if (hit == null) return false;
+                          activeSession.updateSelection(
+                            EditorSelection(
+                              objectId: hit.objectId,
+                              range: EditorTextRange(
+                                start: hit.utf16Offset,
+                                end: hit.utf16Offset,
+                              ),
+                              affinity: hit.affinity,
                             ),
-                            affinity: hit.affinity,
-                          ),
-                        );
-                        return true;
-                      },
-                      child: const SizedBox.expand(),
+                          );
+                          return true;
+                        },
+                        child: const SizedBox.expand(),
+                      ),
                     ),
                   ),
             if (activeObject != null &&

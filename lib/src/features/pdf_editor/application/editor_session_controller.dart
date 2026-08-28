@@ -565,9 +565,20 @@ class EditorSessionController {
           if (!_disposed &&
               epoch == _fontFallbackEpoch &&
               _state.revision == edit.baseRevision) {
-            _emit(
-              _state.copyWith(fontFallbackProposal: proposal, clearError: true),
-            );
+            if (proposal.embeddingAllowed) {
+              // Silently approve the nearest available font rather than
+              // interrupting the user with a dialog.
+              unawaited(approveFontFallback(proposal.token));
+            } else {
+              // Embedding not permitted — surface the proposal so the
+              // user can decide.
+              _emit(
+                _state.copyWith(
+                  fontFallbackProposal: proposal,
+                  clearError: true,
+                ),
+              );
+            }
           }
         } catch (proposalError) {
           if (!_disposed && epoch == _fontFallbackEpoch) {

@@ -105,7 +105,17 @@ class _NativeTextEditorState extends State<NativeTextEditor> {
         onUndo: widget.onUndo,
         onRedo: widget.onRedo,
         child: Container(
-          color: Colors.white,
+          decoration: BoxDecoration(
+            // Keep the background mostly transparent so the underlying PDF
+            // page content remains visible. A faint tint and thin border
+            // mark the active editing region.
+            color: const Color(0x0AFFFFFF),
+            border: Border.all(
+              color: const Color(0xFF2F80ED),
+              width: 1.5,
+            ),
+            borderRadius: BorderRadius.circular(2),
+          ),
           child: DefaultSelectionStyle(
             selectionColor: const Color(0x553b82f6),
             cursorColor: const Color(0xff2f80ed),

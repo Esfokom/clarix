@@ -28,6 +28,9 @@ class EditorSessionRegistry {
   final StreamController<String> _changes = StreamController<String>.broadcast(
     sync: true,
   );
+  // Track close requests so that pending opens can detect when their tab
+  // was closed while they were loading.
+  final Map<String, int> _closeGenerations = <String, int>{};
 
   Iterable<String> get tabIds => _sessions.keys;
 
@@ -73,6 +76,7 @@ class EditorSessionRegistry {
     required String tabId,
     required String sourcePath,
   }) async {
+    final generation = _closeGenerations[tabId] ?? 0;
     final gateway = _gateways();
     final controller = EditorSessionController(
       gateway: gateway,
@@ -80,6 +84,11 @@ class EditorSessionRegistry {
     );
     try {
       await controller.open(sourcePath);
+      // If close() was called while we were awaiting, discard this session.
+      if ((_closeGenerations[tabId] ?? 0) != generation) {
+        await controller.close();
+        throw StateError('editor session was closed during open');
+      }
       _sessions[tabId] = controller;
       if (gateway is EditorAgentGateway) {
         _agentBridges[tabId] = (gateway as EditorAgentGateway)
@@ -98,6 +107,11 @@ class EditorSessionRegistry {
   }
 
   Future<void> close(String tabId) async {
+    // Increment the generation so any pending open for this tab
+    // discards its result when it completes.
+    _closeGenerations[tabId] = (_closeGenerations[tabId] ?? 0) + 1;
+    // Also clear the pending future so the next open() starts fresh.
+    _opening.remove(tabId);
     final controller = _sessions[tabId];
     if (controller == null) return;
     await _agentBridges.remove(tabId)?.close();
@@ -122,3 +136,4 @@ class EditorSessionRegistry {
     await _changes.close();
   }
 }
+

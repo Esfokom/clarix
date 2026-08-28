@@ -80,12 +80,38 @@ class PageSceneLifecycle extends ChangeNotifier {
         }
         continue;
       }
-      for (final tile
-          in _liveTiles.remove(entry.key) ?? const <LivePdfiumTileAsset>[]) {
-        tile.image.dispose();
+      // Merge new tiles into the existing set instead of replacing all
+      // tiles for the page. Only dispose existing tiles whose bounds
+      // intersect with the incoming patch — retain the rest so partial
+      // invalidations don't wipe out the surrounding document.
+      final existing =
+          _liveTiles[entry.key] ?? const <LivePdfiumTileAsset>[];
+      final retained = <LivePdfiumTileAsset>[];
+      for (final old in existing) {
+        final overlaps = decoded.any(
+          (fresh) => _boundsOverlap(old.bounds, fresh.bounds),
+        );
+        if (overlaps) {
+          old.image.dispose();
+        } else {
+          retained.add(old);
+        }
       }
-      _liveTiles[entry.key] = decoded;
+      _liveTiles[entry.key] = <LivePdfiumTileAsset>[...retained, ...decoded];
       _disposePagePatches(entry.key);
+    }
+    // Enforce a per-page tile limit to avoid unbounded memory growth.
+    // When a page exceeds the cap, drop the oldest tiles first.
+    const maxTilesPerPage = 32;
+    for (final pageNumber in _liveTiles.keys.toList(growable: false)) {
+      final pageTiles = _liveTiles[pageNumber]!;
+      if (pageTiles.length > maxTilesPerPage) {
+        final excess = pageTiles.length - maxTilesPerPage;
+        for (var i = 0; i < excess; i++) {
+          pageTiles[i].image.dispose();
+        }
+        _liveTiles[pageNumber] = pageTiles.sublist(excess);
+      }
     }
     notifyListeners();
   }
@@ -254,6 +280,19 @@ class PageSceneLifecycle extends ChangeNotifier {
     _liveTiles.clear();
     await controller.releaseCleanPatchMemory();
     notifyListeners();
+  }
+
+  static bool _boundsOverlap(EditorPdfBox a, EditorPdfBox b) {
+    // PDF coordinates: left < right, bottom < top.
+    // Two boxes overlap when neither is fully to the left/right/above/below
+    // the other.
+    if (a.right <= b.left || b.right <= a.left) return false;
+    final aBottom = a.bottom < a.top ? a.bottom : a.top;
+    final aTop = a.bottom < a.top ? a.top : a.bottom;
+    final bBottom = b.bottom < b.top ? b.bottom : b.top;
+    final bTop = b.bottom < b.top ? b.top : b.bottom;
+    if (aTop <= bBottom || bTop <= aBottom) return false;
+    return true;
   }
 
   @override
