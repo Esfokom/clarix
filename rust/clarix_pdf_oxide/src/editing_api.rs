@@ -647,6 +647,14 @@ impl NativeEditorSession {
             .map(std::path::PathBuf::from)
             .or_else(|| std::env::var_os("LOCALAPPDATA").map(std::path::PathBuf::from))
             .ok_or_else(|| "project_location_unavailable: LOCALAPPDATA is not set".to_owned())?;
+        // Live PDFium uses path-derived object identities. Older sessions used
+        // a span-derived projection in the unversioned project directory;
+        // isolate the live projection without deleting that recoverable state.
+        let project_root = if start_background_indexing {
+            project_root
+        } else {
+            project_root.join("live-pdfium-v1")
+        };
         let project_location = ProjectLocation::under(&project_root, document_id);
         let fallback_assets = project_location.assets.clone();
         let repository = Arc::new(
