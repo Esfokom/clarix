@@ -24,7 +24,13 @@ class EditorObjectHitGeometry {
   factory EditorObjectHitGeometry.fromObject(EditorSceneObject object) {
     final direction = object.layout?.direction;
     final anchors = <EditorGlyphAnchor>[];
-    for (final character in object.characterBoxes) {
+    // Live imports arrive without per-character boxes (the Rust core only
+    // computes them after reflow). Synthesize proportional boxes from the
+    // object bounds so tap-to-caret still resolves to a real offset.
+    final characters = object.characterBoxes.isEmpty
+        ? _synthesizeCharacterBoxes(object)
+        : object.characterBoxes;
+    for (final character in characters) {
       final bounds = character.bounds;
       switch (direction) {
         case 'righttoleft':
@@ -176,3 +182,32 @@ Offset _transform(Offset point, EditorAffineTransform transform) => Offset(
   transform.a * point.dx + transform.c * point.dy + transform.e,
   transform.b * point.dx + transform.d * point.dy + transform.f,
 );
+
+/// Proportional per-character boxes over [EditorSceneObject.bounds] for
+/// objects without measured character geometry. Mirrors the fallback used by
+/// the native projection pipeline; newline characters consume no width.
+List<EditorTextCharacterBox> _synthesizeCharacterBoxes(
+  EditorSceneObject object,
+) {
+  final text = object.text ?? '';
+  final visibleOffsets = <int>[
+    for (var offset = 0; offset < text.length; offset++)
+      if (text[offset] != '\r' && text[offset] != '\n') offset,
+  ];
+  if (visibleOffsets.isEmpty) return const <EditorTextCharacterBox>[];
+  final width =
+      (object.bounds.right - object.bounds.left) / visibleOffsets.length;
+  return List<EditorTextCharacterBox>.unmodifiable(<EditorTextCharacterBox>[
+    for (var index = 0; index < visibleOffsets.length; index++)
+      EditorTextCharacterBox(
+        start: visibleOffsets[index],
+        end: visibleOffsets[index] + 1,
+        bounds: EditorPdfBox(
+          left: object.bounds.left + width * index,
+          bottom: object.bounds.bottom,
+          right: object.bounds.left + width * (index + 1),
+          top: object.bounds.top,
+        ),
+      ),
+  ]);
+}
