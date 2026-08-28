@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/editing/editor_bridge_types.dart';
 import '../domain/editor_document_state.dart';
 import '../infrastructure/editor_session_gateway.dart';
@@ -31,54 +33,62 @@ class EditorViewportController {
     }
     final generation = (_requestGenerations[pageNumber] ?? 0) + 1;
     _requestGenerations[pageNumber] = generation;
-    final scene = await gateway.requestPage(
-      pageNumber,
-      current.revision,
-      priority: priority,
-    );
-    final latest = state();
-    if (isDisposed() ||
-        _requestGenerations[pageNumber] != generation ||
-        scene.revision != latest.revision) {
-      return;
-    }
-    final scenes = Map<int, EditorPageScene>.of(latest.scenes)
-      ..remove(pageNumber)
-      ..[pageNumber] = scene;
-    final objects = Map<String, EditorObjectState>.of(latest.objects);
-    final protectedObjects = <String>{
-      if (latest.selection case final selection?) selection.objectId,
-      if (latest.optimisticEdit case final edit?) edit.objectId,
-      if (latest.queuedEdit case final edit?) edit.objectId,
-    };
-    while (scenes.length > maxResidentScenes) {
-      final candidates = scenes.keys.where(
-        (candidate) =>
-            candidate != pageNumber &&
-            !scenes[candidate]!.objects.any(
-              (object) => protectedObjects.contains(object.objectId),
-            ),
+    try {
+      final scene = await gateway.requestPage(
+        pageNumber,
+        current.revision,
+        priority: priority,
       );
-      if (candidates.isEmpty) break;
-      final coldPage = candidates.first;
-      final coldScene = scenes.remove(coldPage)!;
-      _requestGenerations.remove(coldPage);
-      for (final object in coldScene.objects) {
-        if (!protectedObjects.contains(object.objectId)) {
-          objects.remove(object.objectId);
+      final latest = state();
+      if (isDisposed() ||
+          _requestGenerations[pageNumber] != generation ||
+          scene.revision != latest.revision) {
+        return;
+      }
+      final scenes = Map<int, EditorPageScene>.of(latest.scenes)
+        ..remove(pageNumber)
+        ..[pageNumber] = scene;
+      final objects = Map<String, EditorObjectState>.of(latest.objects);
+      final protectedObjects = <String>{
+        if (latest.selection case final selection?) selection.objectId,
+        if (latest.optimisticEdit case final edit?) edit.objectId,
+        if (latest.queuedEdit case final edit?) edit.objectId,
+      };
+      while (scenes.length > maxResidentScenes) {
+        final candidates = scenes.keys.where(
+          (candidate) =>
+              candidate != pageNumber &&
+              !scenes[candidate]!.objects.any(
+                (object) => protectedObjects.contains(object.objectId),
+              ),
+        );
+        if (candidates.isEmpty) break;
+        final coldPage = candidates.first;
+        final coldScene = scenes.remove(coldPage)!;
+        _requestGenerations.remove(coldPage);
+        for (final object in coldScene.objects) {
+          if (!protectedObjects.contains(object.objectId)) {
+            objects.remove(object.objectId);
+          }
         }
       }
+      for (final object in scene.objects) {
+        if (object.text == null) continue;
+        objects[object.objectId] = EditorObjectState(
+          objectId: object.objectId,
+          pageId: object.pageId,
+          acceptedText: object.text!,
+          modifiedRevision: object.modifiedRevision,
+        );
+      }
+      emit(latest.copyWith(scenes: scenes, objects: objects));
+    } catch (error) {
+      debugPrint('[editor] page $pageNumber scene refresh failed: $error');
+      if (priority == EditorViewportPriority.visible &&
+          state().errorCode != 'page_scene_failed') {
+        emit(state().copyWith(errorCode: 'page_scene_failed'));
+      }
     }
-    for (final object in scene.objects) {
-      if (object.text == null) continue;
-      objects[object.objectId] = EditorObjectState(
-        objectId: object.objectId,
-        pageId: object.pageId,
-        acceptedText: object.text!,
-        modifiedRevision: object.modifiedRevision,
-      );
-    }
-    emit(latest.copyWith(scenes: scenes, objects: objects));
   }
 
   void updateViewport(Set<int> visiblePages, {int preloadRadius = 2}) {

@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+
 import '../../../core/editing/editor_bridge_types.dart';
 import '../domain/editor_document_state.dart';
 import '../domain/editor_save_state.dart';
@@ -106,7 +108,12 @@ class EditorSessionController {
       ),
     );
     if (metadata.pageCount > 0) {
-      await refreshPage(1);
+      try {
+        await refreshPage(1);
+      } catch (error) {
+        debugPrint('[editor] page 1 scene refresh failed: $error');
+        _emit(_state.copyWith(errorCode: 'page_scene_failed'));
+      }
     }
   }
 
