@@ -60,6 +60,7 @@ class EditorDocumentState {
     this.errorCode,
     this.isOpen = false,
     this.isClosed = false,
+    this.scanning = false,
   });
 
   final String? sourcePath;
@@ -80,6 +81,9 @@ class EditorDocumentState {
   final String? errorCode;
   final bool isOpen;
   final bool isClosed;
+
+  /// True while page scenes are being hydrated from the native side.
+  final bool scanning;
 
   String? visibleText(String objectId) {
     final object = objects[objectId];
@@ -114,6 +118,7 @@ class EditorDocumentState {
     String? errorCode,
     bool? isOpen,
     bool? isClosed,
+    bool? scanning,
     bool clearOptimistic = false,
     bool clearQueued = false,
     bool clearFontFallbackProposal = false,
@@ -148,6 +153,7 @@ class EditorDocumentState {
     errorCode: clearError ? null : (errorCode ?? this.errorCode),
     isOpen: isOpen ?? this.isOpen,
     isClosed: isClosed ?? this.isClosed,
+    scanning: scanning ?? this.scanning,
   );
 }
 

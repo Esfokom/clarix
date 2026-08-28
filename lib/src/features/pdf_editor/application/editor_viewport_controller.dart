@@ -20,6 +20,7 @@ class EditorViewportController {
   final void Function(EditorDocumentState) emit;
   final bool Function() isDisposed;
   final Map<int, int> _requestGenerations = <int, int>{};
+  int _inFlight = 0;
 
   Future<void> refreshPage(
     int pageNumber, {
@@ -33,6 +34,7 @@ class EditorViewportController {
     }
     final generation = (_requestGenerations[pageNumber] ?? 0) + 1;
     _requestGenerations[pageNumber] = generation;
+    _beginScan();
     try {
       final scene = await gateway.requestPage(
         pageNumber,
@@ -94,6 +96,22 @@ class EditorViewportController {
           state().errorCode != 'page_scene_failed') {
         emit(state().copyWith(errorCode: 'page_scene_failed'));
       }
+    } finally {
+      _endScan();
+    }
+  }
+
+  void _beginScan() {
+    _inFlight++;
+    if (_inFlight == 1) {
+      emit(state().copyWith(scanning: true));
+    }
+  }
+
+  void _endScan() {
+    _inFlight--;
+    if (_inFlight == 0) {
+      emit(state().copyWith(scanning: false));
     }
   }
 

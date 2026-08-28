@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
 import 'package:clarix/src/features/pdf_editor/application/editor_session_controller.dart';
 import 'package:clarix/src/features/pdf_editor/infrastructure/editor_session_gateway.dart';
@@ -78,6 +80,64 @@ void main() {
       await controller.close();
     },
   );
+
+  test('scanning flag is true while a scene request is in flight', () async {
+    final gateway = DelayedHydrationGateway();
+    final controller = EditorSessionController(
+      gateway: gateway,
+      commandIds: () => 'command-1',
+    );
+    await controller.open('fixture.pdf');
+    expect(controller.state.scanning, isFalse);
+
+    gateway.holdRequests = true;
+    final pending = controller.refreshPage(
+      1,
+      priority: EditorViewportPriority.visible,
+      force: true,
+    );
+    await pumpEventQueue();
+    expect(controller.state.scanning, isTrue);
+
+    gateway.completeRequest();
+    await pending;
+    await pumpEventQueue();
+    expect(controller.state.scanning, isFalse);
+    await controller.close();
+  });
+}
+
+class DelayedHydrationGateway extends HydrationGateway {
+  Completer<void>? _gate;
+  bool holdRequests = false;
+
+  @override
+  Future<EditorPageScene> requestPage(
+    int pageNumber,
+    int expectedRevision, {
+    EditorViewportPriority priority = EditorViewportPriority.visible,
+  }) {
+    if (!holdRequests) {
+      return super.requestPage(
+        pageNumber,
+        expectedRevision,
+        priority: priority,
+      );
+    }
+    _gate = Completer<void>();
+    return _gate!.future.then(
+      (_) => super.requestPage(
+        pageNumber,
+        expectedRevision,
+        priority: priority,
+      ),
+    );
+  }
+
+  void completeRequest() {
+    _gate?.complete();
+    _gate = null;
+  }
 }
 
 class HydrationGateway implements EditorSessionGateway {

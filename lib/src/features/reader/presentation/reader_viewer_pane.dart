@@ -665,6 +665,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                                 ? _highlightSelection
                                 : null,
                             textEditing: isEditingMode,
+                            scanning: editorState?.scanning ?? false,
                             onToggleTextEditing: _controller.isReady
                                 ? _toggleTextEditing
                                 : null,

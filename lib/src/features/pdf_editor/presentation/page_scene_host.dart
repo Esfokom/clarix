@@ -127,6 +127,7 @@ class PageSceneLifecycle extends ChangeNotifier {
   void start() {
     if (_started) return;
     _started = true;
+    debugPrint('[editor] page scene lifecycle started');
     surface.addListener(_syncViewport);
     _documentChanges = controller.changes.listen((_) {
       unawaited(_ensureCleanPatches());
@@ -181,6 +182,10 @@ class PageSceneLifecycle extends ChangeNotifier {
 
   void _syncViewport() {
     if (!_started || controller.state.isClosed) return;
+    debugPrint(
+      '[editor] viewport sync: visible=${surface.viewport.visiblePages} '
+      'preloadRadius=$preloadRadius',
+    );
     controller.updateViewport(
       surface.viewport.visiblePages,
       preloadRadius: preloadRadius,

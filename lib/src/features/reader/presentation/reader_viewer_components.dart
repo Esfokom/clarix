@@ -436,6 +436,7 @@ class _ViewerHud extends StatelessWidget {
     required this.onHighlightSelection,
     required this.textEditing,
     required this.onToggleTextEditing,
+    this.scanning = false,
   });
 
   final int page;
@@ -449,6 +450,7 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onHighlightSelection;
   final bool textEditing;
   final VoidCallback? onToggleTextEditing;
+  final bool scanning;
 
   @override
   Widget build(BuildContext context) {
@@ -541,6 +543,35 @@ class _ViewerHud extends StatelessWidget {
                 active: textEditing,
               ),
             ),
+            if (textEditing && scanning) ...<Widget>[
+              const SizedBox(width: 10),
+              const _HudDivider(),
+              const SizedBox(width: 10),
+              const IgnorePointer(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    SizedBox(
+                      width: 10,
+                      height: 10,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        color: WorkspaceColors.textMuted,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      'Scanning…',
+                      style: TextStyle(
+                        color: WorkspaceColors.textMuted,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
