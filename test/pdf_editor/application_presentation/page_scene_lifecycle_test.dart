@@ -47,9 +47,11 @@ void main() {
       surface.show(140);
       await tester.pump();
       await tester.pump();
+      // A delivered scene stays mounted when the viewport moves on, so
+      // preloaded pages render immediately when scrolled back into view.
       expect(
         find.byKey(const ValueKey<String>('page-edit-scene-137')),
-        findsNothing,
+        findsOneWidget,
       );
       expect(controller.state.scenes[137], isNotNull);
 
@@ -58,6 +60,12 @@ void main() {
       }
       expect(controller.state.scenes.length, lessThanOrEqualTo(8));
       expect(controller.state.scenes[20], isNotNull);
+      // Once the scene residency limit evicts page 137, its host shrinks.
+      await tester.pump();
+      expect(
+        find.byKey(const ValueKey<String>('page-edit-scene-137')),
+        findsNothing,
+      );
 
       lifecycle.dispose();
       surface.dispose();

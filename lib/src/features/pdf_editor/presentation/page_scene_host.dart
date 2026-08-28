@@ -31,8 +31,16 @@ class PageSceneLifecycle extends ChangeNotifier {
       <int, List<LivePdfiumTileAsset>>{};
   final Set<String> _patchesInFlight = <String>{};
   bool _started = false;
+  bool _disposed = false;
 
   Set<int> get visiblePages => surface.viewport.visiblePages;
+
+  bool get started => _started;
+
+  /// True once [dispose] has run. pdfrx invokes page overlay builders lazily,
+  /// outside the pane's build, so hosts must refuse to build against a
+  /// disposed lifecycle (AnimatedBuilder would attach to a dead ChangeNotifier).
+  bool get isDisposed => _disposed;
 
   EditorPageScene? sceneFor(int pageNumber) =>
       controller.state.scenes[pageNumber];
@@ -297,6 +305,8 @@ class PageSceneLifecycle extends ChangeNotifier {
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     if (_started) surface.removeListener(_syncViewport);
     unawaited(_documentChanges?.cancel());
     unawaited(_liveTileInvalidations?.cancel());
@@ -331,8 +341,12 @@ class PageSceneHost extends StatelessWidget {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: lifecycle,
     builder: (context, _) {
+      // pdfrx only lays out pages near the viewport (plus cache extent), so
+      // a delivered scene is safe to render; gating on visiblePages here made
+      // preloaded scenes flash empty on scroll. Tile/patch memory discipline
+      // keeps its own visibility gates.
       final scene = lifecycle.sceneFor(pageNumber);
-      if (!lifecycle.visiblePages.contains(pageNumber) || scene == null) {
+      if (!lifecycle.started || scene == null) {
         return const SizedBox.shrink();
       }
       return KeyedSubtree(

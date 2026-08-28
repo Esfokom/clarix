@@ -199,9 +199,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       _pageSceneLifecycle?.dispose();
       _pageSceneLifecycle = null;
       _pageSurface.dispose();
-      unawaited(
-        ref.read(editorSessionRegistryProvider).close(oldWidget.tab.id),
-      );
+      // The registry is keyed by tab id and closeTab closes sessions on tab
+      // close — keep the old tab's session (and undo history) alive across
+      // tab switches.
       _disposeSearcher();
       _controller.removeListener(_syncViewerMetrics);
       _metrics.dispose();
@@ -436,10 +436,16 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             ],
                             onGeneralTap: _onViewerTap,
                             viewerOverlayBuilder: _buildViewerOverlay,
-                            pageOverlaysBuilder: (context, pageRect, page) =>
-                                <Widget>[
+                            pageOverlaysBuilder: (context, pageRect, page) {
+                              // pdfrx invokes this builder lazily, outside
+                              // this widget's build — it can run after the
+                              // pane has been disposed or its lifecycle torn
+                              // down for a tab switch.
+                              if (!mounted) return <Widget>[];
+                              return <Widget>[
                                   if (_pageSceneLifecycle
-                                      case final PageSceneLifecycle lifecycle)
+                                      case final PageSceneLifecycle lifecycle
+                                          when !lifecycle.isDisposed)
                                     Positioned.fill(
                                       child: PageSceneHost(
                                         lifecycle: lifecycle,
@@ -512,7 +518,8 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                                         },
                                       ),
                                     ),
-                                ],
+                              ];
+                            },
                           ),
                         );
                       },

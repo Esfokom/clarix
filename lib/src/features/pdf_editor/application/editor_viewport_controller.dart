@@ -43,6 +43,12 @@ class EditorViewportController {
       if (isDisposed() ||
           _requestGenerations[pageNumber] != generation ||
           scene.revision != latest.revision) {
+        debugPrint(
+          '[editor] dropping scene for page $pageNumber: '
+          'disposed=${isDisposed()} '
+          'staleGeneration=${_requestGenerations[pageNumber] != generation} '
+          'staleRevision=${scene.revision != latest.revision}',
+        );
         return;
       }
       final scenes = Map<int, EditorPageScene>.of(latest.scenes)
