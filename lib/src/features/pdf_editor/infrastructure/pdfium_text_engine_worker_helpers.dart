@@ -1,16 +1,14 @@
 part of 'pdfium_text_engine_native.dart';
-String _textForGroup(PdfTextObjectGroup group) {
-  final buffer = StringBuffer();
-  for (var index = 0; index < group.objects.length; index++) {
-    if (index > 0) {
-      final previous = group.objects[index - 1];
-      final current = group.objects[index];
-      buffer.write(_separatorBetween(previous, current));
-    }
-    buffer.write(group.objects[index].text);
-  }
-  return buffer.toString();
-}
+String _textForGroup(PdfTextObjectGroup group) => joinObjectTexts(<
+  PdfObjectTextSample
+>[
+  for (final object in group.objects)
+    (
+      text: object.text,
+      fontSize: object.style.fontSize,
+      baseline: object.baseline,
+    ),
+]);
 
 final class _ApplyDraftWorkerMessage {
   const _ApplyDraftWorkerMessage({
@@ -574,14 +572,18 @@ void _setPageObjectPreviewTransformOnWorker(
 String _separatorBetween(
   PdfTextObjectSnapshot previous,
   PdfTextObjectSnapshot current,
-) {
-  if (RegExp(r'\s$').hasMatch(previous.text) ||
-      RegExp(r'^\s').hasMatch(current.text)) {
-    return '';
-  }
-  final tolerance = (previous.style.fontSize + current.style.fontSize) * 0.25;
-  return (previous.baseline - current.baseline).abs() <= tolerance ? ' ' : '\n';
-}
+) => separatorBetween(
+  (
+    text: previous.text,
+    fontSize: previous.style.fontSize,
+    baseline: previous.baseline,
+  ),
+  (
+    text: current.text,
+    fontSize: current.style.fontSize,
+    baseline: current.baseline,
+  ),
+);
 
 final class _NativeTextSegment {
   const _NativeTextSegment({

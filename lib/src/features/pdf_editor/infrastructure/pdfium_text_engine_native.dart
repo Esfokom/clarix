@@ -13,6 +13,7 @@ import '../domain/pdf_page_object.dart';
 import '../domain/pdf_edit_session.dart';
 import '../domain/pdf_native_edit_types.dart';
 import '../domain/pdf_edit_command.dart';
+import 'pdf_block_text.dart';
 import 'pdf_text_block_grouper.dart';
 import 'pdf_text_engine.dart';
 import 'installed_font_catalog.dart';
