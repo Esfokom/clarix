@@ -574,7 +574,14 @@ class EditorSessionController {
               _state.revision == edit.baseRevision) {
             if (proposal.embeddingAllowed) {
               // Silently approve the nearest available font rather than
-              // interrupting the user with a dialog.
+              // interrupting the user with a dialog. The proposal must be
+              // pending in state for approveFontFallback to accept it.
+              _emit(
+                _state.copyWith(
+                  fontFallbackProposal: proposal,
+                  clearError: true,
+                ),
+              );
               unawaited(approveFontFallback(proposal.token));
             } else {
               // Embedding not permitted — surface the proposal so the

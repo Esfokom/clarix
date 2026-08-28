@@ -1,5 +1,25 @@
 part of 'pdfium_text_engine_native.dart';
 
+/// Resolves a display font family from PDFium font metadata.
+///
+/// Subset prefixes (e.g. `ABCDEF+ArialMT`) are stripped, and fonts that
+/// expose no family name fall back to the base-14 family implied by their
+/// descriptor flags so the format panel never shows a bare `Unknown` when a
+/// reasonable label exists.
+String resolveFontFamilyLabel({
+  required String familyName,
+  required int flags,
+}) {
+  final cleaned = familyName.replaceFirst(RegExp(r'^[A-Z]{6}\+'), '').trim();
+  if (cleaned.isNotEmpty && cleaned != 'Unknown') return cleaned;
+  // PDF font descriptor flags: bit 0 = fixed pitch, bit 1 = serif,
+  // bit 2 = symbolic.
+  if (flags & 4 != 0) return 'Symbol';
+  if (flags & 1 != 0) return 'Courier New';
+  if (flags & 2 != 0) return 'Times New Roman';
+  return 'Helvetica';
+}
+
 mixin _PdfiumTextInspection {
   PdfTextObjectSnapshot? _readTextObject(
     FPDF_PAGEOBJECT object,
@@ -105,13 +125,19 @@ mixin _PdfiumTextInspection {
       nullptr.cast<Char>(),
       0,
     );
-    if (length <= 1) return 'Unknown';
+    if (length <= 1) {
+      return resolveFontFamilyLabel(familyName: '', flags: 0);
+    }
     final buffer = calloc<Char>(length);
     try {
       bindings.FPDFFont_GetFamilyName(font, buffer, length);
-      return utf8.decode(
+      final family = utf8.decode(
         buffer.cast<Uint8>().asTypedList(length - 1),
         allowMalformed: true,
+      );
+      return resolveFontFamilyLabel(
+        familyName: family,
+        flags: bindings.FPDFFont_GetFlags(font),
       );
     } finally {
       calloc.free(buffer);

@@ -130,10 +130,33 @@ void main() {
     );
   }
 
+  test('font fallback auto-approves when the font permits embedding', () async {
+    final gateway = FakeEditorSessionGateway();
+    final controller = _controller(gateway);
+    await controller.open('fixture.pdf');
+
+    controller.applyLocalDelta(
+      objectId: objectId,
+      range: const EditorTextRange(start: 0, end: 6),
+      replacement: '€',
+    );
+    gateway.rejectSubmit(
+      Exception('font_fallback_required: approval required'),
+    );
+    await pumpEventQueue();
+
+    expect(gateway.proposedReplacement, '€');
+    expect(controller.state.revision, 1);
+    expect(controller.state.visibleText(objectId), '€');
+    expect(controller.state.fontFallbackProposal, isNull);
+    expect(gateway.approvedProposalToken, 'proposal-1');
+    await controller.close();
+  });
+
   test(
-    'font fallback remains inert until its one-time proposal is approved',
+    'font fallback surfaces a proposal until approved when embedding is barred',
     () async {
-      final gateway = FakeEditorSessionGateway();
+      final gateway = FakeEditorSessionGateway(embeddingAllowed: false);
       final controller = _controller(gateway);
       await controller.open('fixture.pdf');
 
@@ -221,7 +244,7 @@ EditorSessionController _controller(FakeEditorSessionGateway gateway) {
 
 class FakeEditorSessionGateway
     implements EditorSessionGateway, EditorFontFallbackGateway {
-  FakeEditorSessionGateway({this.order}) {
+  FakeEditorSessionGateway({this.order, this.embeddingAllowed = true}) {
     _events = StreamController<EditorEvent>.broadcast(
       sync: true,
       onCancel: () => order?.add('unsubscribe'),
@@ -229,6 +252,7 @@ class FakeEditorSessionGateway
   }
 
   final List<String>? order;
+  final bool embeddingAllowed;
   late final StreamController<EditorEvent> _events;
   final List<EditorCommandRequest> pending = <EditorCommandRequest>[];
   final List<Completer<EditorCommandResult>> _completers =
@@ -291,7 +315,7 @@ class FakeEditorSessionGateway
       objectId: objectId,
       fontName: 'Arial',
       source: 'installed',
-      embeddingAllowed: true,
+      embeddingAllowed: embeddingAllowed,
       affectedCharacters: '€',
     );
   }

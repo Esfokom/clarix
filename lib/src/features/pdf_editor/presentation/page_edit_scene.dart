@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:pdfrx/pdfrx.dart';
 
@@ -196,19 +197,15 @@ class PageEditScene extends StatelessWidget {
                             'clarix-edit-target-${object.objectId}',
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0x142F80ED),
+                            // Inactive blocks keep a hairline outline so the
+                            // paragraph structure stays visible without the
+                            // loud highlight reserved for the active object.
+                            color: const Color(0x052F80ED),
                             border: Border.all(
-                              color: const Color(0xFF2F80ED),
-                              width: 2,
+                              color: const Color(0x332F80ED),
+                              width: 1,
                             ),
                             borderRadius: BorderRadius.circular(3),
-                            boxShadow: const <BoxShadow>[
-                              BoxShadow(
-                                color: Color(0x552F80ED),
-                                blurRadius: 4,
-                                spreadRadius: 0.5,
-                              ),
-                            ],
                           ),
                         ),
                       ),
@@ -223,32 +220,58 @@ class PageEditScene extends StatelessWidget {
                       pageSize: pageSize,
                       displaySize: displaySize,
                     ),
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.text,
-                      child: PdfOverlayInteractionRegion(
-                        onTap: (details) {
-                          final objectRect = EditorPageGeometry.rectForBox(
-                            object.bounds,
-                            pageSize: pageSize,
-                            displaySize: displaySize,
-                          );
-                          final hit = hitTestIndex.hitTest(
-                            details.localPosition + objectRect.topLeft,
-                          );
-                          if (hit == null) return false;
-                          activeSession.updateSelection(
-                            EditorSelection(
-                              objectId: hit.objectId,
-                              range: EditorTextRange(
-                                start: hit.utf16Offset,
-                                end: hit.utf16Offset,
-                              ),
-                              affinity: hit.affinity,
+                    child: _TapRegion(
+                      onTap: (Offset localInBox) {
+                        final objectRect = EditorPageGeometry.rectForBox(
+                          object.bounds,
+                          pageSize: pageSize,
+                          displaySize: displaySize,
+                        );
+                        final hit = hitTestIndex.hitTest(
+                          localInBox + objectRect.topLeft,
+                        );
+                        if (hit == null) return;
+                        activeSession.updateSelection(
+                          EditorSelection(
+                            objectId: hit.objectId,
+                            range: EditorTextRange(
+                              start: hit.utf16Offset,
+                              end: hit.utf16Offset,
                             ),
-                          );
-                          return true;
-                        },
-                        child: const SizedBox.expand(),
+                            affinity: hit.affinity,
+                          ),
+                        );
+                      },
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.text,
+                        // The pdfrx region also dispatches the tap when its
+                        // registration is current; both paths converge on the
+                        // same selection.
+                        child: PdfOverlayInteractionRegion(
+                          onTap: (details) {
+                            final objectRect = EditorPageGeometry.rectForBox(
+                              object.bounds,
+                              pageSize: pageSize,
+                              displaySize: displaySize,
+                            );
+                            final hit = hitTestIndex.hitTest(
+                              details.localPosition + objectRect.topLeft,
+                            );
+                            if (hit == null) return false;
+                            activeSession.updateSelection(
+                              EditorSelection(
+                                objectId: hit.objectId,
+                                range: EditorTextRange(
+                                  start: hit.utf16Offset,
+                                  end: hit.utf16Offset,
+                                ),
+                                affinity: hit.affinity,
+                              ),
+                            );
+                            return true;
+                          },
+                          child: const SizedBox.expand(),
+                        ),
                       ),
                     ),
                   ),
@@ -454,3 +477,44 @@ Offset _transformPoint(Offset point, EditorAffineTransform transform) => Offset(
   transform.a * point.dx + transform.c * point.dy + transform.e,
   transform.b * point.dx + transform.d * point.dy + transform.f,
 );
+
+/// A pan-safe tap detector that observes raw pointer events without competing
+/// in the gesture arena, so the reader's pan/zoom keeps working while taps
+/// still land. Complements the pdfrx overlay hit-tester dispatch, which can be
+/// stale when the viewer rebuilds page overlays lazily.
+class _TapRegion extends StatefulWidget {
+  const _TapRegion({required this.onTap, required this.child});
+
+  final ValueChanged<Offset> onTap;
+  final Widget child;
+
+  @override
+  State<_TapRegion> createState() => _TapRegionState();
+}
+
+class _TapRegionState extends State<_TapRegion> {
+  Offset? _downPosition;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (PointerDownEvent event) {
+        if (event.buttons == kPrimaryButton) {
+          _downPosition = event.localPosition;
+        }
+      },
+      onPointerUp: (PointerUpEvent event) {
+        final Offset? down = _downPosition;
+        _downPosition = null;
+        if (down == null) return;
+        if ((event.localPosition - down).distance > kTouchSlop) return;
+        widget.onTap(event.localPosition);
+      },
+      onPointerCancel: (PointerCancelEvent event) {
+        _downPosition = null;
+      },
+      child: widget.child,
+    );
+  }
+}
