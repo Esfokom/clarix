@@ -25,6 +25,12 @@ void main() {
       }).rightToolWindow,
       RightToolWindow.ai,
     );
+    expect(
+      WorkspaceSession.fromJson(<String, dynamic>{
+        'rightToolWindow': 'textFormat',
+      }).rightToolWindow,
+      RightToolWindow.none,
+    );
   });
 
   test(

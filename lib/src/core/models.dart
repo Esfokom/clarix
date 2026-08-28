@@ -8,6 +8,9 @@ enum SidebarPane { thumbnails, outline }
 
 enum RightToolWindow { none, document, ai }
 
+T _enumByNameOr<T extends Enum>(List<T> values, String? name, T fallback) =>
+    values.firstWhere((value) => value.name == name, orElse: () => fallback);
+
 const double minWorkspacePaneWidth = 200;
 const double maxWorkspacePaneWidth = 480;
 
@@ -75,8 +78,10 @@ class WorkspaceSession {
       recentFiles: (json['recentFiles'] as List<dynamic>? ?? const <dynamic>[])
           .cast<String>()
           .toList(growable: false),
-      sidebarPane: SidebarPane.values.byName(
-        json['sidebarPane'] as String? ?? SidebarPane.thumbnails.name,
+      sidebarPane: _enumByNameOr(
+        SidebarPane.values,
+        json['sidebarPane'] as String?,
+        SidebarPane.thumbnails,
       ),
       leftPaneWidth: _clampPaneWidth(
         (json['leftPaneWidth'] as num?)?.toDouble() ?? 280,
@@ -86,8 +91,10 @@ class WorkspaceSession {
       ),
       leftPaneCollapsed: json['leftPaneCollapsed'] as bool? ?? false,
       rightPaneCollapsed: json['rightPaneCollapsed'] as bool? ?? false,
-      rightToolWindow: RightToolWindow.values.byName(
-        json['rightToolWindow'] as String? ?? RightToolWindow.none.name,
+      rightToolWindow: _enumByNameOr(
+        RightToolWindow.values,
+        json['rightToolWindow'] as String?,
+        RightToolWindow.none,
       ),
     );
   }
@@ -209,8 +216,10 @@ class DocumentTabState {
       searchQuery: json['searchQuery'] as String? ?? '',
       selectedSearchResult: json['selectedSearchResult'] as int? ?? 0,
       outlineExpanded: json['outlineExpanded'] as bool? ?? true,
-      indexStatus: DocumentIndexStatus.values.byName(
-        json['indexStatus'] as String? ?? DocumentIndexStatus.idle.name,
+      indexStatus: _enumByNameOr(
+        DocumentIndexStatus.values,
+        json['indexStatus'] as String?,
+        DocumentIndexStatus.idle,
       ),
       missingFileMessage: json['missingFileMessage'] as String?,
       lastOpenedAt:
@@ -385,8 +394,10 @@ class DownloadTaskState {
     return DownloadTaskState(
       taskId: json['taskId'] as String,
       modelId: json['modelId'] as String,
-      status: DownloadTaskStatus.values.byName(
-        json['status'] as String? ?? DownloadTaskStatus.idle.name,
+      status: _enumByNameOr(
+        DownloadTaskStatus.values,
+        json['status'] as String?,
+        DownloadTaskStatus.idle,
       ),
       progress: json['progress'] as int? ?? 0,
       downloadedBytes: json['downloadedBytes'] as int? ?? 0,
