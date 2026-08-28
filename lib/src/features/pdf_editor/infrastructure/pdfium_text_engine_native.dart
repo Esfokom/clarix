@@ -15,6 +15,7 @@ import '../domain/pdf_native_edit_types.dart';
 import '../domain/pdf_edit_command.dart';
 import 'pdf_block_text.dart';
 import 'pdf_text_block_grouper.dart';
+import 'pdfium_page_object_path.dart';
 import 'pdf_text_engine.dart';
 import 'installed_font_catalog.dart';
 import 'pdf_native_text_layout.dart';

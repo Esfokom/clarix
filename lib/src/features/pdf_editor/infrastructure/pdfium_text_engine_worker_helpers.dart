@@ -609,18 +609,8 @@ final class _DiscoveredObject {
   final PdfReadOnlyReason? readOnlyReason;
 }
 
-FPDF_PAGEOBJECT _objectAtPath(FPDF_PAGE page, List<int> path) {
-  if (path.isEmpty) return nullptr.cast<fpdf_pageobject_t__>();
-  var object = pdfiumBindings.FPDFPage_GetObject(page, path.first);
-  for (var index = 1; index < path.length; index++) {
-    if (object.address == 0 ||
-        pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_FORM) {
-      return nullptr.cast<fpdf_pageobject_t__>();
-    }
-    object = pdfiumBindings.FPDFFormObj_GetObject(object, path[index]);
-  }
-  return object;
-}
+FPDF_PAGEOBJECT _objectAtPath(FPDF_PAGE page, List<int> path) =>
+    objectAtPdfiumPath(page, path);
 
 void _setObjectText(FPDF_PAGEOBJECT object, String text) {
   final buffer = calloc<Uint16>(text.length + 1);

@@ -116,4 +116,88 @@ void main() {
       expect(joinObjectTexts(<PdfObjectTextSample>[]), '');
     });
   });
+
+  group('distributeReplacement', () {
+    test('single segment passes through unchanged', () {
+      expect(
+        distributeReplacement(
+          replacement: 'anything',
+          originalSegments: <String>['old'],
+          separators: <String>[],
+        ),
+        <String>['anything'],
+      );
+    });
+
+    test('intra-segment edit keeps separators in place', () {
+      expect(
+        distributeReplacement(
+          replacement: 'Hellx world',
+          originalSegments: <String>['Hello', 'world'],
+          separators: <String>[' '],
+        ),
+        <String>['Hellx', 'world'],
+      );
+    });
+
+    test('deleted separator collapses via prefix fill', () {
+      expect(
+        distributeReplacement(
+          replacement: 'onetwo',
+          originalSegments: <String>['one', 'two'],
+          separators: <String>['\n'],
+        ),
+        <String>['onetwo', ' '],
+      );
+    });
+
+    test('every empty segment becomes a space anchor', () {
+      expect(
+        distributeReplacement(
+          replacement: 'b',
+          originalSegments: <String>['a', 'b', 'c'],
+          separators: <String>[' ', ' '],
+        ),
+        <String>['b', ' ', ' '],
+      );
+    });
+
+    test('full delete leaves a space anchor in every object', () {
+      expect(
+        distributeReplacement(
+          replacement: '',
+          originalSegments: <String>['a', 'b', 'c'],
+          separators: <String>[' ', ' '],
+        ),
+        <String>[' ', ' ', ' '],
+      );
+    });
+
+    test('typed newline re-splits at the existing separator', () {
+      expect(
+        distributeReplacement(
+          replacement: 'one\ntwo and more',
+          originalSegments: <String>['one', 'two'],
+          separators: <String>['\n'],
+        ),
+        <String>['one', 'two and more'],
+      );
+    });
+
+    test('replacement re-joins to the same trimmed text', () {
+      final segments = distributeReplacement(
+        replacement: 'Bye world',
+        originalSegments: <String>['Hello', 'world'],
+        separators: <String>[' '],
+      );
+      expect(segments, <String>['Bye', 'world']);
+      expect(
+        joinObjectTexts(<PdfObjectTextSample>[
+          for (final segment in segments)
+            (text: segment, fontSize: 12, baseline: 700),
+        ]).trimRight(),
+        'Bye world',
+      );
+    });
+  });
 }

@@ -18,6 +18,24 @@ final class PdfTextFixture {
     ]);
   }
 
+  static Future<File> multiObjectBlock() async {
+    return _write('multi-object.pdf', <pw.Page>[
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (_) => pw.Align(
+          alignment: pw.Alignment.topLeft,
+          child: pw.Row(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: <pw.Widget>[
+              pw.Text('Hello', style: const pw.TextStyle(fontSize: 12)),
+              pw.Text('world', style: const pw.TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      ),
+    ]);
+  }
+
   static Future<File> rotatedBlock(String text) async {
     return _write('rotated.pdf', <pw.Page>[
       pw.Page(

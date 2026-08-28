@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:ffi/ffi.dart';
@@ -8,7 +9,9 @@ import 'package:pdfium_flutter/pdfium_flutter.dart';
 import '../../../core/editing/editor_bridge_types.dart';
 import '../domain/pdf_text_types.dart';
 import 'live_pdfium_tile_renderer.dart';
+import 'pdf_block_text.dart';
 import 'pdfium_edit_plan_applier.dart';
+import 'pdfium_page_object_path.dart';
 import 'pdf_text_engine.dart';
 import 'pdfium_worker_executor.dart';
 
@@ -224,83 +227,87 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
     throw StateError('PDFium could not load page text for transaction');
   }
   try {
-    final resolved =
-        <
-          ({
-            FPDF_PAGEOBJECT object,
-            String replacement,
-            String originalText,
-            EditorPdfBox bounds,
-          })
-        >[];
+    final resolved = <_ResolvedBlockReplacement>[];
     for (final replacement in plan.replacements) {
       final locator = replacement.locator;
-      if (locator.objectType != 'text' || locator.objectPath.length != 1) {
-        throw ArgumentError(
-          'live replacement currently requires one text object',
-        );
+      if (locator.objectType != 'text' || locator.allObjectPaths.isEmpty) {
+        throw ArgumentError('live replacement requires a text locator');
       }
-      final object = pdfiumBindings.FPDFPage_GetObject(
-        page,
-        locator.objectPath.single,
-      );
-      if (object.address == 0 ||
-          pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_TEXT) {
-        throw StateError('locator does not resolve to a text object');
-      }
-      final left = calloc<Float>();
-      final bottom = calloc<Float>();
-      final right = calloc<Float>();
-      final top = calloc<Float>();
-      try {
-        if (pdfiumBindings.FPDFPageObj_GetBounds(
-              object,
-              left,
-              bottom,
-              right,
-              top,
-            ) ==
-            0) {
-          throw StateError('PDFium could not read text bounds');
+      final objects = <FPDF_PAGEOBJECT>[];
+      final originalTexts = <String>[];
+      final samples = <PdfObjectTextSample>[];
+      var unionLeft = double.infinity;
+      var unionBottom = double.infinity;
+      var unionRight = double.negativeInfinity;
+      var unionTop = double.negativeInfinity;
+      for (final path in locator.allObjectPaths) {
+        final object = objectAtPdfiumPath(page, path);
+        if (object.address == 0 ||
+            pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_TEXT) {
+          throw StateError('locator does not resolve to a text object');
         }
-        resolved.add((
-          object: object,
-          replacement: replacement.replacement,
-          originalText: _readTextObjectText(object, textPage),
-          bounds: EditorPdfBox(
-            left: left.value,
-            bottom: bottom.value,
-            right: right.value,
-            top: top.value,
-          ),
+        final metrics = _readTextObjectMetrics(object, textPage);
+        objects.add(object);
+        originalTexts.add(metrics.text);
+        samples.add((
+          text: metrics.text,
+          fontSize: metrics.fontSize,
+          baseline: metrics.baseline,
         ));
-      } finally {
-        calloc.free(left);
-        calloc.free(bottom);
-        calloc.free(right);
-        calloc.free(top);
+        unionLeft = math.min(unionLeft, metrics.bounds.left);
+        unionBottom = math.min(unionBottom, metrics.bounds.bottom);
+        unionRight = math.max(unionRight, metrics.bounds.right);
+        unionTop = math.max(unionTop, metrics.bounds.top);
       }
-    }
-    for (var index = 0; index < resolved.length; index += 1) {
-      final expectedText = plan.replacements[index].expectedText;
+      final expectedText = replacement.expectedText;
       if (expectedText != null &&
-          resolved[index].originalText != expectedText) {
+          expectedText.trimRight() !=
+              joinObjectTexts(samples).trimRight()) {
         throw StateError('locator text no longer matches the prepared plan');
       }
+      final separators = <String>[
+        for (var index = 0; index + 1 < samples.length; index++)
+          separatorBetween(samples[index], samples[index + 1]),
+      ];
+      final segments = distributeReplacement(
+        replacement: replacement.replacement,
+        originalSegments: originalTexts,
+        separators: separators,
+      );
+      resolved.add(
+        _ResolvedBlockReplacement(
+          objects: objects,
+          originalTexts: originalTexts,
+          segments: segments,
+          bounds: EditorPdfBox(
+            left: unionLeft,
+            bottom: unionBottom,
+            right: unionRight,
+            top: unionTop,
+          ),
+        ),
+      );
     }
     final changed = <({FPDF_PAGEOBJECT object, String originalText})>[];
     try {
       for (final replacement in resolved) {
-        _setTextObjectText(replacement.object, replacement.replacement);
-        changed.add((
-          object: replacement.object,
-          originalText: replacement.originalText,
-        ));
+        for (var index = 0; index < replacement.objects.length; index++) {
+          _setTextObjectText(
+            replacement.objects[index],
+            replacement.segments[index],
+          );
+          changed.add((
+            object: replacement.objects[index],
+            originalText: replacement.originalTexts[index],
+          ));
+        }
       }
       if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
         throw StateError('PDFium could not regenerate changed page content');
       }
-      return resolved.map((item) => item.bounds).toList(growable: false);
+      return resolved
+          .map((replacement) => replacement.bounds)
+          .toList(growable: false);
     } catch (_) {
       for (final original in changed.reversed) {
         _setTextObjectText(original.object, original.originalText);
@@ -310,6 +317,66 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
   } finally {
     pdfiumBindings.FPDFText_ClosePage(textPage);
     pdfiumBindings.FPDF_ClosePage(page);
+  }
+}
+
+final class _ResolvedBlockReplacement {
+  _ResolvedBlockReplacement({
+    required this.objects,
+    required this.originalTexts,
+    required this.segments,
+    required this.bounds,
+  });
+
+  final List<FPDF_PAGEOBJECT> objects;
+  final List<String> originalTexts;
+  final List<String> segments;
+  final EditorPdfBox bounds;
+}
+
+({String text, double fontSize, double baseline, EditorPdfBox bounds})
+_readTextObjectMetrics(FPDF_PAGEOBJECT object, FPDF_TEXTPAGE textPage) {
+  final left = calloc<Float>();
+  final bottom = calloc<Float>();
+  final right = calloc<Float>();
+  final top = calloc<Float>();
+  final fontSize = calloc<Float>();
+  final matrix = calloc<FS_MATRIX>();
+  try {
+    if (pdfiumBindings.FPDFPageObj_GetBounds(
+          object,
+          left,
+          bottom,
+          right,
+          top,
+        ) ==
+        0) {
+      throw StateError('PDFium could not read text bounds');
+    }
+    final hasFontSize = pdfiumBindings.FPDFTextObj_GetFontSize(
+          object,
+          fontSize,
+        ) !=
+        0;
+    pdfiumBindings.FPDFPageObj_GetMatrix(object, matrix);
+    return (
+      text: _readTextObjectText(object, textPage),
+      fontSize: hasFontSize ? fontSize.value : 0,
+      baseline: matrix.ref.f,
+      bounds: EditorPdfBox(
+        left: left.value,
+        bottom: bottom.value,
+        right: right.value,
+        top: top.value,
+      ),
+    );
+  } finally {
+    calloc.free(left);
+    calloc.free(bottom);
+    calloc.free(right);
+    calloc.free(top);
+    calloc.free(fontSize);
+    calloc.free(matrix);
   }
 }
 

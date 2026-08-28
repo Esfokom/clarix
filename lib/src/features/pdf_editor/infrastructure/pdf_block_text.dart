@@ -35,3 +35,53 @@ String joinObjectTexts(List<PdfObjectTextSample> objects) {
   }
   return buffer.toString();
 }
+
+/// Distributes a block-level [replacement] across the block's physical text
+/// objects so that re-joining the segments reproduces the replacement.
+///
+/// Splits greedily at the first occurrence of each recorded separator (the
+/// separators between adjacent [originalSegments], as produced by
+/// [separatorBetween]). If a separator is missing from the replacement the
+/// remainder goes entirely to the current segment (prefix fill). PDFium
+/// discards a truly empty text object during content generation — which would
+/// shift page-object indices and desync the locator registry — so every empty
+/// segment is pinned to a single space.
+List<String> distributeReplacement({
+  required String replacement,
+  required List<String> originalSegments,
+  required List<String> separators,
+}) {
+  if (originalSegments.length == 1) return <String>[replacement];
+  final segments = <String>[];
+  var cursor = 0;
+  var exhausted = false;
+  for (var index = 0; index < originalSegments.length; index++) {
+    if (exhausted) {
+      segments.add(' ');
+      continue;
+    }
+    if (index == originalSegments.length - 1) {
+      segments.add(replacement.substring(cursor));
+      exhausted = true;
+      continue;
+    }
+    final separator = index < separators.length ? separators[index] : '';
+    if (separator.isEmpty) {
+      segments.add(replacement.substring(cursor));
+      exhausted = true;
+      continue;
+    }
+    final match = replacement.indexOf(separator, cursor);
+    if (match < 0) {
+      segments.add(replacement.substring(cursor));
+      exhausted = true;
+      continue;
+    }
+    segments.add(replacement.substring(cursor, match));
+    cursor = match + separator.length;
+  }
+  for (var index = 0; index < segments.length; index++) {
+    if (segments[index].isEmpty) segments[index] = ' ';
+  }
+  return segments;
+}

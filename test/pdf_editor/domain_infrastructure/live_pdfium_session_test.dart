@@ -86,6 +86,67 @@ void main() {
     expect(binding.objectId, matches(RegExp(r'^[0-9a-f-]{36}$')));
   });
 
+  test('applies sequential replacements across a multi-object block', () async {
+    final file = await PdfTextFixture.multiObjectBlock();
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+
+    final blocks = await session.inspectTextBlocks(
+      sourceRevision: 'source',
+      pageNumbers: const <int>[1],
+    );
+    final block = blocks.single;
+    expect(block.objectPaths.length, greaterThan(1));
+    expect(block.text, 'Hello world');
+
+    final manifest = const LivePdfiumImportManifestBuilder().build(
+      sourceFingerprint: 'source',
+      blocks: <PdfTextBlock>[block],
+    );
+    final locator = manifest.bindings.single.locator;
+
+    // First edit: intra-block replacement keeps the separator in place.
+    await session.apply(
+      LivePdfiumEditPlan(
+        replacements: <LivePdfiumTextReplacement>[
+          LivePdfiumTextReplacement(
+            locator: locator,
+            replacement: 'Bye world',
+            expectedText: 'Hello world',
+          ),
+        ],
+        revision: 1,
+      ),
+    );
+    var after = await session.inspectTextBlocks(
+      sourceRevision: 'source',
+      pageNumbers: const <int>[1],
+    );
+    expect(after.single.text.trimRight(), 'Bye world');
+
+    // Second edit through the same locator: deleting the separator collapses
+    // into the first object and pins the trailing object with a space anchor.
+    await session.apply(
+      LivePdfiumEditPlan(
+        replacements: <LivePdfiumTextReplacement>[
+          LivePdfiumTextReplacement(
+            locator: locator,
+            replacement: 'Bye',
+            expectedText: 'Bye world',
+          ),
+        ],
+        revision: 2,
+      ),
+    );
+    after = await session.inspectTextBlocks(
+      sourceRevision: 'source',
+      pageNumbers: const <int>[1],
+    );
+    expect(after.single.text.trimRight(), 'Bye');
+    expect(after.single.objectPaths.length, greaterThan(1));
+  });
+
   test(
     'regenerating changed page content updates a live PDFium tile',
     () async {
