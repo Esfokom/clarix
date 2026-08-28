@@ -18,11 +18,10 @@ final class LivePdfiumImportManifestBuilder {
   }) {
     final bindings = <LivePdfiumImportBinding>[];
     for (final block in _importableBlocks(blocks)) {
-      final path = block.objectPaths.single;
       final sourceKey = _sourceKey(
         sourceFingerprint,
         block.locator.pageNumber,
-        path,
+        block.objectPaths,
       );
       bindings.add(
         LivePdfiumImportBinding(
@@ -31,7 +30,8 @@ final class LivePdfiumImportManifestBuilder {
           sourceRevision: sourceFingerprint,
           locator: EditorPhysicalLocator(
             pageNumber: block.locator.pageNumber,
-            objectPath: path,
+            objectPath: block.objectPaths.first,
+            objectPaths: block.objectPaths,
             objectType: 'text',
             sourceFingerprint: sourceFingerprint,
             objectRevision: 0,
@@ -46,8 +46,9 @@ final class LivePdfiumImportManifestBuilder {
   }
 
   /// Converts the same PDFium scan into the semantic hydration payload.
-  /// Only one-object blocks are safe to route today: a grouped block has no
-  /// single recursive PDFium locator for a whole-text physical replacement.
+  /// Every inspected block routes through — including grouped multi-object
+  /// blocks — with the full object-path list carried in the source key so the
+  /// live apply worker can address every constituent text object.
   native.NativeLivePageImport buildPageImport({
     required int expectedRevision,
     required String sourceFingerprint,
@@ -62,8 +63,11 @@ final class LivePdfiumImportManifestBuilder {
     height: height,
     objects: _importableBlocks(blocks)
         .map((block) {
-          final path = block.objectPaths.single;
-          final sourceKey = _sourceKey(sourceFingerprint, pageNumber, path);
+          final sourceKey = _sourceKey(
+            sourceFingerprint,
+            pageNumber,
+            block.objectPaths,
+          );
           final style = block.styleAt(0);
           return native.NativeLiveTextObject(
             objectId: _uuidV5(sourceKey),
@@ -96,13 +100,15 @@ final class LivePdfiumImportManifestBuilder {
   );
 
   Iterable<PdfTextBlock> _importableBlocks(Iterable<PdfTextBlock> blocks) =>
-      blocks.where(
-        (block) => block.objectPaths.length == 1 && block.runs.isNotEmpty,
-      );
+      blocks.where((block) => block.runs.isNotEmpty);
 }
 
-String _sourceKey(String fingerprint, int pageNumber, List<int> objectPath) =>
-    '$fingerprint/live-pdfium/page/$pageNumber/object/${objectPath.join('.')}';
+String _sourceKey(
+  String fingerprint,
+  int pageNumber,
+  List<List<int>> objectPaths,
+) => '$fingerprint/live-pdfium/page/$pageNumber/object/'
+    '${objectPaths.map((path) => path.join('.')).join('|')}';
 
 String _uuidV5(String value) {
   const namespace = <int>[

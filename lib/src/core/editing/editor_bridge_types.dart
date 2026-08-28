@@ -127,13 +127,24 @@ class EditorPhysicalLocator {
     required this.objectType,
     required this.sourceFingerprint,
     required this.objectRevision,
+    this.objectPaths = const <List<int>>[],
   });
 
   final int pageNumber;
+
+  /// The primary (first) PDFium object path — the stable identity used for
+  /// source-key derivation and by consumers that only need one path.
   final List<int> objectPath;
   final String objectType;
   final String sourceFingerprint;
   final int objectRevision;
+
+  /// Every PDFium object path covered by this locator's block. Empty for
+  /// single-object locators; [allObjectPaths] falls back to [objectPath].
+  final List<List<int>> objectPaths;
+
+  List<List<int>> get allObjectPaths =>
+      objectPaths.isEmpty ? <List<int>>[objectPath] : objectPaths;
 }
 
 /// A raster tile rendered from the live PDFium document at one revision.
