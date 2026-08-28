@@ -823,12 +823,21 @@ fn validate_text_block(block: &TextBlock) -> Result<(), ModelError> {
         }
     }
     if block.base.source_binding.is_some() && block.base.capability == EditCapability::Editable {
-        let complete = block
-            .font
+        // Live-PDFium imports materialize through the live PDFium document
+        // (its encoded bytes feed the save path), not through the Rust font
+        // pipeline, so they are exempt from the font/materialization contract.
+        let is_live_pdfium = block
+            .base
+            .source_binding
             .as_ref()
-            .is_some_and(|font| font.is_valid() && font.embeddable)
-            && !block.source_glyphs.is_empty()
-            && (block.text.is_empty() || !block.character_boxes.is_empty());
+            .is_some_and(|binding| binding.adapter_id == "live-pdfium");
+        let complete = is_live_pdfium
+            || (block
+                .font
+                .as_ref()
+                .is_some_and(|font| font.is_valid() && font.embeddable)
+                && !block.source_glyphs.is_empty()
+                && (block.text.is_empty() || !block.character_boxes.is_empty()));
         if !complete {
             return Err(ModelError::IncompleteEditableText(id));
         }

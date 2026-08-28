@@ -315,6 +315,6 @@ mod tests {
             ]
         );
         assert_eq!(rows, 0);
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
     }
 }

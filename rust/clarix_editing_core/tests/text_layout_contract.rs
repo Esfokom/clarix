@@ -108,6 +108,44 @@ fn imported_editable_text_requires_font_and_materialization_contract() {
 }
 
 #[test]
+fn live_pdfium_imports_are_exempt_from_the_font_contract() {
+    let page_id = clarix_editing_core::PageId::from_source_key("live/page");
+    let object_id = ObjectId::from_source_key("live/object");
+    // The live PDFium import ships no font, glyphs, or character geometry:
+    // materialization comes from the live document's encoded bytes.
+    let block = TextBlock::plain(
+        object_id,
+        page_id,
+        "A",
+        clarix_editing_core::PdfBox::new(0.0, 0.0, 10.0, 10.0).unwrap(),
+    )
+    .with_source_binding(SourceBinding {
+        adapter_id: "live-pdfium".into(),
+        source_revision: "sha256:source".into(),
+        source_key: "page/1/text/1".into(),
+        confidence: 1.0,
+    });
+    let page = clarix_editing_core::PageNode::new(
+        page_id,
+        1,
+        100.0,
+        100.0,
+        vec![clarix_editing_core::DocumentObject::text(block)],
+    );
+
+    let model = clarix_editing_core::DocumentModel::new(
+        clarix_editing_core::DocumentId::from_source_key("live"),
+        "sha256:source".into(),
+        vec![page],
+    )
+    .expect("live-pdfium imports must hydrate without a font contract");
+
+    let hydrated = model.page(1).expect("page must be present");
+    assert_eq!(hydrated.objects.len(), 1);
+    let _ = EditCapability::Editable;
+}
+
+#[test]
 fn complete_text_block_round_trips_legal_character_geometry() {
     let page_id = clarix_editing_core::PageId::from_source_key("geometry/page");
     let object_id = ObjectId::from_source_key("geometry/object");
