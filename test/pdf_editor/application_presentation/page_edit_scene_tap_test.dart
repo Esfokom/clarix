@@ -56,7 +56,27 @@ void main() {
     expect(controller.state.selection, isNotNull);
     expect(controller.state.selection!.objectId, 'object-1');
     expect(controller.state.selection!.range.start, 1);
-    expect(find.byKey(const Key('clarix-native-editor')), findsOneWidget);
+    expect(find.byKey(const Key('session-text-input')), findsOneWidget);
+    expect(find.byKey(const Key('session-caret')), findsOneWidget);
+
+    // Once selected, the same object must remain tappable so the caret can be
+    // repositioned without leaving edit mode.
+    await tester.tapAt(const Offset(290, 100));
+    await tester.pump();
+
+    expect(controller.state.selection!.range.start, 3);
+    expect(tester.testTextInput.editingState!['selectionBase'], 3);
+    expect(tester.testTextInput.editingState!['selectionExtent'], 3);
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'Abc',
+        selection: TextSelection.collapsed(offset: 2),
+      ),
+    );
+    await tester.pump();
+
+    expect(controller.state.selection!.range.start, 2);
   });
 }
 
@@ -94,7 +114,14 @@ class TapGateway implements EditorSessionGateway {
         pageId: 'page-1',
         text: 'Abc',
         bounds: const EditorPdfBox(left: 0, bottom: 0, right: 120, top: 20),
-        transform: const EditorAffineTransform(a: 1, b: 0, c: 0, d: 1, e: 0, f: 0),
+        transform: const EditorAffineTransform(
+          a: 1,
+          b: 0,
+          c: 0,
+          d: 1,
+          e: 0,
+          f: 0,
+        ),
         capability: 'editable',
         modifiedRevision: 0,
         runs: const <EditorTextRun>[],

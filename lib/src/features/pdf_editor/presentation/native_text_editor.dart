@@ -6,6 +6,7 @@ import '../application/editor_session_presentation_state.dart';
 import '../domain/editor_selection.dart';
 import 'editor_semantics.dart';
 import 'editor_shortcuts.dart';
+import 'text_delta.dart';
 
 class NativeTextEditor extends StatefulWidget {
   const NativeTextEditor({
@@ -169,7 +170,7 @@ class _NativeTextEditorState extends State<NativeTextEditor> {
     final base = _compositionBase ?? previous;
     _compositionBase = null;
     if (next.text == base.text) return;
-    final delta = _delta(base.text, next.text);
+    final delta = computeTextDelta(base.text, next.text);
     widget.session.applyLocalDelta(
       objectId: widget.object.objectId,
       range: EditorTextRange(start: delta.start, end: delta.end),
@@ -219,30 +220,5 @@ TextStyle _textStyle(EditorSceneObject object, double scale) {
         ? null
         : object.layout!.lineHeight / source.fontSize,
     decoration: TextDecoration.none,
-  );
-}
-
-({int start, int end, String replacement}) _delta(String before, String after) {
-  final oldUnits = before.codeUnits;
-  final newUnits = after.codeUnits;
-  var prefix = 0;
-  while (prefix < oldUnits.length &&
-      prefix < newUnits.length &&
-      oldUnits[prefix] == newUnits[prefix]) {
-    prefix++;
-  }
-  var suffix = 0;
-  while (suffix < oldUnits.length - prefix &&
-      suffix < newUnits.length - prefix &&
-      oldUnits[oldUnits.length - suffix - 1] ==
-          newUnits[newUnits.length - suffix - 1]) {
-    suffix++;
-  }
-  return (
-    start: prefix,
-    end: oldUnits.length - suffix,
-    replacement: String.fromCharCodes(
-      newUnits.sublist(prefix, newUnits.length - suffix),
-    ),
   );
 }

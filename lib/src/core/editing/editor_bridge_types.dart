@@ -550,22 +550,32 @@ class EditorCommandRequest {
 /// A physical mutation that the sole live PDFium document can apply after the
 /// Rust editor core has validated a semantic command, but before that command
 /// becomes durable in the canonical session.
+enum EditorPhysicalEditOperationKind { replaceText, setTextTransform }
+
 class EditorPhysicalEditOperation {
   const EditorPhysicalEditOperation({
+    required this.kind,
     required this.objectId,
     required this.sourceKey,
     required this.sourceRevision,
-    required this.expectedText,
-    required this.replacement,
-    required this.bounds,
+    this.expectedText,
+    this.replacement,
+    this.expectedTransform,
+    this.transform,
+    required this.oldBounds,
+    required this.newBounds,
   });
 
+  final EditorPhysicalEditOperationKind kind;
   final String objectId;
   final String sourceKey;
   final String sourceRevision;
-  final String expectedText;
-  final String replacement;
-  final EditorPdfBox bounds;
+  final String? expectedText;
+  final String? replacement;
+  final EditorAffineTransform? expectedTransform;
+  final EditorAffineTransform? transform;
+  final EditorPdfBox oldBounds;
+  final EditorPdfBox newBounds;
 }
 
 class EditorPhysicalEditPlan {

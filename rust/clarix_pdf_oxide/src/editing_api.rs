@@ -505,13 +505,23 @@ pub struct NativePhysicalEditPlan {
 
 #[derive(Debug, Clone)]
 pub struct NativePhysicalEditOperation {
+    pub kind: NativePhysicalEditOperationKind,
     pub object_id: String,
     /// Stable source key used by the live PDFium scene's locator table.
     pub source_key: String,
     pub source_revision: String,
-    pub expected_text: String,
-    pub replacement: String,
-    pub bounds: NativePdfBox,
+    pub expected_text: Option<String>,
+    pub replacement: Option<String>,
+    pub expected_transform: Option<NativeAffineTransform>,
+    pub transform: Option<NativeAffineTransform>,
+    pub old_bounds: NativePdfBox,
+    pub new_bounds: NativePdfBox,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum NativePhysicalEditOperationKind {
+    ReplaceText,
+    SetTextTransform,
 }
 
 #[derive(Debug, Clone)]
@@ -747,7 +757,7 @@ impl NativeEditorSession {
             objects,
         );
         self.actor
-            .hydrate_page(page, revision)
+            .hydrate_live_page(page, revision)
             .map_err(editing_error)
     }
 
@@ -1838,12 +1848,36 @@ fn native_physical_edit_operation(
             replacement,
             bounds,
         } => NativePhysicalEditOperation {
+            kind: NativePhysicalEditOperationKind::ReplaceText,
             object_id: object_id.to_string(),
             source_key: source_key.clone(),
             source_revision: source_revision.clone(),
-            expected_text: expected_text.clone(),
-            replacement: replacement.clone(),
-            bounds: native_box(*bounds),
+            expected_text: Some(expected_text.clone()),
+            replacement: Some(replacement.clone()),
+            expected_transform: None,
+            transform: None,
+            old_bounds: native_box(*bounds),
+            new_bounds: native_box(*bounds),
+        },
+        PhysicalEditOperation::SetTextTransform {
+            object_id,
+            source_key,
+            source_revision,
+            expected_transform,
+            transform,
+            old_bounds,
+            new_bounds,
+        } => NativePhysicalEditOperation {
+            kind: NativePhysicalEditOperationKind::SetTextTransform,
+            object_id: object_id.to_string(),
+            source_key: source_key.clone(),
+            source_revision: source_revision.clone(),
+            expected_text: None,
+            replacement: None,
+            expected_transform: Some(native_transform(*expected_transform)),
+            transform: Some(native_transform(*transform)),
+            old_bounds: native_box(*old_bounds),
+            new_bounds: native_box(*new_bounds),
         },
     }
 }

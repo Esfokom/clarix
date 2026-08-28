@@ -554,6 +554,20 @@ impl DocumentModel {
         Ok(())
     }
 
+    pub(crate) fn replace_page(&mut self, page: PageNode) -> Result<(), ModelError> {
+        let mut pages = self.pages.clone();
+        pages.retain(|candidate| candidate.page_number != page.page_number);
+        pages.push(page);
+        pages.sort_by_key(|candidate| candidate.page_number);
+        *self = Self::from_parts(
+            self.id,
+            self.source_fingerprint.clone(),
+            self.revision,
+            pages,
+        )?;
+        Ok(())
+    }
+
     pub(crate) fn replace_object(&mut self, object: DocumentObject) -> Result<(), ModelError> {
         let id = object.id();
         let Some((page_index, object_offset)) = self.object_index.get(&id).copied() else {

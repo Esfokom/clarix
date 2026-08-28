@@ -3471,16 +3471,29 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return NativePhysicalEditOperation(
-      objectId: dco_decode_String(arr[0]),
-      sourceKey: dco_decode_String(arr[1]),
-      sourceRevision: dco_decode_String(arr[2]),
-      expectedText: dco_decode_String(arr[3]),
-      replacement: dco_decode_String(arr[4]),
-      bounds: dco_decode_native_pdf_box(arr[5]),
+      kind: dco_decode_native_physical_edit_operation_kind(arr[0]),
+      objectId: dco_decode_String(arr[1]),
+      sourceKey: dco_decode_String(arr[2]),
+      sourceRevision: dco_decode_String(arr[3]),
+      expectedText: dco_decode_opt_String(arr[4]),
+      replacement: dco_decode_opt_String(arr[5]),
+      expectedTransform: dco_decode_opt_box_autoadd_native_affine_transform(
+        arr[6],
+      ),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
+      oldBounds: dco_decode_native_pdf_box(arr[8]),
+      newBounds: dco_decode_native_pdf_box(arr[9]),
     );
+  }
+
+  @protected
+  NativePhysicalEditOperationKind
+  dco_decode_native_physical_edit_operation_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativePhysicalEditOperationKind.values[raw as int];
   }
 
   @protected
@@ -5667,20 +5680,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseDeserializer deserializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_physical_edit_operation_kind(deserializer);
     var var_objectId = sse_decode_String(deserializer);
     var var_sourceKey = sse_decode_String(deserializer);
     var var_sourceRevision = sse_decode_String(deserializer);
-    var var_expectedText = sse_decode_String(deserializer);
-    var var_replacement = sse_decode_String(deserializer);
-    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    var var_expectedText = sse_decode_opt_String(deserializer);
+    var var_replacement = sse_decode_opt_String(deserializer);
+    var var_expectedTransform =
+        sse_decode_opt_box_autoadd_native_affine_transform(deserializer);
+    var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
+      deserializer,
+    );
+    var var_oldBounds = sse_decode_native_pdf_box(deserializer);
+    var var_newBounds = sse_decode_native_pdf_box(deserializer);
     return NativePhysicalEditOperation(
+      kind: var_kind,
       objectId: var_objectId,
       sourceKey: var_sourceKey,
       sourceRevision: var_sourceRevision,
       expectedText: var_expectedText,
       replacement: var_replacement,
-      bounds: var_bounds,
+      expectedTransform: var_expectedTransform,
+      transform: var_transform,
+      oldBounds: var_oldBounds,
+      newBounds: var_newBounds,
     );
+  }
+
+  @protected
+  NativePhysicalEditOperationKind
+  sse_decode_native_physical_edit_operation_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativePhysicalEditOperationKind.values[inner];
   }
 
   @protected
@@ -7834,12 +7866,31 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     SseSerializer serializer,
   ) {
     // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_physical_edit_operation_kind(self.kind, serializer);
     sse_encode_String(self.objectId, serializer);
     sse_encode_String(self.sourceKey, serializer);
     sse_encode_String(self.sourceRevision, serializer);
-    sse_encode_String(self.expectedText, serializer);
-    sse_encode_String(self.replacement, serializer);
-    sse_encode_native_pdf_box(self.bounds, serializer);
+    sse_encode_opt_String(self.expectedText, serializer);
+    sse_encode_opt_String(self.replacement, serializer);
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.expectedTransform,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.transform,
+      serializer,
+    );
+    sse_encode_native_pdf_box(self.oldBounds, serializer);
+    sse_encode_native_pdf_box(self.newBounds, serializer);
+  }
+
+  @protected
+  void sse_encode_native_physical_edit_operation_kind(
+    NativePhysicalEditOperationKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
   }
 
   @protected

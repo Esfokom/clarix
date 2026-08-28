@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../../../core/editing/editor_bridge.dart';
 import '../../../core/editing/editor_bridge_types.dart';
 import '../../../core/editing/live_pdfium_editor_port.dart';
@@ -320,15 +322,28 @@ class BridgeEditorSessionGateway
     final objectId = request.payload.objectId;
     final registry = _livePdfiumLocatorRegistry;
     final livePort = _livePdfiumEditorPort;
-    final isBoundReplacement =
-        request.payload.kind == EditorCommandKind.replaceTextRange &&
-        objectId != null &&
-        registry != null &&
-        registry.hasObject(objectId);
+    final isLiveTextCommand = switch (request.payload.kind) {
+      EditorCommandKind.replaceTextRange ||
+      EditorCommandKind.moveObject ||
+      EditorCommandKind.resizeObject ||
+      EditorCommandKind.rotateObject => true,
+      _ => false,
+    };
+    final hasLiveBinding =
+        objectId != null && registry != null && registry.hasObject(objectId);
     final isHistoryCommand =
         request.payload.kind == EditorCommandKind.undo ||
         request.payload.kind == EditorCommandKind.redo;
-    if ((isBoundReplacement || isHistoryCommand) && livePort != null) {
+    debugPrint(
+      '[editor] routing ${request.payload.kind} for $objectId: '
+      'live=${(hasLiveBinding || isHistoryCommand) && livePort != null} '
+      'bound=$hasLiveBinding history=$isHistoryCommand',
+    );
+    if (livePort != null && isLiveTextCommand) {
+      if (!hasLiveBinding) throw StateError('live_pdfium_binding_missing');
+      return livePort.submit(request);
+    }
+    if (isHistoryCommand && livePort != null) {
       return livePort.submit(request);
     }
     return _required().submit(request);

@@ -486,6 +486,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativePhysicalEditOperationKind
+  dco_decode_native_physical_edit_operation_kind(dynamic raw);
+
+  @protected
   NativePhysicalEditPlan dco_decode_native_physical_edit_plan(dynamic raw);
 
   @protected
@@ -1238,6 +1242,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePhysicalEditOperation sse_decode_native_physical_edit_operation(
     SseDeserializer deserializer,
   );
+
+  @protected
+  NativePhysicalEditOperationKind
+  sse_decode_native_physical_edit_operation_kind(SseDeserializer deserializer);
 
   @protected
   NativePhysicalEditPlan sse_decode_native_physical_edit_plan(
@@ -2170,6 +2178,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_native_physical_edit_operation(
     NativePhysicalEditOperation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_physical_edit_operation_kind(
+    NativePhysicalEditOperationKind self,
     SseSerializer serializer,
   );
 

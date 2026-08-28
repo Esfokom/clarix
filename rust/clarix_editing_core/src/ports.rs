@@ -3,8 +3,8 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    DocumentId, DocumentModel, DocumentRevision, ObjectId, PageId, PageNode, PdfBox,
-    PersistenceError, SaveError,
+    AffineTransform, DocumentId, DocumentModel, DocumentRevision, ObjectId, PageId, PageNode,
+    PdfBox, PersistenceError, SaveError,
 };
 
 /// A transport-only operation that a live PDFium owner can resolve against its
@@ -19,6 +19,15 @@ pub enum PhysicalEditOperation {
         expected_text: String,
         replacement: String,
         bounds: PdfBox,
+    },
+    SetTextTransform {
+        object_id: ObjectId,
+        source_key: String,
+        source_revision: String,
+        expected_transform: AffineTransform,
+        transform: AffineTransform,
+        old_bounds: PdfBox,
+        new_bounds: PdfBox,
     },
 }
 

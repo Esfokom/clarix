@@ -454,6 +454,30 @@ impl EditorSessionState {
             .map_err(|error| EditingError::InvalidCommand(error.to_string()))
     }
 
+    pub(crate) fn hydrate_live_page(
+        &mut self,
+        page: PageNode,
+        expected_revision: DocumentRevision,
+    ) -> Result<(), EditingError> {
+        self.ensure_open()?;
+        if expected_revision != self.revision() {
+            return Err(EditingError::RevisionConflict {
+                expected: expected_revision,
+                actual: self.revision(),
+            });
+        }
+        match self.model.hydrate_page(page.clone()) {
+            Ok(()) => Ok(()),
+            Err(_) if self.revision() == DocumentRevision::INITIAL => self
+                .model
+                .replace_page(page)
+                .map_err(|error| EditingError::InvalidCommand(error.to_string())),
+            Err(_) => Err(EditingError::InvalidCommand(
+                "live_projection_migration_required".into(),
+            )),
+        }
+    }
+
     pub fn close(&mut self) {
         self.closed = true;
     }
@@ -768,6 +792,22 @@ impl EditorSessionState {
             }
             EditorCommand::MoveObject { transform, .. } => after.set_transform(*transform),
             EditorCommand::ResizeObject { bounds, .. } => {
+                let old_width = object_bounds.right - object_bounds.left;
+                let old_height = object_bounds.top - object_bounds.bottom;
+                let new_width = bounds.right - bounds.left;
+                let new_height = bounds.top - bounds.bottom;
+                if old_width <= 0.0 || old_height <= 0.0 || new_width <= 0.0 || new_height <= 0.0 {
+                    return Err(EditingError::InvalidCommand(
+                        "resize bounds must have positive extent".into(),
+                    ));
+                }
+                after.set_transform(scaled_transform(
+                    after.transform(),
+                    new_width / old_width,
+                    new_height / old_height,
+                    object_bounds.left,
+                    object_bounds.bottom,
+                ));
                 after.set_bounds(*bounds);
                 if let DocumentObject::Text(block) = &mut after {
                     let current_capacity = if block.layout_capacity_graphemes == 0 {
@@ -997,22 +1037,46 @@ fn physical_plan_from_changes(
             return None;
         };
         let binding = after_object.source_binding()?;
-        operations.push(crate::PhysicalEditOperation::ReplaceText {
-            object_id: after_object.id(),
-            source_key: binding.source_key.clone(),
-            source_revision: binding.source_revision.clone(),
-            expected_text: before_text.text.clone(),
-            replacement: after_text.text.clone(),
-            bounds: after_object.bounds(),
-        });
-        inverse_operations.push(crate::PhysicalEditOperation::ReplaceText {
-            object_id: before_object.id(),
-            source_key: binding.source_key.clone(),
-            source_revision: binding.source_revision.clone(),
-            expected_text: after_text.text.clone(),
-            replacement: before_text.text.clone(),
-            bounds: before_object.bounds(),
-        });
+        if before_text.text != after_text.text {
+            operations.push(crate::PhysicalEditOperation::ReplaceText {
+                object_id: after_object.id(),
+                source_key: binding.source_key.clone(),
+                source_revision: binding.source_revision.clone(),
+                expected_text: before_text.text.clone(),
+                replacement: after_text.text.clone(),
+                bounds: after_object.bounds(),
+            });
+            inverse_operations.push(crate::PhysicalEditOperation::ReplaceText {
+                object_id: before_object.id(),
+                source_key: binding.source_key.clone(),
+                source_revision: binding.source_revision.clone(),
+                expected_text: after_text.text.clone(),
+                replacement: before_text.text.clone(),
+                bounds: before_object.bounds(),
+            });
+        }
+        if before_object.transform() != after_object.transform()
+            || before_object.bounds() != after_object.bounds()
+        {
+            operations.push(crate::PhysicalEditOperation::SetTextTransform {
+                object_id: after_object.id(),
+                source_key: binding.source_key.clone(),
+                source_revision: binding.source_revision.clone(),
+                expected_transform: before_object.transform(),
+                transform: after_object.transform(),
+                old_bounds: before_object.bounds(),
+                new_bounds: after_object.bounds(),
+            });
+            inverse_operations.push(crate::PhysicalEditOperation::SetTextTransform {
+                object_id: before_object.id(),
+                source_key: binding.source_key.clone(),
+                source_revision: binding.source_revision.clone(),
+                expected_transform: after_object.transform(),
+                transform: before_object.transform(),
+                old_bounds: after_object.bounds(),
+                new_bounds: before_object.bounds(),
+            });
+        }
     }
     (!operations.is_empty()).then_some(crate::PhysicalEditPlan {
         previous_revision,
@@ -1249,5 +1313,30 @@ fn rotated_transform(
         d: rotation.b * current.c + rotation.d * current.d,
         e: rotation.a * current.e + rotation.c * current.f + rotation.e,
         f: rotation.b * current.e + rotation.d * current.f + rotation.f,
+    }
+}
+
+fn scaled_transform(
+    current: AffineTransform,
+    scale_x: f64,
+    scale_y: f64,
+    anchor_x: f64,
+    anchor_y: f64,
+) -> AffineTransform {
+    let scale = AffineTransform {
+        a: scale_x,
+        b: 0.0,
+        c: 0.0,
+        d: scale_y,
+        e: anchor_x - scale_x * anchor_x,
+        f: anchor_y - scale_y * anchor_y,
+    };
+    AffineTransform {
+        a: scale.a * current.a + scale.c * current.b,
+        b: scale.b * current.a + scale.d * current.b,
+        c: scale.a * current.c + scale.c * current.d,
+        d: scale.b * current.c + scale.d * current.d,
+        e: scale.a * current.e + scale.c * current.f + scale.e,
+        f: scale.b * current.e + scale.d * current.f + scale.f,
     }
 }

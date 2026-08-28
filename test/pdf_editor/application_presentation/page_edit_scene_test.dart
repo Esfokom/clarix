@@ -8,6 +8,7 @@ import 'package:clarix/src/features/pdf_editor/presentation/editor_hit_test.dart
 import 'package:clarix/src/features/pdf_editor/presentation/editor_text_painter.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/live_pdfium_tile_layer.dart';
 import 'package:clarix/src/features/pdf_editor/presentation/page_edit_scene.dart';
+import 'package:clarix/src/features/pdf_editor/presentation/session_text_input.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -47,7 +48,8 @@ void main() {
       ),
     );
 
-    expect(find.byKey(const Key('clarix-native-editor')), findsNothing);
+    expect(find.byKey(const Key('session-text-input')), findsNothing);
+    expect(find.byKey(const Key('session-caret')), findsNothing);
   });
 
   testWidgets(
@@ -83,9 +85,118 @@ void main() {
         ),
       );
 
-      expect(find.byKey(const Key('clarix-native-editor')), findsOneWidget);
+      expect(find.byKey(const Key('session-text-input')), findsOneWidget);
+      expect(find.byKey(const Key('session-caret')), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey<String>('clarix-edit-target-object-1')),
+        findsOneWidget,
+      );
     },
   );
+
+  testWidgets(
+    'backspace edits the PDF without painting a duplicate text field',
+    (tester) async {
+      final harness = NativeEditorTestHarness(text: 'Before');
+      await harness.open(selectionOffset: 6);
+      addTearDown(harness.controller.close);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: StreamBuilder<EditorDocumentState>(
+            stream: harness.controller.changes,
+            initialData: harness.controller.state,
+            builder: (context, snapshot) {
+              final document = snapshot.data!;
+              return SizedBox(
+                width: 420,
+                height: 72,
+                child: PageEditScene(
+                  scene: document.scenes[1]!,
+                  document: document,
+                  session: harness.controller,
+                  editingEnabled: true,
+                  displaySize: const Size(420, 72),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(EditableText), findsNothing);
+      expect(find.byType(EditorTextObjectLayer), findsNothing);
+
+      tester.testTextInput.updateEditingValue(
+        const TextEditingValue(
+          text: 'Befor',
+          selection: TextSelection.collapsed(offset: 5),
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      expect(harness.gateway.requests, hasLength(1));
+      final command = harness.gateway.requests.single.payload;
+      expect(command.kind, EditorCommandKind.replaceTextRange);
+      expect(command.start, 5);
+      expect(command.end, 6);
+      expect(command.replacement, '');
+    },
+  );
+
+  testWidgets('invisible input commits IME composition as one edit', (
+    tester,
+  ) async {
+    final harness = NativeEditorTestHarness(text: 'Before');
+    await harness.open(selectionOffset: 6);
+    addTearDown(harness.controller.close);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StreamBuilder<EditorDocumentState>(
+          stream: harness.controller.changes,
+          initialData: harness.controller.state,
+          builder: (context, snapshot) {
+            final document = snapshot.data!;
+            return SessionTextInput(
+              session: harness.controller,
+              object: harness.gateway.object,
+              text: document.visibleText(harnessObjectId)!,
+              selection: document.selection!,
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump();
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'Beforex',
+        selection: TextSelection.collapsed(offset: 7),
+        composing: TextRange(start: 6, end: 7),
+      ),
+    );
+    await tester.pump();
+    expect(harness.gateway.requests, isEmpty);
+
+    tester.testTextInput.updateEditingValue(
+      const TextEditingValue(
+        text: 'Beforex',
+        selection: TextSelection.collapsed(offset: 7),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    expect(harness.gateway.requests, hasLength(1));
+    final command = harness.gateway.requests.single.payload;
+    expect(command.start, 6);
+    expect(command.end, 6);
+    expect(command.replacement, 'x');
+  });
 
   testWidgets('edit targets use the pdfrx overlay interaction bridge', (
     tester,

@@ -28,7 +28,7 @@ class EditorObjectHitGeometry {
     // computes them after reflow). Synthesize proportional boxes from the
     // object bounds so tap-to-caret still resolves to a real offset.
     final characters = object.characterBoxes.isEmpty
-        ? _synthesizeCharacterBoxes(object)
+        ? synthesizeCharacterBoxes(object)
         : object.characterBoxes;
     for (final character in characters) {
       final bounds = character.bounds;
@@ -186,7 +186,7 @@ Offset _transform(Offset point, EditorAffineTransform transform) => Offset(
 /// Proportional per-character boxes over [EditorSceneObject.bounds] for
 /// objects without measured character geometry. Mirrors the fallback used by
 /// the native projection pipeline; newline characters consume no width.
-List<EditorTextCharacterBox> _synthesizeCharacterBoxes(
+List<EditorTextCharacterBox> synthesizeCharacterBoxes(
   EditorSceneObject object,
 ) {
   final text = object.text ?? '';

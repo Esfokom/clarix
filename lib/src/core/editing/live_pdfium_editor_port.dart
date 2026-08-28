@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../features/pdf_editor/infrastructure/pdfium_edit_plan_applier.dart';
 import 'editor_bridge.dart';
 import 'editor_bridge_types.dart';
@@ -125,24 +127,63 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
   /// [prepareLiveCommand] and [publishPreparedLiveCommand] independently.
   Future<EditorCommandResult> submit(EditorCommandRequest request) async {
     final prepared = await _semantic.prepareLiveCommand(request);
+    debugPrint(
+      '[editor] live plan prepared: ${prepared.plan.operations.length} '
+      'operation(s), previousRevision=${prepared.plan.previousRevision} '
+      'revision=${prepared.plan.revision}',
+    );
+    for (final operation in prepared.plan.operations) {
+      debugPrint(
+        '[editor]   live operation kind=${operation.kind} '
+        'sourceKey=${operation.sourceKey}',
+      );
+    }
     final replacements = prepared.plan.operations
+        .where(
+          (operation) =>
+              operation.kind == EditorPhysicalEditOperationKind.replaceText,
+        )
         .map(
           (operation) => LivePdfiumTextReplacement(
             locator: _locatorRegistry.resolve(
               sourceKey: operation.sourceKey,
               sourceRevision: operation.sourceRevision,
             ),
-            replacement: operation.replacement,
+            replacement: operation.replacement!,
             expectedText: operation.expectedText,
+          ),
+        )
+        .toList(growable: false);
+    final transforms = prepared.plan.operations
+        .where(
+          (operation) =>
+              operation.kind ==
+              EditorPhysicalEditOperationKind.setTextTransform,
+        )
+        .map(
+          (operation) => LivePdfiumTextTransform(
+            locator: _locatorRegistry.resolve(
+              sourceKey: operation.sourceKey,
+              sourceRevision: operation.sourceRevision,
+            ),
+            expectedTransform: operation.expectedTransform!,
+            transform: operation.transform!,
+            oldBounds: operation.oldBounds,
+            newBounds: operation.newBounds,
           ),
         )
         .toList(growable: false);
     final applied = await _session.apply(
       LivePdfiumEditPlan(
         replacements: replacements,
+        transforms: transforms,
         expectedRevision: prepared.plan.previousRevision,
         revision: prepared.plan.revision,
       ),
+    );
+    debugPrint(
+      '[editor] live apply succeeded: revision=${applied.revision} '
+      'invalidations=${applied.invalidations.length}',
     );
     final result = await _semantic.publishPreparedLiveCommand(prepared.token);
     onApplied?.call(applied);

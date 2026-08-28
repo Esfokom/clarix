@@ -3725,19 +3725,45 @@ impl SseDecode for crate::api::NativePdfSource {
 impl SseDecode for crate::editing_api::NativePhysicalEditOperation {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_kind =
+            <crate::editing_api::NativePhysicalEditOperationKind>::sse_decode(deserializer);
         let mut var_objectId = <String>::sse_decode(deserializer);
         let mut var_sourceKey = <String>::sse_decode(deserializer);
         let mut var_sourceRevision = <String>::sse_decode(deserializer);
-        let mut var_expectedText = <String>::sse_decode(deserializer);
-        let mut var_replacement = <String>::sse_decode(deserializer);
-        let mut var_bounds = <crate::editing_api::NativePdfBox>::sse_decode(deserializer);
+        let mut var_expectedText = <Option<String>>::sse_decode(deserializer);
+        let mut var_replacement = <Option<String>>::sse_decode(deserializer);
+        let mut var_expectedTransform =
+            <Option<crate::editing_api::NativeAffineTransform>>::sse_decode(deserializer);
+        let mut var_transform =
+            <Option<crate::editing_api::NativeAffineTransform>>::sse_decode(deserializer);
+        let mut var_oldBounds = <crate::editing_api::NativePdfBox>::sse_decode(deserializer);
+        let mut var_newBounds = <crate::editing_api::NativePdfBox>::sse_decode(deserializer);
         return crate::editing_api::NativePhysicalEditOperation {
+            kind: var_kind,
             object_id: var_objectId,
             source_key: var_sourceKey,
             source_revision: var_sourceRevision,
             expected_text: var_expectedText,
             replacement: var_replacement,
-            bounds: var_bounds,
+            expected_transform: var_expectedTransform,
+            transform: var_transform,
+            old_bounds: var_oldBounds,
+            new_bounds: var_newBounds,
+        };
+    }
+}
+
+impl SseDecode for crate::editing_api::NativePhysicalEditOperationKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::editing_api::NativePhysicalEditOperationKind::ReplaceText,
+            1 => crate::editing_api::NativePhysicalEditOperationKind::SetTextTransform,
+            _ => unreachable!(
+                "Invalid variant for NativePhysicalEditOperationKind: {}",
+                inner
+            ),
         };
     }
 }
@@ -5938,12 +5964,16 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::NativePdfSource>
 impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePhysicalEditOperation {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
+            self.kind.into_into_dart().into_dart(),
             self.object_id.into_into_dart().into_dart(),
             self.source_key.into_into_dart().into_dart(),
             self.source_revision.into_into_dart().into_dart(),
             self.expected_text.into_into_dart().into_dart(),
             self.replacement.into_into_dart().into_dart(),
-            self.bounds.into_into_dart().into_dart(),
+            self.expected_transform.into_into_dart().into_dart(),
+            self.transform.into_into_dart().into_dart(),
+            self.old_bounds.into_into_dart().into_dart(),
+            self.new_bounds.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -5956,6 +5986,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePhysicalEditOpe
     for crate::editing_api::NativePhysicalEditOperation
 {
     fn into_into_dart(self) -> crate::editing_api::NativePhysicalEditOperation {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePhysicalEditOperationKind {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::ReplaceText => 0.into_dart(),
+            Self::SetTextTransform => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::editing_api::NativePhysicalEditOperationKind
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativePhysicalEditOperationKind>
+    for crate::editing_api::NativePhysicalEditOperationKind
+{
+    fn into_into_dart(self) -> crate::editing_api::NativePhysicalEditOperationKind {
         self
     }
 }
@@ -7632,12 +7683,35 @@ impl SseEncode for crate::api::NativePdfSource {
 impl SseEncode for crate::editing_api::NativePhysicalEditOperation {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::editing_api::NativePhysicalEditOperationKind>::sse_encode(self.kind, serializer);
         <String>::sse_encode(self.object_id, serializer);
         <String>::sse_encode(self.source_key, serializer);
         <String>::sse_encode(self.source_revision, serializer);
-        <String>::sse_encode(self.expected_text, serializer);
-        <String>::sse_encode(self.replacement, serializer);
-        <crate::editing_api::NativePdfBox>::sse_encode(self.bounds, serializer);
+        <Option<String>>::sse_encode(self.expected_text, serializer);
+        <Option<String>>::sse_encode(self.replacement, serializer);
+        <Option<crate::editing_api::NativeAffineTransform>>::sse_encode(
+            self.expected_transform,
+            serializer,
+        );
+        <Option<crate::editing_api::NativeAffineTransform>>::sse_encode(self.transform, serializer);
+        <crate::editing_api::NativePdfBox>::sse_encode(self.old_bounds, serializer);
+        <crate::editing_api::NativePdfBox>::sse_encode(self.new_bounds, serializer);
+    }
+}
+
+impl SseEncode for crate::editing_api::NativePhysicalEditOperationKind {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::editing_api::NativePhysicalEditOperationKind::ReplaceText => 0,
+                crate::editing_api::NativePhysicalEditOperationKind::SetTextTransform => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 
@@ -8292,3 +8366,57 @@ mod io {
 }
 #[cfg(not(target_family = "wasm"))]
 pub use io::*;
+
+/// cbindgen:ignore
+#[cfg(target_family = "wasm")]
+mod web {
+    // This file is automatically generated, so please do not edit it.
+    // @generated by `flutter_rust_bridge`@ 2.12.0.
+
+    // Section: imports
+
+    use super::*;
+    use crate::api::*;
+    use crate::editing_api::*;
+    use flutter_rust_bridge::for_generated::byteorder::{
+        NativeEndian, ReadBytesExt, WriteBytesExt,
+    };
+    use flutter_rust_bridge::for_generated::wasm_bindgen;
+    use flutter_rust_bridge::for_generated::wasm_bindgen::prelude::*;
+    use flutter_rust_bridge::for_generated::{transform_result_dco, Lifetimeable, Lockable};
+    use flutter_rust_bridge::{Handler, IntoIntoDart};
+
+    // Section: boilerplate
+
+    flutter_rust_bridge::frb_generated_boilerplate_web!();
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativeEditorSession>>::decrement_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativePdfSession>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativePdfSession>>::decrement_strong_count(ptr as _);
+    }
+}
+#[cfg(target_family = "wasm")]
+pub use web::*;

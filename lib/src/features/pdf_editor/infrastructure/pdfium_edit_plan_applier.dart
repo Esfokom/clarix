@@ -23,22 +23,46 @@ class LivePdfiumTextReplacement {
   final String? expectedText;
 }
 
+class LivePdfiumTextTransform {
+  const LivePdfiumTextTransform({
+    required this.locator,
+    required this.expectedTransform,
+    required this.transform,
+    required this.oldBounds,
+    required this.newBounds,
+  });
+
+  final EditorPhysicalLocator locator;
+  final EditorAffineTransform expectedTransform;
+  final EditorAffineTransform transform;
+  final EditorPdfBox oldBounds;
+  final EditorPdfBox newBounds;
+}
+
 /// The currently supported, all-or-nothing physical PDFium edit transaction.
 class LivePdfiumEditPlan {
   LivePdfiumEditPlan({
-    required List<LivePdfiumTextReplacement> replacements,
+    List<LivePdfiumTextReplacement> replacements =
+        const <LivePdfiumTextReplacement>[],
+    List<LivePdfiumTextTransform> transforms =
+        const <LivePdfiumTextTransform>[],
     this.expectedRevision,
     this.revision,
-  }) : replacements = List.unmodifiable(replacements) {
-    if (replacements.isEmpty) {
+  }) : replacements = List.unmodifiable(replacements),
+       transforms = List.unmodifiable(transforms) {
+    if (replacements.isEmpty && transforms.isEmpty) {
       throw ArgumentError.value(
         replacements,
         'replacements',
         'must not be empty',
       );
     }
-    final pageNumber = replacements.first.locator.pageNumber;
-    if (replacements.any((item) => item.locator.pageNumber != pageNumber)) {
+    final locators = <EditorPhysicalLocator>[
+      ...replacements.map((item) => item.locator),
+      ...transforms.map((item) => item.locator),
+    ];
+    final pageNumber = locators.first.pageNumber;
+    if (locators.any((item) => item.pageNumber != pageNumber)) {
       throw ArgumentError.value(
         replacements,
         'replacements',
@@ -57,6 +81,7 @@ class LivePdfiumEditPlan {
   }
 
   final List<LivePdfiumTextReplacement> replacements;
+  final List<LivePdfiumTextTransform> transforms;
 
   /// Semantic revision at which this plan was prepared. Omitted only by
   /// direct local callers that do not participate in the bridge protocol.
@@ -66,7 +91,9 @@ class LivePdfiumEditPlan {
   /// only by direct local callers, which advance by one.
   final int? revision;
 
-  int get pageNumber => replacements.first.locator.pageNumber;
+  int get pageNumber => replacements.isNotEmpty
+      ? replacements.first.locator.pageNumber
+      : transforms.first.locator.pageNumber;
 }
 
 /// Result returned only after the plan has been regenerated in the live PDF.

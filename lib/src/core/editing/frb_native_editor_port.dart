@@ -523,14 +523,38 @@ EditorPhysicalEditPlan _physicalEditPlanFromNative(
 
 EditorPhysicalEditOperation _physicalEditOperationFromNative(
   native.NativePhysicalEditOperation value,
-) => EditorPhysicalEditOperation(
-  objectId: _canonicalUuid(value.objectId, 'physicalOperation.objectId'),
-  sourceKey: value.sourceKey,
-  sourceRevision: value.sourceRevision,
-  expectedText: value.expectedText,
-  replacement: value.replacement,
-  bounds: _boxFromNative(value.bounds),
-);
+) {
+  final kind = switch (value.kind) {
+    native.NativePhysicalEditOperationKind.replaceText =>
+      EditorPhysicalEditOperationKind.replaceText,
+    native.NativePhysicalEditOperationKind.setTextTransform =>
+      EditorPhysicalEditOperationKind.setTextTransform,
+  };
+  if (kind == EditorPhysicalEditOperationKind.replaceText &&
+      (value.expectedText == null || value.replacement == null)) {
+    throw StateError('invalid_physical_operation: replacement payload missing');
+  }
+  if (kind == EditorPhysicalEditOperationKind.setTextTransform &&
+      (value.expectedTransform == null || value.transform == null)) {
+    throw StateError('invalid_physical_operation: transform payload missing');
+  }
+  return EditorPhysicalEditOperation(
+    kind: kind,
+    objectId: _canonicalUuid(value.objectId, 'physicalOperation.objectId'),
+    sourceKey: value.sourceKey,
+    sourceRevision: value.sourceRevision,
+    expectedText: value.expectedText,
+    replacement: value.replacement,
+    expectedTransform: value.expectedTransform == null
+        ? null
+        : _transformFromNative(value.expectedTransform!),
+    transform: value.transform == null
+        ? null
+        : _transformFromNative(value.transform!),
+    oldBounds: _boxFromNative(value.oldBounds),
+    newBounds: _boxFromNative(value.newBounds),
+  );
+}
 
 EditorCommandResult _commandResultFromNative(
   native.NativeCommandResult value,

@@ -261,8 +261,7 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
       }
       final expectedText = replacement.expectedText;
       if (expectedText != null &&
-          expectedText.trimRight() !=
-              joinObjectTexts(samples).trimRight()) {
+          expectedText.trimRight() != joinObjectTexts(samples).trimRight()) {
         throw StateError('locator text no longer matches the prepared plan');
       }
       final separators = <String>[
@@ -289,6 +288,8 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
       );
     }
     final changed = <({FPDF_PAGEOBJECT object, String originalText})>[];
+    final changedTransforms =
+        <({FPDF_PAGEOBJECT object, EditorAffineTransform original})>[];
     try {
       for (final replacement in resolved) {
         for (var index = 0; index < replacement.objects.length; index++) {
@@ -302,13 +303,42 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
           ));
         }
       }
+      for (final transform in plan.transforms) {
+        if (transform.locator.objectType != 'text') {
+          throw ArgumentError('live transform requires a text locator');
+        }
+        for (final path in transform.locator.allObjectPaths) {
+          final object = objectAtPdfiumPath(page, path);
+          if (object.address == 0 ||
+              pdfiumBindings.FPDFPageObj_GetType(object) != FPDF_PAGEOBJ_TEXT) {
+            throw StateError('locator does not resolve to a text object');
+          }
+          final original = _readObjectTransform(object);
+          if (!_sameTransform(original, transform.expectedTransform)) {
+            throw StateError(
+              'locator transform no longer matches the prepared plan',
+            );
+          }
+          _setObjectTransform(object, transform.transform);
+          changedTransforms.add((object: object, original: original));
+        }
+      }
       if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
         throw StateError('PDFium could not regenerate changed page content');
       }
-      return resolved
-          .map((replacement) => replacement.bounds)
-          .toList(growable: false);
+      return <EditorPdfBox>[
+        ...resolved.map((replacement) => replacement.bounds),
+        ...plan.transforms.expand(
+          (transform) => <EditorPdfBox>[
+            transform.oldBounds,
+            transform.newBounds,
+          ],
+        ),
+      ];
     } catch (_) {
+      for (final original in changedTransforms.reversed) {
+        _setObjectTransform(original.object, original.original);
+      }
       for (final original in changed.reversed) {
         _setTextObjectText(original.object, original.originalText);
       }
@@ -353,11 +383,8 @@ _readTextObjectMetrics(FPDF_PAGEOBJECT object, FPDF_TEXTPAGE textPage) {
         0) {
       throw StateError('PDFium could not read text bounds');
     }
-    final hasFontSize = pdfiumBindings.FPDFTextObj_GetFontSize(
-          object,
-          fontSize,
-        ) !=
-        0;
+    final hasFontSize =
+        pdfiumBindings.FPDFTextObj_GetFontSize(object, fontSize) != 0;
     pdfiumBindings.FPDFPageObj_GetMatrix(object, matrix);
     return (
       text: _readTextObjectText(object, textPage),
@@ -417,6 +444,51 @@ void _setTextObjectText(FPDF_PAGEOBJECT object, String replacement) {
     calloc.free(buffer);
   }
 }
+
+EditorAffineTransform _readObjectTransform(FPDF_PAGEOBJECT object) {
+  final matrix = calloc<FS_MATRIX>();
+  try {
+    if (pdfiumBindings.FPDFPageObj_GetMatrix(object, matrix) == 0) {
+      throw StateError('PDFium could not read object transform');
+    }
+    return EditorAffineTransform(
+      a: matrix.ref.a,
+      b: matrix.ref.b,
+      c: matrix.ref.c,
+      d: matrix.ref.d,
+      e: matrix.ref.e,
+      f: matrix.ref.f,
+    );
+  } finally {
+    calloc.free(matrix);
+  }
+}
+
+void _setObjectTransform(FPDF_PAGEOBJECT object, EditorAffineTransform value) {
+  final matrix = calloc<FS_MATRIX>();
+  try {
+    matrix.ref
+      ..a = value.a
+      ..b = value.b
+      ..c = value.c
+      ..d = value.d
+      ..e = value.e
+      ..f = value.f;
+    if (pdfiumBindings.FPDFPageObj_SetMatrix(object, matrix) == 0) {
+      throw StateError('PDFium could not update object transform');
+    }
+  } finally {
+    calloc.free(matrix);
+  }
+}
+
+bool _sameTransform(EditorAffineTransform left, EditorAffineTransform right) =>
+    (left.a - right.a).abs() <= 1e-6 &&
+    (left.b - right.b).abs() <= 1e-6 &&
+    (left.c - right.c).abs() <= 1e-6 &&
+    (left.d - right.d).abs() <= 1e-6 &&
+    (left.e - right.e).abs() <= 1e-6 &&
+    (left.f - right.f).abs() <= 1e-6;
 
 EditorDirtyTile _renderPageTileOnWorker(
   PdfiumWorkerInput<LivePdfiumTileRequest> input,

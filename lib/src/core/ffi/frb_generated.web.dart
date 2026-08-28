@@ -145,6 +145,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw);
 
   @protected
+  NativeLivePageImport dco_decode_box_autoadd_native_live_page_import(
+    dynamic raw,
+  );
+
+  @protected
   NativeObjectDetailsRequest
   dco_decode_box_autoadd_native_object_details_request(dynamic raw);
 
@@ -255,6 +260,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeLiveTextObject> dco_decode_list_native_live_text_object(
+    dynamic raw,
+  );
+
+  @protected
   List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw);
 
   @protected
@@ -265,6 +275,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw);
+
+  @protected
+  List<NativePhysicalEditOperation>
+  dco_decode_list_native_physical_edit_operation(dynamic raw);
 
   @protected
   List<NativeRagChunk> dco_decode_list_native_rag_chunk(dynamic raw);
@@ -301,6 +315,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint32List dco_decode_list_prim_u_32_strict(dynamic raw);
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw);
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
@@ -414,6 +431,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   dco_decode_native_font_fallback_proposal_request(dynamic raw);
 
   @protected
+  NativeLivePageImport dco_decode_native_live_page_import(dynamic raw);
+
+  @protected
+  NativeLiveTextObject dco_decode_native_live_text_object(dynamic raw);
+
+  @protected
   NativeMemoryPressureLevel dco_decode_native_memory_pressure_level(
     dynamic raw,
   );
@@ -460,7 +483,24 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfSource dco_decode_native_pdf_source(dynamic raw);
 
   @protected
+  NativePhysicalEditOperation dco_decode_native_physical_edit_operation(
+    dynamic raw,
+  );
+
+  @protected
+  NativePhysicalEditOperationKind
+  dco_decode_native_physical_edit_operation_kind(dynamic raw);
+
+  @protected
+  NativePhysicalEditPlan dco_decode_native_physical_edit_plan(dynamic raw);
+
+  @protected
   NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw);
+
+  @protected
+  NativePreparedLiveCommand dco_decode_native_prepared_live_command(
+    dynamic raw,
+  );
 
   @protected
   NativeProviderTestRequest dco_decode_native_provider_test_request(
@@ -765,6 +805,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeLivePageImport sse_decode_box_autoadd_native_live_page_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeObjectDetailsRequest
   sse_decode_box_autoadd_native_object_details_request(
     SseDeserializer deserializer,
@@ -891,6 +936,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<NativeLiveTextObject> sse_decode_list_native_live_text_object(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<NativeObjectPatch> sse_decode_list_native_object_patch(
     SseDeserializer deserializer,
   );
@@ -909,6 +959,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<NativePdfSource> sse_decode_list_native_pdf_source(
     SseDeserializer deserializer,
   );
+
+  @protected
+  List<NativePhysicalEditOperation>
+  sse_decode_list_native_physical_edit_operation(SseDeserializer deserializer);
 
   @protected
   List<NativeRagChunk> sse_decode_list_native_rag_chunk(
@@ -955,6 +1009,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer);
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer);
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
@@ -1110,6 +1167,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  NativeLivePageImport sse_decode_native_live_page_import(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativeLiveTextObject sse_decode_native_live_text_object(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativeMemoryPressureLevel sse_decode_native_memory_pressure_level(
     SseDeserializer deserializer,
   );
@@ -1174,7 +1241,26 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer);
 
   @protected
+  NativePhysicalEditOperation sse_decode_native_physical_edit_operation(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePhysicalEditOperationKind
+  sse_decode_native_physical_edit_operation_kind(SseDeserializer deserializer);
+
+  @protected
+  NativePhysicalEditPlan sse_decode_native_physical_edit_plan(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   NativePhysicalLocator sse_decode_native_physical_locator(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  NativePreparedLiveCommand sse_decode_native_prepared_live_command(
     SseDeserializer deserializer,
   );
 
@@ -1552,6 +1638,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_native_live_page_import(
+    NativeLivePageImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_box_autoadd_native_object_details_request(
     NativeObjectDetailsRequest self,
     SseSerializer serializer,
@@ -1696,6 +1788,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_native_live_text_object(
+    List<NativeLiveTextObject> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_native_object_patch(
     List<NativeObjectPatch> self,
     SseSerializer serializer,
@@ -1716,6 +1814,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_native_pdf_source(
     List<NativePdfSource> self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_native_physical_edit_operation(
+    List<NativePhysicalEditOperation> self,
     SseSerializer serializer,
   );
 
@@ -1778,6 +1882,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
     Uint32List self,
     SseSerializer serializer,
   );
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_prim_u_8_strict(
@@ -1978,6 +2085,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_live_page_import(
+    NativeLivePageImport self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_live_text_object(
+    NativeLiveTextObject self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_memory_pressure_level(
     NativeMemoryPressureLevel self,
     SseSerializer serializer,
@@ -2059,8 +2178,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_native_physical_edit_operation(
+    NativePhysicalEditOperation self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_physical_edit_operation_kind(
+    NativePhysicalEditOperationKind self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_physical_edit_plan(
+    NativePhysicalEditPlan self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_native_physical_locator(
     NativePhysicalLocator self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_native_prepared_live_command(
+    NativePreparedLiveCommand self,
     SseSerializer serializer,
   );
 

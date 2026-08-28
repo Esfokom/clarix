@@ -66,6 +66,11 @@ enum ActorRequest {
         expected_revision: DocumentRevision,
         reply: Sender<Result<(), EditingError>>,
     },
+    HydrateLivePage {
+        page: PageNode,
+        expected_revision: DocumentRevision,
+        reply: Sender<Result<(), EditingError>>,
+    },
     Close {
         reply: Sender<Result<(), EditingError>>,
     },
@@ -307,6 +312,26 @@ impl EditorSessionActor {
             .map_err(|_| EditingError::ActorUnavailable)?
     }
 
+    pub fn hydrate_live_page(
+        &self,
+        page: PageNode,
+        expected_revision: DocumentRevision,
+    ) -> Result<(), EditingError> {
+        self.ensure_open()?;
+        let (reply, response) = bounded(1);
+        self.inner
+            .sender
+            .send(ActorRequest::HydrateLivePage {
+                page,
+                expected_revision,
+                reply,
+            })
+            .map_err(|_| EditingError::ActorUnavailable)?;
+        response
+            .recv()
+            .map_err(|_| EditingError::ActorUnavailable)?
+    }
+
     pub fn subscribe_with_capacity(
         &self,
         capacity: usize,
@@ -491,6 +516,13 @@ fn run_actor(
                 reply,
             } => {
                 let _ = reply.send(session.hydrate_page(page, expected_revision));
+            }
+            ActorRequest::HydrateLivePage {
+                page,
+                expected_revision,
+                reply,
+            } => {
+                let _ = reply.send(session.hydrate_live_page(page, expected_revision));
             }
             ActorRequest::Close { reply } => {
                 let revision = session.revision();

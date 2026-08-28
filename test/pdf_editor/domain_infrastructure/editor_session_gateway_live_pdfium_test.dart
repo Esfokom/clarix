@@ -118,7 +118,7 @@ void main() {
     },
   );
 
-  test('keeps an unbound text edit on the legacy transaction path', () async {
+  test('rejects an unbound text edit in a live session', () async {
     final liveSession = _FakeLivePdfiumSession();
     final native = _NativePort();
     final gateway = BridgeEditorSessionGateway.forTest(
@@ -127,23 +127,26 @@ void main() {
       openLivePdfiumSession: (_) async => liveSession,
     );
     await gateway.open('fixture.pdf');
-    await gateway.submit(
-      const EditorCommandRequest(
-        commandId: _commandId,
-        baseRevision: 0,
-        payload: EditorCommand(
-          kind: EditorCommandKind.replaceTextRange,
-          objectId: _objectId,
-          start: 0,
-          end: 6,
-          replacement: 'Changed',
+    expect(
+      () => gateway.submit(
+        const EditorCommandRequest(
+          commandId: _commandId,
+          baseRevision: 0,
+          payload: EditorCommand(
+            kind: EditorCommandKind.replaceTextRange,
+            objectId: _objectId,
+            start: 0,
+            end: 6,
+            replacement: 'Changed',
+          ),
         ),
       ),
+      throwsStateError,
     );
 
     expect(native.prepared, isFalse);
     expect(native.published, isFalse);
-    expect(native.legacySubmissions, 1);
+    expect(native.legacySubmissions, isZero);
     expect(liveSession.appliedPlans, isEmpty);
   });
 
@@ -294,6 +297,27 @@ void main() {
     expect(page.objects.single.sourceKey, 'source/live-pdfium/page/1/object/0');
     expect(page.objects.single.objectId, matches(RegExp(r'^[0-9a-f-]{36}$')));
   });
+
+  test(
+    'surfaces a recovered projection conflict instead of binding mismatched objects',
+    () async {
+      final liveSession = _ImportingLivePdfiumSession();
+      final nativePort = _NativePort()
+        ..importError = StateError(
+          'invalid_command: invalid command: page 1 was already hydrated '
+          'with different content',
+        );
+      final gateway = BridgeEditorSessionGateway.forTest(
+        openBridgeSession: (_, {String? projectRoot}) async =>
+            EditorBridgeSession.forTest(nativePort),
+        openLivePdfiumSession: (_) async => liveSession,
+      );
+      await gateway.open('fixture.pdf');
+
+      await expectLater(gateway.requestPage(1, 0), throwsStateError);
+      expect(nativePort.importedPages, hasLength(1));
+    },
+  );
 }
 
 const _commandId = '00000000-0000-4000-8000-000000000010';
@@ -344,6 +368,7 @@ final class _NativePort
   bool published = false;
   bool closed = false;
   int legacySubmissions = 0;
+  Object? importError;
   final List<native.NativeLivePageImport> importedPages =
       <native.NativeLivePageImport>[];
 
@@ -384,6 +409,7 @@ final class _NativePort
   @override
   Future<void> importLivePage(native.NativeLivePageImport request) async {
     importedPages.add(request);
+    if (importError case final error?) throw error;
   }
 
   @override

@@ -14,9 +14,9 @@ import 'editor_hit_test.dart';
 import 'editor_text_painter.dart';
 import 'font_fallback_dialog.dart';
 import 'live_pdfium_tile_layer.dart';
-import 'native_text_editor.dart';
 import 'object_transform_handles.dart';
 import 'overflow_indicator.dart';
+import 'session_text_input.dart';
 
 typedef PageSelectionActionsBuilder =
     Widget Function(
@@ -105,7 +105,8 @@ class PageEditScene extends StatelessWidget {
     final liveTileCoveredPages = <int>{
       for (final tile in liveTiles) tile.pageNumber,
     };
-    final usesLivePdfiumTiles = liveTiles.isNotEmpty &&
+    final usesLivePdfiumTiles =
+        liveTiles.isNotEmpty &&
         liveTileCoveredPages.contains(scene.pageNumber) &&
         liveTiles.length >= editableObjectIds.length;
     final fallbackProposal = document.fontFallbackProposal;
@@ -182,109 +183,118 @@ class PageEditScene extends StatelessWidget {
                   ),
             if (activeSession != null)
               for (final object in interactive)
-                if (object.objectId != activeObject?.objectId)
-                  Positioned.fromRect(
-                    rect: EditorPageGeometry.rectForBox(
-                      object.bounds,
-                      pageSize: pageSize,
-                      displaySize: displaySize,
-                    ),
-                    child: IgnorePointer(
-                      child: Semantics(
-                        label: 'Editable text region',
-                        child: DecoratedBox(
-                          key: ValueKey<String>(
-                            'clarix-edit-target-${object.objectId}',
+                Positioned.fromRect(
+                  rect: EditorPageGeometry.rectForBox(
+                    object.bounds,
+                    pageSize: pageSize,
+                    displaySize: displaySize,
+                  ),
+                  child: IgnorePointer(
+                    child: Semantics(
+                      label: 'Editable text region',
+                      child: DecoratedBox(
+                        key: ValueKey<String>(
+                          'clarix-edit-target-${object.objectId}',
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0x052F80ED),
+                          border: Border.all(
+                            color: const Color(0x332F80ED),
+                            width: 1,
                           ),
-                          decoration: BoxDecoration(
-                            // Inactive blocks keep a hairline outline so the
-                            // paragraph structure stays visible without the
-                            // loud highlight reserved for the active object.
-                            color: const Color(0x052F80ED),
-                            border: Border.all(
-                              color: const Color(0x332F80ED),
-                              width: 1,
-                            ),
-                            borderRadius: BorderRadius.circular(3),
-                          ),
+                          borderRadius: BorderRadius.circular(3),
                         ),
                       ),
                     ),
                   ),
+                ),
             if (activeSession != null)
               for (final object in interactive)
-                if (object.objectId != activeObject?.objectId)
-                  Positioned.fromRect(
-                    rect: EditorPageGeometry.rectForBox(
-                      object.bounds,
-                      pageSize: pageSize,
-                      displaySize: displaySize,
-                    ),
-                    child: _TapRegion(
-                      onTap: (Offset localInBox) {
-                        final objectRect = EditorPageGeometry.rectForBox(
-                          object.bounds,
-                          pageSize: pageSize,
-                          displaySize: displaySize,
-                        );
-                        final hit = hitTestIndex.hitTest(
-                          localInBox + objectRect.topLeft,
-                        );
-                        if (hit == null) return;
-                        activeSession.updateSelection(
-                          EditorSelection(
-                            objectId: hit.objectId,
-                            range: EditorTextRange(
-                              start: hit.utf16Offset,
-                              end: hit.utf16Offset,
-                            ),
-                            affinity: hit.affinity,
+                Positioned.fromRect(
+                  rect: EditorPageGeometry.rectForBox(
+                    object.bounds,
+                    pageSize: pageSize,
+                    displaySize: displaySize,
+                  ),
+                  child: _TapRegion(
+                    onTap: (Offset localInBox) {
+                      final objectRect = EditorPageGeometry.rectForBox(
+                        object.bounds,
+                        pageSize: pageSize,
+                        displaySize: displaySize,
+                      );
+                      final hit = hitTestIndex.hitTest(
+                        localInBox + objectRect.topLeft,
+                      );
+                      if (hit == null) return;
+                      activeSession.updateSelection(
+                        EditorSelection(
+                          objectId: hit.objectId,
+                          range: EditorTextRange(
+                            start: hit.utf16Offset,
+                            end: hit.utf16Offset,
                           ),
-                        );
-                      },
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.text,
-                        // The pdfrx region also dispatches the tap when its
-                        // registration is current; both paths converge on the
-                        // same selection.
-                        child: PdfOverlayInteractionRegion(
-                          onTap: (details) {
-                            final objectRect = EditorPageGeometry.rectForBox(
-                              object.bounds,
-                              pageSize: pageSize,
-                              displaySize: displaySize,
-                            );
-                            final hit = hitTestIndex.hitTest(
-                              details.localPosition + objectRect.topLeft,
-                            );
-                            if (hit == null) return false;
-                            activeSession.updateSelection(
-                              EditorSelection(
-                                objectId: hit.objectId,
-                                range: EditorTextRange(
-                                  start: hit.utf16Offset,
-                                  end: hit.utf16Offset,
-                                ),
-                                affinity: hit.affinity,
-                              ),
-                            );
-                            return true;
-                          },
-                          child: const SizedBox.expand(),
+                          affinity: hit.affinity,
                         ),
+                      );
+                    },
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.text,
+                      // The pdfrx region also dispatches the tap when its
+                      // registration is current; both paths converge on the
+                      // same selection.
+                      child: PdfOverlayInteractionRegion(
+                        onTap: (details) {
+                          final objectRect = EditorPageGeometry.rectForBox(
+                            object.bounds,
+                            pageSize: pageSize,
+                            displaySize: displaySize,
+                          );
+                          final hit = hitTestIndex.hitTest(
+                            details.localPosition + objectRect.topLeft,
+                          );
+                          if (hit == null) return false;
+                          activeSession.updateSelection(
+                            EditorSelection(
+                              objectId: hit.objectId,
+                              range: EditorTextRange(
+                                start: hit.utf16Offset,
+                                end: hit.utf16Offset,
+                              ),
+                              affinity: hit.affinity,
+                            ),
+                          );
+                          return true;
+                        },
+                        child: const SizedBox.expand(),
                       ),
                     ),
                   ),
+                ),
             if (activeObject != null &&
                 selection != null &&
-                activeSession != null)
+                activeSession != null) ...<Widget>[
+              // The caret paints at scene level from PDF character geometry;
+              // no text is overlaid — the page keeps rendering the real
+              // content in its own fonts.
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: _ActiveObjectCaret(
+                    object: activeObject,
+                    selection: selection,
+                    pageSize: pageSize,
+                    displaySize: displaySize,
+                    observer: observer,
+                  ),
+                ),
+              ),
               Positioned.fromRect(
                 rect: EditorPageGeometry.rectForBox(
                   activeObject.bounds,
                   pageSize: pageSize,
                   displaySize: displaySize,
                 ),
-                child: NativeTextEditor(
+                child: SessionTextInput(
                   session: activeSession,
                   object: activeObject,
                   text:
@@ -292,7 +302,14 @@ class PageEditScene extends StatelessWidget {
                       activeObject.text ??
                       '',
                   selection: selection,
-                  scale: displaySize.width / pageSize.width,
+                  onSelectionChanged: (range) {
+                    activeSession.updateSelection(
+                      EditorSelection(
+                        objectId: activeObject.objectId,
+                        range: range,
+                      ),
+                    );
+                  },
                   onUndo: activeSession.canUndo
                       ? () => unawaited(activeSession.undo())
                       : null,
@@ -301,6 +318,7 @@ class PageEditScene extends StatelessWidget {
                       : null,
                 ),
               ),
+            ],
             if (activeObject != null && activeSession != null)
               ObjectTransformHandles(
                 session: activeSession,
@@ -382,6 +400,8 @@ class _EditorChromePainter extends CustomPainter {
     required this.pageSize,
     required this.displaySize,
     required this.observer,
+    this.caretVisible = true,
+    this.showOutline = true,
   });
 
   final EditorSceneObject object;
@@ -390,6 +410,8 @@ class _EditorChromePainter extends CustomPainter {
   final Size pageSize;
   final Size displaySize;
   final EditorLayerObserver? observer;
+  final bool caretVisible;
+  final bool showOutline;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -403,9 +425,13 @@ class _EditorChromePainter extends CustomPainter {
       ..color = const Color(0xff2f80ed)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
-    canvas.drawRect(bounds, outline);
-    final caret = _caretSegment(object, selection.range.end);
-    canvas.drawLine(caret.$1, caret.$2, outline..strokeWidth = 1.5);
+    if (showOutline) {
+      canvas.drawRect(bounds, outline);
+    }
+    if (caretVisible) {
+      final caret = _caretSegment(object, selection.range.end);
+      canvas.drawLine(caret.$1, caret.$2, outline..strokeWidth = 1.5);
+    }
     if (composition?.objectId == object.objectId) {
       canvas.drawLine(
         Offset(bounds.left, bounds.bottom - 1),
@@ -422,19 +448,26 @@ class _EditorChromePainter extends CustomPainter {
       selection.range.end != oldDelegate.selection.range.end ||
       composition?.range.start != oldDelegate.composition?.range.start ||
       composition?.range.end != oldDelegate.composition?.range.end ||
+      caretVisible != oldDelegate.caretVisible ||
+      showOutline != oldDelegate.showOutline ||
       displaySize != oldDelegate.displaySize;
 
   (Offset, Offset) _caretSegment(EditorSceneObject object, int utf16Offset) {
+    // Live imports arrive without measured character boxes; synthesize
+    // proportional ones so the caret lands at the clicked character.
+    final characterBoxes = object.characterBoxes.isEmpty
+        ? synthesizeCharacterBoxes(object)
+        : object.characterBoxes;
     EditorTextCharacterBox? character;
     var useLeadingEdge = true;
-    for (final candidate in object.characterBoxes) {
+    for (final candidate in characterBoxes) {
       if (candidate.start == utf16Offset) {
         character = candidate;
         break;
       }
     }
     if (character == null) {
-      for (final candidate in object.characterBoxes.reversed) {
+      for (final candidate in characterBoxes.reversed) {
         if (candidate.end == utf16Offset) {
           character = candidate;
           useLeadingEdge = false;
@@ -477,6 +510,66 @@ Offset _transformPoint(Offset point, EditorAffineTransform transform) => Offset(
   transform.a * point.dx + transform.c * point.dy + transform.e,
   transform.b * point.dx + transform.d * point.dy + transform.f,
 );
+
+/// A blinking caret painted from PDF character geometry for the active
+/// object. Paints nothing else — the PDF page keeps rendering the real
+/// content underneath.
+class _ActiveObjectCaret extends StatefulWidget {
+  const _ActiveObjectCaret({
+    required this.object,
+    required this.selection,
+    required this.pageSize,
+    required this.displaySize,
+    required this.observer,
+  });
+
+  final EditorSceneObject object;
+  final EditorSelection selection;
+  final Size pageSize;
+  final Size displaySize;
+  final EditorLayerObserver? observer;
+
+  @override
+  State<_ActiveObjectCaret> createState() => _ActiveObjectCaretState();
+}
+
+class _ActiveObjectCaretState extends State<_ActiveObjectCaret>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blink =
+      AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 1060),
+        )
+        ..addListener(() => setState(() {}))
+        ..repeat();
+
+  // TextField-style asymmetric blink: visible for the first ~53% of the cycle.
+  bool get _caretVisible => _blink.value < 0.53;
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      key: const Key('session-caret'),
+      size: widget.displaySize,
+      painter: _EditorChromePainter(
+        object: widget.object,
+        selection: widget.selection,
+        composition: null,
+        pageSize: widget.pageSize,
+        displaySize: widget.displaySize,
+        observer: widget.observer,
+        caretVisible: _caretVisible,
+        showOutline: false,
+      ),
+    );
+  }
+}
 
 /// A pan-safe tap detector that observes raw pointer events without competing
 /// in the gesture arena, so the reader's pan/zoom keeps working while taps
