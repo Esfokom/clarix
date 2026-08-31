@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/gestures.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
@@ -15,7 +15,6 @@ import 'editor_text_painter.dart';
 import 'font_fallback_dialog.dart';
 import 'live_pdfium_tile_layer.dart';
 import 'object_transform_handles.dart';
-import 'overflow_indicator.dart';
 import 'session_text_input.dart';
 
 typedef PageSelectionActionsBuilder =
@@ -68,6 +67,20 @@ class PageEditScene extends StatelessWidget {
   final PageSelectionActionsBuilder? selectionActionsBuilder;
   final PageOverlayBuilder? pageOverlayBuilder;
 
+  static const Map<String, String> _editFailureBanners = <String, String>{
+    'text_overflow':
+        'Text does not fit this object. Shorten it or cancel the edit.',
+    'live_pdfium_binding_missing':
+        'This text is not bound to the live document. Re-inspect the page to enable editing.',
+    'live_pdfium_revision_conflict':
+        'Document state changed underneath the editor. Re-open edit mode to continue.',
+    'live_pdfium_unsupported':
+        'This change cannot be applied to the PDF yet.',
+    'glyph_unsupported': 'This character is not supported by the PDF font.',
+    'live_hydration_failed':
+        'Live page import failed. Re-inspect the page or reopen the editor.',
+  };
+
   @override
   Widget build(BuildContext context) {
     final activeSession = editingEnabled ? session : null;
@@ -110,6 +123,10 @@ class PageEditScene extends StatelessWidget {
         liveTileCoveredPages.contains(scene.pageNumber) &&
         liveTiles.length >= editableObjectIds.length;
     final fallbackProposal = document.fontFallbackProposal;
+    final errorCode = document.errorCode;
+    final errorMessage = errorCode == null
+        ? null
+        : _editFailureBanners[errorCode];
     final showFallbackProposal =
         activeSession != null &&
         fallbackProposal != null &&
@@ -349,20 +366,26 @@ class PageEditScene extends StatelessWidget {
                       ),
                     ),
                   ),
-            if (activeSession != null &&
-                document.errorCode == 'text_overflow' &&
-                activeObject != null)
+            if (activeSession != null && errorMessage != null)
               Positioned(
                 left: 8,
                 right: 8,
                 bottom: 8,
                 child: Semantics(
                   liveRegion: true,
-                  child: OverflowIndicator(
-                    message:
-                        'Text does not fit this object. Shorten it or cancel the edit.',
-                    canIncreaseBounds: false,
-                    onCancel: activeSession.clearError,
+                  child: _EditorErrorBanner(
+                    message: errorMessage,
+                    onRetry:
+                        errorCode == 'live_pdfium_binding_missing' ||
+                            errorCode == 'live_hydration_failed'
+                        ? () => unawaited(
+                            activeSession!.refreshPage(
+                              scene.pageNumber,
+                              force: true,
+                            ),
+                          )
+                        : null,
+                    onDismiss: activeSession!.clearError,
                   ),
                 ),
               ),
@@ -390,6 +413,45 @@ class PageEditScene extends StatelessWidget {
             document.optimisticEdit?.objectId == objectId ||
             document.queuedEdit?.objectId == objectId);
   }
+}
+
+class _EditorErrorBanner extends StatelessWidget {
+  const _EditorErrorBanner({
+    required this.message,
+    required this.onRetry,
+    required this.onDismiss,
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) => Material(
+    key: const Key('editor-error-banner'),
+    color: Theme.of(context).colorScheme.errorContainer,
+    child: Padding(
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        children: <Widget>[
+          const Icon(Icons.warning_amber_rounded),
+          const SizedBox(width: 8),
+          Expanded(child: Text(message)),
+          if (onRetry != null)
+            TextButton(
+              key: const Key('editor-error-retry'),
+              onPressed: onRetry,
+              child: const Text('Retry'),
+            ),
+          TextButton(
+            key: const Key('editor-error-dismiss'),
+            onPressed: onDismiss,
+            child: const Text('Dismiss'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _EditorChromePainter extends CustomPainter {

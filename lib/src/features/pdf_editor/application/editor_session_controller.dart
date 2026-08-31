@@ -810,6 +810,13 @@ Map<int, EditorPageScene> _removeObjectsFromScenes(
 }
 
 String _errorCode(Object error) {
+  final rawMessage = error is StateError ? error.message : error.toString();
+  if (rawMessage.startsWith('live PDFium revision conflict')) {
+    return 'live_pdfium_revision_conflict';
+  }
+  if (rawMessage.contains('glyph') || rawMessage.contains('FPDFText_SetText')) {
+    return 'glyph_unsupported';
+  }
   final message = error.toString().replaceFirst(
     RegExp(r'^(Exception|StateError):\s*'),
     '',
