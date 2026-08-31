@@ -217,6 +217,9 @@ class BridgeEditorSessionGateway
       _session = semanticSession;
       _sessionId = metadata.sessionId;
       _livePdfiumSession = liveSession;
+      if (liveSession case final LivePdfiumRevisionSync revisionSync) {
+        revisionSync.seedRevision(metadata.revision);
+      }
       final locatorRegistry = LivePdfiumLocatorRegistry();
       locatorRegistry.registerManifest(
         manifest,
@@ -318,6 +321,21 @@ class BridgeEditorSessionGateway
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
       _submitRouted(request);
 
+  Future<EditorCommandResult> _acknowledgePublish(
+    Future<EditorCommandResult> Function() publish,
+  ) async {
+    final result = await publish();
+    final liveSession = _livePdfiumSession;
+    if (liveSession case final LivePdfiumRevisionSync revisionSync) {
+      try {
+        revisionSync.acknowledgeRevision(result.committedRevision);
+      } on StateError {
+        // A concurrent close owns teardown of the live session.
+      }
+    }
+    return result;
+  }
+
   Future<EditorCommandResult> _submitRouted(EditorCommandRequest request) {
     final objectId = request.payload.objectId;
     final registry = _livePdfiumLocatorRegistry;
@@ -341,12 +359,12 @@ class BridgeEditorSessionGateway
     );
     if (livePort != null && isLiveTextCommand) {
       if (!hasLiveBinding) throw StateError('live_pdfium_binding_missing');
-      return livePort.submit(request);
+      return _acknowledgePublish(() => livePort.submit(request));
     }
     if (isHistoryCommand && livePort != null) {
-      return livePort.submit(request);
+      return _acknowledgePublish(() => livePort.submit(request));
     }
-    return _required().submit(request);
+    return _acknowledgePublish(() => _required().submit(request));
   }
 
   @override
@@ -369,10 +387,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required String proposalToken,
-  }) => _required().approveFontFallback(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    proposalToken: proposalToken,
+  }) => _acknowledgePublish(
+    () => _required().approveFontFallback(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      proposalToken: proposalToken,
+    ),
   );
 
   @override
@@ -424,10 +444,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required EditorAnnotation annotation,
-  }) => _required().createAnnotation(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    annotation: annotation,
+  }) => _acknowledgePublish(
+    () => _required().createAnnotation(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      annotation: annotation,
+    ),
   );
 
   @override
@@ -435,10 +457,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required EditorAnnotation annotation,
-  }) => _required().updateAnnotation(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    annotation: annotation,
+  }) => _acknowledgePublish(
+    () => _required().updateAnnotation(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      annotation: annotation,
+    ),
   );
 
   @override
@@ -446,10 +470,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required String objectId,
-  }) => _required().deleteAnnotation(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    objectId: objectId,
+  }) => _acknowledgePublish(
+    () => _required().deleteAnnotation(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      objectId: objectId,
+    ),
   );
 
   @override

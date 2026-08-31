@@ -150,6 +150,61 @@ void main() {
     expect(liveSession.appliedPlans, isEmpty);
   });
 
+  test('a semantic-only publish acknowledges the live revision', () async {
+    final liveSession = _FakeLivePdfiumSession();
+    final native = _NativePort();
+    final gateway = BridgeEditorSessionGateway.forTest(
+      openBridgeSession: (_, {String? projectRoot}) async =>
+          EditorBridgeSession.forTest(native),
+      openLivePdfiumSession: (_) async => liveSession,
+      loadLivePdfiumImportManifest: (_) async =>
+          const LivePdfiumImportManifest(
+            sourceFingerprint: 'source',
+            bindings: <LivePdfiumImportBinding>[
+              LivePdfiumImportBinding(
+                objectId: _objectId,
+                sourceKey: 'manifest/page/1/object/0',
+                sourceRevision: 'source',
+                locator: EditorPhysicalLocator(
+                  pageNumber: 1,
+                  objectPath: <int>[0],
+                  objectType: 'text',
+                  sourceFingerprint: 'source',
+                  objectRevision: 0,
+                ),
+              ),
+            ],
+          ),
+    );
+    await gateway.open('fixture.pdf');
+
+    final checkpoint = await gateway.submit(
+      const EditorCommandRequest(
+        commandId: _commandId,
+        baseRevision: 0,
+        payload: EditorCommand(kind: EditorCommandKind.createCheckpoint),
+      ),
+    );
+    expect(checkpoint.committedRevision, 1);
+    expect(liveSession.appliedRevision, 1);
+
+    final applied = await gateway.submit(
+      const EditorCommandRequest(
+        commandId: _commandId,
+        baseRevision: 1,
+        payload: EditorCommand(
+          kind: EditorCommandKind.replaceTextRange,
+          objectId: _objectId,
+          start: 0,
+          end: 6,
+          replacement: 'Changed',
+        ),
+      ),
+    );
+    expect(applied.committedRevision, 2);
+    expect(liveSession.appliedRevision, 2);
+  });
+
   test('routes undo through the live PDFium transaction', () async {
     final liveSession = _FakeLivePdfiumSession();
     final native = _NativePort();
@@ -324,17 +379,32 @@ const _commandId = '00000000-0000-4000-8000-000000000010';
 const _preparedToken = '00000000-0000-4000-8000-000000000011';
 const _objectId = '00000000-0000-4000-8000-000000000012';
 
-class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
+class _FakeLivePdfiumSession
+    implements LivePdfiumSessionOwner, LivePdfiumRevisionSync {
   final List<String> openedPaths = <String>[];
   final List<LivePdfiumEditPlan> appliedPlans = <LivePdfiumEditPlan>[];
   List<EditorTileInvalidation> invalidations = const <EditorTileInvalidation>[];
   bool closed = false;
+  int _revision = 0;
+
+  @override
+  int get appliedRevision => _revision;
+
+  @override
+  void acknowledgeRevision(int revision) {
+    if (revision < _revision) throw StateError('receding revision');
+    _revision = revision;
+  }
+
+  @override
+  void seedRevision(int revision) => _revision = revision;
 
   @override
   Future<LivePdfiumApplyResult> apply(LivePdfiumEditPlan plan) async {
     appliedPlans.add(plan);
+    _revision = plan.revision ?? _revision + 1;
     return LivePdfiumApplyResult(
-      revision: plan.revision ?? 1,
+      revision: _revision,
       invalidations: invalidations,
     );
   }
@@ -368,6 +438,7 @@ final class _NativePort
   bool published = false;
   bool closed = false;
   int legacySubmissions = 0;
+  int _preparedBaseRevision = 0;
   Object? importError;
   final List<native.NativeLivePageImport> importedPages =
       <native.NativeLivePageImport>[];
@@ -423,22 +494,25 @@ final class _NativePort
     EditorCommandRequest request,
   ) async {
     prepared = true;
-    return const EditorPreparedLiveCommand(
+    _preparedBaseRevision = request.baseRevision;
+    return EditorPreparedLiveCommand(
       token: _preparedToken,
-      commandId: _commandId,
-      previousRevision: 0,
-      committedRevision: 1,
+      commandId: request.commandId,
+      previousRevision: request.baseRevision,
+      committedRevision: request.baseRevision + 1,
       plan: EditorPhysicalEditPlan(
-        previousRevision: 0,
-        revision: 1,
-        operations: <EditorPhysicalEditOperation>[
+        previousRevision: request.baseRevision,
+        revision: request.baseRevision + 1,
+        operations: const <EditorPhysicalEditOperation>[
           EditorPhysicalEditOperation(
+            kind: EditorPhysicalEditOperationKind.replaceText,
             objectId: _objectId,
             sourceKey: 'manifest/page/1/object/0',
             sourceRevision: 'source',
             expectedText: 'Before',
             replacement: 'Changed',
-            bounds: EditorPdfBox(left: 0, bottom: 0, right: 1, top: 1),
+            oldBounds: EditorPdfBox(left: 0, bottom: 0, right: 1, top: 1),
+            newBounds: EditorPdfBox(left: 0, bottom: 0, right: 1, top: 1),
           ),
         ],
         inverseOperations: <EditorPhysicalEditOperation>[],
@@ -449,7 +523,7 @@ final class _NativePort
   @override
   Future<EditorCommandResult> publishPreparedLiveCommand(String token) async {
     published = true;
-    return _result(_commandId, 0);
+    return _result(_commandId, _preparedBaseRevision);
   }
 
   @override

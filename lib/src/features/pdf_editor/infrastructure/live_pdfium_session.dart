@@ -20,6 +20,15 @@ abstract interface class LivePdfiumSessionOwner
   Future<void> close();
 }
 
+/// Synchronizes the physical PDFium document with the semantic revision.
+abstract interface class LivePdfiumRevisionSync {
+  int get appliedRevision;
+
+  void seedRevision(int revision);
+
+  void acknowledgeRevision(int revision);
+}
+
 /// Supplies one page scan from the PDFium document that owns live edits.
 abstract interface class LivePdfiumPageImportSource {
   Future<LivePdfiumPageInspection> inspectPageForImport({
@@ -52,6 +61,7 @@ final class LivePdfiumPageInspection {
 final class LivePdfiumSession
     implements
         LivePdfiumSessionOwner,
+        LivePdfiumRevisionSync,
         LivePdfiumPageImportSource,
         LivePdfiumSaveSource {
   LivePdfiumSession._(this._document) {
@@ -65,6 +75,28 @@ final class LivePdfiumSession
 
   static Future<LivePdfiumSession> open(String sourcePath) async =>
       LivePdfiumSession._(await PdfDocument.openFile(sourcePath));
+
+  @override
+  int get appliedRevision => _revision;
+
+  /// Aligns this session with Rust before any physical plan was applied.
+  @override
+  void seedRevision(int revision) {
+    _ensureOpen();
+    _revision = revision;
+  }
+
+  /// Aligns this session after a semantic-only publish.
+  @override
+  void acknowledgeRevision(int revision) {
+    _ensureOpen();
+    if (revision < _revision) {
+      throw StateError(
+        'cannot acknowledge a receding revision: $revision < $_revision',
+      );
+    }
+    _revision = revision;
+  }
 
   Future<EditorDirtyTile> renderTile(LivePdfiumTileRequest request) {
     _ensureOpen();

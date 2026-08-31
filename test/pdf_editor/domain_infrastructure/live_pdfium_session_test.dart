@@ -11,6 +11,48 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/pdf_text_fixture.dart';
 
 void main() {
+  test('a seeded session accepts a plan prepared at the seed revision', () async {
+    final file = await PdfTextFixture.singleBlock('Before');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+    final blocks = await session.inspectTextBlocks(
+      sourceRevision: 'source',
+      pageNumbers: const <int>[1],
+    );
+    final locator = const LivePdfiumImportManifestBuilder()
+        .build(sourceFingerprint: 'source', blocks: blocks)
+        .bindings
+        .single
+        .locator;
+
+    session.seedRevision(3);
+    final result = await session.apply(
+      LivePdfiumEditPlan(
+        replacements: <LivePdfiumTextReplacement>[
+          LivePdfiumTextReplacement(locator: locator, replacement: 'x'),
+        ],
+        expectedRevision: 3,
+        revision: 4,
+      ),
+    );
+
+    expect(result.revision, 4);
+    expect(session.appliedRevision, 4);
+  });
+
+  test('acknowledgeRevision advances the revision and rejects receding values', () async {
+    final file = await PdfTextFixture.singleBlock('Before');
+    addTearDown(() => file.parent.delete(recursive: true));
+    final session = await LivePdfiumSession.open(file.path);
+    addTearDown(session.close);
+
+    session.acknowledgeRevision(2);
+
+    expect(session.appliedRevision, 2);
+    expect(() => session.acknowledgeRevision(1), throwsStateError);
+  });
+
   test('renders a page rectangle from its live PDFium document', () async {
     final file = await PdfTextFixture.singleBlock('Live tile');
     addTearDown(() => file.parent.delete(recursive: true));
