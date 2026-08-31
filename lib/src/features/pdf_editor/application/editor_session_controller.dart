@@ -121,9 +121,16 @@ class EditorSessionController {
     int pageNumber, {
     EditorViewportPriority priority = EditorViewportPriority.visible,
     bool force = false,
-  }) {
+  }) async {
     _ensureActive();
-    return _viewport.refreshPage(pageNumber, priority: priority, force: force);
+    try {
+      await _viewport.refreshPage(pageNumber, priority: priority, force: force);
+    } catch (error) {
+      if (!_disposed && _errorCode(error) == 'live_hydration_failed') {
+        _emit(_state.copyWith(errorCode: 'live_hydration_failed'));
+      }
+      rethrow;
+    }
   }
 
   void updateViewport(Set<int> visiblePages, {int preloadRadius = 2}) {

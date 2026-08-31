@@ -285,6 +285,17 @@ class BridgeEditorSessionGateway
   }
 
   Future<void> _hydrateLivePage(int pageNumber, int expectedRevision) async {
+    try {
+      return await _hydrateLivePageOrThrow(pageNumber, expectedRevision);
+    } catch (error) {
+      throw StateError('live_hydration_failed: $error');
+    }
+  }
+
+  Future<void> _hydrateLivePageOrThrow(
+    int pageNumber,
+    int expectedRevision,
+  ) async {
     final liveSession = _livePdfiumSession;
     if (liveSession is! LivePdfiumPageImportSource) return;
     final semanticSession = _required();
