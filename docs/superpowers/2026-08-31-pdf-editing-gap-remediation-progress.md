@@ -15,10 +15,10 @@ Plan: `docs/superpowers/plans/2026-08-31-pdf-editing-gap-remediation.md`
 |---|---|---|
 | A1 | Complete | Commit `ab3f155`; focused live-session/gateway Flutter suite: 24 passing. |
 | A2 | Complete | Commit `1611e48`; page-edit-scene Flutter suite: 12 passing. |
-| A3 | In progress | Semantic-only undo/redo physicality; Rust/FRB/Dart bridge surface mapped. |
+| A3 | In progress | Semantic-only undo/redo physicality; Rust/FRB/Dart bridge implementation is awaiting Rust verification. |
 | A4 | Pending | Hydration retry and diagnostics. |
 | A5 | Pending | Save divergence guard. |
-| A6 | Pending | Text-input focus retention. |
+| A6 | Complete | Commit `8a2b8b4`; tap and IME tests pass. |
 | A7 | Pending | Windows saved-PDF round-trip gate. |
 
 ## Verification log
@@ -30,3 +30,4 @@ Plan: `docs/superpowers/plans/2026-08-31-pdf-editing-gap-remediation.md`
 | A2 red | Passed | The new live-binding banner test found no banner. |
 | A2 green | Passed | `flutter test --no-pub test/pdf_editor/application_presentation/page_edit_scene_test.dart` — 12 tests. |
 | A2 analysis | Inconclusive | `flutter analyze` repeatedly completed dependency resolution but did not emit its final analyzer result before the command time slice ended; focused Flutter tests compiled and passed. |
+| A6 green | Passed | `flutter test --no-pub test/pdf_editor/application_presentation/page_edit_scene_tap_test.dart test/pdf_editor/application_presentation/native_text_ime_test.dart` — 3 tests. |
