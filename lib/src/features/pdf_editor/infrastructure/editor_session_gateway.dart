@@ -411,6 +411,15 @@ class BridgeEditorSessionGateway
   Future<EditorSaveResult> save(EditorSaveRequest request) async {
     final liveSession = _livePdfiumSession;
     if (liveSession is LivePdfiumSaveSource) {
+      if (liveSession case final LivePdfiumRevisionSync revisionSync) {
+        final metadata = await _required().metadata();
+        if (revisionSync.appliedRevision != metadata.revision) {
+          throw StateError(
+            'live_pdfium_save_revision_mismatch: applied '
+            '${revisionSync.appliedRevision}, published ${metadata.revision}',
+          );
+        }
+      }
       return _required().saveLivePdfium(
         request,
         await (liveSession as LivePdfiumSaveSource).saveBytes(),
