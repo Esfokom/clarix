@@ -89,6 +89,12 @@ final class _SessionTextInputState extends State<SessionTextInput>
         _connection?.setEditingState(_value);
       }
     }
+    if ((oldWidget.selection.range != widget.selection.range ||
+            oldWidget.object.objectId != widget.object.objectId) &&
+        mounted &&
+        !_focusNode.hasFocus) {
+      _focusNode.requestFocus();
+    }
   }
 
   @override
