@@ -19,7 +19,7 @@ Plan: `docs/superpowers/plans/2026-08-31-pdf-editing-gap-remediation.md`
 | A4 | Complete | Commits `748869c` and `325b874`; retries stale revisions and surfaces hydration failure state. |
 | A5 | Complete | Commit `f6567ba`; focused divergence test passes. |
 | A6 | Complete | Commit `8a2b8b4`; tap and IME tests pass. |
-| A7 | In progress | Dedicated Windows runner and exit-gate entry added; integration target remains to be implemented and run. |
+| A7 | In progress | Commit pending: integration target now drives `SessionTextInput` through delete/type, a semantic-only checkpoint, undo/redo, live save, and reopen. The Windows profile drive launches but has not returned a result. |
 
 ## Verification log
 
@@ -34,3 +34,5 @@ Plan: `docs/superpowers/plans/2026-08-31-pdf-editing-gap-remediation.md`
 | A5 green | Passed | `flutter test --no-pub test/pdf_editor/domain_infrastructure/editor_session_gateway_live_pdfium_test.dart --plain-name "save refuses when the live document lags the Rust revision"`. |
 | A3 green | Passed | Editing-core semantic undo regression and full live-PDFium gateway Flutter suite. |
 | A4 green | Passed | `flutter test --no-pub test/pdf_editor/domain_infrastructure/editor_session_gateway_live_pdfium_test.dart` — 13 tests. |
+| A7 analysis | Passed | `flutter analyze --no-pub integration_test/live_editing_round_trip_test.dart` — no issues. |
+| A7 Windows profile drive | Inconclusive | `& tool/editing_phase3/run_live_round_trip.ps1` compiled and launched `build/windows/x64/runner/Profile/clarix.exe`, but did not report a test result after more than three minutes. The owned processes were stopped; do not treat the empirical gate as passed. |
