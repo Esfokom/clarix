@@ -235,7 +235,7 @@ class EditorBridgeSession {
         value.committedRevision <= value.previousRevision ||
         value.plan.previousRevision != value.previousRevision ||
         value.plan.revision != value.committedRevision ||
-        value.plan.operations.isEmpty) {
+        (value.physicalApplyRequired && value.plan.operations.isEmpty)) {
       throw const EditorProtocolViolation(
         'prepared live command does not describe a valid uncommitted revision',
       );

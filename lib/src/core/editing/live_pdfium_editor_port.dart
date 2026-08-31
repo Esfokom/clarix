@@ -138,6 +138,9 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
         'sourceKey=${operation.sourceKey}',
       );
     }
+    if (!prepared.physicalApplyRequired) {
+      return _semantic.publishPreparedLiveCommand(prepared.token);
+    }
     final replacements = prepared.plan.operations
         .where(
           (operation) =>

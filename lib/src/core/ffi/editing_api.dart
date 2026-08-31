@@ -1306,6 +1306,7 @@ class NativePreparedLiveCommand {
   final String commandId;
   final BigInt previousRevision;
   final BigInt committedRevision;
+  final bool physicalApplyRequired;
   final NativePhysicalEditPlan plan;
 
   const NativePreparedLiveCommand({
@@ -1313,6 +1314,7 @@ class NativePreparedLiveCommand {
     required this.commandId,
     required this.previousRevision,
     required this.committedRevision,
+    required this.physicalApplyRequired,
     required this.plan,
   });
 
@@ -1322,6 +1324,7 @@ class NativePreparedLiveCommand {
       commandId.hashCode ^
       previousRevision.hashCode ^
       committedRevision.hashCode ^
+      physicalApplyRequired.hashCode ^
       plan.hashCode;
 
   @override
@@ -1333,6 +1336,7 @@ class NativePreparedLiveCommand {
           commandId == other.commandId &&
           previousRevision == other.previousRevision &&
           committedRevision == other.committedRevision &&
+          physicalApplyRequired == other.physicalApplyRequired &&
           plan == other.plan;
 }
 

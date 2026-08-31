@@ -492,6 +492,7 @@ pub struct NativePreparedLiveCommand {
     pub command_id: String,
     pub previous_revision: u64,
     pub committed_revision: u64,
+    pub physical_apply_required: bool,
     pub plan: NativePhysicalEditPlan,
 }
 
@@ -996,6 +997,7 @@ impl NativeEditorSession {
         let command_id = CommandId::from_str(&request.command_id)
             .map_err(|error| format!("invalid_command_id: {error}"))?;
         let payload = editor_command(request.payload)?;
+        let is_history_command = matches!(&payload, EditorCommand::Undo | EditorCommand::Redo);
         let result = self
             .actor
             .submit(CommandEnvelope::user(
@@ -1035,16 +1037,18 @@ impl NativeEditorSession {
                 payload,
             ))
             .map_err(editing_error)?;
-        let plan = prepared.physical_plan.as_ref().ok_or_else(|| {
-            "live_pdfium_unsupported: command has no physical PDFium edit plan".to_owned()
-        })?;
+        let plan = prepared.physical_plan.as_ref();
+        if plan.is_none() && !is_history_command {
+            return Err("live_pdfium_unsupported: command has no physical PDFium edit plan".to_owned());
+        }
         let token = CommandId::new().to_string();
         let response = NativePreparedLiveCommand {
             token: token.clone(),
             command_id: prepared.envelope.command_id.to_string(),
             previous_revision: prepared.previous_revision.value(),
             committed_revision: prepared.committed_revision.value(),
-            plan: native_physical_edit_plan(plan),
+            physical_apply_required: prepared.physical_apply_required,
+            plan: native_physical_edit_plan(plan, prepared.previous_revision, prepared.committed_revision),
         };
         self.prepared_live_commands
             .lock()
@@ -1827,17 +1831,19 @@ fn native_command_result(result: CommandResult) -> NativeCommandResult {
     }
 }
 
-fn native_physical_edit_plan(plan: &PhysicalEditPlan) -> NativePhysicalEditPlan {
+fn native_physical_edit_plan(
+    plan: Option<&PhysicalEditPlan>,
+    previous_revision: DocumentRevision,
+    revision: DocumentRevision,
+) -> NativePhysicalEditPlan {
     NativePhysicalEditPlan {
-        previous_revision: plan.previous_revision.value(),
-        revision: plan.revision.value(),
-        operations: plan
-            .operations
+        previous_revision: plan.map_or(previous_revision.value(), |plan| plan.previous_revision.value()),
+        revision: plan.map_or(revision.value(), |plan| plan.revision.value()),
+        operations: plan.map_or(&[][..], |plan| plan.operations.as_slice())
             .iter()
             .map(native_physical_edit_operation)
             .collect(),
-        inverse_operations: plan
-            .inverse_operations
+        inverse_operations: plan.map_or(&[][..], |plan| plan.inverse_operations.as_slice())
             .iter()
             .map(native_physical_edit_operation)
             .collect(),

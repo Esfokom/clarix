@@ -133,6 +133,7 @@ class FrbNativeEditorPort
         value.committedRevision,
         'prepared.committedRevision',
       ),
+      physicalApplyRequired: value.physicalApplyRequired,
       plan: _physicalEditPlanFromNative(value.plan),
     );
   }
