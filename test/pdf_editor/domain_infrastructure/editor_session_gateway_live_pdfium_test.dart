@@ -354,6 +354,22 @@ void main() {
     expect(page.objects.single.objectId, matches(RegExp(r'^[0-9a-f-]{36}$')));
   });
 
+  test('hydration retries once after a revision move', () async {
+    final liveSession = _ImportingLivePdfiumSession();
+    final native = _NativePort()..metadataRevision = 2;
+    final gateway = BridgeEditorSessionGateway.forTest(
+      openBridgeSession: (_, {String? projectRoot}) async =>
+          EditorBridgeSession.forTest(native),
+      openLivePdfiumSession: (_) async => liveSession,
+    );
+    await gateway.open('fixture.pdf');
+
+    await gateway.requestPage(1, 0);
+
+    expect(native.importedPages, hasLength(1));
+    expect(native.importedPages.single.expectedRevision, BigInt.from(2));
+  });
+
   test('save refuses when the live document lags the Rust revision', () async {
     final liveSession = _FakeLivePdfiumSession();
     final native = _NativePort()..metadataRevision = 2;

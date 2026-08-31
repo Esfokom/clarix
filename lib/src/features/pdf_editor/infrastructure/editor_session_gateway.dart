@@ -288,33 +288,41 @@ class BridgeEditorSessionGateway
     final liveSession = _livePdfiumSession;
     if (liveSession is! LivePdfiumPageImportSource) return;
     final semanticSession = _required();
-    final metadata = await semanticSession.metadata();
-    if (metadata.revision != expectedRevision) return;
-    final inspection = await (liveSession as LivePdfiumPageImportSource)
-        .inspectPageForImport(
-          sourceRevision: metadata.sourceFingerprint,
-          pageNumber: pageNumber,
-        );
-    final builder = const LivePdfiumImportManifestBuilder();
-    final manifest = builder.build(
-      sourceFingerprint: metadata.sourceFingerprint,
-      blocks: inspection.blocks,
-    );
-    await semanticSession.importLivePage(
-      builder.buildPageImport(
-        expectedRevision: expectedRevision,
+    var revision = expectedRevision;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final metadata = await semanticSession.metadata();
+      if (metadata.revision != revision) {
+        revision = metadata.revision;
+        continue;
+      }
+      final inspection = await (liveSession as LivePdfiumPageImportSource)
+          .inspectPageForImport(
+            sourceRevision: metadata.sourceFingerprint,
+            pageNumber: pageNumber,
+          );
+      final builder = const LivePdfiumImportManifestBuilder();
+      final manifest = builder.build(
         sourceFingerprint: metadata.sourceFingerprint,
-        pageNumber: inspection.pageNumber,
-        width: inspection.width,
-        height: inspection.height,
         blocks: inspection.blocks,
-      ),
-    );
-    _livePdfiumLocatorRegistry?.registerManifest(
-      manifest,
-      sourceFingerprint: metadata.sourceFingerprint,
-    );
-    _liveImportedPages.add(pageNumber);
+      );
+      await semanticSession.importLivePage(
+        builder.buildPageImport(
+          expectedRevision: revision,
+          sourceFingerprint: metadata.sourceFingerprint,
+          pageNumber: inspection.pageNumber,
+          width: inspection.width,
+          height: inspection.height,
+          blocks: inspection.blocks,
+        ),
+      );
+      _livePdfiumLocatorRegistry?.registerManifest(
+        manifest,
+        sourceFingerprint: metadata.sourceFingerprint,
+      );
+      _liveImportedPages.add(pageNumber);
+      return;
+    }
+    throw StateError('live_hydration_revision_moved_repeatedly');
   }
 
   @override
