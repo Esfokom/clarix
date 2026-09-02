@@ -94,6 +94,44 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     ),
                   ),
                 ),
+                PopupMenuButton<String>(
+                  key: const Key('ai-runtime-picker'),
+                  tooltip: 'Choose AI runtime',
+                  enabled:
+                      !ai.chatBusy &&
+                      (widget.aiState.localModels.isNotEmpty ||
+                          widget.aiState.providerProfiles.isNotEmpty),
+                  onSelected: (String id) =>
+                      ref.read(aiNotifierProvider.notifier).selectProvider(id),
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
+                        ...widget.aiState.localModels.map(
+                          (LocalModelProfile model) => PopupMenuItem<String>(
+                            value: model.id,
+                            child: Text(model.label),
+                          ),
+                        ),
+                        ...widget.aiState.providerProfiles.map(
+                          (AiProviderProfile profile) => PopupMenuItem<String>(
+                            value: profile.id,
+                            child: Text(profile.label),
+                          ),
+                        ),
+                      ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(LucideIcons.bot, color: colors.textFaint, size: 14),
+                      const SizedBox(width: 4),
+                      Icon(
+                        LucideIcons.chevronDown,
+                        color: colors.textFaint,
+                        size: 12,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
                 Tooltip(
                   message: 'Conversation history',
                   child: ShadIconButton.ghost(
@@ -169,7 +207,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     },
                   ),
           ),
-          if (ai.chatBusy) _ComposerLoadingIndicator(colors: colors),
+          if (ai.chatBusy)
+            _ComposerLoadingIndicator(
+              colors: colors,
+              statusMessage: ai.statusMessage,
+            ),
           _DocumentComposer(
             controller: _controller,
             enabled: composerEnabled,
@@ -540,9 +582,13 @@ class _MessageBubble extends StatelessWidget {
 }
 
 class _ComposerLoadingIndicator extends StatefulWidget {
-  const _ComposerLoadingIndicator({required this.colors});
+  const _ComposerLoadingIndicator({
+    required this.colors,
+    required this.statusMessage,
+  });
 
   final WorkspaceSurfaceTokens colors;
+  final String statusMessage;
 
   @override
   State<_ComposerLoadingIndicator> createState() =>
@@ -590,46 +636,58 @@ class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
     return Padding(
       key: const Key('composer-loader'),
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          ScaleTransition(
-            scale: Tween<double>(begin: 0.72, end: 1.1).animate(
-              CurvedAnimation(
-                parent: _animationController,
-                curve: Curves.easeInOut,
-              ),
-            ),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: widget.colors.accent,
-                shape: BoxShape.circle,
-              ),
-              child: SizedBox(width: 7, height: 7),
-            ),
+          Text(
+            widget.statusMessage,
+            key: const Key('ai-runtime-status'),
+            style: TextStyle(color: widget.colors.textFaint, fontSize: 10.5),
           ),
-          const SizedBox(width: 8),
-          AnimatedBuilder(
-            animation: _animationController,
-            builder: (BuildContext context, Widget? child) => ShaderMask(
-              blendMode: BlendMode.srcIn,
-              shaderCallback: (Rect bounds) => LinearGradient(
-                colors: const <Color>[
-                  WorkspaceColors.textMuted,
-                  WorkspaceColors.textStrong,
-                  WorkspaceColors.textMuted,
-                ],
-                stops: <double>[0, _animationController.value, 1],
-              ).createShader(bounds),
-              child: child,
-            ),
-            child: Text(
-              _words[_wordIndex],
-              style: const TextStyle(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
+          const SizedBox(height: 4),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ScaleTransition(
+                scale: Tween<double>(begin: 0.72, end: 1.1).animate(
+                  CurvedAnimation(
+                    parent: _animationController,
+                    curve: Curves.easeInOut,
+                  ),
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: widget.colors.accent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox(width: 7, height: 7),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              AnimatedBuilder(
+                animation: _animationController,
+                builder: (BuildContext context, Widget? child) => ShaderMask(
+                  blendMode: BlendMode.srcIn,
+                  shaderCallback: (Rect bounds) => LinearGradient(
+                    colors: const <Color>[
+                      WorkspaceColors.textMuted,
+                      WorkspaceColors.textStrong,
+                      WorkspaceColors.textMuted,
+                    ],
+                    stops: <double>[0, _animationController.value, 1],
+                  ).createShader(bounds),
+                  child: child,
+                ),
+                child: Text(
+                  _words[_wordIndex],
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

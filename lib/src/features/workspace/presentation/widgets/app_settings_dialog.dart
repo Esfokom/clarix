@@ -122,6 +122,20 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                       label: const Text('Add provider'),
                                     ),
                                   ),
+                                  const SizedBox(height: 8),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: OutlinedButton.icon(
+                                      key: const Key('download-gemma-4'),
+                                      onPressed: () => ref
+                                          .read(aiNotifierProvider.notifier)
+                                          .downloadGemma4(),
+                                      icon: const Icon(Icons.download_outlined),
+                                      label: const Text(
+                                        'Download Gemma 4 E2B (local)',
+                                      ),
+                                    ),
+                                  ),
                                   const SizedBox(height: 24),
                                   const Text(
                                     'Storage',

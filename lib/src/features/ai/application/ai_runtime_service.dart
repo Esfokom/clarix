@@ -4,15 +4,21 @@ import '../../../core/ffi/chat_api.dart' as native_chat;
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
+import '../infrastructure/local_model_store.dart';
+import 'local_model_runtime.dart';
 
 class AiRuntimeService {
   AiRuntimeService({
     required this.providerProfiles,
+    required this.localModels,
+    required this.localRuntime,
     Future<void> Function()? ensureNativeReady,
   }) : _ensureNativeReady =
            ensureNativeReady ?? ClarixRustRuntime.requireInitialized;
 
   final ProviderProfileStore providerProfiles;
+  final LocalModelStore localModels;
+  final LocalModelRuntime localRuntime;
   final Future<void> Function() _ensureNativeReady;
 
   Future<void> testProvider(AiProviderProfile profile, String apiKey) async {
@@ -45,6 +51,38 @@ class AiRuntimeService {
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
   }) async {
+    final localProfile = (await localModels.readAll())
+        .where((item) => item.id == profileId)
+        .firstOrNull;
+    if (localProfile != null) {
+      onStatus?.call(
+        AiRuntimePhase.loadingInference,
+        'Loading ${localProfile.label} into device memory. '
+        'The first response may take a minute.',
+      );
+      final buffer = StringBuffer();
+      var receivedFirstToken = false;
+      await localRuntime.sendPrompt(
+        profile: localProfile,
+        prompt: prompt,
+        documentSnippets: documentSnippets,
+        onToken: (String token) {
+          if (!receivedFirstToken) {
+            receivedFirstToken = true;
+            onStatus?.call(
+              AiRuntimePhase.generating,
+              'Generating with ${localProfile.label} on this device.',
+            );
+          }
+          buffer.write(token);
+          onToken(token);
+        },
+      );
+      return AiReply(
+        text: buffer.toString(),
+        citations: const <CitationSnippet>[],
+      );
+    }
     final profiles = await providerProfiles.readProfiles();
     final profile = profiles.where((item) => item.id == profileId).firstOrNull;
     if (profile == null) {

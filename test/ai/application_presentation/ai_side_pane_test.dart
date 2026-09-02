@@ -178,18 +178,55 @@ void main() {
 
     expect(find.byKey(const Key('composer-loader')), findsOneWidget);
     expect(find.text('Reading'), findsOneWidget);
-    expect(find.text('Contacting DeepSeek.'), findsNothing);
+    expect(find.text('Contacting DeepSeek.'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 5));
 
     expect(find.text('Tracing'), findsOneWidget);
   });
+
+  testWidgets(
+    'offers downloaded local Gemma and remote providers in the runtime picker',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          child: ShadApp(
+            home: Scaffold(
+              body: AiSidePane(
+                aiState: _state(
+                  const <ComposerMessage>[],
+                  localModels: <LocalModelProfile>[
+                    LocalModelProfile.gemma4(
+                      id: 'gemma-local',
+                      label: 'Gemma 4 E2B (Local)',
+                      modelFileName: 'gemma-4-E2B-it.litertlm',
+                    ),
+                  ],
+                  providers: <AiProviderProfile>[_remoteProfile],
+                ),
+                documentContext: null,
+                onCollapse: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('ai-runtime-picker')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Gemma 4 E2B (Local)'), findsOneWidget);
+      expect(find.text('DeepSeek'), findsOneWidget);
+    },
+  );
 }
 
 AiFeatureState _state(
   List<ComposerMessage> messages, {
   bool chatBusy = false,
   String? statusMessage,
+  List<LocalModelProfile> localModels = const <LocalModelProfile>[],
+  List<AiProviderProfile> providers = const <AiProviderProfile>[],
 }) => AiFeatureState(
   chat: AiWorkspaceState.initial().copyWith(
     providerReady: true,
@@ -197,7 +234,16 @@ AiFeatureState _state(
     statusMessage: statusMessage,
     messages: messages,
   ),
-  providerProfiles: const <AiProviderProfile>[],
+  providerProfiles: providers,
+  localModels: localModels,
+);
+
+final AiProviderProfile _remoteProfile = AiProviderProfile.create(
+  id: 'deepseek',
+  label: 'DeepSeek',
+  baseUrl: 'https://api.deepseek.com/v1',
+  modelId: 'deepseek-chat',
+  shareRetrievedPassages: false,
 );
 
 ComposerMessage _message(

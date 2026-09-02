@@ -5,6 +5,7 @@ import '../../../core/models.dart';
 import '../domain/ai_feature_state.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
+import '../domain/local_model_profile.dart';
 import 'ai_document_context.dart';
 import 'ai_providers.dart';
 
@@ -19,24 +20,32 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     final profiles = ref.read(providerProfileStoreProvider);
     final saved = await preferences.readState();
     final available = await profiles.readProfiles();
+    final localModels = await ref.read(localModelStoreProvider).readAll();
     final defaultId = await profiles.readDefaultProfileId();
-    final selected =
+    final selectedRemote =
         _profileById(available, defaultId) ??
         (available.isEmpty ? null : available.first);
+    final selectedLocal = localModels
+        .where((LocalModelProfile item) => item.id == saved.selectedProviderId)
+        .firstOrNull;
+    final String? selectedId = selectedLocal?.id ?? selectedRemote?.id;
+    final String? selectedLabel = selectedLocal?.label ?? selectedRemote?.label;
     final ready =
-        selected != null &&
-        (await profiles.readApiKey(selected.id))?.isNotEmpty == true;
+        selectedLocal != null ||
+        (selectedRemote != null &&
+            (await profiles.readApiKey(selectedRemote.id))?.isNotEmpty == true);
     return AiFeatureState(
       chat: saved.copyWith(
         chatBusy: false,
-        selectedProviderId: selected?.id,
-        clearSelectedProviderId: selected == null,
+        selectedProviderId: selectedId,
+        clearSelectedProviderId: selectedId == null,
         providerReady: ready,
         statusMessage: ready
-            ? '${selected.label} is ready.'
+            ? '$selectedLabel is ready.'
             : 'Add a provider to start a remote AI chat.',
       ),
       providerProfiles: available,
+      localModels: localModels,
     );
   }
 
@@ -121,6 +130,21 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
   );
 
   Future<void> selectProvider(String? profileId) async {
+    final localModel = _current.localModels
+        .where((LocalModelProfile item) => item.id == profileId)
+        .firstOrNull;
+    if (localModel != null) {
+      await _commit(
+        _current.copyWith(
+          chat: _current.chat.copyWith(
+            selectedProviderId: localModel.id,
+            providerReady: true,
+            statusMessage: '${localModel.label} is ready on this device.',
+          ),
+        ),
+      );
+      return;
+    }
     final profile = _profileById(_current.providerProfiles, profileId);
     final profiles = ref.read(providerProfileStoreProvider);
     final ready =
@@ -150,6 +174,19 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     await _commit(
       _current.copyWith(providerProfiles: await profiles.readProfiles()),
     );
+    await selectProvider(profile.id);
+  }
+
+  Future<void> downloadGemma4() async {
+    final LocalModelProfile profile = LocalModelProfile.gemma4(
+      id: 'local-gemma-4-e2b',
+      label: 'Gemma 4 E2B (Local)',
+      modelFileName: 'gemma-4-E2B-it.litertlm',
+    );
+    await ref.read(localModelRuntimeProvider).download(profile);
+    final store = ref.read(localModelStoreProvider);
+    await store.save(profile);
+    await _commit(_current.copyWith(localModels: await store.readAll()));
     await selectProvider(profile.id);
   }
 

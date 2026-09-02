@@ -8,9 +8,12 @@ import '../infrastructure/document_chunk_store.dart';
 import '../infrastructure/local_rag_native_retriever.dart';
 import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
+import '../infrastructure/local_model_store.dart';
+import '../infrastructure/flutter_gemma_local_model_gateway.dart';
 import '../infrastructure/provider_profile_store.dart';
 import 'ai_notifier.dart';
 import 'ai_runtime_service.dart';
+import 'local_model_runtime.dart';
 
 final aiSharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
@@ -41,6 +44,12 @@ final chunkStoreProvider = Provider<DocumentChunkStore>(
 final localRagStoreProvider = Provider<LocalRagStore>(
   (Ref ref) => LocalRagStore(),
 );
+final localModelStoreProvider = Provider<LocalModelStore>(
+  (Ref ref) => LocalModelStore(ref.watch(aiSharedPreferencesProvider)),
+);
+final localModelRuntimeProvider = Provider<LocalModelRuntime>(
+  (Ref ref) => LocalModelRuntime(gateway: FlutterGemmaLocalModelGateway()),
+);
 final localRagNativeRetrieverProvider = Provider<NativeLocalRagRetriever>((
   Ref ref,
 ) {
@@ -64,6 +73,8 @@ final localRagServiceProvider = Provider<LocalRagService>((Ref ref) {
 final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   final AiRuntimeService service = AiRuntimeService(
     providerProfiles: ref.watch(providerProfileStoreProvider),
+    localModels: ref.watch(localModelStoreProvider),
+    localRuntime: ref.watch(localModelRuntimeProvider),
   );
   ref.onDispose(service.dispose);
   return service;
