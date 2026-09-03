@@ -29,6 +29,13 @@ class LocalModelProfile {
     modelFamily: 'gemma4',
   );
 
+  /// The built-in local inference model that Clarix can recognize at launch.
+  factory LocalModelProfile.gemma4E2b() => LocalModelProfile.gemma4(
+    id: 'local-gemma-4-e2b',
+    label: 'Gemma 4 E2B (Local)',
+    modelFileName: 'gemma-4-E2B-it.litertlm',
+  );
+
   factory LocalModelProfile.fromJson(Map<String, dynamic> json) =>
       LocalModelProfile(
         id: json['id'] as String,

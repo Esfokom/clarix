@@ -185,6 +185,32 @@ void main() {
     expect(find.text('Tracing'), findsOneWidget);
   });
 
+  testWidgets('shows the responding model and a copy control for an answer', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: ShadApp(
+          home: Scaffold(
+            body: AiSidePane(
+              aiState: _state(<ComposerMessage>[
+                _message('assistant', 'A local answer.', modelLabel: 'Gemma 4'),
+              ]),
+              documentContext: null,
+              onCollapse: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Responded by Gemma 4'), findsOneWidget);
+    expect(
+      find.byKey(const Key('copy-assistant-response-assistant')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets(
     'offers downloaded local Gemma and remote providers in the runtime picker',
     (tester) async {
@@ -195,6 +221,7 @@ void main() {
               body: AiSidePane(
                 aiState: _state(
                   const <ComposerMessage>[],
+                  selectedProviderId: 'gemma-local',
                   localModels: <LocalModelProfile>[
                     LocalModelProfile.gemma4(
                       id: 'gemma-local',
@@ -212,19 +239,62 @@ void main() {
         ),
       );
 
+      expect(find.byKey(const Key('ai-runtime-picker-label')), findsOneWidget);
+
       await tester.tap(find.byKey(const Key('ai-runtime-picker')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Gemma 4 E2B (Local)'), findsOneWidget);
+      expect(find.text('Gemma 4 E2B (Local)'), findsNWidgets(2));
       expect(find.text('DeepSeek'), findsOneWidget);
     },
   );
+
+  testWidgets('confirms before switching models with a conversation', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: ShadApp(
+          home: Scaffold(
+            body: AiSidePane(
+              aiState: _state(
+                <ComposerMessage>[_message('user', 'Existing question')],
+                selectedProviderId: 'deepseek',
+                localModels: <LocalModelProfile>[
+                  LocalModelProfile.gemma4(
+                    id: 'gemma-local',
+                    label: 'Gemma 4 E2B (Local)',
+                    modelFileName: 'gemma-4-E2B-it.litertlm',
+                  ),
+                ],
+                providers: <AiProviderProfile>[_remoteProfile],
+              ),
+              documentContext: null,
+              onCollapse: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('ai-runtime-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Gemma 4 E2B (Local)').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Start a new conversation?'), findsOneWidget);
+    expect(
+      find.text('Changing models starts a new conversation.'),
+      findsOneWidget,
+    );
+  });
 }
 
 AiFeatureState _state(
   List<ComposerMessage> messages, {
   bool chatBusy = false,
   String? statusMessage,
+  String? selectedProviderId,
   List<LocalModelProfile> localModels = const <LocalModelProfile>[],
   List<AiProviderProfile> providers = const <AiProviderProfile>[],
 }) => AiFeatureState(
@@ -232,6 +302,7 @@ AiFeatureState _state(
     providerReady: true,
     chatBusy: chatBusy,
     statusMessage: statusMessage,
+    selectedProviderId: selectedProviderId,
     messages: messages,
   ),
   providerProfiles: providers,
@@ -250,10 +321,12 @@ ComposerMessage _message(
   String role,
   String text, {
   List<CitationSnippet> citations = const <CitationSnippet>[],
+  String? modelLabel,
 }) => ComposerMessage(
   id: role,
   role: role,
   text: text,
   createdAt: DateTime.utc(2026),
   citations: citations,
+  modelLabel: modelLabel,
 );

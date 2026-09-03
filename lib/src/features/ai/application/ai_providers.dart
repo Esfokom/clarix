@@ -10,7 +10,9 @@ import '../infrastructure/local_rag_service.dart';
 import '../infrastructure/local_rag_store.dart';
 import '../infrastructure/local_model_store.dart';
 import '../infrastructure/flutter_gemma_local_model_gateway.dart';
+import '../infrastructure/groq_transcription_service.dart';
 import '../infrastructure/provider_profile_store.dart';
+import '../infrastructure/record_voice_recorder.dart';
 import 'ai_notifier.dart';
 import 'ai_runtime_service.dart';
 import 'local_model_runtime.dart';
@@ -79,6 +81,15 @@ final aiRuntimeServiceProvider = Provider<AiRuntimeService>((Ref ref) {
   ref.onDispose(service.dispose);
   return service;
 });
+
+final groqTranscriptionServiceProvider = Provider<GroqTranscriptionService>(
+  (Ref ref) =>
+      GroqTranscriptionService(apiKey: GroqTranscriptionService.apiKey),
+);
+
+final voiceRecorderProvider = Provider<RecordVoiceRecorder>(
+  (Ref ref) => RecordVoiceRecorder(),
+);
 
 final aiNotifierProvider = AsyncNotifierProvider<AiNotifier, AiFeatureState>(
   AiNotifier.new,

@@ -7,7 +7,6 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api.dart';
-import 'chat_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -48,9 +47,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  Map<String, String> dco_decode_Map_String_String_None(dynamic raw);
-
-  @protected
   NativePdfSession
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     dynamic raw,
@@ -60,21 +56,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
 
   @protected
-  RustStreamSink<NativeChatEvent> dco_decode_StreamSink_native_chat_event_Sse(
-    dynamic raw,
-  );
-
-  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
   bool dco_decode_bool(dynamic raw);
-
-  @protected
-  NativeChatEvent dco_decode_box_autoadd_native_chat_event(dynamic raw);
-
-  @protected
-  NativeChatRequest dco_decode_box_autoadd_native_chat_request(dynamic raw);
 
   @protected
   NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(
@@ -101,9 +86,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> dco_decode_list_String(dynamic raw);
-
-  @protected
-  List<NativeChatMessage> dco_decode_list_native_chat_message(dynamic raw);
 
   @protected
   List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw);
@@ -133,18 +115,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint64List dco_decode_list_prim_usize_strict(dynamic raw);
-
-  @protected
-  List<(String, String)> dco_decode_list_record_string_string(dynamic raw);
-
-  @protected
-  NativeChatEvent dco_decode_native_chat_event(dynamic raw);
-
-  @protected
-  NativeChatMessage dco_decode_native_chat_message(dynamic raw);
-
-  @protected
-  NativeChatRequest dco_decode_native_chat_request(dynamic raw);
 
   @protected
   NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw);
@@ -189,9 +159,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? dco_decode_opt_String(dynamic raw);
 
   @protected
-  NativeChatEvent? dco_decode_opt_box_autoadd_native_chat_event(dynamic raw);
-
-  @protected
   PdfDocumentMetadata dco_decode_pdf_document_metadata(dynamic raw);
 
   @protected
@@ -201,9 +168,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   (double, double, double, double) dco_decode_record_f_32_f_32_f_32_f_32(
     dynamic raw,
   );
-
-  @protected
-  (String, String) dco_decode_record_string_string(dynamic raw);
 
   @protected
   int dco_decode_u_8(dynamic raw);
@@ -236,11 +200,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  Map<String, String> sse_decode_Map_String_String_None(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   NativePdfSession
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     SseDeserializer deserializer,
@@ -252,25 +211,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  RustStreamSink<NativeChatEvent> sse_decode_StreamSink_native_chat_event_Sse(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
   bool sse_decode_bool(SseDeserializer deserializer);
-
-  @protected
-  NativeChatEvent sse_decode_box_autoadd_native_chat_event(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeChatRequest sse_decode_box_autoadd_native_chat_request(
-    SseDeserializer deserializer,
-  );
 
   @protected
   NativePdfComposeRequest sse_decode_box_autoadd_native_pdf_compose_request(
@@ -297,11 +241,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
-
-  @protected
-  List<NativeChatMessage> sse_decode_list_native_chat_message(
-    SseDeserializer deserializer,
-  );
 
   @protected
   List<NativePdfBookmark> sse_decode_list_native_pdf_bookmark(
@@ -341,24 +280,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer);
-
-  @protected
-  List<(String, String)> sse_decode_list_record_string_string(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeChatEvent sse_decode_native_chat_event(SseDeserializer deserializer);
-
-  @protected
-  NativeChatMessage sse_decode_native_chat_message(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  NativeChatRequest sse_decode_native_chat_request(
-    SseDeserializer deserializer,
-  );
 
   @protected
   NativePdfAnnotations sse_decode_native_pdf_annotations(
@@ -425,11 +346,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   String? sse_decode_opt_String(SseDeserializer deserializer);
 
   @protected
-  NativeChatEvent? sse_decode_opt_box_autoadd_native_chat_event(
-    SseDeserializer deserializer,
-  );
-
-  @protected
   PdfDocumentMetadata sse_decode_pdf_document_metadata(
     SseDeserializer deserializer,
   );
@@ -439,11 +355,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   (double, double, double, double) sse_decode_record_f_32_f_32_f_32_f_32(
-    SseDeserializer deserializer,
-  );
-
-  @protected
-  (String, String) sse_decode_record_string_string(
     SseDeserializer deserializer,
   );
 
@@ -487,12 +398,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_Map_String_String_None(
-    Map<String, String> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
     NativePdfSession self,
@@ -506,28 +411,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
-  void sse_encode_StreamSink_native_chat_event_Sse(
-    RustStreamSink<NativeChatEvent> self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
   void sse_encode_bool(bool self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_native_chat_event(
-    NativeChatEvent self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_box_autoadd_native_chat_request(
-    NativeChatRequest self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_box_autoadd_native_pdf_compose_request(
@@ -558,12 +445,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_native_chat_message(
-    List<NativeChatMessage> self,
-    SseSerializer serializer,
-  );
 
   @protected
   void sse_encode_list_native_pdf_bookmark(
@@ -616,30 +497,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_usize_strict(
     Uint64List self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_list_record_string_string(
-    List<(String, String)> self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_chat_event(
-    NativeChatEvent self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_chat_message(
-    NativeChatMessage self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_native_chat_request(
-    NativeChatRequest self,
     SseSerializer serializer,
   );
 
@@ -725,12 +582,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_String(String? self, SseSerializer serializer);
 
   @protected
-  void sse_encode_opt_box_autoadd_native_chat_event(
-    NativeChatEvent? self,
-    SseSerializer serializer,
-  );
-
-  @protected
   void sse_encode_pdf_document_metadata(
     PdfDocumentMetadata self,
     SseSerializer serializer,
@@ -745,12 +596,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_record_f_32_f_32_f_32_f_32(
     (double, double, double, double) self,
-    SseSerializer serializer,
-  );
-
-  @protected
-  void sse_encode_record_string_string(
-    (String, String) self,
     SseSerializer serializer,
   );
 

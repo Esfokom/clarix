@@ -28,14 +28,14 @@ class ConversationStore {
     _database = await databaseFactoryFfi.openDatabase(
       path.join(root.path, 'clarix_conversations.sqlite'),
       options: OpenDatabaseOptions(
-        version: 1,
+        version: 2,
         onConfigure: (Database db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (Database db, int _) async {
           await db.execute(
             'CREATE TABLE conversations (id TEXT PRIMARY KEY, document_id TEXT NOT NULL, title TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, summary TEXT, summary_through_sequence INTEGER)',
           );
           await db.execute(
-            'CREATE TABLE conversation_messages (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE, sequence INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, citations_json TEXT NOT NULL, created_at TEXT NOT NULL, token_estimate INTEGER NOT NULL, is_compacted INTEGER NOT NULL DEFAULT 0)',
+            'CREATE TABLE conversation_messages (id TEXT PRIMARY KEY, conversation_id TEXT NOT NULL REFERENCES conversations(id) ON DELETE CASCADE, sequence INTEGER NOT NULL, role TEXT NOT NULL, content TEXT NOT NULL, citations_json TEXT NOT NULL, model_label TEXT, created_at TEXT NOT NULL, token_estimate INTEGER NOT NULL, is_compacted INTEGER NOT NULL DEFAULT 0)',
           );
           await db.execute(
             'CREATE INDEX conversations_document_updated ON conversations(document_id, updated_at DESC)',
@@ -43,6 +43,13 @@ class ConversationStore {
           await db.execute(
             'CREATE INDEX messages_conversation_sequence ON conversation_messages(conversation_id, sequence)',
           );
+        },
+        onUpgrade: (Database db, int oldVersion, int newVersion) async {
+          if (oldVersion < 2) {
+            await db.execute(
+              'ALTER TABLE conversation_messages ADD COLUMN model_label TEXT',
+            );
+          }
         },
       ),
     );
@@ -100,6 +107,12 @@ class ConversationStore {
   Future<void> deleteThread(String id) =>
       _db.delete('conversations', where: 'id = ?', whereArgs: <Object?>[id]);
   Future<void> clearAll() => _db.delete('conversations');
+
+  Future<void> close() async {
+    final Database? database = _database;
+    _database = null;
+    if (database != null) await database.close();
+  }
 
   Future<void> saveSummary({
     required String threadId,
@@ -185,6 +198,7 @@ class ConversationStore {
     'role': message.role,
     'content': message.content,
     'citations_json': citationsJson(message.citations),
+    'model_label': message.modelLabel,
     'created_at': message.createdAt.toUtc().toIso8601String(),
     'token_estimate': message.tokenEstimate,
     'is_compacted': message.isCompacted ? 1 : 0,
@@ -211,6 +225,7 @@ class ConversationStore {
           )
           .toList(growable: false),
       sequence: row['sequence']! as int,
+      modelLabel: row['model_label'] as String?,
       isCompacted: (row['is_compacted']! as int) == 1,
     );
   }

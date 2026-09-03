@@ -8,16 +8,27 @@ import '../domain/local_model_profile.dart';
 /// and remote OpenAI-compatible provider streaming.
 class FlutterGemmaLocalModelGateway implements LocalModelGateway {
   @override
+  Future<bool> isInstalled(LocalModelProfile profile) =>
+      FlutterGemma.isModelInstalled(profile.modelFileName);
+
+  @override
   Future<void> install(LocalModelProfile profile) => FlutterGemma.installModel(
     modelType: ModelType.gemma4,
     fileType: ModelFileType.litertlm,
   ).fromNetwork(profile.downloadUrl).install();
 
   @override
+  Future<void> uninstall(LocalModelProfile profile) async {
+    await FlutterGemma.uninstallModel(profile.modelFileName);
+    await FlutterGemma.clearActiveInferenceIdentity();
+  }
+
+  @override
   Stream<String> generate({
     required LocalModelProfile profile,
     required String prompt,
     required String systemInstruction,
+    required List<String> conversationHistory,
   }) async* {
     await install(profile);
 
@@ -28,7 +39,13 @@ class FlutterGemmaLocalModelGateway implements LocalModelGateway {
     );
     final chat = await model.createChat(systemInstruction: systemInstruction);
     try {
-      await chat.addQueryChunk(Message.text(text: prompt, isUser: true));
+      final String contextualPrompt = conversationHistory.isEmpty
+          ? prompt
+          : 'Previous conversation:\n${conversationHistory.join('\n')}\n\n'
+                'Current user question: $prompt';
+      await chat.addQueryChunk(
+        Message.text(text: contextualPrompt, isUser: true),
+      );
       await for (final response in chat.generateChatResponseAsync()) {
         if (response case TextResponse(:final token)) yield token;
       }

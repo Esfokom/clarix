@@ -1,6 +1,6 @@
 import '../../../core/clarix_logger.dart';
-import '../../../core/clarix_rust_runtime.dart';
-import '../../../core/ffi/chat_api.dart' as native_chat;
+import 'dart:convert';
+import 'dart:io';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
@@ -12,34 +12,26 @@ class AiRuntimeService {
     required this.providerProfiles,
     required this.localModels,
     required this.localRuntime,
+    RemoteChatGateway? remoteGateway,
     Future<void> Function()? ensureNativeReady,
-  }) : _ensureNativeReady =
-           ensureNativeReady ?? ClarixRustRuntime.requireInitialized;
+  }) : remoteGateway = remoteGateway ?? DartOpenAiCompatibleGateway();
 
   final ProviderProfileStore providerProfiles;
   final LocalModelStore localModels;
   final LocalModelRuntime localRuntime;
-  final Future<void> Function() _ensureNativeReady;
+  final RemoteChatGateway remoteGateway;
 
   Future<void> testProvider(AiProviderProfile profile, String apiKey) async {
     if (apiKey.trim().isEmpty) {
       throw ArgumentError('Enter an API key before testing this provider.');
     }
-    await _ensureNativeReady();
-    await native_chat
-        .streamChat(
-          request: native_chat.NativeChatRequest(
-            providerEndpoint: profile.baseUrl,
-            modelId: profile.modelId,
-            headers: profile.headers,
-            apiKey: apiKey.trim(),
-            messages: const <native_chat.NativeChatMessage>[
-              native_chat.NativeChatMessage(
-                role: 'user',
-                content: 'Reply with OK.',
-              ),
-            ],
-          ),
+    await remoteGateway
+        .stream(
+          profile: profile,
+          apiKey: apiKey.trim(),
+          messages: const <RemoteChatMessage>[
+            RemoteChatMessage(role: 'user', content: 'Reply with OK.'),
+          ],
         )
         .first;
   }
@@ -48,6 +40,7 @@ class AiRuntimeService {
     required String prompt,
     required String profileId,
     required List<CitationSnippet> documentSnippets,
+    List<RemoteChatMessage> conversationHistory = const <RemoteChatMessage>[],
     required void Function(String token) onToken,
     void Function(AiRuntimePhase phase, String message)? onStatus,
   }) async {
@@ -66,6 +59,12 @@ class AiRuntimeService {
         profile: localProfile,
         prompt: prompt,
         documentSnippets: documentSnippets,
+        conversationHistory: conversationHistory
+            .map(
+              (RemoteChatMessage message) =>
+                  '${message.role}: ${message.content}',
+            )
+            .toList(growable: false),
         onToken: (String token) {
           if (!receivedFirstToken) {
             receivedFirstToken = true;
@@ -96,38 +95,27 @@ class AiRuntimeService {
       );
       throw StateError('Add an API key for ${profile.label}.');
     }
-    await _ensureNativeReady();
     clarixLog.i(
       'AI runtime prepared ${profile.label} streaming request '
       '(model=${profile.modelId}, endpoint=${profile.baseUrl}).',
     );
     onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}.');
     final buffer = StringBuffer();
-    await for (final event in native_chat.streamChat(
-      request: native_chat.NativeChatRequest(
-        providerEndpoint: profile.baseUrl,
-        modelId: profile.modelId,
-        headers: profile.headers,
-        apiKey: key,
-        messages: <native_chat.NativeChatMessage>[
-          if (documentSnippets.isNotEmpty)
-            native_chat.NativeChatMessage(
-              role: 'system',
-              content: _documentContext(documentSnippets),
-            ),
-          native_chat.NativeChatMessage(role: 'user', content: prompt),
-        ],
-      ),
+    await for (final text in remoteGateway.stream(
+      profile: profile,
+      apiKey: key,
+      messages: <RemoteChatMessage>[
+        if (documentSnippets.isNotEmpty)
+          RemoteChatMessage(
+            role: 'system',
+            content: _documentContext(documentSnippets),
+          ),
+        ...conversationHistory,
+        RemoteChatMessage(role: 'user', content: prompt),
+      ],
     )) {
-      switch (event) {
-        case native_chat.NativeChatEvent_TextDelta(:final text):
-          buffer.write(text);
-          onToken(text);
-        case native_chat.NativeChatEvent_Error(:final message):
-          throw StateError(message);
-        case native_chat.NativeChatEvent_Done():
-          break;
-      }
+      buffer.write(text);
+      onToken(text);
     }
     return AiReply(
       text: buffer.toString(),
@@ -137,6 +125,77 @@ class AiRuntimeService {
 
   Future<void> stopGeneration() async {}
   Future<void> dispose() async {}
+}
+
+class RemoteChatMessage {
+  const RemoteChatMessage({required this.role, required this.content});
+  final String role;
+  final String content;
+}
+
+abstract interface class RemoteChatGateway {
+  Stream<String> stream({
+    required AiProviderProfile profile,
+    required String apiKey,
+    required List<RemoteChatMessage> messages,
+  });
+}
+
+class DartOpenAiCompatibleGateway implements RemoteChatGateway {
+  @override
+  Stream<String> stream({
+    required AiProviderProfile profile,
+    required String apiKey,
+    required List<RemoteChatMessage> messages,
+  }) async* {
+    final HttpClient client = HttpClient();
+    try {
+      final HttpClientRequest request = await client.postUrl(
+        profile.chatCompletionsUri,
+      );
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $apiKey');
+      request.headers.contentType = ContentType.json;
+      profile.headers.forEach(request.headers.set);
+      request.write(
+        jsonEncode(<String, Object>{
+          'model': profile.modelId,
+          'messages': messages
+              .map(
+                (RemoteChatMessage message) => <String, String>{
+                  'role': message.role,
+                  'content': message.content,
+                },
+              )
+              .toList(growable: false),
+          'stream': true,
+        }),
+      );
+      final HttpClientResponse response = await request.close();
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError('Provider returned HTTP ${response.statusCode}.');
+      }
+      await for (final String line
+          in response.transform(utf8.decoder).transform(const LineSplitter())) {
+        if (!line.startsWith('data:')) continue;
+        final String data = line.substring(5).trim();
+        if (data == '[DONE]') return;
+        final dynamic decoded = jsonDecode(data);
+        String? text;
+        if (decoded is Map) {
+          final Object? choices = decoded['choices'];
+          if (choices is List && choices.isNotEmpty) {
+            final Object? first = choices.first;
+            if (first is Map && first['delta'] is Map) {
+              text = (first['delta'] as Map)['content'] as String?;
+            }
+          }
+        }
+        if (text != null && text.isNotEmpty) yield text;
+      }
+    } finally {
+      client.close(force: true);
+    }
+  }
 }
 
 String _documentContext(List<CitationSnippet> snippets) {

@@ -46,13 +46,45 @@ void main() {
       expect(gateway.downloadedProfile, profile);
     },
   );
+
+  test(
+    'uninstalls the selected Gemma profile through the local gateway',
+    () async {
+      final _FakeGateway gateway = _FakeGateway();
+      final LocalModelRuntime runtime = LocalModelRuntime(gateway: gateway);
+
+      await runtime.delete(profile);
+
+      expect(gateway.deletedProfile, profile);
+    },
+  );
+
+  test(
+    'checks whether Flutter Gemma still has a local model installed',
+    () async {
+      final _FakeGateway gateway = _FakeGateway()..installed = true;
+      final LocalModelRuntime runtime = LocalModelRuntime(gateway: gateway);
+
+      expect(await runtime.isInstalled(profile), isTrue);
+      expect(gateway.checkedProfile, profile);
+    },
+  );
 }
 
 class _FakeGateway implements LocalModelGateway {
   LocalModelProfile? downloadedProfile;
+  LocalModelProfile? deletedProfile;
   LocalModelProfile? profile;
   String? prompt;
   String? systemInstruction;
+  LocalModelProfile? checkedProfile;
+  bool installed = false;
+
+  @override
+  Future<bool> isInstalled(LocalModelProfile profile) async {
+    checkedProfile = profile;
+    return installed;
+  }
 
   @override
   Future<void> install(LocalModelProfile profile) async {
@@ -60,10 +92,16 @@ class _FakeGateway implements LocalModelGateway {
   }
 
   @override
+  Future<void> uninstall(LocalModelProfile profile) async {
+    deletedProfile = profile;
+  }
+
+  @override
   Stream<String> generate({
     required LocalModelProfile profile,
     required String prompt,
     required String systemInstruction,
+    required List<String> conversationHistory,
   }) async* {
     this.profile = profile;
     this.prompt = prompt;

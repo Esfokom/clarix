@@ -28,4 +28,59 @@ void main() {
       expect(await store.readAll(), <LocalModelProfile>[model]);
     },
   );
+
+  test('removes metadata when a local model is deleted', () async {
+    final LocalModelStore store = LocalModelStore(SharedPreferencesAsync());
+    final LocalModelProfile model = LocalModelProfile.gemma4(
+      id: 'local-gemma-4-e2b',
+      label: 'Gemma 4 E2B',
+      modelFileName: 'gemma-4-E2B-it.litertlm',
+    );
+    await store.save(model);
+
+    await store.delete(model.id);
+
+    expect(await store.readAll(), isEmpty);
+  });
+
+  test(
+    'restores a supported model found in Flutter Gemma at startup',
+    () async {
+      final LocalModelStore store = LocalModelStore(SharedPreferencesAsync());
+      final LocalModelProfile model = LocalModelProfile.gemma4(
+        id: 'local-gemma-4-e2b',
+        label: 'Gemma 4 E2B (Local)',
+        modelFileName: 'gemma-4-E2B-it.litertlm',
+      );
+
+      final List<LocalModelProfile> available = await store.reconcile(
+        supportedProfiles: <LocalModelProfile>[model],
+        isInstalled: (LocalModelProfile profile) async => profile == model,
+      );
+
+      expect(available, <LocalModelProfile>[model]);
+      expect(await store.readAll(), <LocalModelProfile>[model]);
+    },
+  );
+
+  test(
+    'removes stale metadata when the local file is no longer installed',
+    () async {
+      final LocalModelStore store = LocalModelStore(SharedPreferencesAsync());
+      final LocalModelProfile model = LocalModelProfile.gemma4(
+        id: 'local-gemma-4-e2b',
+        label: 'Gemma 4 E2B (Local)',
+        modelFileName: 'gemma-4-E2B-it.litertlm',
+      );
+      await store.save(model);
+
+      final List<LocalModelProfile> available = await store.reconcile(
+        supportedProfiles: <LocalModelProfile>[model],
+        isInstalled: (_) async => false,
+      );
+
+      expect(available, isEmpty);
+      expect(await store.readAll(), isEmpty);
+    },
+  );
 }

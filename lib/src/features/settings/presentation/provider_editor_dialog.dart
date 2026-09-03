@@ -20,6 +20,7 @@ class ProviderEditorDialogState extends ConsumerState<ProviderEditorDialog> {
   late final TextEditingController _contextWindow;
   final TextEditingController _apiKey = TextEditingController();
   late bool _shareRetrievedPassages;
+  String _presetId = 'custom';
   bool _saving = false;
   bool _testing = false;
   String? _error;
@@ -60,6 +61,37 @@ class ProviderEditorDialogState extends ConsumerState<ProviderEditorDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              DropdownButtonFormField<String>(
+                key: const Key('provider-preset'),
+                initialValue: _presetId,
+                decoration: const InputDecoration(labelText: 'Provider'),
+                items: const <DropdownMenuItem<String>>[
+                  DropdownMenuItem(
+                    value: 'custom',
+                    child: Text('Custom OpenAI-compatible'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'deepseek-flash',
+                    child: Text('DeepSeek V4 Flash'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'deepseek-pro',
+                    child: Text('DeepSeek V4 Pro'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'openai-gpt5',
+                    child: Text('OpenAI GPT-5'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'openai-gpt5-mini',
+                    child: Text('OpenAI GPT-5 mini'),
+                  ),
+                ],
+                onChanged: _editing
+                    ? null
+                    : (String? value) => _applyPreset(value ?? 'custom'),
+              ),
+              const SizedBox(height: 12),
               _field(
                 key: const Key('provider-label'),
                 controller: _label,
@@ -156,6 +188,15 @@ class ProviderEditorDialogState extends ConsumerState<ProviderEditorDialog> {
     shareRetrievedPassages: _shareRetrievedPassages,
   );
 
+  void _applyPreset(String presetId) {
+    setState(() => _presetId = presetId);
+    final _ProviderPreset? preset = _ProviderPreset.byId(presetId);
+    if (preset == null) return;
+    _label.text = preset.label;
+    _baseUrl.text = preset.baseUrl;
+    _model.text = preset.modelId;
+  }
+
   Future<void> _testConnection() async {
     final AiProviderProfile profile;
     try {
@@ -210,4 +251,43 @@ class ProviderEditorDialogState extends ConsumerState<ProviderEditorDialog> {
     }
     return error.toString();
   }
+}
+
+class _ProviderPreset {
+  const _ProviderPreset(this.id, this.label, this.baseUrl, this.modelId);
+
+  final String id;
+  final String label;
+  final String baseUrl;
+  final String modelId;
+
+  static const List<_ProviderPreset> _presets = <_ProviderPreset>[
+    _ProviderPreset(
+      'deepseek-flash',
+      'DeepSeek V4 Flash',
+      'https://api.deepseek.com',
+      'deepseek-v4-flash',
+    ),
+    _ProviderPreset(
+      'deepseek-pro',
+      'DeepSeek V4 Pro',
+      'https://api.deepseek.com',
+      'deepseek-v4-pro',
+    ),
+    _ProviderPreset(
+      'openai-gpt5',
+      'OpenAI GPT-5',
+      'https://api.openai.com/v1',
+      'gpt-5',
+    ),
+    _ProviderPreset(
+      'openai-gpt5-mini',
+      'OpenAI GPT-5 mini',
+      'https://api.openai.com/v1',
+      'gpt-5-mini',
+    ),
+  ];
+
+  static _ProviderPreset? byId(String id) =>
+      _presets.where((item) => item.id == id).firstOrNull;
 }

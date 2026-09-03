@@ -84,11 +84,74 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
                                   const _SettingsHeading(
-                                    title: 'AI providers',
+                                    title: 'AI models',
                                     description:
-                                        'Configure compatible remote AI providers for Clarix.',
+                                        'Choose an on-device model or configure an online provider.',
                                   ),
                                   const SizedBox(height: 16),
+                                  const Text(
+                                    'Local',
+                                    style: TextStyle(
+                                      color: WorkspaceColors.textStrong,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  if (aiState.localModels.isEmpty)
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: OutlinedButton.icon(
+                                        key: const Key('download-gemma-4'),
+                                        onPressed: () => ref
+                                            .read(aiNotifierProvider.notifier)
+                                            .downloadGemma4(),
+                                        icon: const Icon(
+                                          Icons.download_outlined,
+                                        ),
+                                        label: const Text(
+                                          'Download Gemma 4 E2B',
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    ...aiState.localModels.map(
+                                      (LocalModelProfile model) => ListTile(
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                            ),
+                                        leading: Image.asset(
+                                          'assets/images/gemma-color.png',
+                                          width: 28,
+                                          height: 28,
+                                        ),
+                                        title: Text(model.label),
+                                        subtitle: const Text('On this device'),
+                                        trailing: IconButton(
+                                          key: Key(
+                                            'delete-local-model-${model.id}',
+                                          ),
+                                          tooltip: 'Delete ${model.label}',
+                                          onPressed: () => ref
+                                              .read(aiNotifierProvider.notifier)
+                                              .deleteLocalModel(model),
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    'Online',
+                                    style: TextStyle(
+                                      color: WorkspaceColors.textStrong,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
                                   if (aiState.providerProfiles.isEmpty)
                                     const Padding(
                                       padding: EdgeInsets.symmetric(
@@ -120,20 +183,6 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                       onPressed: () => _openEditor(context),
                                       icon: const Icon(Icons.add),
                                       label: const Text('Add provider'),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: OutlinedButton.icon(
-                                      key: const Key('download-gemma-4'),
-                                      onPressed: () => ref
-                                          .read(aiNotifierProvider.notifier)
-                                          .downloadGemma4(),
-                                      icon: const Icon(Icons.download_outlined),
-                                      label: const Text(
-                                        'Download Gemma 4 E2B (local)',
-                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 24),
@@ -594,6 +643,14 @@ class _ProviderTile extends ConsumerWidget {
       ),
       child: Row(
         children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: Image.asset(
+              _providerIcon(profile.label),
+              width: 28,
+              height: 28,
+            ),
+          ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -670,5 +727,12 @@ class _ProviderTile extends ConsumerWidget {
     if (confirmed == true) {
       await ref.read(aiNotifierProvider.notifier).deleteProvider(profile.id);
     }
+  }
+
+  String _providerIcon(String label) {
+    final String normalized = label.toLowerCase();
+    if (normalized.contains('deepseek')) return 'assets/images/deepseek.png';
+    if (normalized.contains('openai')) return 'assets/images/openai.png';
+    return 'assets/images/openai.png';
   }
 }

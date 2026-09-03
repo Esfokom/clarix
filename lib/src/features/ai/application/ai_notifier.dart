@@ -5,22 +5,31 @@ import '../../../core/models.dart';
 import '../domain/ai_feature_state.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
+import '../domain/conversation.dart';
 import '../domain/local_model_profile.dart';
 import 'ai_document_context.dart';
 import 'ai_providers.dart';
+import 'ai_runtime_service.dart';
 
 /// Owns persisted AI preferences and the active document conversation.
 ///
 /// Workspace supplies a document context at the call boundary; this controller
 /// never reads workspace state or constructs editor sessions.
 class AiNotifier extends AsyncNotifier<AiFeatureState> {
+  String? _activeConversationId;
+
   @override
   Future<AiFeatureState> build() async {
     final preferences = ref.read(aiPreferencesStoreProvider);
     final profiles = ref.read(providerProfileStoreProvider);
     final saved = await preferences.readState();
     final available = await profiles.readProfiles();
-    final localModels = await ref.read(localModelStoreProvider).readAll();
+    final localModels = await ref
+        .read(localModelStoreProvider)
+        .reconcile(
+          supportedProfiles: <LocalModelProfile>[LocalModelProfile.gemma4E2b()],
+          isInstalled: ref.read(localModelRuntimeProvider).isInstalled,
+        );
     final defaultId = await profiles.readDefaultProfileId();
     final selectedRemote =
         _profileById(available, defaultId) ??
@@ -53,6 +62,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     final store = await ref.read(conversationStoreProvider.future);
     final threads = await store.listThreads(documentId);
     if (threads.isEmpty) {
+      _activeConversationId = null;
       await _commit(
         _current.copyWith(
           chat: _current.chat.copyWith(
@@ -69,6 +79,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
   Future<void> selectConversation(String threadId) async {
     final store = await ref.read(conversationStoreProvider.future);
     final messages = await store.readMessages(threadId);
+    _activeConversationId = threadId;
     await _commit(
       _current.copyWith(
         chat: _current.chat.copyWith(
@@ -80,6 +91,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
                   text: message.content,
                   createdAt: message.createdAt,
                   citations: message.citations,
+                  modelLabel: message.modelLabel,
                 ),
               )
               .toList(growable: false),
@@ -92,11 +104,13 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     await (await ref.read(
       conversationStoreProvider.future,
     )).deleteThread(threadId);
+    if (_activeConversationId == threadId) _activeConversationId = null;
     await loadLatestConversation(documentId);
   }
 
   Future<void> startNewConversation() async {
     if (_current.chat.chatBusy) return;
+    _activeConversationId = null;
     await _commit(
       _current.copyWith(
         chat: _current.chat.copyWith(
@@ -178,16 +192,21 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
   }
 
   Future<void> downloadGemma4() async {
-    final LocalModelProfile profile = LocalModelProfile.gemma4(
-      id: 'local-gemma-4-e2b',
-      label: 'Gemma 4 E2B (Local)',
-      modelFileName: 'gemma-4-E2B-it.litertlm',
-    );
+    final LocalModelProfile profile = LocalModelProfile.gemma4E2b();
     await ref.read(localModelRuntimeProvider).download(profile);
     final store = ref.read(localModelStoreProvider);
     await store.save(profile);
     await _commit(_current.copyWith(localModels: await store.readAll()));
     await selectProvider(profile.id);
+  }
+
+  Future<void> deleteLocalModel(LocalModelProfile profile) async {
+    await ref.read(localModelRuntimeProvider).delete(profile);
+    final store = ref.read(localModelStoreProvider);
+    await store.delete(profile.id);
+    final bool wasSelected = _current.chat.selectedProviderId == profile.id;
+    await _commit(_current.copyWith(localModels: await store.readAll()));
+    if (wasSelected) await selectProvider(null);
   }
 
   Future<void> testProvider(
@@ -232,12 +251,14 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
       createdAt: DateTime.now().toUtc(),
       citations: const [],
     );
+    final String modelLabel = _modelLabel(current.chat.selectedProviderId!);
     final assistant = ComposerMessage(
       id: 'assistant_${DateTime.now().microsecondsSinceEpoch}',
       role: 'assistant',
       text: '',
       createdAt: DateTime.now().toUtc(),
       citations: const [],
+      modelLabel: modelLabel,
     );
     await _commit(
       current.copyWith(
@@ -276,9 +297,22 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
         snippets = const <CitationSnippet>[];
       }
       final store = await ref.read(conversationStoreProvider.future);
-      final threads = await store.listThreads(context.documentId);
+      final String threadId =
+          _activeConversationId ??
+          (await store.createThread(
+            documentId: context.documentId,
+            title: _conversationTitle(prompt),
+          )).id;
+      _activeConversationId = threadId;
+      final List<RemoteChatMessage> history = current.chat.messages
+          .map(
+            (ComposerMessage message) =>
+                RemoteChatMessage(role: message.role, content: message.text),
+          )
+          .toList(growable: false);
       clarixLog.i(
-        'AI provider run starting with ${threads.length} persisted thread(s).',
+        'AI provider run starting with active thread $threadId and '
+        '${history.length} prior message(s).',
       );
       final reply = await ref
           .read(aiRuntimeServiceProvider)
@@ -286,6 +320,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
             prompt: prompt.trim(),
             profileId: current.chat.selectedProviderId!,
             documentSnippets: snippets,
+            conversationHistory: history,
             onStatus: _setActivity,
             onToken: (token) {
               buffer.write(token);
@@ -298,6 +333,18 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
         busy: false,
         phase: AiRuntimePhase.idle,
         status: 'Ready to chat with your remote provider.',
+        modelLabel: modelLabel,
+      );
+      await store.appendExchange(
+        threadId: threadId,
+        user: _conversationMessage(user),
+        assistant: _conversationMessage(
+          assistant.copyWith(
+            text: reply.text,
+            citations: snippets,
+            modelLabel: modelLabel,
+          ),
+        ),
       );
     } catch (error, stackTrace) {
       clarixLog.w(
@@ -310,6 +357,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
         busy: false,
         phase: AiRuntimePhase.failed,
         status: 'Generation failed.',
+        modelLabel: modelLabel,
       );
     }
   }
@@ -349,6 +397,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     bool? busy,
     AiRuntimePhase? phase,
     String? status,
+    String? modelLabel,
   }) {
     final value = _current;
     if (value.chat.messages.isEmpty) return;
@@ -356,6 +405,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     messages[messages.length - 1] = messages.last.copyWith(
       text: text,
       citations: citations,
+      modelLabel: modelLabel,
     );
     state = AsyncData(
       value.copyWith(
@@ -376,4 +426,33 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
   ) => id == null
       ? null
       : profiles.where((profile) => profile.id == id).firstOrNull;
+
+  String _modelLabel(String id) =>
+      _current.localModels
+          .where((LocalModelProfile item) => item.id == id)
+          .firstOrNull
+          ?.label ??
+      _current.providerProfiles
+          .where((AiProviderProfile item) => item.id == id)
+          .firstOrNull
+          ?.label ??
+      id;
+
+  String _conversationTitle(String prompt) {
+    final String normalized = prompt.trim().replaceAll(RegExp(r'\s+'), ' ');
+    return normalized.length <= 52
+        ? normalized
+        : '${normalized.substring(0, 49)}...';
+  }
+
+  ConversationMessage _conversationMessage(ComposerMessage message) =>
+      ConversationMessage(
+        id: message.id,
+        role: message.role,
+        content: message.text,
+        createdAt: message.createdAt,
+        tokenEstimate: (message.text.trim().length / 4).ceil(),
+        citations: message.citations,
+        modelLabel: message.modelLabel,
+      );
 }

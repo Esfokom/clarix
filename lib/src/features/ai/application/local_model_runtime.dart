@@ -2,12 +2,15 @@ import '../domain/ai_models.dart';
 import '../domain/local_model_profile.dart';
 
 abstract interface class LocalModelGateway {
+  Future<bool> isInstalled(LocalModelProfile profile);
   Future<void> install(LocalModelProfile profile);
+  Future<void> uninstall(LocalModelProfile profile);
 
   Stream<String> generate({
     required LocalModelProfile profile,
     required String prompt,
     required String systemInstruction,
+    required List<String> conversationHistory,
   });
 }
 
@@ -16,18 +19,23 @@ class LocalModelRuntime {
 
   final LocalModelGateway gateway;
 
+  Future<bool> isInstalled(LocalModelProfile profile) =>
+      gateway.isInstalled(profile);
   Future<void> download(LocalModelProfile profile) => gateway.install(profile);
+  Future<void> delete(LocalModelProfile profile) => gateway.uninstall(profile);
 
   Future<void> sendPrompt({
     required LocalModelProfile profile,
     required String prompt,
     required List<CitationSnippet> documentSnippets,
+    List<String> conversationHistory = const <String>[],
     required void Function(String token) onToken,
   }) async {
     await for (final String token in gateway.generate(
       profile: profile,
       prompt: prompt,
       systemInstruction: _documentContext(documentSnippets),
+      conversationHistory: conversationHistory,
     )) {
       onToken(token);
     }

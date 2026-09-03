@@ -28,8 +28,12 @@ Clarix is a Windows-first Flutter PDF workspace with:
 
 ```bash
 flutter pub get
-flutter run -d windows
+flutter run -d windows --dart-define=GROQ_API_KEY=your_groq_api_key
 ```
+
+`GROQ_API_KEY` enables the composer microphone control and sends stopped
+recordings to Groq `whisper-large-v3-turbo`. Without it, text chat still works
+and voice input reports that the key is missing.
 
 ## Notes
 

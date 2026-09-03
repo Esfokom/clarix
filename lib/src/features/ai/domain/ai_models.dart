@@ -103,6 +103,7 @@ class ComposerMessage {
     required this.text,
     required this.createdAt,
     required this.citations,
+    this.modelLabel,
   });
 
   final String id;
@@ -110,16 +111,22 @@ class ComposerMessage {
   final String text;
   final DateTime createdAt;
   final List<CitationSnippet> citations;
+  final String? modelLabel;
 
   bool get isUser => role == 'user';
 
-  ComposerMessage copyWith({String? text, List<CitationSnippet>? citations}) {
+  ComposerMessage copyWith({
+    String? text,
+    List<CitationSnippet>? citations,
+    String? modelLabel,
+  }) {
     return ComposerMessage(
       id: id,
       role: role,
       text: text ?? this.text,
       createdAt: createdAt,
       citations: citations ?? this.citations,
+      modelLabel: modelLabel ?? this.modelLabel,
     );
   }
 }

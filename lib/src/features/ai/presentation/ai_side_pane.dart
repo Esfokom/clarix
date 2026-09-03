@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:flutter_markdown_plus_latex/flutter_markdown_plus_latex.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,15 +32,22 @@ class AiSidePane extends ConsumerStatefulWidget {
 
 class _AiSidePaneState extends ConsumerState<AiSidePane> {
   late final TextEditingController _controller;
+  late final VoiceInputController _voiceInput;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    _voiceInput = VoiceInputController(
+      recorder: ref.read(voiceRecorderProvider),
+      transcribe: ref.read(groqTranscriptionServiceProvider).transcribe,
+      onTranscript: _appendTranscript,
+    );
   }
 
   @override
   void dispose() {
+    _voiceInput.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -50,6 +58,27 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
     final AiWorkspaceState ai = widget.aiState.chat;
+    final String selectedRuntimeLabel =
+        widget.aiState.localModels
+            .where(
+              (LocalModelProfile model) => model.id == ai.selectedProviderId,
+            )
+            .firstOrNull
+            ?.label ??
+        widget.aiState.providerProfiles
+            .where(
+              (AiProviderProfile profile) =>
+                  profile.id == ai.selectedProviderId,
+            )
+            .firstOrNull
+            ?.label ??
+        'Choose model';
+    final String selectedRuntimeIcon =
+        selectedRuntimeLabel.toLowerCase().contains('gemma')
+        ? 'assets/images/gemma-color.png'
+        : selectedRuntimeLabel.toLowerCase().contains('deepseek')
+        ? 'assets/images/deepseek.png'
+        : 'assets/images/openai.png';
     final composerEnabled =
         ai.providerReady && !ai.chatBusy && widget.documentContext != null;
     final composerHint = !ai.providerReady
@@ -101,28 +130,48 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                       !ai.chatBusy &&
                       (widget.aiState.localModels.isNotEmpty ||
                           widget.aiState.providerProfiles.isNotEmpty),
-                  onSelected: (String id) =>
-                      ref.read(aiNotifierProvider.notifier).selectProvider(id),
+                  onSelected: _selectRuntime,
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<String>>[
                         ...widget.aiState.localModels.map(
                           (LocalModelProfile model) => PopupMenuItem<String>(
                             value: model.id,
-                            child: Text(model.label),
+                            child: _RuntimeMenuItem(
+                              label: model.label,
+                              iconPath: 'assets/images/gemma-color.png',
+                            ),
                           ),
                         ),
                         ...widget.aiState.providerProfiles.map(
                           (AiProviderProfile profile) => PopupMenuItem<String>(
                             value: profile.id,
-                            child: Text(profile.label),
+                            child: _RuntimeMenuItem(
+                              label: profile.label,
+                              iconPath:
+                                  profile.label.toLowerCase().contains(
+                                    'deepseek',
+                                  )
+                                  ? 'assets/images/deepseek.png'
+                                  : 'assets/images/openai.png',
+                            ),
                           ),
                         ),
                       ],
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      Icon(LucideIcons.bot, color: colors.textFaint, size: 14),
+                      Image.asset(selectedRuntimeIcon, width: 16, height: 16),
                       const SizedBox(width: 4),
+                      Text(
+                        selectedRuntimeLabel,
+                        key: const Key('ai-runtime-picker-label'),
+                        style: TextStyle(
+                          color: colors.textMuted,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 2),
                       Icon(
                         LucideIcons.chevronDown,
                         color: colors.textFaint,
@@ -214,6 +263,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
             ),
           _DocumentComposer(
             controller: _controller,
+            voiceInput: _voiceInput,
             enabled: composerEnabled,
             isBusy: ai.chatBusy,
             hintText: composerHint,
@@ -248,6 +298,46 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     _controller.clear();
   }
 
+  void _appendTranscript(String transcript) {
+    final String existing = _controller.text;
+    final String separator = existing.trim().isEmpty ? '' : ' ';
+    final String updated = '$existing$separator$transcript';
+    _controller.value = _controller.value.copyWith(
+      text: updated,
+      selection: TextSelection.collapsed(offset: updated.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  Future<void> _selectRuntime(String id) async {
+    final AiWorkspaceState chat = widget.aiState.chat;
+    if (id == chat.selectedProviderId) return;
+    if (chat.messages.isNotEmpty) {
+      final bool? confirmed = await showDialog<bool>(
+        context: context,
+        builder: (BuildContext dialogContext) => AlertDialog(
+          title: const Text('Start a new conversation?'),
+          content: const Text('Changing models starts a new conversation.'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Change model'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await ref.read(aiNotifierProvider.notifier).startNewConversation();
+    }
+    if (mounted) {
+      await ref.read(aiNotifierProvider.notifier).selectProvider(id);
+    }
+  }
+
   Future<void> _showHistory() async {
     final AiDocumentContext? document = widget.documentContext;
     if (document == null) return;
@@ -255,27 +345,52 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     final store = await ref.read(conversationStoreProvider.future);
     final threads = await store.listThreads(document.documentId);
     if (!menuContext.mounted) return;
-    final RenderBox button = menuContext.findRenderObject()! as RenderBox;
-    final String? selected = await showMenu<String>(
+    final String? selected = await showDialog<String>(
       context: menuContext,
-      position: RelativeRect.fromRect(
-        Rect.fromLTWH(button.size.width - 200, 48, 1, 1),
-        Offset.zero & button.size,
+      builder: (BuildContext dialogContext) => AlertDialog(
+        title: const Text('Conversation history'),
+        content: SizedBox(
+          width: 420,
+          child: threads.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 18),
+                  child: Text('No saved conversations for this document yet.'),
+                )
+              : ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: threads.length,
+                  separatorBuilder: (_, _) => const Divider(height: 1),
+                  itemBuilder: (BuildContext context, int index) {
+                    final thread = threads[index];
+                    return ListTile(
+                      key: Key('conversation-thread-${thread.id}'),
+                      title: Text(
+                        thread.title,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        'Updated ${thread.updatedAt.toLocal()}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      onTap: () => Navigator.pop(dialogContext, thread.id),
+                      trailing: IconButton(
+                        tooltip: 'Delete conversation',
+                        icon: const Icon(LucideIcons.trash2, size: 16),
+                        onPressed: () =>
+                            Navigator.pop(dialogContext, 'delete:${thread.id}'),
+                      ),
+                    );
+                  },
+                ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
       ),
-      items: threads
-          .expand(
-            (thread) => <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                value: thread.id,
-                child: Text(thread.title, overflow: TextOverflow.ellipsis),
-              ),
-              PopupMenuItem<String>(
-                value: 'delete:${thread.id}',
-                child: const Text('Delete conversation'),
-              ),
-            ],
-          )
-          .toList(growable: false),
     );
     if (selected != null && selected.startsWith('delete:')) {
       if (!menuContext.mounted) return;
@@ -307,6 +422,22 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       await ref.read(aiNotifierProvider.notifier).selectConversation(selected);
     }
   }
+}
+
+class _RuntimeMenuItem extends StatelessWidget {
+  const _RuntimeMenuItem({required this.label, required this.iconPath});
+
+  final String label;
+  final String iconPath;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: <Widget>[
+      Image.asset(iconPath, width: 20, height: 20),
+      const SizedBox(width: 10),
+      Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
+    ],
+  );
 }
 
 class _EmptyConversation extends StatelessWidget {
@@ -367,6 +498,7 @@ class _EmptyConversation extends StatelessWidget {
 class _DocumentComposer extends StatelessWidget {
   const _DocumentComposer({
     required this.controller,
+    required this.voiceInput,
     required this.enabled,
     required this.isBusy,
     required this.hintText,
@@ -376,6 +508,7 @@ class _DocumentComposer extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final VoiceInputController voiceInput;
   final bool enabled;
   final bool isBusy;
   final String hintText;
@@ -423,52 +556,123 @@ class _DocumentComposer extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Row(
-                children: <Widget>[
-                  Icon(LucideIcons.fileText, color: colors.textFaint, size: 13),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      'Document context',
-                      style: TextStyle(
+              AnimatedBuilder(
+                animation: voiceInput,
+                builder: (BuildContext context, Widget? child) {
+                  final bool isRecording =
+                      voiceInput.status == VoiceInputStatus.recording;
+                  final bool isTranscribing =
+                      voiceInput.status == VoiceInputStatus.transcribing;
+                  final String contextLabel = isTranscribing
+                      ? 'Transcribing voice…'
+                      : voiceInput.errorMessage ?? 'Document context';
+                  return Row(
+                    children: <Widget>[
+                      Icon(
+                        LucideIcons.fileText,
                         color: colors.textFaint,
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w500,
+                        size: 13,
                       ),
-                    ),
-                  ),
-                  ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: controller,
-                    builder: (BuildContext context, TextEditingValue value, _) {
-                      final bool canSend =
-                          enabled && value.text.trim().isNotEmpty;
-                      return Tooltip(
-                        message: isBusy ? 'Stop generating' : 'Send question',
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          contextLabel,
+                          key: const Key('voice-input-status'),
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: voiceInput.errorMessage == null
+                                ? colors.textFaint
+                                : colors.warning,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Tooltip(
+                        message: isRecording
+                            ? 'Stop recording'
+                            : isTranscribing
+                            ? 'Transcribing voice input'
+                            : 'Start voice input',
                         child: IconButton(
-                          key: const Key('document-composer-send'),
-                          onPressed: isBusy
-                              ? onStop
-                              : (canSend ? onSend : null),
+                          key: const Key('document-composer-voice'),
+                          onPressed:
+                              isTranscribing || (!enabled && !isRecording)
+                              ? null
+                              : voiceInput.toggle,
                           style: IconButton.styleFrom(
                             minimumSize: const Size(32, 32),
                             maximumSize: const Size(32, 32),
                             padding: EdgeInsets.zero,
-                            backgroundColor: isBusy
-                                ? colors.textMuted
-                                : colors.accent,
+                            backgroundColor: isRecording
+                                ? colors.warning
+                                : colors.panelRaised,
                             disabledBackgroundColor: colors.border,
-                            foregroundColor: colors.canvas,
+                            foregroundColor: isRecording
+                                ? colors.canvas
+                                : colors.textMuted,
                             disabledForegroundColor: colors.textFaint,
                           ),
-                          icon: Icon(
-                            isBusy ? LucideIcons.square : LucideIcons.arrowUp,
-                            size: isBusy ? 13 : 16,
-                          ),
+                          icon: isTranscribing
+                              ? SizedBox(
+                                  width: 14,
+                                  height: 14,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 1.8,
+                                    color: colors.textFaint,
+                                  ),
+                                )
+                              : Icon(
+                                  isRecording
+                                      ? LucideIcons.square
+                                      : LucideIcons.mic,
+                                  size: isRecording ? 13 : 16,
+                                ),
                         ),
-                      );
-                    },
-                  ),
-                ],
+                      ),
+                      const SizedBox(width: 6),
+                      ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: controller,
+                        builder:
+                            (BuildContext context, TextEditingValue value, _) {
+                              final bool canSend =
+                                  enabled &&
+                                  !isRecording &&
+                                  !isTranscribing &&
+                                  value.text.trim().isNotEmpty;
+                              return Tooltip(
+                                message: isBusy
+                                    ? 'Stop generating'
+                                    : 'Send question',
+                                child: IconButton(
+                                  key: const Key('document-composer-send'),
+                                  onPressed: isBusy
+                                      ? onStop
+                                      : (canSend ? onSend : null),
+                                  style: IconButton.styleFrom(
+                                    minimumSize: const Size(32, 32),
+                                    maximumSize: const Size(32, 32),
+                                    padding: EdgeInsets.zero,
+                                    backgroundColor: isBusy
+                                        ? colors.textMuted
+                                        : colors.accent,
+                                    disabledBackgroundColor: colors.border,
+                                    foregroundColor: colors.canvas,
+                                    disabledForegroundColor: colors.textFaint,
+                                  ),
+                                  icon: Icon(
+                                    isBusy
+                                        ? LucideIcons.square
+                                        : LucideIcons.arrowUp,
+                                    size: isBusy ? 13 : 16,
+                                  ),
+                                ),
+                              );
+                            },
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -555,7 +759,49 @@ class _MessageBubble extends StatelessWidget {
       return Padding(
         key: const Key('assistant-message-content'),
         padding: const EdgeInsets.fromLTRB(4, 10, 4, 12),
-        child: SizedBox(width: double.infinity, child: content),
+        child: SizedBox(
+          width: double.infinity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              content,
+              const SizedBox(height: 6),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      message.modelLabel == null
+                          ? 'Responded by selected model'
+                          : 'Responded by ${message.modelLabel}',
+                      key: Key('assistant-model-${message.id}'),
+                      style: TextStyle(color: colors.textFaint, fontSize: 10.5),
+                    ),
+                  ),
+                  IconButton(
+                    key: Key('copy-assistant-response-${message.id}'),
+                    tooltip: 'Copy response',
+                    icon: Icon(
+                      LucideIcons.copy,
+                      color: colors.textFaint,
+                      size: 14,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () async {
+                      await Clipboard.setData(
+                        ClipboardData(text: message.text),
+                      );
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Response copied.')),
+                        );
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       );
     }
 

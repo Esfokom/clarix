@@ -73,6 +73,31 @@ void main() {
     );
   });
 
+  testWidgets('fills endpoint and model from the DeepSeek preset', (
+    WidgetTester tester,
+  ) async {
+    final _Harness harness = await _Harness.create();
+    addTearDown(harness.dispose);
+
+    await tester.pumpWidget(harness.dialog());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Add provider'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('provider-preset')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('DeepSeek V4 Flash').last);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('provider-base-url'))).controller!.text,
+      'https://api.deepseek.com',
+    );
+    expect(
+      tester.widget<TextField>(find.byKey(const Key('provider-model'))).controller!.text,
+      'deepseek-v4-flash',
+    );
+  });
+
   testWidgets('editing never prefills the API key', (
     WidgetTester tester,
   ) async {

@@ -28,6 +28,7 @@ class ConversationMessage {
     required this.createdAt,
     required this.tokenEstimate,
     required this.citations,
+    this.modelLabel,
     this.sequence,
     this.isCompacted = false,
   });
@@ -38,6 +39,7 @@ class ConversationMessage {
   final DateTime createdAt;
   final int tokenEstimate;
   final List<CitationSnippet> citations;
+  final String? modelLabel;
   final int? sequence;
   final bool isCompacted;
 }

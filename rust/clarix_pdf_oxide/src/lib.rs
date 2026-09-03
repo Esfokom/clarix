@@ -2,7 +2,6 @@ mod frb_generated; /* AUTO INJECTED BY flutter_rust_bridge. This line may not be
 flutter_rust_bridge::frb_generated_sse_codec!();
 
 pub mod api;
-pub mod chat_api;
 #[cfg(feature = "ocr")]
 pub mod ocr;
 pub mod pdf_annotations;
