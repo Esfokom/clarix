@@ -14,6 +14,8 @@ class DesktopWindowChrome extends ConsumerWidget {
     required this.onImport,
     required this.onOpenSettings,
     required this.onSearch,
+    this.onReaderMode,
+    this.onFullscreen,
     this.onSave,
     this.showDocumentActions = false,
     this.useNativeWindowControls = true,
@@ -24,6 +26,8 @@ class DesktopWindowChrome extends ConsumerWidget {
   final VoidCallback onImport;
   final VoidCallback onOpenSettings;
   final ValueChanged<String> onSearch;
+  final VoidCallback? onReaderMode;
+  final VoidCallback? onFullscreen;
   final VoidCallback? onSave;
   final bool showDocumentActions;
   final bool useNativeWindowControls;
@@ -56,6 +60,8 @@ class DesktopWindowChrome extends ConsumerWidget {
                 Expanded(
                   child: _SearchShell(
                     onImport: onImport,
+                    onReaderMode: onReaderMode,
+                    onFullscreen: onFullscreen,
                     onSearch: onSearch,
                     colors: colors,
                   ),
@@ -133,10 +139,14 @@ class DesktopWindowChrome extends ConsumerWidget {
 class _SearchShell extends StatelessWidget {
   const _SearchShell({
     required this.onImport,
+    required this.onReaderMode,
+    required this.onFullscreen,
     required this.onSearch,
     required this.colors,
   });
   final VoidCallback onImport;
+  final VoidCallback? onReaderMode;
+  final VoidCallback? onFullscreen;
   final ValueChanged<String> onSearch;
   final WorkspaceSurfaceTokens colors;
 
@@ -180,8 +190,15 @@ class _SearchShell extends StatelessWidget {
         ),
         IconButton(
           key: const Key('chrome-scan-import'),
-          onPressed: onImport,
+          tooltip: 'Reader mode',
+          onPressed: onReaderMode,
           icon: Icon(Icons.center_focus_strong, color: colors.textMuted),
+        ),
+        IconButton(
+          key: const Key('chrome-fullscreen'),
+          tooltip: 'Fullscreen',
+          onPressed: onFullscreen,
+          icon: Icon(Icons.fullscreen, color: colors.textMuted),
         ),
       ],
     ),

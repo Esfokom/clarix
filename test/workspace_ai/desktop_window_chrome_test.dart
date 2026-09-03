@@ -10,11 +10,15 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1440, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     var imports = 0;
+    var readerModeRequests = 0;
+    var fullscreenRequests = 0;
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
           home: DesktopWindowChrome(
             onImport: () => imports++,
+            onReaderMode: () => readerModeRequests++,
+            onFullscreen: () => fullscreenRequests++,
             onOpenSettings: () {},
             onSearch: (_) {},
             useNativeWindowControls: false,
@@ -28,6 +32,7 @@ void main() {
       'chrome-search-field',
       'chrome-import',
       'chrome-scan-import',
+      'chrome-fullscreen',
       'chrome-overflow',
       'chrome-menu',
       'chrome-minimize',
@@ -38,7 +43,10 @@ void main() {
     }
     await tester.tap(find.byKey(const Key('chrome-import')));
     await tester.tap(find.byKey(const Key('chrome-scan-import')));
-    expect(imports, 2);
+    await tester.tap(find.byKey(const Key('chrome-fullscreen')));
+    expect(imports, 1);
+    expect(readerModeRequests, 1);
+    expect(fullscreenRequests, 1);
 
     final chrome = tester.getRect(
       find.byKey(const Key('desktop-window-chrome')),

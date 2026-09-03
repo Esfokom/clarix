@@ -19,9 +19,10 @@ class GroqNoSpeechDetectedException extends GroqTranscriptionException {
 }
 
 class GroqTranscriptionService {
-  GroqTranscriptionService({required String apiKey, Dio? dio})
-    : _apiKey = apiKey,
-      _dio = dio ?? Dio();
+  factory GroqTranscriptionService({required String apiKey, Dio? dio}) =>
+      GroqTranscriptionService._(apiKey, dio ?? Dio());
+
+  GroqTranscriptionService._(this._apiKey, this._dio);
 
   static const String apiKey = String.fromEnvironment('GROQ_API_KEY');
 

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import '../../domain/workspace_feature_state.dart';
@@ -10,16 +12,21 @@ import 'document_workspace.dart';
 import 'quickstart_surface.dart';
 import 'reader_inspector.dart';
 import 'workspace_common.dart';
+import 'package:clarix/src/features/reader/presentation/reader_viewer_pane.dart';
 
 class WorkspaceBody extends ConsumerStatefulWidget {
   const WorkspaceBody({
     required this.state,
     required this.onOpenSettings,
+    this.fullscreenReader = false,
+    this.onExitFullscreen,
     super.key,
   });
 
   final WorkspaceFeatureState state;
   final VoidCallback onOpenSettings;
+  final bool fullscreenReader;
+  final VoidCallback? onExitFullscreen;
 
   @override
   ConsumerState<WorkspaceBody> createState() => _WorkspaceBodyState();
@@ -31,6 +38,13 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
     final DocumentTabState? activeTab = _activeTab(widget.state);
     final AiFeatureState aiState =
         ref.watch(aiNotifierProvider).value ?? AiFeatureState.initial();
+    if (widget.fullscreenReader && activeTab != null) {
+      return _FullscreenReader(
+        tab: activeTab,
+        state: widget.state,
+        onExit: widget.onExitFullscreen!,
+      );
+    }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final bool showInspector = constraints.maxWidth >= 1200;
@@ -187,6 +201,72 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
     }
     return null;
   }
+}
+
+class _FullscreenReader extends ConsumerStatefulWidget {
+  const _FullscreenReader({
+    required this.tab,
+    required this.state,
+    required this.onExit,
+  });
+  final DocumentTabState tab;
+  final WorkspaceFeatureState state;
+  final VoidCallback onExit;
+  @override
+  ConsumerState<_FullscreenReader> createState() => _FullscreenReaderState();
+}
+
+class _FullscreenReaderState extends ConsumerState<_FullscreenReader> {
+  bool _showExit = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    onHover: (_) {
+      if (!_showExit) setState(() => _showExit = true);
+    },
+    child: Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: ReaderViewerPane(
+            tab: widget.tab,
+            documentRef: ref.watch(pdfDocumentRefProvider(widget.tab.filePath)),
+            annotations:
+                widget
+                    .state
+                    .documentMetadata[widget.tab.documentId]
+                    ?.annotations ??
+                const <DocumentAnnotation>[],
+            colors: WorkspaceSurfaceTokens.fromProfile(
+              ref.watch(clarixThemeProvider).value ??
+                  const ClarixThemeProfile(),
+            ),
+          ),
+        ),
+        Positioned(
+          bottom: 24,
+          left: 0,
+          right: 0,
+          child: IgnorePointer(
+            ignoring: !_showExit,
+            child: AnimatedOpacity(
+              opacity: _showExit ? 1 : 0,
+              duration: const Duration(milliseconds: 160),
+              child: Center(
+                child: Tooltip(
+                  message: 'Exit fullscreen (Escape)',
+                  child: IconButton.filled(
+                    key: const Key('fullscreen-reader-exit'),
+                    onPressed: widget.onExit,
+                    icon: const Icon(Icons.close),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _PaneHandle extends StatelessWidget {

@@ -14,6 +14,7 @@ export 'infrastructure/flutter_gemma_local_model_gateway.dart';
 export 'infrastructure/groq_transcription_service.dart';
 export 'infrastructure/provider_profile_store.dart';
 export 'infrastructure/record_voice_recorder.dart';
+export 'infrastructure/voice_input_settings_store.dart';
 export 'presentation/ai_side_pane.dart';
 export 'presentation/inline_page_reference.dart';
 export 'application/ai_document_context.dart';

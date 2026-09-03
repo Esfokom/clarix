@@ -19,6 +19,8 @@ class WorkspaceScreen extends ConsumerStatefulWidget {
 
 class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     with WindowListener {
+  bool _readerFullscreen = false;
+  bool _windowFullscreen = false;
   @override
   void initState() {
     super.initState();
@@ -85,70 +87,102 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
                 .saveActiveAnnotations();
           }
         },
-      },
-      child: DesktopWindowChrome(
-        showDocumentActions: activeTabId != null,
-        onImport: () =>
-            ref.read(workspaceNotifierProvider.notifier).pickAndOpenPdfs(),
-        onOpenSettings: () => showAppSettingsDialog(context),
-        onSave: !canSave
-            ? null
-            : () => ref
-                  .read(workspaceNotifierProvider.notifier)
-                  .saveActiveAnnotations(),
-        onSearch: (String query) {
-          final String? tabId = asyncState.value?.session.activeTabId;
-          if (tabId != null) {
-            ref
-                .read(workspaceNotifierProvider.notifier)
-                .setSearchQuery(tabId, query.trim());
-          }
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          _exitReading();
         },
-        child: Scaffold(
-          backgroundColor: WorkspaceColors.canvas,
-          body: asyncState.when(
-            data: (WorkspaceFeatureState state) => WorkspaceBody(
-              state: state,
+      },
+      child: _readerFullscreen
+          ? _workspaceScaffold(asyncState)
+          : DesktopWindowChrome(
+              showDocumentActions: activeTabId != null,
+              onImport: () => ref
+                  .read(workspaceNotifierProvider.notifier)
+                  .pickAndOpenPdfs(),
+              onReaderMode: activeTabId == null ? null : _enterReaderMode,
+              onFullscreen: activeTabId == null ? null : _enterFullscreen,
               onOpenSettings: () => showAppSettingsDialog(context),
+              onSave: !canSave
+                  ? null
+                  : () => ref
+                        .read(workspaceNotifierProvider.notifier)
+                        .saveActiveAnnotations(),
+              onSearch: (String query) {
+                final String? tabId = asyncState.value?.session.activeTabId;
+                if (tabId != null) {
+                  ref
+                      .read(workspaceNotifierProvider.notifier)
+                      .setSearchQuery(tabId, query.trim());
+                }
+              },
+              child: _workspaceScaffold(asyncState),
             ),
-            error: (Object error, StackTrace stackTrace) => Center(
-              child: SurfaceBlock(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Text(
-                      'Clarix could not initialize.',
-                      style: TextStyle(
-                        color: WorkspaceColors.textStrong,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+    );
+  }
+
+  Widget _workspaceScaffold(AsyncValue<WorkspaceFeatureState> asyncState) =>
+      Scaffold(
+        backgroundColor: WorkspaceColors.canvas,
+        body: asyncState.when(
+          data: (WorkspaceFeatureState state) => WorkspaceBody(
+            state: state,
+            onOpenSettings: () => showAppSettingsDialog(context),
+            fullscreenReader: _readerFullscreen,
+            onExitFullscreen: _exitReading,
+          ),
+          error: (Object error, StackTrace stackTrace) => Center(
+            child: SurfaceBlock(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Text(
+                    'Clarix could not initialize.',
+                    style: TextStyle(
+                      color: WorkspaceColors.textStrong,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '$error',
-                      style: const TextStyle(
-                        color: WorkspaceColors.textMuted,
-                        fontSize: 12,
-                      ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$error',
+                    style: const TextStyle(
+                      color: WorkspaceColors.textMuted,
+                      fontSize: 12,
                     ),
-                  ],
-                ),
-              ),
-            ),
-            loading: () => const Center(
-              child: SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ],
               ),
             ),
           ),
+          loading: () => const Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
         ),
-      ),
-    );
+      );
+
+  void _enterReaderMode() => setState(() => _readerFullscreen = true);
+
+  Future<void> _enterFullscreen() async {
+    setState(() {
+      _readerFullscreen = true;
+      _windowFullscreen = true;
+    });
+    await windowManager.setFullScreen(true);
+  }
+
+  Future<void> _exitReading() async {
+    final bool leaveWindowFullscreen = _windowFullscreen;
+    setState(() {
+      _readerFullscreen = false;
+      _windowFullscreen = false;
+    });
+    if (leaveWindowFullscreen) await windowManager.setFullScreen(false);
   }
 
   Future<bool> _showDiscardDialog() async {

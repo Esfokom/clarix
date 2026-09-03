@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
@@ -186,6 +188,8 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
+                                  const _VoiceInputSettings(),
+                                  const SizedBox(height: 24),
                                   const Text(
                                     'Storage',
                                     style: TextStyle(
@@ -270,6 +274,126 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
       await ref.read(aiNotifierProvider.notifier).clearAllConversations();
     }
   }
+}
+
+class _VoiceInputSettings extends ConsumerStatefulWidget {
+  const _VoiceInputSettings();
+
+  @override
+  ConsumerState<_VoiceInputSettings> createState() =>
+      _VoiceInputSettingsState();
+}
+
+class _VoiceInputSettingsState extends ConsumerState<_VoiceInputSettings> {
+  static const String _systemDefaultId = '__system_default__';
+
+  List<VoiceInputDevice> _devices = const <VoiceInputDevice>[];
+  String? _selectedDeviceId;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final recorder = ref.read(voiceRecorderProvider);
+    final store = ref.read(voiceInputSettingsStoreProvider);
+    try {
+      final List<VoiceInputDevice> devices = await recorder.listInputDevices();
+      String? selectedDeviceId = await store.readSelectedDeviceId();
+      if (selectedDeviceId != null &&
+          !devices.any(
+            (VoiceInputDevice item) => item.id == selectedDeviceId,
+          )) {
+        selectedDeviceId = null;
+        await store.saveSelectedDeviceId(null);
+      }
+      if (selectedDeviceId != null) {
+        await recorder.selectInputDevice(selectedDeviceId);
+      }
+      if (mounted) {
+        setState(() {
+          _devices = devices;
+          _selectedDeviceId = selectedDeviceId;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _select(String? value) {
+    if (value == null) return;
+    unawaited(_saveSelection(value));
+  }
+
+  Future<void> _saveSelection(String value) async {
+    final String? deviceId = value == _systemDefaultId ? null : value;
+    try {
+      await ref.read(voiceRecorderProvider).selectInputDevice(deviceId);
+      await ref
+          .read(voiceInputSettingsStoreProvider)
+          .saveSelectedDeviceId(deviceId);
+      if (mounted) setState(() => _selectedDeviceId = deviceId);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not select microphone: $error')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: <Widget>[
+      const Text(
+        'Voice input',
+        style: TextStyle(
+          color: WorkspaceColors.textStrong,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 4),
+      const Text(
+        'Choose the microphone used for voice questions.',
+        style: TextStyle(color: WorkspaceColors.textMuted),
+      ),
+      const SizedBox(height: 10),
+      if (_loading)
+        const SizedBox(
+          height: 40,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        )
+      else
+        DropdownButtonFormField<String>(
+          key: const Key('voice-input-device-setting'),
+          initialValue: _selectedDeviceId ?? _systemDefaultId,
+          isExpanded: true,
+          decoration: const InputDecoration(labelText: 'Microphone'),
+          items: <DropdownMenuItem<String>>[
+            const DropdownMenuItem<String>(
+              value: _systemDefaultId,
+              child: Text('System default microphone'),
+            ),
+            ..._devices.map(
+              (VoiceInputDevice device) => DropdownMenuItem<String>(
+                value: device.id,
+                child: Text(device.label, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+          onChanged: _select,
+        ),
+    ],
+  );
 }
 
 class _SettingsTabs extends StatelessWidget {

@@ -9,6 +9,7 @@ import '../application/voice_input_controller.dart';
 
 abstract interface class RecordAudioEngine {
   Future<bool> hasPermission();
+  Future<List<InputDevice>> listInputDevices();
   Future<void> start(RecordConfig config, {required String path});
   Future<String?> stop();
   Stream<double> onAmplitudeChanged(Duration interval);
@@ -26,9 +27,33 @@ class RecordVoiceRecorder implements VoiceRecorder {
   final Future<Directory> Function() _temporaryDirectory;
   StreamSubscription<double>? _amplitudeSubscription;
   bool _didRecordSpeech = false;
+  InputDevice? _selectedDevice;
 
   @override
   Future<bool> hasPermission() => _engine.hasPermission();
+
+  @override
+  Future<List<VoiceInputDevice>> listInputDevices() async =>
+      (await _engine.listInputDevices())
+          .map(
+            (InputDevice device) =>
+                VoiceInputDevice(id: device.id, label: device.label),
+          )
+          .toList(growable: false);
+
+  @override
+  Future<void> selectInputDevice(String? id) async {
+    if (id == null) {
+      _selectedDevice = null;
+      return;
+    }
+    _selectedDevice = (await _engine.listInputDevices())
+        .where((InputDevice device) => device.id == id)
+        .firstOrNull;
+    if (_selectedDevice == null) {
+      throw StateError('The selected microphone is no longer available.');
+    }
+  }
 
   @override
   Future<void> start() async {
@@ -38,7 +63,7 @@ class RecordVoiceRecorder implements VoiceRecorder {
       'clarix-voice-${DateTime.now().microsecondsSinceEpoch}.wav',
     );
     await _engine.start(
-      const RecordConfig(encoder: AudioEncoder.wav),
+      RecordConfig(encoder: AudioEncoder.wav, device: _selectedDevice),
       path: audioPath,
     );
     _didRecordSpeech = false;
@@ -76,6 +101,9 @@ class _RecordPackageAudioEngine implements RecordAudioEngine {
 
   @override
   Future<bool> hasPermission() => _recorder.hasPermission();
+
+  @override
+  Future<List<InputDevice>> listInputDevices() => _recorder.listInputDevices();
 
   @override
   Future<void> start(RecordConfig config, {required String path}) =>

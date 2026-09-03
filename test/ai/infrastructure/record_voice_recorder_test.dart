@@ -34,6 +34,9 @@ class _FakeRecordAudioEngine implements RecordAudioEngine {
   Future<bool> hasPermission() async => true;
 
   @override
+  Future<List<InputDevice>> listInputDevices() async => const <InputDevice>[];
+
+  @override
   Stream<double> onAmplitudeChanged(Duration interval) =>
       Stream<double>.empty();
 

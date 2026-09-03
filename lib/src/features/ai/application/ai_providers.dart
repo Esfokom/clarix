@@ -13,6 +13,7 @@ import '../infrastructure/flutter_gemma_local_model_gateway.dart';
 import '../infrastructure/groq_transcription_service.dart';
 import '../infrastructure/provider_profile_store.dart';
 import '../infrastructure/record_voice_recorder.dart';
+import '../infrastructure/voice_input_settings_store.dart';
 import 'ai_notifier.dart';
 import 'ai_runtime_service.dart';
 import 'local_model_runtime.dart';
@@ -89,6 +90,9 @@ final groqTranscriptionServiceProvider = Provider<GroqTranscriptionService>(
 
 final voiceRecorderProvider = Provider<RecordVoiceRecorder>(
   (Ref ref) => RecordVoiceRecorder(),
+);
+final voiceInputSettingsStoreProvider = Provider<VoiceInputSettingsStore>(
+  (Ref ref) => VoiceInputSettingsStore(ref.watch(aiSharedPreferencesProvider)),
 );
 
 final aiNotifierProvider = AsyncNotifierProvider<AiNotifier, AiFeatureState>(

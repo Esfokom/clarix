@@ -43,6 +43,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       transcribe: ref.read(groqTranscriptionServiceProvider).transcribe,
       onTranscript: _appendTranscript,
     );
+    unawaited(_restoreSelectedInputDevice());
   }
 
   @override
@@ -307,6 +308,19 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       selection: TextSelection.collapsed(offset: updated.length),
       composing: TextRange.empty,
     );
+  }
+
+  Future<void> _restoreSelectedInputDevice() async {
+    try {
+      final String? deviceId = await ref
+          .read(voiceInputSettingsStoreProvider)
+          .readSelectedDeviceId();
+      if (deviceId != null) await _voiceInput.selectInputDevice(deviceId);
+    } catch (_) {
+      await ref
+          .read(voiceInputSettingsStoreProvider)
+          .saveSelectedDeviceId(null);
+    }
   }
 
   Future<void> _selectRuntime(String id) async {

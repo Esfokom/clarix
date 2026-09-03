@@ -54,6 +54,26 @@ void main() {
     expect(transcriptionCalled, isFalse);
     expect(controller.errorMessage, 'No speech was detected. Try again.');
   });
+
+  test(
+    'exposes available microphones and selects the requested device',
+    () async {
+      final _FakeVoiceRecorder recorder = _FakeVoiceRecorder();
+      final VoiceInputController controller = VoiceInputController(
+        recorder: recorder,
+        transcribe: (_) async => '',
+        onTranscript: (_) {},
+      );
+
+      expect(await controller.listInputDevices(), const <VoiceInputDevice>[
+        VoiceInputDevice(id: 'usb-mic', label: 'USB Microphone'),
+      ]);
+
+      await controller.selectInputDevice('usb-mic');
+
+      expect(recorder.selectedDeviceId, 'usb-mic');
+    },
+  );
 }
 
 class _FakeVoiceRecorder implements VoiceRecorder {
@@ -61,6 +81,7 @@ class _FakeVoiceRecorder implements VoiceRecorder {
 
   bool started = false;
   final bool hasRecordedSpeech;
+  String? selectedDeviceId;
 
   @override
   Future<bool> hasPermission() async => true;
@@ -75,6 +96,17 @@ class _FakeVoiceRecorder implements VoiceRecorder {
 
   @override
   Future<bool> didRecordSpeech() async => hasRecordedSpeech;
+
+  @override
+  Future<List<VoiceInputDevice>> listInputDevices() async =>
+      const <VoiceInputDevice>[
+        VoiceInputDevice(id: 'usb-mic', label: 'USB Microphone'),
+      ];
+
+  @override
+  Future<void> selectInputDevice(String? id) async {
+    selectedDeviceId = id;
+  }
 
   @override
   Future<void> dispose() async {}

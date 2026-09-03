@@ -4,8 +4,24 @@ import 'package:flutter/foundation.dart';
 
 enum VoiceInputStatus { idle, recording, transcribing }
 
+class VoiceInputDevice {
+  const VoiceInputDevice({required this.id, required this.label});
+
+  final String id;
+  final String label;
+
+  @override
+  bool operator ==(Object other) =>
+      other is VoiceInputDevice && other.id == id && other.label == label;
+
+  @override
+  int get hashCode => Object.hash(id, label);
+}
+
 abstract interface class VoiceRecorder {
   Future<bool> hasPermission();
+  Future<List<VoiceInputDevice>> listInputDevices();
+  Future<void> selectInputDevice(String? id);
   Future<void> start();
   Future<String?> stop();
   Future<bool> didRecordSpeech();
@@ -13,13 +29,13 @@ abstract interface class VoiceRecorder {
 }
 
 class VoiceInputController extends ChangeNotifier {
-  VoiceInputController({
+  factory VoiceInputController({
     required VoiceRecorder recorder,
     required Future<String> Function(String audioPath) transcribe,
     required ValueChanged<String> onTranscript,
-  }) : _recorder = recorder,
-       _transcribe = transcribe,
-       _onTranscript = onTranscript;
+  }) => VoiceInputController._(recorder, transcribe, onTranscript);
+
+  VoiceInputController._(this._recorder, this._transcribe, this._onTranscript);
 
   final VoiceRecorder _recorder;
   final Future<String> Function(String audioPath) _transcribe;
@@ -30,6 +46,11 @@ class VoiceInputController extends ChangeNotifier {
 
   VoiceInputStatus get status => _status;
   String? get errorMessage => _errorMessage;
+
+  Future<List<VoiceInputDevice>> listInputDevices() =>
+      _recorder.listInputDevices();
+
+  Future<void> selectInputDevice(String? id) => _recorder.selectInputDevice(id);
 
   Future<void> toggle() async {
     switch (_status) {
