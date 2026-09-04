@@ -6,6 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfrx/pdfrx.dart';
 
+import 'reader_viewport_motion.dart';
+
+export 'reader_viewport_motion.dart';
+
 /// A smaller delta gives mouse wheels finer steps while high-resolution
 /// trackpads remain continuous.
 const double readerPointerZoomSensitivity = 0.65;
@@ -94,7 +98,8 @@ class ReaderCursorLockedPdfRegion extends StatefulWidget {
 }
 
 class _ReaderCursorLockedPdfRegionState
-    extends State<ReaderCursorLockedPdfRegion> {
+    extends State<ReaderCursorLockedPdfRegion>
+    with TickerProviderStateMixin {
   late ReaderCursorLockedPdfInput _input;
 
   @override
@@ -103,20 +108,27 @@ class _ReaderCursorLockedPdfRegionState
     _input = ReaderCursorLockedPdfInput(
       widget.controller,
       onViewChanged: widget.onViewChanged,
-    );
+    )..attachVsync(this);
   }
 
   @override
   void didUpdateWidget(covariant ReaderCursorLockedPdfRegion oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.controller, widget.controller)) {
+      _input.dispose();
       _input = ReaderCursorLockedPdfInput(
         widget.controller,
         onViewChanged: widget.onViewChanged,
-      );
+      )..attachVsync(this);
     } else {
       _input.onViewChanged = widget.onViewChanged;
     }
+  }
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
   }
 
   @override
@@ -139,12 +151,21 @@ class _ReaderCursorLockedPdfRegionState
 
 class ReaderCursorLockedPdfInput {
   ReaderCursorLockedPdfInput(this.controller, {this.onViewChanged}) {
+    motion.onSettled = () => onViewChanged?.call();
     interactionDelegateProvider =
-        ReaderCursorAnchoredInteractionDelegateProvider(localAnchor);
+        ReaderCursorAnchoredInteractionDelegateProvider(
+          localAnchor,
+          motion: motion,
+        );
   }
 
   final PdfViewerController controller;
   VoidCallback? onViewChanged;
+
+  /// Frame-paced smoothing behind every wheel, Ctrl+wheel and pointer-scale
+  /// interaction in this region.
+  final ReaderViewportMotion motion = ReaderViewportMotion();
+
   late final ReaderCursorAnchoredInteractionDelegateProvider
   interactionDelegateProvider;
   Offset? _lastPointerGlobalPosition;
@@ -153,6 +174,14 @@ class ReaderCursorLockedPdfInput {
   Matrix4? _trackpadPanMatrix;
 
   bool get pdfrxScaleEnabled => false;
+
+  /// Supplies the ticker used to animate smoothed pan and zoom. pdfrx only
+  /// hands a [TickerProvider] to the interaction delegate once the document is
+  /// ready, so the region attaches its own up front to keep the very first
+  /// wheel notch animated.
+  void attachVsync(TickerProvider vsync) => motion.attach(controller, vsync);
+
+  void dispose() => motion.detach();
 
   void rememberPointer(PointerEvent event) {
     _lastPointerGlobalPosition = event.position;
@@ -192,21 +221,20 @@ class ReaderCursorLockedPdfInput {
     if (!scale.isFinite || scale <= 0) {
       return;
     }
-    final double newZoom = (controller.currentZoom * scale)
-        .clamp(controller.minScale, controller.maxScale)
-        .toDouble();
-    unawaited(
-      controller.zoomOnLocalPosition(
-        localPosition: _validLocalAnchor(globalPosition),
-        newZoom: newZoom,
-        duration: Duration.zero,
-      ),
+    // Compounding onto the in-flight target rather than the on-screen zoom is
+    // what makes a fast burst of notches read as one continuous zoom.
+    motion.zoomBy(
+      scaleFactor: scale,
+      focalPoint: _validLocalAnchor(globalPosition),
     );
     onViewChanged?.call();
   }
 
   void handlePointerPanZoomStart(PointerPanZoomStartEvent event) {
     rememberPointer(event);
+    // A trackpad gesture is one-to-one with the fingers, so it owns the matrix
+    // outright: any glide still decaying would fight it frame for frame.
+    motion.stop();
     if (!controller.isReady) {
       _trackpadZoom.end();
       _trackpadStartMatrix = null;
@@ -337,13 +365,21 @@ bool _isInsideViewport(Offset point, Size viewportSize) {
 /// used only when no valid cursor position is available.
 class ReaderCursorAnchoredInteractionDelegateProvider
     extends PdfViewerScrollInteractionDelegateProvider {
-  ReaderCursorAnchoredInteractionDelegateProvider(this.anchorProvider);
+  ReaderCursorAnchoredInteractionDelegateProvider(
+    this.anchorProvider, {
+    ReaderViewportMotion? motion,
+  }) : motion = motion ?? ReaderViewportMotion();
 
   final ReaderZoomAnchorProvider anchorProvider;
 
+  /// Shared with the owning region so wheel glide, Ctrl+wheel zoom and pointer
+  /// scale all animate through the same target instead of overwriting one
+  /// another's matrix.
+  final ReaderViewportMotion motion;
+
   @override
   PdfViewerScrollInteractionDelegate create() {
-    return _ReaderCursorAnchoredInteractionDelegate(anchorProvider);
+    return _ReaderCursorAnchoredInteractionDelegate(anchorProvider, motion);
   }
 
   @override
@@ -355,14 +391,16 @@ class ReaderCursorAnchoredInteractionDelegateProvider
 
 class _ReaderCursorAnchoredInteractionDelegate
     implements PdfViewerScrollInteractionDelegate {
-  _ReaderCursorAnchoredInteractionDelegate(this.anchorProvider);
+  _ReaderCursorAnchoredInteractionDelegate(this.anchorProvider, this.motion);
 
   final ReaderZoomAnchorProvider anchorProvider;
+  final ReaderViewportMotion motion;
   PdfViewerController? _controller;
 
   @override
   void init(PdfViewerController controller, TickerProvider vsync) {
     _controller = controller;
+    motion.attach(controller, vsync);
   }
 
   @override
@@ -371,7 +409,7 @@ class _ReaderCursorAnchoredInteractionDelegate
   }
 
   @override
-  void stop() {}
+  void stop() => motion.stop();
 
   @override
   void pan(Offset delta, PdfViewerLayoutMetrics layoutMetrics) {
@@ -379,13 +417,7 @@ class _ReaderCursorAnchoredInteractionDelegate
     if (controller == null || !controller.isReady) {
       return;
     }
-    final Matrix4 matrix = controller.value.clone()
-      ..setEntry(0, 3, controller.value.entry(0, 3) + delta.dx)
-      ..setEntry(1, 3, controller.value.entry(1, 3) + delta.dy);
-    controller.value = controller.makeMatrixInSafeRange(
-      matrix,
-      forceClamp: true,
-    );
+    motion.panBy(delta);
   }
 
   @override

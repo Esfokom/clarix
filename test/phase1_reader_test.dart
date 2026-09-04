@@ -6,6 +6,7 @@ import 'package:clarix/src/features/workspace/infrastructure/document_metadata_s
 import 'package:clarix/src/features/workspace/presentation/widgets/pdf_viewer_interaction_math.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pdfrx/pdfrx.dart';
@@ -360,13 +361,25 @@ void main() {
     );
     const Offset cursor = Offset(420, 315);
 
+    final Offset documentPointBefore = controller.documentPointAt(cursor);
+
     await tester.sendEventToBinding(
       const PointerScaleEvent(position: cursor, scale: 1.2),
     );
+    await tester.pump();
+    final double firstFrameZoom = controller.zoom;
+    await tester.pumpAndSettle();
 
-    expect(controller.zoomCalls, hasLength(1));
-    expect(controller.zoomCalls.single.localPosition, cursor);
-    expect(controller.zoomCalls.single.newZoom, closeTo(2.26, 0.000001));
+    // The zoom is eased towards the target instead of snapping to it, but the
+    // cursor stays pinned on every intermediate frame.
+    expect(firstFrameZoom, lessThan(2.26));
+    expect(controller.zoomCalls.length, greaterThan(1));
+    expect(
+      controller.zoomCalls.map((_ZoomCall call) => call.localPosition),
+      everyElement(cursor),
+    );
+    expect(controller.zoom, closeTo(2.26, 0.000001));
+    expect(controller.documentPointAt(cursor), documentPointBefore);
   });
 
   testWidgets('Ctrl-wheel zooms while plain wheel remains pdfrx-owned', (
@@ -394,10 +407,60 @@ void main() {
       const PointerScrollEvent(position: cursor, scrollDelta: Offset(0, -120)),
     );
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
 
-    expect(controller.zoomCalls, hasLength(1));
-    expect(controller.zoomCalls.single.localPosition, cursor);
-    expect(controller.zoomCalls.single.newZoom, closeTo(2.26, 0.000001));
+    expect(controller.zoomCalls, isNotEmpty);
+    expect(
+      controller.zoomCalls.map((_ZoomCall call) => call.localPosition),
+      everyElement(cursor),
+    );
+    expect(controller.zoom, closeTo(2.26, 0.000001));
+  });
+
+  testWidgets('a wheel glide eases towards an accumulated target', (
+    WidgetTester tester,
+  ) async {
+    final _RecordingPdfViewerController controller =
+        _RecordingPdfViewerController();
+    final ReaderViewportMotion motion = ReaderViewportMotion()
+      ..attach(controller, const TestVSync());
+    addTearDown(motion.detach);
+    await tester.pumpWidget(const SizedBox.expand());
+
+    motion.panBy(const Offset(0, -120));
+    await tester.pump();
+
+    // The first frame covers part of the notch rather than jumping it.
+    expect(controller.translation.dy, lessThan(0));
+    expect(controller.translation.dy, greaterThan(-120));
+
+    // A second notch mid-glide extends the same target instead of restarting.
+    motion.panBy(const Offset(0, -120));
+    await tester.pumpAndSettle();
+
+    expect(controller.translation.dy, closeTo(-240, 0.5));
+    expect(motion.isPanning, isFalse);
+  });
+
+  testWidgets('a glide clamped at the boundary reverses immediately', (
+    WidgetTester tester,
+  ) async {
+    final _ClampingPdfViewerController controller =
+        _ClampingPdfViewerController();
+    final ReaderViewportMotion motion = ReaderViewportMotion()
+      ..attach(controller, const TestVSync());
+    addTearDown(motion.detach);
+    await tester.pumpWidget(const SizedBox.expand());
+
+    motion.panBy(const Offset(0, -400));
+    await tester.pumpAndSettle();
+    expect(controller.translation.dy, -100);
+
+    motion.panBy(const Offset(0, 40));
+    await tester.pumpAndSettle();
+
+    // The discarded 300px never has to be paid back.
+    expect(controller.translation.dy, closeTo(-60, 0.5));
   });
 
   testWidgets('adapter zoom signals notify the workspace persistence hook', (
@@ -425,8 +488,10 @@ void main() {
       const PointerScrollEvent(position: cursor, scrollDelta: Offset(0, -120)),
     );
     await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
 
-    expect(persistenceRequests, 2);
+    // Once per input event, plus once when each eased zoom settles on target.
+    expect(persistenceRequests, greaterThanOrEqualTo(2));
   });
 
   test('document metadata round-trips through the sidecar store', () async {

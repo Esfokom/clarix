@@ -124,75 +124,23 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     ),
                   ),
                 ),
-                PopupMenuButton<String>(
-                  key: const Key('ai-runtime-picker'),
-                  tooltip: 'Choose AI runtime',
-                  enabled:
-                      !ai.chatBusy &&
-                      (widget.aiState.localModels.isNotEmpty ||
-                          widget.aiState.providerProfiles.isNotEmpty),
-                  onSelected: _selectRuntime,
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                        ...widget.aiState.localModels.map(
-                          (LocalModelProfile model) => PopupMenuItem<String>(
-                            value: model.id,
-                            child: _RuntimeMenuItem(
-                              label: model.label,
-                              iconPath: 'assets/images/gemma-color.png',
-                            ),
-                          ),
-                        ),
-                        ...widget.aiState.providerProfiles.map(
-                          (AiProviderProfile profile) => PopupMenuItem<String>(
-                            value: profile.id,
-                            child: _RuntimeMenuItem(
-                              label: profile.label,
-                              iconPath:
-                                  profile.label.toLowerCase().contains(
-                                    'deepseek',
-                                  )
-                                  ? 'assets/images/deepseek.png'
-                                  : 'assets/images/openai.png',
-                            ),
-                          ),
-                        ),
-                      ],
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Image.asset(selectedRuntimeIcon, width: 16, height: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        selectedRuntimeLabel,
-                        key: const Key('ai-runtime-picker-label'),
-                        style: TextStyle(
-                          color: colors.textMuted,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 2),
-                      Icon(
-                        LucideIcons.chevronDown,
-                        color: colors.textFaint,
-                        size: 12,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 4),
                 Tooltip(
-                  message: 'Conversation history',
+                  message: _historyOpen
+                      ? 'Back to conversation'
+                      : 'Conversation history',
                   child: ShadIconButton.ghost(
                     key: const Key('ai-conversation-history'),
                     width: 28,
                     height: 28,
                     padding: EdgeInsets.zero,
-                    icon: const Icon(LucideIcons.history, size: 14),
+                    foregroundColor: _historyOpen ? colors.accent : null,
+                    icon: Icon(
+                      _historyOpen ? LucideIcons.x : LucideIcons.history,
+                      size: 14,
+                    ),
                     onPressed: ai.chatBusy || widget.documentContext == null
                         ? null
-                        : _showHistory,
+                        : _toggleHistory,
                   ),
                 ),
                 const SizedBox(width: 4),
@@ -237,25 +185,68 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
             ),
           ),
           Expanded(
-            child: ai.messages.isEmpty
-                ? _EmptyConversation(
-                    providerReady: ai.providerReady,
-                    colors: colors,
-                  )
-                : ListView.builder(
-                    reverse: true,
-                    padding: const EdgeInsets.all(12),
-                    itemCount: ai.messages.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final ComposerMessage message =
-                          ai.messages[ai.messages.length - 1 - index];
-                      return _MessageBubble(
-                        message: message,
-                        documentContext: widget.documentContext,
-                        colors: colors,
-                      );
-                    },
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              reverseDuration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              layoutBuilder: (Widget? current, List<Widget> previous) =>
+                  Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[...previous, if (current != null) current],
                   ),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                // The history slides in from the side it lives on, so the two
+                // views read as one surface sliding rather than a hard cut.
+                final bool isHistory =
+                    child.key == const ValueKey<String>('ai-history');
+                return FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: Offset(0, isHistory ? 0.035 : -0.02),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                );
+              },
+              child: _historyOpen
+                  ? _ConversationHistoryPanel(
+                      key: const ValueKey<String>('ai-history'),
+                      threads: _historyThreads,
+                      isLoading: _historyLoading,
+                      activeThreadId: _activeThreadId,
+                      colors: colors,
+                      onOpen: _openConversation,
+                      onDelete: _confirmDeleteConversation,
+                    )
+                  : KeyedSubtree(
+                      key: const ValueKey<String>('ai-chat'),
+                      child: ai.messages.isEmpty
+                          ? _EmptyConversation(
+                              providerReady: ai.providerReady,
+                              colors: colors,
+                            )
+                          : ListView.builder(
+                              reverse: true,
+                              padding: const EdgeInsets.all(12),
+                              itemCount: ai.messages.length,
+                              itemBuilder:
+                                  (BuildContext context, int index) {
+                                    final ComposerMessage message = ai
+                                        .messages[ai.messages.length -
+                                        1 -
+                                        index];
+                                    return _MessageBubble(
+                                      message: message,
+                                      documentContext: widget.documentContext,
+                                      colors: colors,
+                                    );
+                                  },
+                            ),
+                    ),
+            ),
           ),
           if (ai.chatBusy)
             _ComposerLoadingIndicator(
@@ -272,6 +263,13 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
             colors: colors,
             onStop: () =>
                 ref.read(aiNotifierProvider.notifier).stopGeneration(),
+            runtimeLabel: selectedRuntimeLabel,
+            runtimeIconPath: selectedRuntimeIcon,
+            selectedRuntimeId: ai.selectedProviderId,
+            localModels: widget.aiState.localModels,
+            providerProfiles: widget.aiState.providerProfiles,
+            onSelectRuntime: _selectRuntime,
+            runtimePickerEnabled: !ai.chatBusy,
           ),
         ],
       ),

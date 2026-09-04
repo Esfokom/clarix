@@ -266,7 +266,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
   Future<void> _zoomInAtPointer() async {
     await _controller.zoomUpOnLocalPosition(
       localPosition: _lastPointerAnchor(),
-      duration: Duration.zero,
+      duration: readerZoomAnimationDuration,
     );
     await _persistViewerState();
   }
@@ -274,7 +274,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
   Future<void> _zoomOutAtPointer() async {
     await _controller.zoomDownOnLocalPosition(
       localPosition: _lastPointerAnchor(),
-      duration: Duration.zero,
+      duration: readerZoomAnimationDuration,
     );
     await _persistViewerState();
   }
@@ -288,13 +288,13 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
       case _ZoomPreset.fitWidth:
         await _controller.goTo(
           _controller.calcMatrixFitWidthForPage(pageNumber: _page),
-          duration: const Duration(milliseconds: 120),
+          duration: readerZoomAnimationDuration,
         );
         break;
       case _ZoomPreset.fitPage:
         await _controller.goTo(
           _controller.calcMatrixForFit(pageNumber: _page),
-          duration: const Duration(milliseconds: 120),
+          duration: readerZoomAnimationDuration,
         );
         break;
       case _ZoomPreset.percent50:
@@ -324,7 +324,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     return _controller.zoomOnLocalPosition(
       localPosition: _lastPointerAnchor(),
       newZoom: _clampZoom(zoom),
-      duration: Duration.zero,
+      duration: readerZoomAnimationDuration,
     );
   }
 

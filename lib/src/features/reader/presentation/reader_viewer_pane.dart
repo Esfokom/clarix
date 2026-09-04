@@ -232,10 +232,13 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                               blurRadius: 10,
                               offset: Offset(0, 6),
                             ),
-                            limitRenderingCache: true,
-                            maxImageBytesCachedOnMemory: 64 * 1024 * 1024,
-                            horizontalCacheExtent: 0.5,
-                            verticalCacheExtent: 0.75,
+                            // Render and keep a screenful of pages beyond the
+                            // viewport in every direction so a fast scroll
+                            // lands on painted pages instead of placeholders.
+                            limitRenderingCache: false,
+                            maxImageBytesCachedOnMemory: 192 * 1024 * 1024,
+                            horizontalCacheExtent: 1,
+                            verticalCacheExtent: 2,
                             panEnabled: true,
                             scaleEnabled: input.pdfrxScaleEnabled,
                             scaleByPointerScale: readerPointerZoomSensitivity,
