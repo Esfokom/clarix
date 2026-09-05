@@ -45,7 +45,7 @@ class EditorSessionController {
   final EditorCommandIdFactory _commandIds;
   final int _maxResidentScenes;
   final StreamController<EditorDocumentState> _changes =
-      StreamController<EditorDocumentState>.broadcast(sync: true);
+      StreamController<EditorDocumentState>.broadcast();
   StreamSubscription<EditorEvent>? _events;
   EditorDocumentState _state = const EditorDocumentState();
   bool _disposed = false;
@@ -63,6 +63,7 @@ class EditorSessionController {
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
+  bool get usesLivePdfiumRendering => _gateway is EditorLivePdfiumTileGateway;
   Stream<List<EditorTileInvalidation>> get liveTileInvalidations {
     final gateway = _gateway;
     return gateway is EditorLivePdfiumTileGateway
@@ -531,6 +532,7 @@ class EditorSessionController {
         _state.copyWith(
           revision: result.committedRevision,
           objects: objects,
+          scenes: _patchScenes(_state.scenes, result.objectPatches),
           save: _state.save.copyWith(
             phase: EditorSavePhase.dirty,
             clearError: true,

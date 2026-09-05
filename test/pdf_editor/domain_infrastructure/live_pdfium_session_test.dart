@@ -11,47 +11,150 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/pdf_text_fixture.dart';
 
 void main() {
-  test('a seeded session accepts a plan prepared at the seed revision', () async {
-    final file = await PdfTextFixture.singleBlock('Before');
-    addTearDown(() => file.parent.delete(recursive: true));
-    final session = await LivePdfiumSession.open(file.path);
-    addTearDown(session.close);
-    final blocks = await session.inspectTextBlocks(
-      sourceRevision: 'source',
-      pageNumbers: const <int>[1],
-    );
-    final locator = const LivePdfiumImportManifestBuilder()
-        .build(sourceFingerprint: 'source', blocks: blocks)
-        .bindings
-        .single
-        .locator;
+  test(
+    'measures proportional glyphs by object identity in the live document',
+    () async {
+      final file = await PdfTextFixture.singleBlock('Wi');
+      addTearDown(() => file.parent.delete(recursive: true));
+      final session = await LivePdfiumSession.open(file.path);
+      addTearDown(session.close);
+      final block = (await session.inspectTextBlocks(
+        sourceRevision: 'source',
+        pageNumbers: [1],
+      )).single;
+      final locator = const LivePdfiumImportManifestBuilder()
+          .build(sourceFingerprint: 'source', blocks: [block])
+          .bindings
+          .single
+          .locator;
+      final objects = await session.measureTextObjects([
+        EditorSceneObject(
+          kind: EditorSceneObjectKind.text,
+          objectId: 'text',
+          pageId: 'page',
+          text: 'Wi',
+          bounds: EditorPdfBox(
+            left: block.bounds.left,
+            bottom: block.bounds.bottom,
+            right: block.bounds.right,
+            top: block.bounds.top,
+          ),
+          transform: const EditorAffineTransform(
+            a: 1,
+            b: 0,
+            c: 0,
+            d: 1,
+            e: 0,
+            f: 0,
+          ),
+          capability: 'editable',
+          modifiedRevision: 0,
+          runs: const [],
+          physicalLocator: locator,
+        ),
+      ]);
+      final boxes = objects.single.characterBoxes;
+      expect(boxes, hasLength(2));
+      expect(
+        boxes[0].bounds.right - boxes[0].bounds.left,
+        greaterThan(2 * (boxes[1].bounds.right - boxes[1].bounds.left)),
+      );
+      expect(boxes[1].start, 1);
+    },
+  );
 
-    session.seedRevision(3);
-    final result = await session.apply(
-      LivePdfiumEditPlan(
-        replacements: <LivePdfiumTextReplacement>[
-          LivePdfiumTextReplacement(locator: locator, replacement: 'x'),
-        ],
-        expectedRevision: 3,
-        revision: 4,
-      ),
-    );
+  test(
+    'insertion invalidates both original and expanded native text bounds',
+    () async {
+      final file = await PdfTextFixture.singleBlock('Hi');
+      addTearDown(() => file.parent.delete(recursive: true));
+      final session = await LivePdfiumSession.open(file.path);
+      addTearDown(session.close);
+      final before = (await session.inspectTextBlocks(
+        sourceRevision: 'source',
+        pageNumbers: [1],
+      )).single;
+      final locator = const LivePdfiumImportManifestBuilder()
+          .build(sourceFingerprint: 'source', blocks: [before])
+          .bindings
+          .single
+          .locator;
+      final result = await session.apply(
+        LivePdfiumEditPlan(
+          replacements: [
+            LivePdfiumTextReplacement(
+              locator: locator,
+              replacement: 'Hello much longer text',
+            ),
+          ],
+        ),
+      );
+      final after = (await session.inspectTextBlocks(
+        sourceRevision: 'source',
+        pageNumbers: [1],
+      )).single;
+      expect(
+        result.invalidations.any(
+          (tile) => tile.bounds.right >= after.bounds.right,
+        ),
+        isTrue,
+      );
+      expect(
+        result.invalidations.any(
+          (tile) => tile.bounds.left <= before.bounds.left,
+        ),
+        isTrue,
+      );
+    },
+  );
 
-    expect(result.revision, 4);
-    expect(session.appliedRevision, 4);
-  });
+  test(
+    'a seeded session accepts a plan prepared at the seed revision',
+    () async {
+      final file = await PdfTextFixture.singleBlock('Before');
+      addTearDown(() => file.parent.delete(recursive: true));
+      final session = await LivePdfiumSession.open(file.path);
+      addTearDown(session.close);
+      final blocks = await session.inspectTextBlocks(
+        sourceRevision: 'source',
+        pageNumbers: const <int>[1],
+      );
+      final locator = const LivePdfiumImportManifestBuilder()
+          .build(sourceFingerprint: 'source', blocks: blocks)
+          .bindings
+          .single
+          .locator;
 
-  test('acknowledgeRevision advances the revision and rejects receding values', () async {
-    final file = await PdfTextFixture.singleBlock('Before');
-    addTearDown(() => file.parent.delete(recursive: true));
-    final session = await LivePdfiumSession.open(file.path);
-    addTearDown(session.close);
+      session.seedRevision(3);
+      final result = await session.apply(
+        LivePdfiumEditPlan(
+          replacements: <LivePdfiumTextReplacement>[
+            LivePdfiumTextReplacement(locator: locator, replacement: 'x'),
+          ],
+          expectedRevision: 3,
+          revision: 4,
+        ),
+      );
 
-    session.acknowledgeRevision(2);
+      expect(result.revision, 4);
+      expect(session.appliedRevision, 4);
+    },
+  );
 
-    expect(session.appliedRevision, 2);
-    expect(() => session.acknowledgeRevision(1), throwsStateError);
-  });
+  test(
+    'acknowledgeRevision advances the revision and rejects receding values',
+    () async {
+      final file = await PdfTextFixture.singleBlock('Before');
+      addTearDown(() => file.parent.delete(recursive: true));
+      final session = await LivePdfiumSession.open(file.path);
+      addTearDown(session.close);
+
+      session.acknowledgeRevision(2);
+
+      expect(session.appliedRevision, 2);
+      expect(() => session.acknowledgeRevision(1), throwsStateError);
+    },
+  );
 
   test('renders a page rectangle from its live PDFium document', () async {
     final file = await PdfTextFixture.singleBlock('Live tile');

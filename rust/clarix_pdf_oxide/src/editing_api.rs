@@ -997,7 +997,6 @@ impl NativeEditorSession {
         let command_id = CommandId::from_str(&request.command_id)
             .map_err(|error| format!("invalid_command_id: {error}"))?;
         let payload = editor_command(request.payload)?;
-        let is_history_command = matches!(&payload, EditorCommand::Undo | EditorCommand::Redo);
         let result = self
             .actor
             .submit(CommandEnvelope::user(
@@ -1029,6 +1028,7 @@ impl NativeEditorSession {
         let command_id = CommandId::from_str(&request.command_id)
             .map_err(|error| format!("invalid_command_id: {error}"))?;
         let payload = editor_command(request.payload)?;
+        let is_history_command = matches!(&payload, EditorCommand::Undo | EditorCommand::Redo);
         let prepared = self
             .actor
             .prepare(CommandEnvelope::user(

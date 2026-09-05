@@ -76,6 +76,13 @@ final class LivePdfiumLocatorRegistry {
   bool hasObject(String objectId) =>
       _sourceKeysByObjectId.containsKey(objectId);
 
+  EditorPhysicalLocator locatorForObject(String objectId) {
+    final sourceKey = _sourceKeysByObjectId[objectId];
+    final entry = _entries[sourceKey];
+    if (entry == null) throw StateError('live_pdfium_locator_not_found');
+    return entry.locator;
+  }
+
   void clear() {
     _entries.clear();
     _sourceKeysByObjectId.clear();
@@ -173,6 +180,7 @@ final class LivePdfiumEditorPort implements NativeLivePdfiumPort {
             transform: operation.transform!,
             oldBounds: operation.oldBounds,
             newBounds: operation.newBounds,
+            pageSpace: true,
           ),
         )
         .toList(growable: false);

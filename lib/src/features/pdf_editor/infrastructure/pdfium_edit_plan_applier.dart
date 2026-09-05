@@ -30,6 +30,7 @@ class LivePdfiumTextTransform {
     required this.transform,
     required this.oldBounds,
     required this.newBounds,
+    this.pageSpace = false,
   });
 
   final EditorPhysicalLocator locator;
@@ -37,6 +38,10 @@ class LivePdfiumTextTransform {
   final EditorAffineTransform transform;
   final EditorPdfBox oldBounds;
   final EditorPdfBox newBounds;
+
+  /// Imported semantic blocks start with identity in page coordinates. Their
+  /// transform is a delta over each constituent object's native font matrix.
+  final bool pageSpace;
 }
 
 /// The currently supported, all-or-nothing physical PDFium edit transaction.

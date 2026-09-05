@@ -310,8 +310,8 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        scene: _scene(1),
-        document: _document(1, selectedObject: 'object-1'),
+        scene: _scene(3),
+        document: _document(3, selectedObject: 'object-1'),
         patches: <String, CleanPatchAsset>{'object-1': patch},
         liveTiles: <LivePdfiumTileAsset>[tile],
         observer: RecordingLayerObserver(),

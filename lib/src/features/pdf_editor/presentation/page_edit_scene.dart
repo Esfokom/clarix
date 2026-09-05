@@ -74,8 +74,7 @@ class PageEditScene extends StatelessWidget {
         'This text is not bound to the live document. Re-inspect the page to enable editing.',
     'live_pdfium_revision_conflict':
         'Document state changed underneath the editor. Re-open edit mode to continue.',
-    'live_pdfium_unsupported':
-        'This change cannot be applied to the PDF yet.',
+    'live_pdfium_unsupported': 'This change cannot be applied to the PDF yet.',
     'glyph_unsupported': 'This character is not supported by the PDF font.',
     'live_hydration_failed':
         'Live page import failed. Re-inspect the page or reopen the editor.',
@@ -108,20 +107,14 @@ class PageEditScene extends StatelessWidget {
           !edited.any((object) => object.objectId == activeObject.objectId))
         activeObject,
     ];
-    // Only use live tiles when they provide full-page coverage (every
-    // editable object on this page has a corresponding tile). Partial
-    // invalidation patches must not suppress the base PDF + clean-patch
-    // path, otherwise the rest of the page goes blank.
-    final editableObjectIds = interactive
-        .map((object) => object.objectId)
-        .toSet();
-    final liveTileCoveredPages = <int>{
-      for (final tile in liveTiles) tile.pageNumber,
-    };
-    final usesLivePdfiumTiles =
-        liveTiles.isNotEmpty &&
-        liveTileCoveredPages.contains(scene.pageNumber) &&
-        liveTiles.length >= editableObjectIds.length;
+    // This scene overlays pdfrx; a dirty tile needs to cover only its changed
+    // region. Object counts say nothing about raster coverage.
+    final pageTiles = liveTiles
+        .where((tile) => tile.pageNumber == scene.pageNumber)
+        .toList(growable: false);
+    final usesLivePdfiumTiles = pageTiles.isNotEmpty;
+    final usesLiveRendering =
+        usesLivePdfiumTiles || (session?.usesLivePdfiumRendering ?? false);
     final fallbackProposal = document.fontFallbackProposal;
     final errorCode = document.errorCode;
     final errorMessage = errorCode == null
@@ -149,7 +142,7 @@ class PageEditScene extends StatelessWidget {
       scene.pageNumber,
     );
     return KeyedSubtree(
-      key: ValueKey<String>('${scene.pageId}:${scene.revision}'),
+      key: ValueKey<String>(scene.pageId),
       child: SizedBox.fromSize(
         size: displaySize,
         child: Stack(
@@ -157,12 +150,12 @@ class PageEditScene extends StatelessWidget {
           children: <Widget>[
             if (usesLivePdfiumTiles)
               LivePdfiumTileLayer(
-                tiles: liveTiles,
+                tiles: pageTiles,
                 pageSize: pageSize,
                 displaySize: displaySize,
               ),
             for (final object in overlayObjects)
-              if (!usesLivePdfiumTiles)
+              if (!usesLiveRendering)
                 if (cleanPatches.containsKey(object.objectId))
                   CleanPatchLayer(
                     asset: cleanPatches[object.objectId]!,
@@ -179,6 +172,7 @@ class PageEditScene extends StatelessWidget {
                   Positioned.fromRect(
                     rect: EditorPageGeometry.rectForBox(
                       object.bounds,
+                      transform: object.transform,
                       pageSize: pageSize,
                       displaySize: displaySize,
                       bleedPoints: 1.0,
@@ -186,7 +180,7 @@ class PageEditScene extends StatelessWidget {
                     child: const ColoredBox(color: Color(0x0A000000)),
                   ),
             for (final object in overlayObjects)
-              if (!usesLivePdfiumTiles)
+              if (!usesLiveRendering)
                 if (object.objectId != activeObject?.objectId)
                   EditorTextObjectLayer(
                     object: object,
@@ -203,6 +197,7 @@ class PageEditScene extends StatelessWidget {
                 Positioned.fromRect(
                   rect: EditorPageGeometry.rectForBox(
                     object.bounds,
+                    transform: object.transform,
                     pageSize: pageSize,
                     displaySize: displaySize,
                   ),
@@ -230,13 +225,53 @@ class PageEditScene extends StatelessWidget {
                 Positioned.fromRect(
                   rect: EditorPageGeometry.rectForBox(
                     object.bounds,
+                    transform: object.transform,
                     pageSize: pageSize,
                     displaySize: displaySize,
                   ),
                   child: _TapRegion(
+                    onDoubleTap: (localInBox) {
+                      final rect = EditorPageGeometry.rectForBox(
+                        object.bounds,
+                        transform: object.transform,
+                        pageSize: pageSize,
+                        displaySize: displaySize,
+                      );
+                      final hit = hitTestIndex.hitTest(
+                        localInBox + rect.topLeft,
+                      );
+                      if (hit == null) return;
+                      final text =
+                          document.visibleText(hit.objectId) ??
+                          object.text ??
+                          '';
+                      final painter = TextPainter(
+                        text: TextSpan(text: text),
+                        textDirection: TextDirection.ltr,
+                      )..layout();
+                      final word = painter.getWordBoundary(
+                        TextPosition(
+                          offset: hit.utf16Offset.clamp(
+                            0,
+                            text.isEmpty ? 0 : text.length - 1,
+                          ),
+                        ),
+                      );
+                      painter.dispose();
+                      activeSession.updateSelection(
+                        EditorSelection(
+                          objectId: hit.objectId,
+                          range: EditorTextRange(
+                            start: word.start,
+                            end: word.end,
+                          ),
+                        ),
+                      );
+                    },
                     onTap: (Offset localInBox) {
                       final objectRect = EditorPageGeometry.rectForBox(
                         object.bounds,
+                        transform: object.transform,
                         pageSize: pageSize,
                         displaySize: displaySize,
                       );
@@ -262,27 +297,11 @@ class PageEditScene extends StatelessWidget {
                       // same selection.
                       child: PdfOverlayInteractionRegion(
                         onTap: (details) {
-                          final objectRect = EditorPageGeometry.rectForBox(
-                            object.bounds,
-                            pageSize: pageSize,
-                            displaySize: displaySize,
-                          );
-                          final hit = hitTestIndex.hitTest(
-                            details.localPosition + objectRect.topLeft,
-                          );
-                          if (hit == null) return false;
-                          activeSession.updateSelection(
-                            EditorSelection(
-                              objectId: hit.objectId,
-                              range: EditorTextRange(
-                                start: hit.utf16Offset,
-                                end: hit.utf16Offset,
-                              ),
-                              affinity: hit.affinity,
-                            ),
-                          );
+                          // Raw pointer handling above owns selection. Consume
+                          // the viewer gesture without resetting a double tap.
                           return true;
                         },
+                        onDoubleTap: (_) => true,
                         child: const SizedBox.expand(),
                       ),
                     ),
@@ -295,6 +314,7 @@ class PageEditScene extends StatelessWidget {
               // no text is overlaid — the page keeps rendering the real
               // content in its own fonts.
               Positioned.fill(
+                key: ValueKey<String>('caret-${activeObject.objectId}'),
                 child: IgnorePointer(
                   child: _ActiveObjectCaret(
                     object: activeObject,
@@ -306,12 +326,15 @@ class PageEditScene extends StatelessWidget {
                 ),
               ),
               Positioned.fromRect(
+                key: ValueKey<String>('input-region-${activeObject.objectId}'),
                 rect: EditorPageGeometry.rectForBox(
                   activeObject.bounds,
+                  transform: activeObject.transform,
                   pageSize: pageSize,
                   displaySize: displaySize,
                 ),
                 child: SessionTextInput(
+                  key: ValueKey<String>('input-${activeObject.objectId}'),
                   session: activeSession,
                   object: activeObject,
                   text:
@@ -319,6 +342,7 @@ class PageEditScene extends StatelessWidget {
                       activeObject.text ??
                       '',
                   selection: selection,
+                  onEscape: () => activeSession.updateSelection(null),
                   onSelectionChanged: (range) {
                     activeSession.updateSelection(
                       EditorSelection(
@@ -379,13 +403,13 @@ class PageEditScene extends StatelessWidget {
                         errorCode == 'live_pdfium_binding_missing' ||
                             errorCode == 'live_hydration_failed'
                         ? () => unawaited(
-                            activeSession!.refreshPage(
+                            activeSession.refreshPage(
                               scene.pageNumber,
                               force: true,
                             ),
                           )
                         : null,
-                    onDismiss: activeSession!.clearError,
+                    onDismiss: activeSession.clearError,
                   ),
                 ),
               ),
@@ -480,6 +504,7 @@ class _EditorChromePainter extends CustomPainter {
     observer?.layerPainted('selection-chrome', objectId: object.objectId);
     final bounds = EditorPageGeometry.rectForBox(
       object.bounds,
+      transform: object.transform,
       pageSize: pageSize,
       displaySize: displaySize,
     );
@@ -490,7 +515,35 @@ class _EditorChromePainter extends CustomPainter {
     if (showOutline) {
       canvas.drawRect(bounds, outline);
     }
-    if (caretVisible) {
+    if (selection.range.start != selection.range.end) {
+      final characters = object.characterBoxes.isEmpty
+          ? synthesizeCharacterBoxes(object)
+          : object.characterBoxes;
+      final highlight = Paint()..color = const Color(0x553b82f6);
+      for (final character in characters) {
+        if (character.end <= selection.range.start ||
+            character.start >= selection.range.end) {
+          continue;
+        }
+        final box = character.bounds;
+        final corners =
+            [
+                  Offset(box.left, box.top),
+                  Offset(box.right, box.top),
+                  Offset(box.right, box.bottom),
+                  Offset(box.left, box.bottom),
+                ]
+                .map(
+                  (point) => EditorPageGeometry.pointForPdf(
+                    _transformPoint(point, object.transform),
+                    pageSize: pageSize,
+                    displaySize: displaySize,
+                  ),
+                )
+                .toList();
+        canvas.drawPath(Path()..addPolygon(corners, true), highlight);
+      }
+    } else if (caretVisible) {
       final caret = _caretSegment(object, selection.range.end);
       canvas.drawLine(caret.$1, caret.$2, outline..strokeWidth = 1.5);
     }
@@ -506,6 +559,7 @@ class _EditorChromePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _EditorChromePainter oldDelegate) =>
       object.objectId != oldDelegate.object.objectId ||
+      object != oldDelegate.object ||
       selection.range.start != oldDelegate.selection.range.start ||
       selection.range.end != oldDelegate.selection.range.end ||
       composition?.range.start != oldDelegate.composition?.range.start ||
@@ -595,39 +649,56 @@ class _ActiveObjectCaret extends StatefulWidget {
   State<_ActiveObjectCaret> createState() => _ActiveObjectCaretState();
 }
 
-class _ActiveObjectCaretState extends State<_ActiveObjectCaret>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _blink =
-      AnimationController(
-          vsync: this,
-          duration: const Duration(milliseconds: 1060),
-        )
-        ..addListener(() => setState(() {}))
-        ..repeat();
+class _ActiveObjectCaretState extends State<_ActiveObjectCaret> {
+  Timer? _blink;
+  bool _caretVisible = true;
 
-  // TextField-style asymmetric blink: visible for the first ~53% of the cycle.
-  bool get _caretVisible => _blink.value < 0.53;
+  @override
+  void initState() {
+    super.initState();
+    _restartBlink();
+  }
+
+  void _restartBlink() {
+    _blink?.cancel();
+    _caretVisible = true;
+    _blink = Timer.periodic(const Duration(milliseconds: 530), (_) {
+      if (mounted) setState(() => _caretVisible = !_caretVisible);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _ActiveObjectCaret oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.object != oldWidget.object ||
+        widget.selection.range.start != oldWidget.selection.range.start ||
+        widget.selection.range.end != oldWidget.selection.range.end) {
+      _restartBlink();
+    }
+  }
 
   @override
   void dispose() {
-    _blink.dispose();
+    _blink?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      key: const Key('session-caret'),
-      size: widget.displaySize,
-      painter: _EditorChromePainter(
-        object: widget.object,
-        selection: widget.selection,
-        composition: null,
-        pageSize: widget.pageSize,
-        displaySize: widget.displaySize,
-        observer: widget.observer,
-        caretVisible: _caretVisible,
-        showOutline: false,
+    return RepaintBoundary(
+      child: CustomPaint(
+        key: const Key('session-caret'),
+        size: widget.displaySize,
+        painter: _EditorChromePainter(
+          object: widget.object,
+          selection: widget.selection,
+          composition: null,
+          pageSize: widget.pageSize,
+          displaySize: widget.displaySize,
+          observer: widget.observer,
+          caretVisible: _caretVisible,
+          showOutline: false,
+        ),
       ),
     );
   }
@@ -638,9 +709,14 @@ class _ActiveObjectCaretState extends State<_ActiveObjectCaret>
 /// still land. Complements the pdfrx overlay hit-tester dispatch, which can be
 /// stale when the viewer rebuilds page overlays lazily.
 class _TapRegion extends StatefulWidget {
-  const _TapRegion({required this.onTap, required this.child});
+  const _TapRegion({
+    required this.onTap,
+    required this.onDoubleTap,
+    required this.child,
+  });
 
   final ValueChanged<Offset> onTap;
+  final ValueChanged<Offset> onDoubleTap;
   final Widget child;
 
   @override
@@ -649,6 +725,8 @@ class _TapRegion extends StatefulWidget {
 
 class _TapRegionState extends State<_TapRegion> {
   Offset? _downPosition;
+  Offset? _lastTapPosition;
+  Duration? _lastTapTime;
 
   @override
   Widget build(BuildContext context) {
@@ -664,7 +742,19 @@ class _TapRegionState extends State<_TapRegion> {
         _downPosition = null;
         if (down == null) return;
         if ((event.localPosition - down).distance > kTouchSlop) return;
-        widget.onTap(event.localPosition);
+        final last = _lastTapTime;
+        final doubleTap =
+            last != null &&
+            event.timeStamp - last <= kDoubleTapTimeout &&
+            (event.localPosition - _lastTapPosition!).distance <=
+                kDoubleTapSlop;
+        _lastTapTime = doubleTap ? null : event.timeStamp;
+        _lastTapPosition = event.localPosition;
+        if (doubleTap) {
+          widget.onDoubleTap(event.localPosition);
+        } else {
+          widget.onTap(event.localPosition);
+        }
       },
       onPointerCancel: (PointerCancelEvent event) {
         _downPosition = null;

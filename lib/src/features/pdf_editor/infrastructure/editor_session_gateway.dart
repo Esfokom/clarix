@@ -261,11 +261,61 @@ class BridgeEditorSessionGateway
     EditorViewportPriority priority = EditorViewportPriority.visible,
   }) async {
     await _hydrateLivePageIfAvailable(pageNumber, expectedRevision);
-    return _required().pageScene(
+    final scene = await _required().pageScene(
       pageNumber: pageNumber,
       expectedRevision: expectedRevision,
       priority: priority,
     );
+    return EditorPageScene(
+      schemaVersion: scene.schemaVersion,
+      pageId: scene.pageId,
+      pageNumber: scene.pageNumber,
+      width: scene.width,
+      height: scene.height,
+      revision: scene.revision,
+      objects: await _measureObjects(scene.objects),
+    );
+  }
+
+  Future<List<EditorSceneObject>> _measureObjects(
+    List<EditorSceneObject> objects,
+  ) async {
+    final live = _livePdfiumSession;
+    final registry = _livePdfiumLocatorRegistry;
+    if (live is! LivePdfiumSession || registry == null) return objects;
+    final bound = <EditorSceneObject>[];
+    for (final object in objects) {
+      if (!registry.hasObject(object.objectId)) {
+        bound.add(object);
+        continue;
+      }
+      final locator = registry.locatorForObject(object.objectId);
+      bound.add(
+        EditorSceneObject(
+          kind: object.kind,
+          objectId: object.objectId,
+          pageId: object.pageId,
+          text: object.text,
+          bounds: object.bounds,
+          transform: object.transform,
+          capability: object.capability,
+          capabilityReason: object.capabilityReason,
+          modifiedRevision: object.modifiedRevision,
+          runs: object.runs,
+          characterBoxes: object.characterBoxes,
+          layout: object.layout,
+          fontFingerprint: object.fontFingerprint,
+          fontAssetHandle: object.fontAssetHandle,
+          physicalLocator: locator,
+        ),
+      );
+    }
+    try {
+      return await live.measureTextObjects(bound);
+    } catch (error) {
+      debugPrint('[editor] native character measurement failed: $error');
+      return bound;
+    }
   }
 
   Future<void> _hydrateLivePageIfAvailable(
@@ -352,7 +402,51 @@ class BridgeEditorSessionGateway
         // A concurrent close owns teardown of the live session.
       }
     }
-    return result;
+    if (liveSession is! LivePdfiumSession || result.objectPatches.isEmpty) {
+      return result;
+    }
+    // The command is already published. Geometry enrichment must not turn an
+    // accepted mutation into a reported failure (which could prompt a retry).
+    try {
+      final objects = await Future.wait(
+        result.objectPatches.map(
+          (patch) => _required().objectDetails(patch.objectId),
+        ),
+      );
+      final measured = {
+        for (final object in await _measureObjects(objects))
+          object.objectId: object,
+      };
+      return EditorCommandResult(
+        schemaVersion: result.schemaVersion,
+        commandId: result.commandId,
+        previousRevision: result.previousRevision,
+        committedRevision: result.committedRevision,
+        durable: result.durable,
+        warnings: result.warnings,
+        removedObjectIds: result.removedObjectIds,
+        objectPatches: [
+          for (final patch in result.objectPatches)
+            EditorObjectPatch(
+              objectId: patch.objectId,
+              pageId: patch.pageId,
+              modifiedRevision: patch.modifiedRevision,
+              text: patch.text,
+              textRuns: patch.textRuns,
+              characterBoxes:
+                  measured[patch.objectId]?.characterBoxes ??
+                  patch.characterBoxes,
+              bounds: measured[patch.objectId]?.bounds ?? patch.bounds,
+              transform: patch.transform,
+              fontFingerprint: patch.fontFingerprint,
+              fontAssetHandle: patch.fontAssetHandle,
+            ),
+        ],
+      );
+    } catch (error) {
+      debugPrint('[editor] accepted edit geometry unavailable: $error');
+      return result;
+    }
   }
 
   Future<EditorCommandResult> _submitRouted(EditorCommandRequest request) {

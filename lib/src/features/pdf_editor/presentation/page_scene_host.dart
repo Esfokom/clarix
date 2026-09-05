@@ -30,6 +30,11 @@ class PageSceneLifecycle extends ChangeNotifier {
   final Map<int, List<LivePdfiumTileAsset>> _liveTiles =
       <int, List<LivePdfiumTileAsset>>{};
   final Set<String> _patchesInFlight = <String>{};
+  // Keep small invalidation records after raster eviction. The pdfrx base
+  // document still contains the source pixels until Save/reopen.
+  final Map<(int, int, int), EditorTileInvalidation> _dirtyCells = {};
+  final Set<(int, int, int)> _cellsInFlight = {};
+  int _rasterEpoch = 0;
   bool _started = false;
   bool _disposed = false;
 
@@ -66,6 +71,7 @@ class PageSceneLifecycle extends ChangeNotifier {
   /// stale are disposed immediately, while unchanged pages remain resident.
   Future<void> replaceLiveTiles(List<EditorDirtyTile> tiles) async {
     if (!_started || tiles.isEmpty) return;
+    final epoch = _rasterEpoch;
     final grouped = <int, List<EditorDirtyTile>>{};
     for (final tile in tiles) {
       (grouped[tile.pageNumber] ??= <EditorDirtyTile>[]).add(tile);
@@ -82,24 +88,35 @@ class PageSceneLifecycle extends ChangeNotifier {
         }
         rethrow;
       }
-      if (!_started || !visiblePages.contains(entry.key)) {
+      if (!_started ||
+          epoch != _rasterEpoch ||
+          !visiblePages.contains(entry.key)) {
         for (final tile in decoded) {
           tile.image.dispose();
         }
         continue;
       }
-      // Merge new tiles into the existing set instead of replacing all
-      // tiles for the page. Only dispose existing tiles whose bounds
-      // intersect with the incoming patch — retain the rest so partial
-      // invalidations don't wipe out the surrounding document.
-      final existing =
-          _liveTiles[entry.key] ?? const <LivePdfiumTileAsset>[];
+      final existing = _liveTiles[entry.key] ?? const <LivePdfiumTileAsset>[];
       final retained = <LivePdfiumTileAsset>[];
-      for (final old in existing) {
-        final overlaps = decoded.any(
-          (fresh) => _boundsOverlap(old.bounds, fresh.bounds),
+      // An asynchronous old render must never replace newer pixels.
+      decoded.removeWhere((fresh) {
+        final stale = existing.any(
+          (old) =>
+              _boundsOverlap(old.bounds, fresh.bounds) &&
+              old.revision > fresh.revision,
         );
-        if (overlaps) {
+        if (stale) fresh.image.dispose();
+        return stale;
+      });
+      for (final old in existing) {
+        final covered = decoded.any(
+          (fresh) =>
+              fresh.bounds.left <= old.bounds.left &&
+              fresh.bounds.right >= old.bounds.right &&
+              fresh.bounds.bottom <= old.bounds.bottom &&
+              fresh.bounds.top >= old.bounds.top,
+        );
+        if (covered) {
           old.image.dispose();
         } else {
           retained.add(old);
@@ -107,19 +124,6 @@ class PageSceneLifecycle extends ChangeNotifier {
       }
       _liveTiles[entry.key] = <LivePdfiumTileAsset>[...retained, ...decoded];
       _disposePagePatches(entry.key);
-    }
-    // Enforce a per-page tile limit to avoid unbounded memory growth.
-    // When a page exceeds the cap, drop the oldest tiles first.
-    const maxTilesPerPage = 32;
-    for (final pageNumber in _liveTiles.keys.toList(growable: false)) {
-      final pageTiles = _liveTiles[pageNumber]!;
-      if (pageTiles.length > maxTilesPerPage) {
-        final excess = pageTiles.length - maxTilesPerPage;
-        for (var i = 0; i < excess; i++) {
-          pageTiles[i].image.dispose();
-        }
-        _liveTiles[pageNumber] = pageTiles.sublist(excess);
-      }
     }
     notifyListeners();
   }
@@ -143,40 +147,104 @@ class PageSceneLifecycle extends ChangeNotifier {
     List<EditorTileInvalidation> invalidations,
   ) async {
     if (!_started || invalidations.isEmpty) return;
-    final dpi = (144 * surface.viewport.zoom).round().clamp(72, 576);
-    final visible = invalidations
-        .where((invalidation) => visiblePages.contains(invalidation.pageNumber))
-        .toList(growable: false);
-    if (visible.isEmpty) return;
-    try {
-      final tiles = await Future.wait(
-        visible.map(
-          (invalidation) => controller.renderLiveTile(
-            LivePdfiumTileRequest(
-              pageNumber: invalidation.pageNumber,
-              revision: invalidation.revision,
-              bounds: invalidation.bounds,
-              width: math.max(
-                1,
-                ((invalidation.bounds.right - invalidation.bounds.left) *
-                        dpi /
-                        72)
-                    .ceil(),
-              ),
-              height: math.max(
-                1,
-                ((invalidation.bounds.top - invalidation.bounds.bottom) *
-                        dpi /
-                        72)
-                    .ceil(),
-              ),
+    const cellSize = 256.0;
+    for (final invalidation in invalidations) {
+      final size = surface.pageSize(invalidation.pageNumber);
+      final bounds = invalidation.bounds;
+      final left = bounds.left.clamp(0.0, size.width);
+      final right = bounds.right.clamp(0.0, size.width);
+      final bottom = bounds.bottom.clamp(0.0, size.height);
+      final top = bounds.top.clamp(0.0, size.height);
+      for (
+        var x = (left / cellSize).floor();
+        x < (right / cellSize).ceil();
+        x++
+      ) {
+        for (
+          var y = (bottom / cellSize).floor();
+          y < (top / cellSize).ceil();
+          y++
+        ) {
+          final key = (invalidation.pageNumber, x, y);
+          if ((_dirtyCells[key]?.revision ?? -1) > invalidation.revision) {
+            continue;
+          }
+          _dirtyCells[key] = EditorTileInvalidation(
+            pageNumber: invalidation.pageNumber,
+            revision: invalidation.revision,
+            bounds: EditorPdfBox(
+              left: x * cellSize,
+              bottom: y * cellSize,
+              right: math.min((x + 1) * cellSize, size.width),
+              top: math.min((y + 1) * cellSize, size.height),
             ),
+          );
+        }
+      }
+    }
+    await _ensureLiveCells();
+  }
+
+  Future<void> _ensureLiveCells() async {
+    if (!_started) return;
+    // Bound decoded raster memory to roughly 32 MiB across visible pages.
+    // Fixed cells also bound metadata by page area, independent of key count.
+    final area = visiblePages.fold<double>(0, (sum, page) {
+      final size = surface.pageSize(page);
+      return sum + size.width * size.height;
+    });
+    final scale = math.min(
+      (2 * surface.viewport.zoom).clamp(1.0, 8.0),
+      math.sqrt(8 * 1024 * 1024 / math.max(1, area)),
+    );
+    for (final key in _dirtyCells.keys.toList(growable: false)) {
+      if (!_started ||
+          !visiblePages.contains(key.$1) ||
+          _cellsInFlight.contains(key)) {
+        continue;
+      }
+      final dirty = _dirtyCells[key]!;
+      final bounds = dirty.bounds;
+      final width = math.max(1, ((bounds.right - bounds.left) * scale).ceil());
+      final height = math.max(1, ((bounds.top - bounds.bottom) * scale).ceil());
+      final current = _liveTiles[key.$1]
+          ?.where(
+            (tile) =>
+                tile.bounds.left == bounds.left &&
+                tile.bounds.bottom == bounds.bottom,
+          )
+          .firstOrNull;
+      if (current != null &&
+          current.revision >= dirty.revision &&
+          current.image.width == width &&
+          current.image.height == height) {
+        continue;
+      }
+      _cellsInFlight.add(key);
+      final epoch = _rasterEpoch;
+      try {
+        final tile = await controller.renderLiveTile(
+          LivePdfiumTileRequest(
+            pageNumber: key.$1,
+            revision: dirty.revision,
+            bounds: bounds,
+            width: width,
+            height: height,
           ),
-        ),
-      );
-      await replaceLiveTiles(tiles);
-    } catch (_) {
-      // If a live tile cannot be produced, retain the normal page/patch path.
+        );
+        if (_started &&
+            epoch == _rasterEpoch &&
+            identical(_dirtyCells[key], dirty)) {
+          await replaceLiveTiles([tile]);
+        }
+      } catch (error) {
+        debugPrint('[editor] live region render failed: $error');
+      } finally {
+        _cellsInFlight.remove(key);
+      }
+      if (_started && !identical(_dirtyCells[key], dirty)) {
+        unawaited(_ensureLiveCells());
+      }
     }
   }
 
@@ -192,12 +260,14 @@ class PageSceneLifecycle extends ChangeNotifier {
     );
     _disposeColdPatches();
     _disposeColdTiles();
+    unawaited(_ensureLiveCells());
     unawaited(_ensureCleanPatches());
     notifyListeners();
   }
 
   Future<void> _ensureCleanPatches() async {
     if (!_started || controller.state.isClosed) return;
+    if (controller.usesLivePdfiumRendering) return;
     final targetDpi = (144 * surface.viewport.zoom).round().clamp(72, 576);
     final objects = <EditorSceneObject>[
       for (final page in visiblePages)
@@ -281,6 +351,7 @@ class PageSceneLifecycle extends ChangeNotifier {
   }
 
   Future<void> releasePatchMemory() async {
+    _rasterEpoch++;
     for (final patch in _cleanPatches.values) {
       patch.image.dispose();
     }

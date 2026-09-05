@@ -11,6 +11,59 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('dirty regions survive overlap and off-screen image eviction', (
+    tester,
+  ) async {
+    final gateway = LifecycleGateway(pageCount: 2);
+    final controller = EditorSessionController(
+      gateway: gateway,
+      commandIds: () => 'unused',
+    );
+    await controller.open('fixture.pdf');
+    final surface = LifecycleSurface()..show(1);
+    final lifecycle = PageSceneLifecycle(
+      surface: surface,
+      controller: controller,
+    )..start();
+    addTearDown(lifecycle.dispose);
+    addTearDown(surface.dispose);
+    addTearDown(controller.close);
+    Future<void> drain() async {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 100)),
+      );
+      await tester.pump();
+    }
+
+    gateway.emitLiveInvalidation(
+      const EditorTileInvalidation(
+        pageNumber: 1,
+        revision: 1,
+        bounds: EditorPdfBox(left: 10, bottom: 10, right: 100, top: 40),
+      ),
+    );
+    await drain();
+    gateway.emitLiveInvalidation(
+      const EditorTileInvalidation(
+        pageNumber: 1,
+        revision: 2,
+        bounds: EditorPdfBox(left: 80, bottom: 10, right: 150, top: 40),
+      ),
+    );
+    await drain();
+    final tiles = lifecycle.liveTilesFor(1);
+    expect(tiles, hasLength(1));
+    expect(tiles.single.bounds.left, lessThanOrEqualTo(10));
+    expect(tiles.single.bounds.right, greaterThanOrEqualTo(150));
+    surface.show(2);
+    await drain();
+    expect(lifecycle.liveTilesFor(1), isEmpty);
+    surface.show(1);
+    await drain();
+    expect(lifecycle.liveTilesFor(1), hasLength(1));
+    expect(lifecycle.liveTilesFor(1).single.revision, 2);
+  });
+
   testWidgets(
     'scrolling requests visible page plus two warm pages each way',
     (tester) async {

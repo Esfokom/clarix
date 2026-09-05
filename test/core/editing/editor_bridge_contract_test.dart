@@ -208,17 +208,20 @@ class FakeLivePdfiumPort extends FakeNativeEditorPort
       commandId: request.commandId,
       previousRevision: request.baseRevision,
       committedRevision: request.baseRevision + 1,
+      physicalApplyRequired: true,
       plan: EditorPhysicalEditPlan(
         previousRevision: request.baseRevision,
         revision: request.baseRevision + 1,
         operations: <EditorPhysicalEditOperation>[
           EditorPhysicalEditOperation(
+            kind: EditorPhysicalEditOperationKind.replaceText,
             objectId: '00000000-0000-4000-8000-000000000010',
             sourceKey: 'page/1/text/0',
             sourceRevision: 'source-revision',
             expectedText: 'Before',
             replacement: 'After',
-            bounds: const EditorPdfBox(left: 1, bottom: 2, right: 3, top: 4),
+            oldBounds: const EditorPdfBox(left: 1, bottom: 2, right: 3, top: 4),
+            newBounds: const EditorPdfBox(left: 1, bottom: 2, right: 3, top: 4),
           ),
         ],
         inverseOperations: const <EditorPhysicalEditOperation>[],

@@ -537,10 +537,14 @@ class EditorBridgeSession {
       return;
     }
     _closed = true;
-    await _nativeSubscription.cancel();
+    // FRB cancellation can wait for the Rust event producer to return. Closing
+    // the native session terminates that producer, so start both operations
+    // before awaiting either one.
+    final cancellation = _nativeSubscription.cancel();
     try {
       await _native.close();
     } finally {
+      await cancellation;
       await _eventsController.close();
     }
   }
