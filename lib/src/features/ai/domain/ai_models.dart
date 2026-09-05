@@ -26,6 +26,7 @@ class AiWorkspaceState {
     required this.messages,
     required this.useCurrentDocumentScope,
     required this.lastRetrievalSnippets,
+    this.activeConversationId,
   });
 
   final bool providerReady;
@@ -36,6 +37,10 @@ class AiWorkspaceState {
   final List<ComposerMessage> messages;
   final bool useCurrentDocumentScope;
   final List<CitationSnippet> lastRetrievalSnippets;
+
+  /// Identifier of the saved thread currently loaded into [messages], or null
+  /// for a conversation that has not been persisted yet.
+  final String? activeConversationId;
 
   factory AiWorkspaceState.initial() => const AiWorkspaceState(
     providerReady: false,
@@ -58,6 +63,8 @@ class AiWorkspaceState {
     List<ComposerMessage>? messages,
     bool? useCurrentDocumentScope,
     List<CitationSnippet>? lastRetrievalSnippets,
+    String? activeConversationId,
+    bool clearActiveConversationId = false,
   }) {
     return AiWorkspaceState(
       providerReady: providerReady ?? this.providerReady,
@@ -72,6 +79,9 @@ class AiWorkspaceState {
           useCurrentDocumentScope ?? this.useCurrentDocumentScope,
       lastRetrievalSnippets:
           lastRetrievalSnippets ?? this.lastRetrievalSnippets,
+      activeConversationId: clearActiveConversationId
+          ? null
+          : activeConversationId ?? this.activeConversationId,
     );
   }
 

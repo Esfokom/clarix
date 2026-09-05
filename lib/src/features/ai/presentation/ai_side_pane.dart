@@ -7,12 +7,16 @@ import 'package:flutter_markdown_plus_latex/flutter_markdown_plus_latex.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:markdown/markdown.dart' as markdown;
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:smooth_corner/smooth_corner.dart';
 
 import 'package:clarix/src/features/ai/ai.dart';
 import '../../../core/clarix_logger.dart';
 import '../../../core/theme_controller.dart';
 import '../../../core/theme_profile.dart';
 import '../../../core/workspace_surface_tokens.dart';
+
+part 'ai_composer.dart';
+part 'ai_conversation_history.dart';
 
 class AiSidePane extends ConsumerStatefulWidget {
   const AiSidePane({
@@ -33,6 +37,12 @@ class AiSidePane extends ConsumerStatefulWidget {
 class _AiSidePaneState extends ConsumerState<AiSidePane> {
   late final TextEditingController _controller;
   late final VoiceInputController _voiceInput;
+
+  /// History replaces the transcript in place instead of opening a dialog, so
+  /// the pane only ever shows one of the two.
+  bool _historyOpen = false;
+  bool _historyLoading = false;
+  List<ConversationThread> _historyThreads = const <ConversationThread>[];
 
   @override
   void initState() {
@@ -59,6 +69,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
     final AiWorkspaceState ai = widget.aiState.chat;
+    final String? activeThreadId = ai.activeConversationId;
     final String selectedRuntimeLabel =
         widget.aiState.localModels
             .where(
@@ -126,7 +137,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                 ),
                 Tooltip(
                   message: _historyOpen
-                      ? 'Back to conversation'
+                      ? 'Hide conversation history'
                       : 'Conversation history',
                   child: ShadIconButton.ghost(
                     key: const Key('ai-conversation-history'),
@@ -134,45 +145,28 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     height: 28,
                     padding: EdgeInsets.zero,
                     foregroundColor: _historyOpen ? colors.accent : null,
-                    icon: Icon(
-                      _historyOpen ? LucideIcons.x : LucideIcons.history,
-                      size: 14,
-                    ),
+                    icon: const Icon(LucideIcons.history, size: 14),
                     onPressed: ai.chatBusy || widget.documentContext == null
                         ? null
                         : _toggleHistory,
                   ),
                 ),
-                const SizedBox(width: 4),
-                Tooltip(
-                  message:
-                      'Estimated conversation context: $estimatedTokens of $contextLimit tokens',
-                  child: Text(
-                    '$contextPercent%',
-                    key: const Key('ai-context-usage'),
-                    style: TextStyle(
-                      color: colors.textFaint,
-                      fontSize: 10.5,
-                      fontWeight: FontWeight.w600,
+                // While history is open the pinned action below owns starting a
+                // new conversation, so the header keeps only one way to do it.
+                if (!_historyOpen) ...<Widget>[
+                  const SizedBox(width: 4),
+                  Tooltip(
+                    message: 'New conversation',
+                    child: ShadIconButton.ghost(
+                      key: const Key('ai-new-conversation'),
+                      width: 28,
+                      height: 28,
+                      padding: EdgeInsets.zero,
+                      icon: const Icon(LucideIcons.squarePen, size: 14),
+                      onPressed: ai.chatBusy ? null : _startNewConversation,
                     ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Tooltip(
-                  message: 'New conversation',
-                  child: ShadIconButton.ghost(
-                    key: const Key('ai-new-conversation'),
-                    width: 28,
-                    height: 28,
-                    padding: EdgeInsets.zero,
-                    icon: const Icon(LucideIcons.squarePen, size: 14),
-                    onPressed: ai.chatBusy
-                        ? null
-                        : () => ref
-                              .read(aiNotifierProvider.notifier)
-                              .startNewConversation(),
-                  ),
-                ),
+                ],
                 const SizedBox(width: 4),
                 ShadIconButton.ghost(
                   width: 28,
@@ -193,7 +187,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               layoutBuilder: (Widget? current, List<Widget> previous) =>
                   Stack(
                     fit: StackFit.expand,
-                    children: <Widget>[...previous, if (current != null) current],
+                    children: <Widget>[...previous, ?current],
                   ),
               transitionBuilder: (Widget child, Animation<double> animation) {
                 // The history slides in from the side it lives on, so the two
@@ -216,7 +210,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                       key: const ValueKey<String>('ai-history'),
                       threads: _historyThreads,
                       isLoading: _historyLoading,
-                      activeThreadId: _activeThreadId,
+                      activeThreadId: activeThreadId,
                       colors: colors,
                       onOpen: _openConversation,
                       onDelete: _confirmDeleteConversation,
@@ -248,29 +242,39 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                     ),
             ),
           ),
-          if (ai.chatBusy)
-            _ComposerLoadingIndicator(
+          if (_historyOpen)
+            _PinnedNewConversationBar(
               colors: colors,
-              statusMessage: ai.statusMessage,
+              onPressed: ai.chatBusy ? null : _startNewConversation,
+            )
+          else ...<Widget>[
+            if (ai.chatBusy)
+              _ComposerLoadingIndicator(
+                colors: colors,
+                statusMessage: ai.statusMessage,
+              ),
+            _DocumentComposer(
+              controller: _controller,
+              voiceInput: _voiceInput,
+              enabled: composerEnabled,
+              isBusy: ai.chatBusy,
+              hintText: composerHint,
+              onSend: _send,
+              colors: colors,
+              onStop: () =>
+                  ref.read(aiNotifierProvider.notifier).stopGeneration(),
+              runtimeLabel: selectedRuntimeLabel,
+              runtimeIconPath: selectedRuntimeIcon,
+              selectedRuntimeId: ai.selectedProviderId,
+              localModels: widget.aiState.localModels,
+              providerProfiles: widget.aiState.providerProfiles,
+              onSelectRuntime: _selectRuntime,
+              runtimePickerEnabled: !ai.chatBusy,
+              contextPercent: contextPercent,
+              estimatedTokens: estimatedTokens,
+              contextLimit: contextLimit,
             ),
-          _DocumentComposer(
-            controller: _controller,
-            voiceInput: _voiceInput,
-            enabled: composerEnabled,
-            isBusy: ai.chatBusy,
-            hintText: composerHint,
-            onSend: _send,
-            colors: colors,
-            onStop: () =>
-                ref.read(aiNotifierProvider.notifier).stopGeneration(),
-            runtimeLabel: selectedRuntimeLabel,
-            runtimeIconPath: selectedRuntimeIcon,
-            selectedRuntimeId: ai.selectedProviderId,
-            localModels: widget.aiState.localModels,
-            providerProfiles: widget.aiState.providerProfiles,
-            onSelectRuntime: _selectRuntime,
-            runtimePickerEnabled: !ai.chatBusy,
-          ),
+          ],
         ],
       ),
     );
@@ -321,135 +325,124 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     }
   }
 
+  /// Switches models in place: the transcript carries over, and each reply
+  /// already records the model that produced it.
   Future<void> _selectRuntime(String id) async {
-    final AiWorkspaceState chat = widget.aiState.chat;
-    if (id == chat.selectedProviderId) return;
-    if (chat.messages.isNotEmpty) {
-      final bool? confirmed = await showDialog<bool>(
-        context: context,
-        builder: (BuildContext dialogContext) => AlertDialog(
-          title: const Text('Start a new conversation?'),
-          content: const Text('Changing models starts a new conversation.'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: const Text('Change model'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed != true || !mounted) return;
-      await ref.read(aiNotifierProvider.notifier).startNewConversation();
+    if (id == widget.aiState.chat.selectedProviderId) return;
+    await ref.read(aiNotifierProvider.notifier).selectProvider(id);
+  }
+
+  void _startNewConversation() {
+    setState(() => _historyOpen = false);
+    unawaited(ref.read(aiNotifierProvider.notifier).startNewConversation());
+  }
+
+  Future<void> _toggleHistory() async {
+    if (_historyOpen) {
+      setState(() => _historyOpen = false);
+      return;
     }
-    if (mounted) {
-      await ref.read(aiNotifierProvider.notifier).selectProvider(id);
+    setState(() {
+      _historyOpen = true;
+      _historyLoading = _historyThreads.isEmpty;
+    });
+    await _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final AiDocumentContext? document = widget.documentContext;
+    if (document == null) return;
+    try {
+      final store = await ref.read(conversationStoreProvider.future);
+      final List<ConversationThread> threads = await store.listThreads(
+        document.documentId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _historyThreads = threads;
+        _historyLoading = false;
+      });
+    } catch (error, stackTrace) {
+      clarixLog.w(
+        'Loading conversation history failed.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (mounted) setState(() => _historyLoading = false);
     }
   }
 
-  Future<void> _showHistory() async {
+  Future<void> _openConversation(String threadId) async {
+    // Close first: the transcript animates in over the freshly loaded
+    // messages rather than after them.
+    setState(() => _historyOpen = false);
+    await ref.read(aiNotifierProvider.notifier).selectConversation(threadId);
+  }
+
+  Future<void> _confirmDeleteConversation(ConversationThread thread) async {
     final AiDocumentContext? document = widget.documentContext;
     if (document == null) return;
-    final BuildContext menuContext = context;
-    final store = await ref.read(conversationStoreProvider.future);
-    final threads = await store.listThreads(document.documentId);
-    if (!menuContext.mounted) return;
-    final String? selected = await showDialog<String>(
-      context: menuContext,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: const Text('Conversation history'),
-        content: SizedBox(
-          width: 420,
-          child: threads.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  child: Text('No saved conversations for this document yet.'),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: threads.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (BuildContext context, int index) {
-                    final thread = threads[index];
-                    return ListTile(
-                      key: Key('conversation-thread-${thread.id}'),
-                      title: Text(
-                        thread.title,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(
-                        'Updated ${thread.updatedAt.toLocal()}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      onTap: () => Navigator.pop(dialogContext, thread.id),
-                      trailing: IconButton(
-                        tooltip: 'Delete conversation',
-                        icon: const Icon(LucideIcons.trash2, size: 16),
-                        onPressed: () =>
-                            Navigator.pop(dialogContext, 'delete:${thread.id}'),
-                      ),
-                    );
-                  },
-                ),
+    final bool confirmed =
+        await _confirm(
+          title: 'Delete conversation?',
+          description: 'This removes this saved conversation permanently.',
+          confirmLabel: 'Delete',
+          destructive: true,
+        ) ??
+        false;
+    if (!confirmed || !mounted) return;
+    await ref
+        .read(aiNotifierProvider.notifier)
+        .deleteConversation(thread.id, document.documentId);
+    await _loadHistory();
+  }
+
+  /// Confirmation styled with the workspace surface tokens, so it reads as
+  /// part of the app rather than a stock Material alert.
+  Future<bool?> _confirm({
+    required String title,
+    required String description,
+    required String confirmLabel,
+    bool destructive = false,
+  }) {
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+    );
+    return showShadDialog<bool>(
+      context: context,
+      barrierColor: WorkspaceColors.backdrop,
+      builder: (BuildContext dialogContext) => ShadDialog(
+        radius: BorderRadius.circular(18),
+        backgroundColor: colors.panel,
+        border: Border.all(color: colors.border),
+        constraints: const BoxConstraints(maxWidth: 380),
+        title: Text(
+          title,
+          style: TextStyle(
+            color: colors.textStrong,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        description: Text(
+          description,
+          style: TextStyle(color: colors.textMuted, fontSize: 12.5),
         ),
         actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
+          ShadButton.outline(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ShadButton(
+            backgroundColor: destructive ? colors.warning : colors.accent,
+            foregroundColor: colors.canvas,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(confirmLabel),
           ),
         ],
       ),
     );
-    if (selected != null && selected.startsWith('delete:')) {
-      if (!menuContext.mounted) return;
-      final bool? confirmed = await showDialog<bool>(
-        context: menuContext,
-        builder: (BuildContext context) => AlertDialog(
-          title: const Text('Delete conversation?'),
-          content: const Text(
-            'This removes this saved conversation permanently.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        ),
-      );
-      if (confirmed == true) {
-        await ref
-            .read(aiNotifierProvider.notifier)
-            .deleteConversation(selected.substring(7), document.documentId);
-      }
-    } else if (selected != null) {
-      await ref.read(aiNotifierProvider.notifier).selectConversation(selected);
-    }
   }
-}
-
-class _RuntimeMenuItem extends StatelessWidget {
-  const _RuntimeMenuItem({required this.label, required this.iconPath});
-
-  final String label;
-  final String iconPath;
-
-  @override
-  Widget build(BuildContext context) => Row(
-    children: <Widget>[
-      Image.asset(iconPath, width: 20, height: 20),
-      const SizedBox(width: 10),
-      Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
-    ],
-  );
 }
 
 class _EmptyConversation extends StatelessWidget {
@@ -501,193 +494,6 @@ class _EmptyConversation extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DocumentComposer extends StatelessWidget {
-  const _DocumentComposer({
-    required this.controller,
-    required this.voiceInput,
-    required this.enabled,
-    required this.isBusy,
-    required this.hintText,
-    required this.onSend,
-    required this.onStop,
-    required this.colors,
-  });
-
-  final TextEditingController controller;
-  final VoiceInputController voiceInput;
-  final bool enabled;
-  final bool isBusy;
-  final String hintText;
-  final VoidCallback onSend;
-  final VoidCallback onStop;
-  final WorkspaceSurfaceTokens colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
-      child: Material(
-        color: Colors.transparent,
-        child: Container(
-          key: const Key('document-composer'),
-          padding: const EdgeInsets.fromLTRB(14, 10, 10, 9),
-          decoration: BoxDecoration(
-            color: colors.panelRaised,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: colors.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              TextField(
-                key: const Key('document-composer-input'),
-                controller: controller,
-                enabled: enabled,
-                minLines: 3,
-                maxLines: 6,
-                textInputAction: TextInputAction.newline,
-                style: TextStyle(
-                  color: colors.textStrong,
-                  fontSize: 12.5,
-                  height: 1.4,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: hintText,
-                  hintStyle: TextStyle(color: colors.textFaint, fontSize: 12.5),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                ),
-              ),
-              const SizedBox(height: 8),
-              AnimatedBuilder(
-                animation: voiceInput,
-                builder: (BuildContext context, Widget? child) {
-                  final bool isRecording =
-                      voiceInput.status == VoiceInputStatus.recording;
-                  final bool isTranscribing =
-                      voiceInput.status == VoiceInputStatus.transcribing;
-                  final String contextLabel = isTranscribing
-                      ? 'Transcribing voice…'
-                      : voiceInput.errorMessage ?? 'Document context';
-                  return Row(
-                    children: <Widget>[
-                      Icon(
-                        LucideIcons.fileText,
-                        color: colors.textFaint,
-                        size: 13,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          contextLabel,
-                          key: const Key('voice-input-status'),
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: voiceInput.errorMessage == null
-                                ? colors.textFaint
-                                : colors.warning,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      Tooltip(
-                        message: isRecording
-                            ? 'Stop recording'
-                            : isTranscribing
-                            ? 'Transcribing voice input'
-                            : 'Start voice input',
-                        child: IconButton(
-                          key: const Key('document-composer-voice'),
-                          onPressed:
-                              isTranscribing || (!enabled && !isRecording)
-                              ? null
-                              : voiceInput.toggle,
-                          style: IconButton.styleFrom(
-                            minimumSize: const Size(32, 32),
-                            maximumSize: const Size(32, 32),
-                            padding: EdgeInsets.zero,
-                            backgroundColor: isRecording
-                                ? colors.warning
-                                : colors.panelRaised,
-                            disabledBackgroundColor: colors.border,
-                            foregroundColor: isRecording
-                                ? colors.canvas
-                                : colors.textMuted,
-                            disabledForegroundColor: colors.textFaint,
-                          ),
-                          icon: isTranscribing
-                              ? SizedBox(
-                                  width: 14,
-                                  height: 14,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 1.8,
-                                    color: colors.textFaint,
-                                  ),
-                                )
-                              : Icon(
-                                  isRecording
-                                      ? LucideIcons.square
-                                      : LucideIcons.mic,
-                                  size: isRecording ? 13 : 16,
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: controller,
-                        builder:
-                            (BuildContext context, TextEditingValue value, _) {
-                              final bool canSend =
-                                  enabled &&
-                                  !isRecording &&
-                                  !isTranscribing &&
-                                  value.text.trim().isNotEmpty;
-                              return Tooltip(
-                                message: isBusy
-                                    ? 'Stop generating'
-                                    : 'Send question',
-                                child: IconButton(
-                                  key: const Key('document-composer-send'),
-                                  onPressed: isBusy
-                                      ? onStop
-                                      : (canSend ? onSend : null),
-                                  style: IconButton.styleFrom(
-                                    minimumSize: const Size(32, 32),
-                                    maximumSize: const Size(32, 32),
-                                    padding: EdgeInsets.zero,
-                                    backgroundColor: isBusy
-                                        ? colors.textMuted
-                                        : colors.accent,
-                                    disabledBackgroundColor: colors.border,
-                                    foregroundColor: colors.canvas,
-                                    disabledForegroundColor: colors.textFaint,
-                                  ),
-                                  icon: Icon(
-                                    isBusy
-                                        ? LucideIcons.square
-                                        : LucideIcons.arrowUp,
-                                    size: isBusy ? 13 : 16,
-                                  ),
-                                ),
-                              );
-                            },
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -835,120 +641,6 @@ class _MessageBubble extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class _ComposerLoadingIndicator extends StatefulWidget {
-  const _ComposerLoadingIndicator({
-    required this.colors,
-    required this.statusMessage,
-  });
-
-  final WorkspaceSurfaceTokens colors;
-  final String statusMessage;
-
-  @override
-  State<_ComposerLoadingIndicator> createState() =>
-      _ComposerLoadingIndicatorState();
-}
-
-class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
-    with SingleTickerProviderStateMixin {
-  static const List<String> _words = <String>[
-    'Reading',
-    'Tracing',
-    'Grounding',
-    'Pondering',
-    'Synthesizing',
-    'Citing',
-  ];
-
-  late final AnimationController _animationController;
-  late final Timer _wordTimer;
-  int _wordIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1400),
-    )..repeat(reverse: true);
-    _wordTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
-        setState(() => _wordIndex = (_wordIndex + 1) % _words.length);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _wordTimer.cancel();
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      key: const Key('composer-loader'),
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 2),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Text(
-            widget.statusMessage,
-            key: const Key('ai-runtime-status'),
-            style: TextStyle(color: widget.colors.textFaint, fontSize: 10.5),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ScaleTransition(
-                scale: Tween<double>(begin: 0.72, end: 1.1).animate(
-                  CurvedAnimation(
-                    parent: _animationController,
-                    curve: Curves.easeInOut,
-                  ),
-                ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: widget.colors.accent,
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox(width: 7, height: 7),
-                ),
-              ),
-              const SizedBox(width: 8),
-              AnimatedBuilder(
-                animation: _animationController,
-                builder: (BuildContext context, Widget? child) => ShaderMask(
-                  blendMode: BlendMode.srcIn,
-                  shaderCallback: (Rect bounds) => LinearGradient(
-                    colors: const <Color>[
-                      WorkspaceColors.textMuted,
-                      WorkspaceColors.textStrong,
-                      WorkspaceColors.textMuted,
-                    ],
-                    stops: <double>[0, _animationController.value, 1],
-                  ).createShader(bounds),
-                  child: child,
-                ),
-                child: Text(
-                  _words[_wordIndex],
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
     );
   }
 }

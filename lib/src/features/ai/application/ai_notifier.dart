@@ -68,6 +68,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           chat: _current.chat.copyWith(
             messages: const <ComposerMessage>[],
             lastRetrievalSnippets: const <CitationSnippet>[],
+            clearActiveConversationId: true,
           ),
         ),
       );
@@ -95,6 +96,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
                 ),
               )
               .toList(growable: false),
+          activeConversationId: threadId,
         ),
       ),
     );
@@ -117,6 +119,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           messages: const <ComposerMessage>[],
           lastRetrievalSnippets: const <CitationSnippet>[],
           statusMessage: 'New conversation ready.',
+          clearActiveConversationId: true,
         ),
       ),
     );
@@ -130,6 +133,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           messages: const <ComposerMessage>[],
           lastRetrievalSnippets: const <CitationSnippet>[],
           statusMessage: 'All saved conversations were cleared.',
+          clearActiveConversationId: true,
         ),
       ),
     );
@@ -304,6 +308,13 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
             title: _conversationTitle(prompt),
           )).id;
       _activeConversationId = threadId;
+      // Surface the thread the exchange is being written to, so the in-pane
+      // history marks it as current the moment it is created.
+      state = AsyncData(
+        _current.copyWith(
+          chat: _current.chat.copyWith(activeConversationId: threadId),
+        ),
+      );
       final List<RemoteChatMessage> history = current.chat.messages
           .map(
             (ComposerMessage message) =>
