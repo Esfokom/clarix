@@ -157,20 +157,25 @@ updated in place; behaviour is unchanged.
 
 Two modes:
 
-- **Focus empty** — `DocumentChunkStore.readChunks(documentId)` in page
-  order, partitioned into contiguous page windows sized to the prompt
-  budget. Guarantees whole-document coverage.
+- **Focus empty** — `DocumentChunkStore.readChunks(documentId)` sorted by
+  page then chunk order. Guarantees whole-document coverage.
 - **Focus set** — `LocalRagService.retrieve(documentId, focus, limit:
-  itemCount * 4)`, then the returned chunks are grouped into batches in
-  page order. This inherits the native embedding retriever when the
-  document is indexed and the lexical fallback when it is not; the study
-  feature adds no retrieval code of its own.
+  itemCount * 4)`, then the returned chunks are sorted the same way. This
+  inherits the native embedding retriever when the document is indexed
+  and the lexical fallback when it is not; the study feature adds no
+  retrieval code of its own.
 
-When a single page window still exceeds the prompt budget, its chunks are
-ranked by `LocalRagService.retrieve` seeded with the window's section
-titles, and the top-ranked chunks are kept. If retrieval returns nothing
-usable, an even-stride sample of the window is kept instead. Either way
-the batch fits the budget.
+Either source list is then partitioned by a greedy walk: accumulate
+chunks in order until the next one would exceed the prompt budget, then
+close the batch. This subsumes fixed page windows — no batch can exceed
+budget by construction — and it keeps batch boundaries aligned to natural
+page order. A single chunk larger than the whole budget forms its own
+batch and has its text truncated to the budget at prompt-build time.
+
+Item quotas are spread across batches: `itemCount ~/ batchCount` each,
+with the remainder distributed to the earliest batches. When batches
+outnumber requested items, batches are sampled down by even stride so the
+selected batches still span the document.
 
 A document with no chunks yields an empty plan; the pane reports that the
 document is not indexed yet rather than calling a model.
@@ -360,9 +365,10 @@ Unit, in `test/study/`:
   fields. Asserts drop counts and that partial batches survive.
 - Budget: batch counts and quotas across context sizes; quotas sum to
   `itemCount`; local versus remote targets differ as expected.
-- Source planner: focus-empty page-window partitioning covers all chunks;
-  focus-set path delegates to `LocalRagService.retrieve`; oversized
-  window falls back to stride sampling when retrieval is empty.
+- Source planner: focus-empty partitioning covers all chunks and no batch
+  exceeds budget; focus-set path delegates to `LocalRagService.retrieve`;
+  quotas sum to `itemCount`; batches are stride-sampled when they
+  outnumber requested items.
 - Harness: repair retry on first parse failure, skip on second, dedupe
   across batches, cancellation keeps accepted items.
 - Store: round-trip of sets, cards, questions, attempts; cascade delete;

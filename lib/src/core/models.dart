@@ -6,7 +6,7 @@ import 'ocr_models.dart';
 
 enum SidebarPane { thumbnails, outline }
 
-enum RightToolWindow { none, document, ai }
+enum RightToolWindow { none, document, ai, study, tts }
 
 T _enumByNameOr<T extends Enum>(List<T> values, String? name, T fallback) =>
     values.firstWhere((value) => value.name == name, orElse: () => fallback);

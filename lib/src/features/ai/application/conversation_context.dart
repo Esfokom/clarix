@@ -1,5 +1,7 @@
 import '../domain/conversation.dart';
 
+int estimateTokens(String text) => (text.trim().length / 4).ceil();
+
 class ConversationContextPlan {
   const ConversationContextPlan({
     required this.estimatedTokens,
@@ -24,7 +26,7 @@ class ConversationContextPlanner {
     String additionalContext = '',
   }) {
     final int budget = contextWindowTokens - reservedCompletionTokens;
-    int used = _estimate(summary) + _estimate(additionalContext);
+    int used = estimateTokens(summary) + estimateTokens(additionalContext);
     for (final message in messages) {
       if (!message.isCompacted) used += message.tokenEstimate;
     }
@@ -43,6 +45,4 @@ class ConversationContextPlanner {
       messagesToCompact: compact,
     );
   }
-
-  int _estimate(String text) => (text.trim().length / 4).ceil();
 }

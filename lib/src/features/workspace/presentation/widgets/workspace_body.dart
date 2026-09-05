@@ -7,6 +7,8 @@ import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/ai/ai.dart';
+import 'package:clarix/src/features/study/study.dart';
+import 'package:clarix/src/features/tts/tts.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'document_workspace.dart';
 import 'quickstart_surface.dart';
@@ -56,6 +58,16 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             showInspector &&
             activeTab != null &&
             widget.state.session.rightToolWindow == RightToolWindow.document;
+        final bool showStudyInline =
+            showInspector &&
+            activeTab != null &&
+            widget.state.session.rightToolWindow == RightToolWindow.study;
+        final bool showTtsInline =
+            showInspector &&
+            activeTab != null &&
+            widget.state.session.rightToolWindow == RightToolWindow.tts;
+        final bool showAnyInline =
+            showAiInline || showDocumentInline || showStudyInline || showTtsInline;
         final bool showAiOverlay =
             !showInspector &&
             activeTab != null &&
@@ -84,7 +96,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             ),
                     ),
                   ),
-                  if (showAiInline || showDocumentInline)
+                  if (showAnyInline)
                     _PaneHandle(
                       key: const Key('right-pane-resizer'),
                       onDrag: (double delta) => ref
@@ -93,12 +105,15 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             widget.state.session.rightPaneWidth - delta,
                           ),
                     ),
-                  if ((showAiInline || showDocumentInline) &&
-                      !widget.state.session.rightPaneCollapsed)
+                  if (showAnyInline && !widget.state.session.rightPaneCollapsed)
                     SizedBox(
                       width: widget.state.session.rightPaneWidth,
                       child: showAiInline
                           ? _aiPane(aiState, activeTab)
+                          : showStudyInline
+                          ? _studyPane(activeTab)
+                          : showTtsInline
+                          ? _ttsPane(activeTab)
                           : ReaderInspector(
                               state: widget.state,
                               activeTab: activeTab,
@@ -186,6 +201,30 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             ),
       onCollapse: () =>
           ref.read(workspaceNotifierProvider.notifier).toggleComposerExpanded(),
+    );
+  }
+
+  Widget _studyPane(DocumentTabState tab) {
+    return StudySidePane(
+      documentId: tab.documentId,
+      onCollapse: () => ref
+          .read(workspaceNotifierProvider.notifier)
+          .selectRightToolWindow(RightToolWindow.study),
+      onNavigateToPage: (int pageNumber) => ref
+          .read(workspaceNotifierProvider.notifier)
+          .updateViewerState(tabId: tab.id, currentPage: pageNumber),
+    );
+  }
+
+  Widget _ttsPane(DocumentTabState tab) {
+    return TtsSidePane(
+      documentId: tab.documentId,
+      onCollapse: () => ref
+          .read(workspaceNotifierProvider.notifier)
+          .selectRightToolWindow(RightToolWindow.tts),
+      onNavigateToPage: (int pageNumber) => ref
+          .read(workspaceNotifierProvider.notifier)
+          .updateViewerState(tabId: tab.id, currentPage: pageNumber),
     );
   }
 
@@ -322,6 +361,20 @@ class _RightToolRail extends ConsumerWidget {
             RightToolWindow.ai,
             'Clarix AI',
             LucideIcons.sparkles,
+          ),
+          _tool(
+            context,
+            ref,
+            RightToolWindow.study,
+            'Study',
+            LucideIcons.graduationCap,
+          ),
+          _tool(
+            context,
+            ref,
+            RightToolWindow.tts,
+            'Listen',
+            LucideIcons.headphones,
           ),
         ],
       ),

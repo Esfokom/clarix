@@ -8,6 +8,8 @@ const Set<String> _requiredEntryPoints = <String>{
   'lib/src/features/ai/ai.dart',
   'lib/src/features/reader/reader.dart',
   'lib/src/features/settings/settings.dart',
+  'lib/src/features/study/study.dart',
+  'lib/src/features/tts/tts.dart',
   'lib/src/features/utilities/utilities.dart',
   'lib/src/features/workspace/workspace.dart',
 };

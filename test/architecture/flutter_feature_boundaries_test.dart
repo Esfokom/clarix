@@ -8,6 +8,8 @@ const Set<String> _publicFeatures = <String>{
   'ai',
   'reader',
   'settings',
+  'study',
+  'tts',
   'utilities',
   'workspace',
 };

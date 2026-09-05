@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/session_store.dart';
 import 'package:clarix/src/features/ai/ai.dart';
+import 'package:clarix/src/features/study/study.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -210,6 +211,25 @@ void main() {
     expect(
       DocumentMetadata.fromJson(metadata.toJson()).toJson(),
       metadata.toJson(),
+    );
+  });
+
+  test('StudyGenerationConfig JSON shape remains stable', () {
+    final StudyGenerationConfig config = StudyGenerationConfig(
+      kind: StudySetKind.quiz,
+      itemCount: 12,
+      difficulty: StudyDifficulty.hard,
+      focus: 'photosynthesis',
+    );
+    expect(config.toJson(), <String, dynamic>{
+      'kind': 'quiz',
+      'itemCount': 12,
+      'difficulty': 'hard',
+      'focus': 'photosynthesis',
+    });
+    expect(
+      StudyGenerationConfig.fromJson(config.toJson()).toJson(),
+      config.toJson(),
     );
   });
 }
