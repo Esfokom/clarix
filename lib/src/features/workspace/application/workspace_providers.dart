@@ -75,6 +75,10 @@ final forensicMarginaliaServiceProvider = Provider<ForensicMarginaliaService>(
   (Ref ref) => ForensicMarginaliaService(),
 );
 
+final brainTrustDebaterServiceProvider = Provider<BrainTrustDebaterService>(
+  (Ref ref) => BrainTrustDebaterService(),
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );
