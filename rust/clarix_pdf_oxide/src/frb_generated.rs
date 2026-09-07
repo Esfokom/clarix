@@ -41,7 +41,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.13.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1334447033;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -928618356;
 
 // Section: executor
 
@@ -2328,6 +2328,39 @@ fn wire__crate__api__local_rag_validate_impl(
         },
     )
 }
+fn wire__crate__chat_api__parse_chat_sse_data_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "parse_chat_sse_data",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_data = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let output_ok = Ok::<_, ()>(crate::chat_api::parse_chat_sse_data(&api_data))?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
 fn wire__crate__api__read_pdf_annotations_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -2388,6 +2421,43 @@ fn wire__crate__api__save_pdf_annotations_impl(
             move |context| {
                 transform_result_sse::<_, String>((move || {
                     let output_ok = crate::api::save_pdf_annotations(api_request)?;
+                    std::result::Result::Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__chat_api__stream_chat_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "stream_chat",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_request = <crate::chat_api::NativeChatRequest>::sse_decode(&mut deserializer);
+            let api_sink = <StreamSink<
+                crate::chat_api::NativeChatEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, String>((move || {
+                    let output_ok = crate::chat_api::stream_chat(api_request, api_sink)?;
                     std::result::Result::Ok(output_ok)
                 })())
             }
@@ -2515,6 +2585,16 @@ impl SseDecode
 }
 
 impl SseDecode
+    for StreamSink<crate::chat_api::NativeChatEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
     for StreamSink<
         crate::editing_api::NativeEditorEvent,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -2596,6 +2676,20 @@ impl SseDecode for Vec<crate::editing_api::NativeAnnotationRange> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::editing_api::NativeAnnotationRange>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::chat_api::NativeChatMessage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::chat_api::NativeChatMessage>::sse_decode(
                 deserializer,
             ));
         }
@@ -3052,6 +3146,61 @@ impl SseDecode for crate::editing_api::NativeApproveFontFallbackRequest {
             command_id: var_commandId,
             base_revision: var_baseRevision,
             proposal_token: var_proposalToken,
+        };
+    }
+}
+
+impl SseDecode for crate::chat_api::NativeChatEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_text = <String>::sse_decode(deserializer);
+                return crate::chat_api::NativeChatEvent::TextDelta { text: var_text };
+            }
+            1 => {
+                let mut var_message = <String>::sse_decode(deserializer);
+                return crate::chat_api::NativeChatEvent::Error {
+                    message: var_message,
+                };
+            }
+            2 => {
+                return crate::chat_api::NativeChatEvent::Done;
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
+impl SseDecode for crate::chat_api::NativeChatMessage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_role = <String>::sse_decode(deserializer);
+        let mut var_content = <String>::sse_decode(deserializer);
+        return crate::chat_api::NativeChatMessage {
+            role: var_role,
+            content: var_content,
+        };
+    }
+}
+
+impl SseDecode for crate::chat_api::NativeChatRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_providerEndpoint = <String>::sse_decode(deserializer);
+        let mut var_modelId = <String>::sse_decode(deserializer);
+        let mut var_headers = <std::collections::HashMap<String, String>>::sse_decode(deserializer);
+        let mut var_apiKey = <String>::sse_decode(deserializer);
+        let mut var_messages = <Vec<crate::chat_api::NativeChatMessage>>::sse_decode(deserializer);
+        return crate::chat_api::NativeChatRequest {
+            provider_endpoint: var_providerEndpoint,
+            model_id: var_modelId,
+            headers: var_headers,
+            api_key: var_apiKey,
+            messages: var_messages,
         };
     }
 }
@@ -4347,6 +4496,17 @@ impl SseDecode for Option<crate::editing_api::NativeAffineTransform> {
     }
 }
 
+impl SseDecode for Option<crate::chat_api::NativeChatEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::chat_api::NativeChatEvent>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<crate::editing_api::NativeCommandResult> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -4803,9 +4963,11 @@ fn pde_ffi_dispatcher_primary_impl(
         43 => wire__crate__api__local_rag_query_impl(port, ptr, rust_vec_len, data_len),
         44 => wire__crate__api__local_rag_status_impl(port, ptr, rust_vec_len, data_len),
         45 => wire__crate__api__local_rag_validate_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__chat_api__parse_chat_sse_data_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__read_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__save_pdf_annotations_impl(port, ptr, rust_vec_len, data_len),
+        49 => wire__crate__chat_api__stream_chat_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__agent_api__test_agent_provider_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -5095,6 +5257,79 @@ impl flutter_rust_bridge::IntoIntoDart<crate::editing_api::NativeApproveFontFall
     for crate::editing_api::NativeApproveFontFallbackRequest
 {
     fn into_into_dart(self) -> crate::editing_api::NativeApproveFontFallbackRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::chat_api::NativeChatEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::chat_api::NativeChatEvent::TextDelta { text } => {
+                [0.into_dart(), text.into_into_dart().into_dart()].into_dart()
+            }
+            crate::chat_api::NativeChatEvent::Error { message } => {
+                [1.into_dart(), message.into_into_dart().into_dart()].into_dart()
+            }
+            crate::chat_api::NativeChatEvent::Done => [2.into_dart()].into_dart(),
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::chat_api::NativeChatEvent
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::chat_api::NativeChatEvent>
+    for crate::chat_api::NativeChatEvent
+{
+    fn into_into_dart(self) -> crate::chat_api::NativeChatEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::chat_api::NativeChatMessage {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.role.into_into_dart().into_dart(),
+            self.content.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::chat_api::NativeChatMessage
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::chat_api::NativeChatMessage>
+    for crate::chat_api::NativeChatMessage
+{
+    fn into_into_dart(self) -> crate::chat_api::NativeChatMessage {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::chat_api::NativeChatRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.provider_endpoint.into_into_dart().into_dart(),
+            self.model_id.into_into_dart().into_dart(),
+            self.headers.into_into_dart().into_dart(),
+            self.api_key.into_into_dart().into_dart(),
+            self.messages.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::chat_api::NativeChatRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::chat_api::NativeChatRequest>
+    for crate::chat_api::NativeChatRequest
+{
+    fn into_into_dart(self) -> crate::chat_api::NativeChatRequest {
         self
     }
 }
@@ -6826,6 +7061,15 @@ impl SseEncode
 }
 
 impl SseEncode
+    for StreamSink<crate::chat_api::NativeChatEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
     for StreamSink<
         crate::editing_api::NativeEditorEvent,
         flutter_rust_bridge::for_generated::SseCodec,
@@ -6898,6 +7142,16 @@ impl SseEncode for Vec<crate::editing_api::NativeAnnotationRange> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::editing_api::NativeAnnotationRange>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::chat_api::NativeChatMessage> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::chat_api::NativeChatMessage>::sse_encode(item, serializer);
         }
     }
 }
@@ -7236,6 +7490,47 @@ impl SseEncode for crate::editing_api::NativeApproveFontFallbackRequest {
         <String>::sse_encode(self.command_id, serializer);
         <u64>::sse_encode(self.base_revision, serializer);
         <String>::sse_encode(self.proposal_token, serializer);
+    }
+}
+
+impl SseEncode for crate::chat_api::NativeChatEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::chat_api::NativeChatEvent::TextDelta { text } => {
+                <i32>::sse_encode(0, serializer);
+                <String>::sse_encode(text, serializer);
+            }
+            crate::chat_api::NativeChatEvent::Error { message } => {
+                <i32>::sse_encode(1, serializer);
+                <String>::sse_encode(message, serializer);
+            }
+            crate::chat_api::NativeChatEvent::Done => {
+                <i32>::sse_encode(2, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
+impl SseEncode for crate::chat_api::NativeChatMessage {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.role, serializer);
+        <String>::sse_encode(self.content, serializer);
+    }
+}
+
+impl SseEncode for crate::chat_api::NativeChatRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.provider_endpoint, serializer);
+        <String>::sse_encode(self.model_id, serializer);
+        <std::collections::HashMap<String, String>>::sse_encode(self.headers, serializer);
+        <String>::sse_encode(self.api_key, serializer);
+        <Vec<crate::chat_api::NativeChatMessage>>::sse_encode(self.messages, serializer);
     }
 }
 
@@ -8121,6 +8416,16 @@ impl SseEncode for Option<crate::editing_api::NativeAffineTransform> {
         <bool>::sse_encode(self.is_some(), serializer);
         if let Some(value) = self {
             <crate::editing_api::NativeAffineTransform>::sse_encode(value, serializer);
+        }
+    }
+}
+
+impl SseEncode for Option<crate::chat_api::NativeChatEvent> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::chat_api::NativeChatEvent>::sse_encode(value, serializer);
         }
     }
 }

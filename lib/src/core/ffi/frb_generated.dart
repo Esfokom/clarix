@@ -5,4692 +5,9190 @@
 
 import 'agent_api.dart';
 import 'api.dart';
+import 'chat_api.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'editing_api.dart';
 import 'frb_generated.dart';
-import 'frb_generated.io.dart' if (dart.library.js_interop) 'frb_generated.web.dart';
+import 'frb_generated.io.dart'
+    if (dart.library.js_interop) 'frb_generated.web.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-
-                /// Main entrypoint of the Rust API
-                class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
-                  @internal
-                  static final instance = RustLib._();
-
-                  RustLib._();
-
-                  /// Initialize flutter_rust_bridge
-                  static Future<void> init({
-                    RustLibApi? api,
-                    BaseHandler? handler,
-                    ExternalLibrary? externalLibrary,
-                    bool forceSameCodegenVersion = true,
-                  }) async {
-                    await instance.initImpl(
-                      api: api,
-                      handler: handler,
-                      externalLibrary: externalLibrary,
-                      forceSameCodegenVersion: forceSameCodegenVersion,
-                    );
-                  }
-
-                  /// Initialize flutter_rust_bridge in mock mode.
-                  /// No libraries for FFI are loaded.
-                  static void initMock({
-                    required RustLibApi api,
-                  }) {
-                    instance.initMockImpl(
-                      api: api,
-                    );
-                  }
-
-                  /// Dispose flutter_rust_bridge
-                  ///
-                  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
-                  /// is automatically disposed when the app stops.
-                  static void dispose() => instance.disposeImpl();
-
-                  @override
-                  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor => RustLibApiImpl.new;
-
-                  @override
-                  WireConstructor<RustLibWire> get wireConstructor => RustLibWire.fromExternalLibrary;
-
-                  @override
-                  Future<void> executeRustInitializers() async {
-                    
-                    
-                  }
-
-                  @override
-                  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig => kDefaultExternalLibraryLoaderConfig;
-
-                  @override
-                  String get codegenVersion => '2.13.0';
-
-                  @override
-                  int get rustContentHash => 1334447033;
-
-                  static const kDefaultExternalLibraryLoaderConfig = ExternalLibraryLoaderConfig(
-                    stem: 'clarix_pdf_oxide',
-                    ioDirectory: 'rust/clarix_pdf_oxide/target/release/',
-                    webPrefix: 'pkg/',
-                    wasmBindgenName: 'wasm_bindgen',
-                  );
-                }
-                
-
-                abstract class RustLibApi extends BaseApi {
-                  Stream<NativeAgentEvent> crateEditingApiNativeEditorSessionAgentEvents({required NativeEditorSession that , required String runId });
-
-Future<NativeAnnotation> crateEditingApiNativeEditorSessionAnnotationDetails({required NativeEditorSession that , required String objectId });
-
-Future<NativeAgentRun> crateEditingApiNativeEditorSessionApproveAgentProposal({required NativeEditorSession that , required String runId , required String approvalId });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionApproveFontFallback({required NativeEditorSession that , required NativeApproveFontFallbackRequest request });
-
-Future<void> crateEditingApiNativeEditorSessionCancelAgentRun({required NativeEditorSession that , required String runId });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({required NativeEditorSession that , required NativeCheckpointRequest request });
-
-Future<NativeCleanPatchAsset> crateEditingApiNativeEditorSessionCleanPatch({required NativeEditorSession that , required NativeCleanPatchRequest request });
-
-Future<void> crateEditingApiNativeEditorSessionClose({required NativeEditorSession that });
-
-Future<NativeCompatibilityReport> crateEditingApiNativeEditorSessionCompatibilityReport({required NativeEditorSession that , required BigInt expectedRevision });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionCreateAnnotation({required NativeEditorSession that , required NativeAnnotationCommandRequest request });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionDeleteAnnotation({required NativeEditorSession that , required NativeDeleteAnnotationRequest request });
-
-Stream<NativeEditorEvent> crateEditingApiNativeEditorSessionEvents({required NativeEditorSession that });
-
-Future<NativeConversationImportReceipt> crateEditingApiNativeEditorSessionImportAgentConversation({required NativeEditorSession that , required NativeConversationImport value });
-
-Future<void> crateEditingApiNativeEditorSessionImportLivePage({required NativeEditorSession that , required NativeLivePageImport request });
-
-Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({required NativeEditorSession that });
-
-Future<NativeSceneObject> crateEditingApiNativeEditorSessionObjectDetails({required NativeEditorSession that , required NativeObjectDetailsRequest request });
-
-Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({required NativeOpenEditorRequest request });
-
-Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpenLivePdfium({required NativeOpenEditorRequest request });
-
-Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({required NativeEditorSession that , required NativePageSceneRequest request });
-
-Future<NativePreparedLiveCommand> crateEditingApiNativeEditorSessionPrepareLiveCommand({required NativeEditorSession that , required NativeSubmitCommandRequest request });
-
-Future<NativeFontFallbackProposal> crateEditingApiNativeEditorSessionProposeFontFallback({required NativeEditorSession that , required NativeFontFallbackProposalRequest request });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionPublishPreparedLiveCommand({required NativeEditorSession that , required String token });
-
-Future<NativeAgentAudit> crateEditingApiNativeEditorSessionReadAgentAudit({required NativeEditorSession that , required String runId });
-
-Future<NativeAgentRun> crateEditingApiNativeEditorSessionRebaseAgentProposal({required NativeEditorSession that , required String runId , required String approvalId , required BigInt currentRevision });
-
-Future<NativeAgentRun> crateEditingApiNativeEditorSessionRejectAgentProposal({required NativeEditorSession that , required String runId , required String approvalId });
-
-Future<void> crateEditingApiNativeEditorSessionReleaseCleanPatchMemory({required NativeEditorSession that });
-
-Future<void> crateEditingApiNativeEditorSessionReportMemoryPressure({required NativeEditorSession that , required NativeMemoryPressureLevel level });
-
-Future<NativeEditorSaveResult> crateEditingApiNativeEditorSessionSave({required NativeEditorSession that , required NativeEditorSaveRequest request });
-
-Future<NativeEditorSaveResult> crateEditingApiNativeEditorSessionSaveLivePdfium({required NativeEditorSession that , required NativeEditorSaveRequest request , required List<int> pdfBytes });
-
-Future<NativeSearchResult> crateEditingApiNativeEditorSessionSearch({required NativeEditorSession that , required NativeSearchRequest request });
-
-Future<NativeSelectionContext> crateEditingApiNativeEditorSessionSelectionContext({required NativeEditorSession that , required NativeSelectionSet selection , required int beforeUtf16 , required int afterUtf16 , required int maxRanges });
-
-Future<NativeAgentRun> crateEditingApiNativeEditorSessionStartAgentRun({required NativeEditorSession that , required NativeStartAgentRunRequest request });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionSubmit({required NativeEditorSession that , required NativeSubmitCommandRequest request });
-
-Future<NativeCommandResult> crateEditingApiNativeEditorSessionUpdateAnnotation({required NativeEditorSession that , required NativeAnnotationCommandRequest request });
-
-Future<NativeValidatedSelection> crateEditingApiNativeEditorSessionValidateSelection({required NativeEditorSession that , required NativeSelectionSet selection });
-
-Stream<String> crateApiNativePdfSessionIndex({required NativePdfSession that , required BigInt maxCharsPerChunk , required BigInt batchSize });
-
-Future<PdfDocumentMetadata> crateApiNativePdfSessionMetadata({required NativePdfSession that });
-
-Future<NativePdfSession> crateApiNativePdfSessionOpen({required String path });
-
-Future<String> crateApiNativePdfSessionPageText({required NativePdfSession that , required BigInt pageNumber });
-
-Future<List<PdfSearchMatch>> crateApiNativePdfSessionSearch({required NativePdfSession that , required String query });
-
-Future<NativePdfComposeResponse> crateApiComposePdfs({required NativePdfComposeRequest request });
-
-Future<NativeRagIndexResponse> crateApiLocalRagIndex({required NativeRagIndexRequest request });
-
-Future<NativeRagQueryResponse> crateApiLocalRagQuery({required NativeRagQueryRequest request });
-
-Future<String> crateApiLocalRagStatus({required String storageDirectory , required String documentFingerprint });
-
-Future<NativeRagIndexResponse> crateApiLocalRagValidate({required NativeRagIndexRequest request });
-
-Future<NativePdfAnnotations> crateApiReadPdfAnnotations({required String path });
-
-Future<void> crateApiSavePdfAnnotations({required NativePdfSaveRequest request });
-
-Future<void> crateAgentApiTestAgentProvider({required NativeProviderTestRequest request });
-
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_NativeEditorSession;
-
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_NativeEditorSession;
-
-CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_NativeEditorSessionPtr;
-
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_NativePdfSession;
-
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_NativePdfSession;
-
-CrossPlatformFinalizerArg get rust_arc_decrement_strong_count_NativePdfSessionPtr;
-
-
-                }
-                
-
-                class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
-                  RustLibApiImpl({
-                    required super.handler,
-                    required super.wire,
-                    required super.generalizedFrbRustBinding,
-                    required super.portManager,
-                  });
-
-                  @override Stream<NativeAgentEvent> crateEditingApiNativeEditorSessionAgentEvents({required NativeEditorSession that , required String runId })  { 
-            final sink = RustStreamSink<NativeAgentEvent>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(runId, serializer);
-sse_encode_StreamSink_native_agent_event_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 1, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionAgentEventsConstMeta,
-            argValues: [that, runId, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
-
-
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionAgentEventsConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_agent_events",
-            argNames: ["that", "runId", "sink"],
-        );
-        
-
-@override Future<NativeAnnotation> crateEditingApiNativeEditorSessionAnnotationDetails({required NativeEditorSession that , required String objectId })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(objectId, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 2, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+/// Main entrypoint of the Rust API
+class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
+  @internal
+  static final instance = RustLib._();
+
+  RustLib._();
+
+  /// Initialize flutter_rust_bridge
+  static Future<void> init({
+    RustLibApi? api,
+    BaseHandler? handler,
+    ExternalLibrary? externalLibrary,
+    bool forceSameCodegenVersion = true,
+  }) async {
+    await instance.initImpl(
+      api: api,
+      handler: handler,
+      externalLibrary: externalLibrary,
+      forceSameCodegenVersion: forceSameCodegenVersion,
+    );
+  }
+
+  /// Initialize flutter_rust_bridge in mock mode.
+  /// No libraries for FFI are loaded.
+  static void initMock({required RustLibApi api}) {
+    instance.initMockImpl(api: api);
+  }
+
+  /// Dispose flutter_rust_bridge
+  ///
+  /// The call to this function is optional, since flutter_rust_bridge (and everything else)
+  /// is automatically disposed when the app stops.
+  static void dispose() => instance.disposeImpl();
+
+  @override
+  ApiImplConstructor<RustLibApiImpl, RustLibWire> get apiImplConstructor =>
+      RustLibApiImpl.new;
+
+  @override
+  WireConstructor<RustLibWire> get wireConstructor =>
+      RustLibWire.fromExternalLibrary;
+
+  @override
+  Future<void> executeRustInitializers() async {}
+
+  @override
+  ExternalLibraryLoaderConfig get defaultExternalLibraryLoaderConfig =>
+      kDefaultExternalLibraryLoaderConfig;
+
+  @override
+  String get codegenVersion => '2.13.0';
+
+  @override
+  int get rustContentHash => -928618356;
+
+  static const kDefaultExternalLibraryLoaderConfig =
+      ExternalLibraryLoaderConfig(
+        stem: 'clarix_pdf_oxide',
+        ioDirectory: 'rust/clarix_pdf_oxide/target/release/',
+        webPrefix: 'pkg/',
+        wasmBindgenName: 'wasm_bindgen',
+      );
+}
+
+abstract class RustLibApi extends BaseApi {
+  Stream<NativeAgentEvent> crateEditingApiNativeEditorSessionAgentEvents({
+    required NativeEditorSession that,
+    required String runId,
+  });
+
+  Future<NativeAnnotation> crateEditingApiNativeEditorSessionAnnotationDetails({
+    required NativeEditorSession that,
+    required String objectId,
+  });
+
+  Future<NativeAgentRun>
+  crateEditingApiNativeEditorSessionApproveAgentProposal({
+    required NativeEditorSession that,
+    required String runId,
+    required String approvalId,
+  });
+
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionApproveFontFallback({
+    required NativeEditorSession that,
+    required NativeApproveFontFallbackRequest request,
+  });
+
+  Future<void> crateEditingApiNativeEditorSessionCancelAgentRun({
+    required NativeEditorSession that,
+    required String runId,
+  });
+
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({
+    required NativeEditorSession that,
+    required NativeCheckpointRequest request,
+  });
+
+  Future<NativeCleanPatchAsset> crateEditingApiNativeEditorSessionCleanPatch({
+    required NativeEditorSession that,
+    required NativeCleanPatchRequest request,
+  });
+
+  Future<void> crateEditingApiNativeEditorSessionClose({
+    required NativeEditorSession that,
+  });
+
+  Future<NativeCompatibilityReport>
+  crateEditingApiNativeEditorSessionCompatibilityReport({
+    required NativeEditorSession that,
+    required BigInt expectedRevision,
+  });
+
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionCreateAnnotation({
+    required NativeEditorSession that,
+    required NativeAnnotationCommandRequest request,
+  });
+
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionDeleteAnnotation({
+    required NativeEditorSession that,
+    required NativeDeleteAnnotationRequest request,
+  });
+
+  Stream<NativeEditorEvent> crateEditingApiNativeEditorSessionEvents({
+    required NativeEditorSession that,
+  });
+
+  Future<NativeConversationImportReceipt>
+  crateEditingApiNativeEditorSessionImportAgentConversation({
+    required NativeEditorSession that,
+    required NativeConversationImport value,
+  });
+
+  Future<void> crateEditingApiNativeEditorSessionImportLivePage({
+    required NativeEditorSession that,
+    required NativeLivePageImport request,
+  });
+
+  Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({
+    required NativeEditorSession that,
+  });
+
+  Future<NativeSceneObject> crateEditingApiNativeEditorSessionObjectDetails({
+    required NativeEditorSession that,
+    required NativeObjectDetailsRequest request,
+  });
+
+  Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({
+    required NativeOpenEditorRequest request,
+  });
+
+  Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpenLivePdfium({
+    required NativeOpenEditorRequest request,
+  });
+
+  Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({
+    required NativeEditorSession that,
+    required NativePageSceneRequest request,
+  });
+
+  Future<NativePreparedLiveCommand>
+  crateEditingApiNativeEditorSessionPrepareLiveCommand({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  });
+
+  Future<NativeFontFallbackProposal>
+  crateEditingApiNativeEditorSessionProposeFontFallback({
+    required NativeEditorSession that,
+    required NativeFontFallbackProposalRequest request,
+  });
+
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionPublishPreparedLiveCommand({
+    required NativeEditorSession that,
+    required String token,
+  });
+
+  Future<NativeAgentAudit> crateEditingApiNativeEditorSessionReadAgentAudit({
+    required NativeEditorSession that,
+    required String runId,
+  });
+
+  Future<NativeAgentRun> crateEditingApiNativeEditorSessionRebaseAgentProposal({
+    required NativeEditorSession that,
+    required String runId,
+    required String approvalId,
+    required BigInt currentRevision,
+  });
+
+  Future<NativeAgentRun> crateEditingApiNativeEditorSessionRejectAgentProposal({
+    required NativeEditorSession that,
+    required String runId,
+    required String approvalId,
+  });
+
+  Future<void> crateEditingApiNativeEditorSessionReleaseCleanPatchMemory({
+    required NativeEditorSession that,
+  });
+
+  Future<void> crateEditingApiNativeEditorSessionReportMemoryPressure({
+    required NativeEditorSession that,
+    required NativeMemoryPressureLevel level,
+  });
+
+  Future<NativeEditorSaveResult> crateEditingApiNativeEditorSessionSave({
+    required NativeEditorSession that,
+    required NativeEditorSaveRequest request,
+  });
+
+  Future<NativeEditorSaveResult>
+  crateEditingApiNativeEditorSessionSaveLivePdfium({
+    required NativeEditorSession that,
+    required NativeEditorSaveRequest request,
+    required List<int> pdfBytes,
+  });
+
+  Future<NativeSearchResult> crateEditingApiNativeEditorSessionSearch({
+    required NativeEditorSession that,
+    required NativeSearchRequest request,
+  });
+
+  Future<NativeSelectionContext>
+  crateEditingApiNativeEditorSessionSelectionContext({
+    required NativeEditorSession that,
+    required NativeSelectionSet selection,
+    required int beforeUtf16,
+    required int afterUtf16,
+    required int maxRanges,
+  });
+
+  Future<NativeAgentRun> crateEditingApiNativeEditorSessionStartAgentRun({
+    required NativeEditorSession that,
+    required NativeStartAgentRunRequest request,
+  });
+
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionSubmit({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  });
+
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionUpdateAnnotation({
+    required NativeEditorSession that,
+    required NativeAnnotationCommandRequest request,
+  });
+
+  Future<NativeValidatedSelection>
+  crateEditingApiNativeEditorSessionValidateSelection({
+    required NativeEditorSession that,
+    required NativeSelectionSet selection,
+  });
+
+  Stream<String> crateApiNativePdfSessionIndex({
+    required NativePdfSession that,
+    required BigInt maxCharsPerChunk,
+    required BigInt batchSize,
+  });
+
+  Future<PdfDocumentMetadata> crateApiNativePdfSessionMetadata({
+    required NativePdfSession that,
+  });
+
+  Future<NativePdfSession> crateApiNativePdfSessionOpen({required String path});
+
+  Future<String> crateApiNativePdfSessionPageText({
+    required NativePdfSession that,
+    required BigInt pageNumber,
+  });
+
+  Future<List<PdfSearchMatch>> crateApiNativePdfSessionSearch({
+    required NativePdfSession that,
+    required String query,
+  });
+
+  Future<NativePdfComposeResponse> crateApiComposePdfs({
+    required NativePdfComposeRequest request,
+  });
+
+  Future<NativeRagIndexResponse> crateApiLocalRagIndex({
+    required NativeRagIndexRequest request,
+  });
+
+  Future<NativeRagQueryResponse> crateApiLocalRagQuery({
+    required NativeRagQueryRequest request,
+  });
+
+  Future<String> crateApiLocalRagStatus({
+    required String storageDirectory,
+    required String documentFingerprint,
+  });
+
+  Future<NativeRagIndexResponse> crateApiLocalRagValidate({
+    required NativeRagIndexRequest request,
+  });
+
+  Future<NativeChatEvent?> crateChatApiParseChatSseData({required String data});
+
+  Future<NativePdfAnnotations> crateApiReadPdfAnnotations({
+    required String path,
+  });
+
+  Future<void> crateApiSavePdfAnnotations({
+    required NativePdfSaveRequest request,
+  });
+
+  Stream<NativeChatEvent> crateChatApiStreamChat({
+    required NativeChatRequest request,
+  });
+
+  Future<void> crateAgentApiTestAgentProvider({
+    required NativeProviderTestRequest request,
+  });
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_NativeEditorSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_NativeEditorSession;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_NativeEditorSessionPtr;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_NativePdfSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_NativePdfSession;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_NativePdfSessionPtr;
+}
+
+class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
+  RustLibApiImpl({
+    required super.handler,
+    required super.wire,
+    required super.generalizedFrbRustBinding,
+    required super.portManager,
+  });
+
+  @override
+  Stream<NativeAgentEvent> crateEditingApiNativeEditorSessionAgentEvents({
+    required NativeEditorSession that,
+    required String runId,
+  }) {
+    final sink = RustStreamSink<NativeAgentEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+              that,
+              serializer,
+            );
+            sse_encode_String(runId, serializer);
+            sse_encode_StreamSink_native_agent_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 1,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateEditingApiNativeEditorSessionAgentEventsConstMeta,
+          argValues: [that, runId, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionAgentEventsConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_agent_events",
+        argNames: ["that", "runId", "sink"],
+      );
+
+  @override
+  Future<NativeAnnotation> crateEditingApiNativeEditorSessionAnnotationDetails({
+    required NativeEditorSession that,
+    required String objectId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(objectId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 2,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_annotation,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionAnnotationDetailsConstMeta,
-            argValues: [that, objectId],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionAnnotationDetailsConstMeta,
+        argValues: [that, objectId],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionAnnotationDetailsConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_annotation_details",
+        argNames: ["that", "objectId"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionAnnotationDetailsConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_annotation_details",
-            argNames: ["that", "objectId"],
-        );
-        
-
-@override Future<NativeAgentRun> crateEditingApiNativeEditorSessionApproveAgentProposal({required NativeEditorSession that , required String runId , required String approvalId })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(runId, serializer);
-sse_encode_String(approvalId, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 3, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeAgentRun>
+  crateEditingApiNativeEditorSessionApproveAgentProposal({
+    required NativeEditorSession that,
+    required String runId,
+    required String approvalId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(runId, serializer);
+          sse_encode_String(approvalId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 3,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_agent_run,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionApproveAgentProposalConstMeta,
-            argValues: [that, runId, approvalId],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionApproveAgentProposalConstMeta,
+        argValues: [that, runId, approvalId],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionApproveAgentProposalConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_approve_agent_proposal",
+        argNames: ["that", "runId", "approvalId"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionApproveAgentProposalConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_approve_agent_proposal",
-            argNames: ["that", "runId", "approvalId"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionApproveFontFallback({required NativeEditorSession that , required NativeApproveFontFallbackRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_approve_font_fallback_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 4, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionApproveFontFallback({
+    required NativeEditorSession that,
+    required NativeApproveFontFallbackRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_approve_font_fallback_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 4,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionApproveFontFallbackConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionApproveFontFallbackConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionApproveFontFallbackConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_approve_font_fallback",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionApproveFontFallbackConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_approve_font_fallback",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<void> crateEditingApiNativeEditorSessionCancelAgentRun({required NativeEditorSession that , required String runId })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(runId, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 5, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateEditingApiNativeEditorSessionCancelAgentRun({
+    required NativeEditorSession that,
+    required String runId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(runId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 5,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionCancelAgentRunConstMeta,
-            argValues: [that, runId],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCancelAgentRunConstMeta,
+        argValues: [that, runId],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionCancelAgentRunConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_cancel_agent_run",
+        argNames: ["that", "runId"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionCancelAgentRunConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_cancel_agent_run",
-            argNames: ["that", "runId"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({required NativeEditorSession that , required NativeCheckpointRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_checkpoint_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 6, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionCheckpoint({
+    required NativeEditorSession that,
+    required NativeCheckpointRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_checkpoint_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 6,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionCheckpointConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCheckpointConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionCheckpointConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_checkpoint",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionCheckpointConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_checkpoint",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeCleanPatchAsset> crateEditingApiNativeEditorSessionCleanPatch({required NativeEditorSession that , required NativeCleanPatchRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_clean_patch_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 7, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCleanPatchAsset> crateEditingApiNativeEditorSessionCleanPatch({
+    required NativeEditorSession that,
+    required NativeCleanPatchRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_clean_patch_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 7,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_clean_patch_asset,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionCleanPatchConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCleanPatchConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionCleanPatchConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_clean_patch",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionCleanPatchConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_clean_patch",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<void> crateEditingApiNativeEditorSessionClose({required NativeEditorSession that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 8, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateEditingApiNativeEditorSessionClose({
+    required NativeEditorSession that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 8,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionCloseConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCloseConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionCloseConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_close",
+        argNames: ["that"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionCloseConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_close",
-            argNames: ["that"],
-        );
-        
-
-@override Future<NativeCompatibilityReport> crateEditingApiNativeEditorSessionCompatibilityReport({required NativeEditorSession that , required BigInt expectedRevision })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_u_64(expectedRevision, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 9, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCompatibilityReport>
+  crateEditingApiNativeEditorSessionCompatibilityReport({
+    required NativeEditorSession that,
+    required BigInt expectedRevision,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_u_64(expectedRevision, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 9,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_compatibility_report,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionCompatibilityReportConstMeta,
-            argValues: [that, expectedRevision],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionCompatibilityReportConstMeta,
+        argValues: [that, expectedRevision],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionCompatibilityReportConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_compatibility_report",
+        argNames: ["that", "expectedRevision"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionCompatibilityReportConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_compatibility_report",
-            argNames: ["that", "expectedRevision"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionCreateAnnotation({required NativeEditorSession that , required NativeAnnotationCommandRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_annotation_command_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 10, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionCreateAnnotation({
+    required NativeEditorSession that,
+    required NativeAnnotationCommandRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_annotation_command_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 10,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionCreateAnnotationConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionCreateAnnotationConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionCreateAnnotationConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_create_annotation",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionCreateAnnotationConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_create_annotation",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionDeleteAnnotation({required NativeEditorSession that , required NativeDeleteAnnotationRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_delete_annotation_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 11, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionDeleteAnnotation({
+    required NativeEditorSession that,
+    required NativeDeleteAnnotationRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_delete_annotation_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 11,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionDeleteAnnotationConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionDeleteAnnotationConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionDeleteAnnotationConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_delete_annotation",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionDeleteAnnotationConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_delete_annotation",
-            argNames: ["that", "request"],
-        );
-        
+  @override
+  Stream<NativeEditorEvent> crateEditingApiNativeEditorSessionEvents({
+    required NativeEditorSession that,
+  }) {
+    final sink = RustStreamSink<NativeEditorEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+              that,
+              serializer,
+            );
+            sse_encode_StreamSink_native_editor_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 12,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateEditingApiNativeEditorSessionEventsConstMeta,
+          argValues: [that, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
-@override Stream<NativeEditorEvent> crateEditingApiNativeEditorSessionEvents({required NativeEditorSession that })  { 
-            final sink = RustStreamSink<NativeEditorEvent>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_StreamSink_native_editor_event_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 12, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionEventsConstMeta,
-            argValues: [that, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionEventsConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_events",
+        argNames: ["that", "sink"],
+      );
 
-
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionEventsConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_events",
-            argNames: ["that", "sink"],
-        );
-        
-
-@override Future<NativeConversationImportReceipt> crateEditingApiNativeEditorSessionImportAgentConversation({required NativeEditorSession that , required NativeConversationImport value })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_conversation_import(value, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 13, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeConversationImportReceipt>
+  crateEditingApiNativeEditorSessionImportAgentConversation({
+    required NativeEditorSession that,
+    required NativeConversationImport value,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_conversation_import(value, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 13,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_conversation_import_receipt,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionImportAgentConversationConstMeta,
-            argValues: [that, value],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionImportAgentConversationConstMeta,
+        argValues: [that, value],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionImportAgentConversationConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_import_agent_conversation",
+        argNames: ["that", "value"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionImportAgentConversationConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_import_agent_conversation",
-            argNames: ["that", "value"],
-        );
-        
-
-@override Future<void> crateEditingApiNativeEditorSessionImportLivePage({required NativeEditorSession that , required NativeLivePageImport request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_live_page_import(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 14, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateEditingApiNativeEditorSessionImportLivePage({
+    required NativeEditorSession that,
+    required NativeLivePageImport request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_live_page_import(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 14,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionImportLivePageConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionImportLivePageConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionImportLivePageConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_import_live_page",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionImportLivePageConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_import_live_page",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({required NativeEditorSession that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 15, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeEditorMetadata> crateEditingApiNativeEditorSessionMetadata({
+    required NativeEditorSession that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 15,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_editor_metadata,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionMetadataConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionMetadataConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionMetadataConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_metadata",
+        argNames: ["that"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionMetadataConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_metadata",
-            argNames: ["that"],
-        );
-        
-
-@override Future<NativeSceneObject> crateEditingApiNativeEditorSessionObjectDetails({required NativeEditorSession that , required NativeObjectDetailsRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_object_details_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 16, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeSceneObject> crateEditingApiNativeEditorSessionObjectDetails({
+    required NativeEditorSession that,
+    required NativeObjectDetailsRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_object_details_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 16,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_scene_object,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionObjectDetailsConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionObjectDetailsConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionObjectDetailsConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_object_details",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionObjectDetailsConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_object_details",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({required NativeOpenEditorRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_open_editor_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 17, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession,
+  @override
+  Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpen({
+    required NativeOpenEditorRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_open_editor_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 17,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionOpenConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionOpenConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionOpenConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_open",
+        argNames: ["request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionOpenConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_open",
-            argNames: ["request"],
-        );
-        
-
-@override Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpenLivePdfium({required NativeOpenEditorRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_open_editor_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 18, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession,
+  @override
+  Future<NativeEditorSession> crateEditingApiNativeEditorSessionOpenLivePdfium({
+    required NativeOpenEditorRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_open_editor_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 18,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionOpenLivePdfiumConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionOpenLivePdfiumConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionOpenLivePdfiumConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_open_live_pdfium",
+        argNames: ["request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionOpenLivePdfiumConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_open_live_pdfium",
-            argNames: ["request"],
-        );
-        
-
-@override Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({required NativeEditorSession that , required NativePageSceneRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_page_scene_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 19, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativePageScene> crateEditingApiNativeEditorSessionPageScene({
+    required NativeEditorSession that,
+    required NativePageSceneRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_page_scene_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 19,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_page_scene,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionPageSceneConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionPageSceneConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionPageSceneConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_page_scene",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionPageSceneConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_page_scene",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativePreparedLiveCommand> crateEditingApiNativeEditorSessionPrepareLiveCommand({required NativeEditorSession that , required NativeSubmitCommandRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_submit_command_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 20, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativePreparedLiveCommand>
+  crateEditingApiNativeEditorSessionPrepareLiveCommand({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_submit_command_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 20,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_prepared_live_command,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionPrepareLiveCommandConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionPrepareLiveCommandConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionPrepareLiveCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_prepare_live_command",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionPrepareLiveCommandConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_prepare_live_command",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeFontFallbackProposal> crateEditingApiNativeEditorSessionProposeFontFallback({required NativeEditorSession that , required NativeFontFallbackProposalRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_font_fallback_proposal_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 21, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeFontFallbackProposal>
+  crateEditingApiNativeEditorSessionProposeFontFallback({
+    required NativeEditorSession that,
+    required NativeFontFallbackProposalRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_font_fallback_proposal_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 21,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_font_fallback_proposal,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionProposeFontFallbackConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionProposeFontFallbackConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionProposeFontFallbackConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_propose_font_fallback",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionProposeFontFallbackConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_propose_font_fallback",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionPublishPreparedLiveCommand({required NativeEditorSession that , required String token })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(token, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 22, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionPublishPreparedLiveCommand({
+    required NativeEditorSession that,
+    required String token,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(token, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 22,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionPublishPreparedLiveCommandConstMeta,
-            argValues: [that, token],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionPublishPreparedLiveCommandConstMeta,
+        argValues: [that, token],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionPublishPreparedLiveCommandConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_publish_prepared_live_command",
+        argNames: ["that", "token"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionPublishPreparedLiveCommandConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_publish_prepared_live_command",
-            argNames: ["that", "token"],
-        );
-        
-
-@override Future<NativeAgentAudit> crateEditingApiNativeEditorSessionReadAgentAudit({required NativeEditorSession that , required String runId })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(runId, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 23, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeAgentAudit> crateEditingApiNativeEditorSessionReadAgentAudit({
+    required NativeEditorSession that,
+    required String runId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(runId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 23,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_agent_audit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionReadAgentAuditConstMeta,
-            argValues: [that, runId],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionReadAgentAuditConstMeta,
+        argValues: [that, runId],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionReadAgentAuditConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_read_agent_audit",
+        argNames: ["that", "runId"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionReadAgentAuditConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_read_agent_audit",
-            argNames: ["that", "runId"],
-        );
-        
-
-@override Future<NativeAgentRun> crateEditingApiNativeEditorSessionRebaseAgentProposal({required NativeEditorSession that , required String runId , required String approvalId , required BigInt currentRevision })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(runId, serializer);
-sse_encode_String(approvalId, serializer);
-sse_encode_u_64(currentRevision, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 24, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeAgentRun> crateEditingApiNativeEditorSessionRebaseAgentProposal({
+    required NativeEditorSession that,
+    required String runId,
+    required String approvalId,
+    required BigInt currentRevision,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(runId, serializer);
+          sse_encode_String(approvalId, serializer);
+          sse_encode_u_64(currentRevision, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 24,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_agent_run,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionRebaseAgentProposalConstMeta,
-            argValues: [that, runId, approvalId, currentRevision],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionRebaseAgentProposalConstMeta,
+        argValues: [that, runId, approvalId, currentRevision],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionRebaseAgentProposalConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_rebase_agent_proposal",
+        argNames: ["that", "runId", "approvalId", "currentRevision"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionRebaseAgentProposalConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_rebase_agent_proposal",
-            argNames: ["that", "runId", "approvalId", "currentRevision"],
-        );
-        
-
-@override Future<NativeAgentRun> crateEditingApiNativeEditorSessionRejectAgentProposal({required NativeEditorSession that , required String runId , required String approvalId })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_String(runId, serializer);
-sse_encode_String(approvalId, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 25, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeAgentRun> crateEditingApiNativeEditorSessionRejectAgentProposal({
+    required NativeEditorSession that,
+    required String runId,
+    required String approvalId,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(runId, serializer);
+          sse_encode_String(approvalId, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 25,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_agent_run,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionRejectAgentProposalConstMeta,
-            argValues: [that, runId, approvalId],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionRejectAgentProposalConstMeta,
+        argValues: [that, runId, approvalId],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionRejectAgentProposalConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_reject_agent_proposal",
+        argNames: ["that", "runId", "approvalId"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionRejectAgentProposalConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_reject_agent_proposal",
-            argNames: ["that", "runId", "approvalId"],
-        );
-        
-
-@override Future<void> crateEditingApiNativeEditorSessionReleaseCleanPatchMemory({required NativeEditorSession that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 26, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateEditingApiNativeEditorSessionReleaseCleanPatchMemory({
+    required NativeEditorSession that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 26,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionReleaseCleanPatchMemoryConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionReleaseCleanPatchMemoryConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionReleaseCleanPatchMemoryConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_release_clean_patch_memory",
+        argNames: ["that"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionReleaseCleanPatchMemoryConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_release_clean_patch_memory",
-            argNames: ["that"],
-        );
-        
-
-@override Future<void> crateEditingApiNativeEditorSessionReportMemoryPressure({required NativeEditorSession that , required NativeMemoryPressureLevel level })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_native_memory_pressure_level(level, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 27, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateEditingApiNativeEditorSessionReportMemoryPressure({
+    required NativeEditorSession that,
+    required NativeMemoryPressureLevel level,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_native_memory_pressure_level(level, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 27,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionReportMemoryPressureConstMeta,
-            argValues: [that, level],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionReportMemoryPressureConstMeta,
+        argValues: [that, level],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionReportMemoryPressureConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_report_memory_pressure",
+        argNames: ["that", "level"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionReportMemoryPressureConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_report_memory_pressure",
-            argNames: ["that", "level"],
-        );
-        
-
-@override Future<NativeEditorSaveResult> crateEditingApiNativeEditorSessionSave({required NativeEditorSession that , required NativeEditorSaveRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_editor_save_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 28, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeEditorSaveResult> crateEditingApiNativeEditorSessionSave({
+    required NativeEditorSession that,
+    required NativeEditorSaveRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_editor_save_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 28,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_editor_save_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionSaveConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionSaveConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionSaveConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_save",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionSaveConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_save",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeEditorSaveResult> crateEditingApiNativeEditorSessionSaveLivePdfium({required NativeEditorSession that , required NativeEditorSaveRequest request , required List<int> pdfBytes })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_editor_save_request(request, serializer);
-sse_encode_list_prim_u_8_loose(pdfBytes, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 29, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeEditorSaveResult>
+  crateEditingApiNativeEditorSessionSaveLivePdfium({
+    required NativeEditorSession that,
+    required NativeEditorSaveRequest request,
+    required List<int> pdfBytes,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_editor_save_request(
+            request,
+            serializer,
+          );
+          sse_encode_list_prim_u_8_loose(pdfBytes, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 29,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_editor_save_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionSaveLivePdfiumConstMeta,
-            argValues: [that, request, pdfBytes],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionSaveLivePdfiumConstMeta,
+        argValues: [that, request, pdfBytes],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionSaveLivePdfiumConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_save_live_pdfium",
+        argNames: ["that", "request", "pdfBytes"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionSaveLivePdfiumConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_save_live_pdfium",
-            argNames: ["that", "request", "pdfBytes"],
-        );
-        
-
-@override Future<NativeSearchResult> crateEditingApiNativeEditorSessionSearch({required NativeEditorSession that , required NativeSearchRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_search_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 30, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeSearchResult> crateEditingApiNativeEditorSessionSearch({
+    required NativeEditorSession that,
+    required NativeSearchRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_search_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 30,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_search_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionSearchConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionSearchConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionSearchConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_search",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionSearchConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_search",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeSelectionContext> crateEditingApiNativeEditorSessionSelectionContext({required NativeEditorSession that , required NativeSelectionSet selection , required int beforeUtf16 , required int afterUtf16 , required int maxRanges })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_selection_set(selection, serializer);
-sse_encode_u_32(beforeUtf16, serializer);
-sse_encode_u_32(afterUtf16, serializer);
-sse_encode_u_32(maxRanges, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 31, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeSelectionContext>
+  crateEditingApiNativeEditorSessionSelectionContext({
+    required NativeEditorSession that,
+    required NativeSelectionSet selection,
+    required int beforeUtf16,
+    required int afterUtf16,
+    required int maxRanges,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_selection_set(selection, serializer);
+          sse_encode_u_32(beforeUtf16, serializer);
+          sse_encode_u_32(afterUtf16, serializer);
+          sse_encode_u_32(maxRanges, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 31,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_selection_context,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionSelectionContextConstMeta,
-            argValues: [that, selection, beforeUtf16, afterUtf16, maxRanges],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionSelectionContextConstMeta,
+        argValues: [that, selection, beforeUtf16, afterUtf16, maxRanges],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionSelectionContextConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_selection_context",
+        argNames: [
+          "that",
+          "selection",
+          "beforeUtf16",
+          "afterUtf16",
+          "maxRanges",
+        ],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionSelectionContextConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_selection_context",
-            argNames: ["that", "selection", "beforeUtf16", "afterUtf16", "maxRanges"],
-        );
-        
-
-@override Future<NativeAgentRun> crateEditingApiNativeEditorSessionStartAgentRun({required NativeEditorSession that , required NativeStartAgentRunRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_start_agent_run_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 32, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeAgentRun> crateEditingApiNativeEditorSessionStartAgentRun({
+    required NativeEditorSession that,
+    required NativeStartAgentRunRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_start_agent_run_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 32,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_agent_run,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionStartAgentRunConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionStartAgentRunConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionStartAgentRunConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_start_agent_run",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionStartAgentRunConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_start_agent_run",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionSubmit({required NativeEditorSession that , required NativeSubmitCommandRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_submit_command_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 33, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult> crateEditingApiNativeEditorSessionSubmit({
+    required NativeEditorSession that,
+    required NativeSubmitCommandRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_submit_command_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 33,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionSubmitConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionSubmitConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateEditingApiNativeEditorSessionSubmitConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_submit",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionSubmitConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_submit",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeCommandResult> crateEditingApiNativeEditorSessionUpdateAnnotation({required NativeEditorSession that , required NativeAnnotationCommandRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_annotation_command_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 34, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeCommandResult>
+  crateEditingApiNativeEditorSessionUpdateAnnotation({
+    required NativeEditorSession that,
+    required NativeAnnotationCommandRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_annotation_command_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 34,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_command_result,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionUpdateAnnotationConstMeta,
-            argValues: [that, request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateEditingApiNativeEditorSessionUpdateAnnotationConstMeta,
+        argValues: [that, request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionUpdateAnnotationConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_update_annotation",
+        argNames: ["that", "request"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionUpdateAnnotationConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_update_annotation",
-            argNames: ["that", "request"],
-        );
-        
-
-@override Future<NativeValidatedSelection> crateEditingApiNativeEditorSessionValidateSelection({required NativeEditorSession that , required NativeSelectionSet selection })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(that, serializer);
-sse_encode_box_autoadd_native_selection_set(selection, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 35, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeValidatedSelection>
+  crateEditingApiNativeEditorSessionValidateSelection({
+    required NativeEditorSession that,
+    required NativeSelectionSet selection,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+            that,
+            serializer,
+          );
+          sse_encode_box_autoadd_native_selection_set(selection, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 35,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_validated_selection,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateEditingApiNativeEditorSessionValidateSelectionConstMeta,
-            argValues: [that, selection],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta:
+            kCrateEditingApiNativeEditorSessionValidateSelectionConstMeta,
+        argValues: [that, selection],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta
+  get kCrateEditingApiNativeEditorSessionValidateSelectionConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativeEditorSession_validate_selection",
+        argNames: ["that", "selection"],
+      );
 
-        TaskConstMeta get kCrateEditingApiNativeEditorSessionValidateSelectionConstMeta => const TaskConstMeta(
-            debugName: "NativeEditorSession_validate_selection",
-            argNames: ["that", "selection"],
-        );
-        
+  @override
+  Stream<String> crateApiNativePdfSessionIndex({
+    required NativePdfSession that,
+    required BigInt maxCharsPerChunk,
+    required BigInt batchSize,
+  }) {
+    final sink = RustStreamSink<String>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+              that,
+              serializer,
+            );
+            sse_encode_usize(maxCharsPerChunk, serializer);
+            sse_encode_usize(batchSize, serializer);
+            sse_encode_StreamSink_String_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 36,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateApiNativePdfSessionIndexConstMeta,
+          argValues: [that, maxCharsPerChunk, batchSize, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
-@override Stream<String> crateApiNativePdfSessionIndex({required NativePdfSession that , required BigInt maxCharsPerChunk , required BigInt batchSize })  { 
-            final sink = RustStreamSink<String>();
-            unawaited(handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(that, serializer);
-sse_encode_usize(maxCharsPerChunk, serializer);
-sse_encode_usize(batchSize, serializer);
-sse_encode_StreamSink_String_Sse(sink, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 36, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_unit,
-          decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiNativePdfSessionIndexConstMeta,
-            argValues: [that, maxCharsPerChunk, batchSize, sink],
-            apiImpl: this,
-        )));
-            return sink.stream;
-             }
+  TaskConstMeta get kCrateApiNativePdfSessionIndexConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativePdfSession_index",
+        argNames: ["that", "maxCharsPerChunk", "batchSize", "sink"],
+      );
 
-
-        TaskConstMeta get kCrateApiNativePdfSessionIndexConstMeta => const TaskConstMeta(
-            debugName: "NativePdfSession_index",
-            argNames: ["that", "maxCharsPerChunk", "batchSize", "sink"],
-        );
-        
-
-@override Future<PdfDocumentMetadata> crateApiNativePdfSessionMetadata({required NativePdfSession that })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(that, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 37, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<PdfDocumentMetadata> crateApiNativePdfSessionMetadata({
+    required NativePdfSession that,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+            that,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 37,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_pdf_document_metadata,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiNativePdfSessionMetadataConstMeta,
-            argValues: [that],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiNativePdfSessionMetadataConstMeta,
+        argValues: [that],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiNativePdfSessionMetadataConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativePdfSession_metadata",
+        argNames: ["that"],
+      );
 
-        TaskConstMeta get kCrateApiNativePdfSessionMetadataConstMeta => const TaskConstMeta(
-            debugName: "NativePdfSession_metadata",
-            argNames: ["that"],
-        );
-        
-
-@override Future<NativePdfSession> crateApiNativePdfSessionOpen({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 38, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
-          decodeSuccessData: sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession,
+  @override
+  Future<NativePdfSession> crateApiNativePdfSessionOpen({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 38,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData:
+              sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiNativePdfSessionOpenConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiNativePdfSessionOpenConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiNativePdfSessionOpenConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativePdfSession_open",
+        argNames: ["path"],
+      );
 
-        TaskConstMeta get kCrateApiNativePdfSessionOpenConstMeta => const TaskConstMeta(
-            debugName: "NativePdfSession_open",
-            argNames: ["path"],
-        );
-        
-
-@override Future<String> crateApiNativePdfSessionPageText({required NativePdfSession that , required BigInt pageNumber })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(that, serializer);
-sse_encode_usize(pageNumber, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 39, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiNativePdfSessionPageText({
+    required NativePdfSession that,
+    required BigInt pageNumber,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+            that,
+            serializer,
+          );
+          sse_encode_usize(pageNumber, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 39,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiNativePdfSessionPageTextConstMeta,
-            argValues: [that, pageNumber],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiNativePdfSessionPageTextConstMeta,
+        argValues: [that, pageNumber],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiNativePdfSessionPageTextConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativePdfSession_page_text",
+        argNames: ["that", "pageNumber"],
+      );
 
-        TaskConstMeta get kCrateApiNativePdfSessionPageTextConstMeta => const TaskConstMeta(
-            debugName: "NativePdfSession_page_text",
-            argNames: ["that", "pageNumber"],
-        );
-        
-
-@override Future<List<PdfSearchMatch>> crateApiNativePdfSessionSearch({required NativePdfSession that , required String query })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(that, serializer);
-sse_encode_String(query, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 40, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<List<PdfSearchMatch>> crateApiNativePdfSessionSearch({
+    required NativePdfSession that,
+    required String query,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+            that,
+            serializer,
+          );
+          sse_encode_String(query, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 40,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_list_pdf_search_match,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiNativePdfSessionSearchConstMeta,
-            argValues: [that, query],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiNativePdfSessionSearchConstMeta,
+        argValues: [that, query],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiNativePdfSessionSearchConstMeta =>
+      const TaskConstMeta(
+        debugName: "NativePdfSession_search",
+        argNames: ["that", "query"],
+      );
 
-        TaskConstMeta get kCrateApiNativePdfSessionSearchConstMeta => const TaskConstMeta(
-            debugName: "NativePdfSession_search",
-            argNames: ["that", "query"],
-        );
-        
-
-@override Future<NativePdfComposeResponse> crateApiComposePdfs({required NativePdfComposeRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_pdf_compose_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 41, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativePdfComposeResponse> crateApiComposePdfs({
+    required NativePdfComposeRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_pdf_compose_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 41,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_pdf_compose_response,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiComposePdfsConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiComposePdfsConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiComposePdfsConstMeta =>
+      const TaskConstMeta(debugName: "compose_pdfs", argNames: ["request"]);
 
-        TaskConstMeta get kCrateApiComposePdfsConstMeta => const TaskConstMeta(
-            debugName: "compose_pdfs",
-            argNames: ["request"],
-        );
-        
-
-@override Future<NativeRagIndexResponse> crateApiLocalRagIndex({required NativeRagIndexRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_rag_index_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 42, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeRagIndexResponse> crateApiLocalRagIndex({
+    required NativeRagIndexRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_rag_index_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 42,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_rag_index_response,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiLocalRagIndexConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiLocalRagIndexConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiLocalRagIndexConstMeta =>
+      const TaskConstMeta(debugName: "local_rag_index", argNames: ["request"]);
 
-        TaskConstMeta get kCrateApiLocalRagIndexConstMeta => const TaskConstMeta(
-            debugName: "local_rag_index",
-            argNames: ["request"],
-        );
-        
-
-@override Future<NativeRagQueryResponse> crateApiLocalRagQuery({required NativeRagQueryRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_rag_query_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 43, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeRagQueryResponse> crateApiLocalRagQuery({
+    required NativeRagQueryRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_rag_query_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 43,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_rag_query_response,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiLocalRagQueryConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiLocalRagQueryConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiLocalRagQueryConstMeta =>
+      const TaskConstMeta(debugName: "local_rag_query", argNames: ["request"]);
 
-        TaskConstMeta get kCrateApiLocalRagQueryConstMeta => const TaskConstMeta(
-            debugName: "local_rag_query",
-            argNames: ["request"],
-        );
-        
-
-@override Future<String> crateApiLocalRagStatus({required String storageDirectory , required String documentFingerprint })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(storageDirectory, serializer);
-sse_encode_String(documentFingerprint, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 44, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<String> crateApiLocalRagStatus({
+    required String storageDirectory,
+    required String documentFingerprint,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(storageDirectory, serializer);
+          sse_encode_String(documentFingerprint, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 44,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiLocalRagStatusConstMeta,
-            argValues: [storageDirectory, documentFingerprint],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiLocalRagStatusConstMeta,
+        argValues: [storageDirectory, documentFingerprint],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiLocalRagStatusConstMeta => const TaskConstMeta(
+    debugName: "local_rag_status",
+    argNames: ["storageDirectory", "documentFingerprint"],
+  );
 
-        TaskConstMeta get kCrateApiLocalRagStatusConstMeta => const TaskConstMeta(
-            debugName: "local_rag_status",
-            argNames: ["storageDirectory", "documentFingerprint"],
-        );
-        
-
-@override Future<NativeRagIndexResponse> crateApiLocalRagValidate({required NativeRagIndexRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_rag_index_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 45, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<NativeRagIndexResponse> crateApiLocalRagValidate({
+    required NativeRagIndexRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_rag_index_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 45,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_rag_index_response,
           decodeErrorData: null,
-        )
-        ,
-            constMeta: kCrateApiLocalRagValidateConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiLocalRagValidateConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiLocalRagValidateConstMeta => const TaskConstMeta(
+    debugName: "local_rag_validate",
+    argNames: ["request"],
+  );
 
-        TaskConstMeta get kCrateApiLocalRagValidateConstMeta => const TaskConstMeta(
-            debugName: "local_rag_validate",
-            argNames: ["request"],
-        );
-        
+  @override
+  Future<NativeChatEvent?> crateChatApiParseChatSseData({
+    required String data,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(data, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 46,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_native_chat_event,
+          decodeErrorData: null,
+        ),
+        constMeta: kCrateChatApiParseChatSseDataConstMeta,
+        argValues: [data],
+        apiImpl: this,
+      ),
+    );
+  }
 
-@override Future<NativePdfAnnotations> crateApiReadPdfAnnotations({required String path })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_String(path, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 46, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateChatApiParseChatSseDataConstMeta =>
+      const TaskConstMeta(debugName: "parse_chat_sse_data", argNames: ["data"]);
+
+  @override
+  Future<NativePdfAnnotations> crateApiReadPdfAnnotations({
+    required String path,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(path, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 47,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_native_pdf_annotations,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiReadPdfAnnotationsConstMeta,
-            argValues: [path],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiReadPdfAnnotationsConstMeta,
+        argValues: [path],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiReadPdfAnnotationsConstMeta => const TaskConstMeta(
+    debugName: "read_pdf_annotations",
+    argNames: ["path"],
+  );
 
-        TaskConstMeta get kCrateApiReadPdfAnnotationsConstMeta => const TaskConstMeta(
-            debugName: "read_pdf_annotations",
-            argNames: ["path"],
-        );
-        
-
-@override Future<void> crateApiSavePdfAnnotations({required NativePdfSaveRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_pdf_save_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 47, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  @override
+  Future<void> crateApiSavePdfAnnotations({
+    required NativePdfSaveRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_pdf_save_request(request, serializer);
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 48,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateApiSavePdfAnnotationsConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
+        ),
+        constMeta: kCrateApiSavePdfAnnotationsConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
 
+  TaskConstMeta get kCrateApiSavePdfAnnotationsConstMeta => const TaskConstMeta(
+    debugName: "save_pdf_annotations",
+    argNames: ["request"],
+  );
 
-        TaskConstMeta get kCrateApiSavePdfAnnotationsConstMeta => const TaskConstMeta(
-            debugName: "save_pdf_annotations",
-            argNames: ["request"],
-        );
-        
+  @override
+  Stream<NativeChatEvent> crateChatApiStreamChat({
+    required NativeChatRequest request,
+  }) {
+    final sink = RustStreamSink<NativeChatEvent>();
+    unawaited(
+      handler.executeNormal(
+        NormalTask(
+          callFfi: (port_) {
+            final serializer = SseSerializer(generalizedFrbRustBinding);
+            sse_encode_box_autoadd_native_chat_request(request, serializer);
+            sse_encode_StreamSink_native_chat_event_Sse(sink, serializer);
+            pdeCallFfi(
+              generalizedFrbRustBinding,
+              serializer,
+              funcId: 49,
+              port: port_,
+            );
+          },
+          codec: SseCodec(
+            decodeSuccessData: sse_decode_unit,
+            decodeErrorData: sse_decode_String,
+          ),
+          constMeta: kCrateChatApiStreamChatConstMeta,
+          argValues: [request, sink],
+          apiImpl: this,
+        ),
+      ),
+    );
+    return sink.stream;
+  }
 
-@override Future<void> crateAgentApiTestAgentProvider({required NativeProviderTestRequest request })  { return handler.executeNormal(NormalTask(
-            callFfi: (port_) {
-              
-            final serializer = SseSerializer(generalizedFrbRustBinding);sse_encode_box_autoadd_native_provider_test_request(request, serializer);
-            pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 48, port: port_);
-            
-            },
-            codec: 
-        SseCodec(
+  TaskConstMeta get kCrateChatApiStreamChatConstMeta => const TaskConstMeta(
+    debugName: "stream_chat",
+    argNames: ["request", "sink"],
+  );
+
+  @override
+  Future<void> crateAgentApiTestAgentProvider({
+    required NativeProviderTestRequest request,
+  }) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_native_provider_test_request(
+            request,
+            serializer,
+          );
+          pdeCallFfi(
+            generalizedFrbRustBinding,
+            serializer,
+            funcId: 50,
+            port: port_,
+          );
+        },
+        codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: sse_decode_String,
-        )
-        ,
-            constMeta: kCrateAgentApiTestAgentProviderConstMeta,
-            argValues: [request],
-            apiImpl: this,
-        )); }
-
-
-        TaskConstMeta get kCrateAgentApiTestAgentProviderConstMeta => const TaskConstMeta(
-            debugName: "test_agent_provider",
-            argNames: ["request"],
-        );
-        
-
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_NativeEditorSession => wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession;
-
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_NativeEditorSession => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession;
-
-RustArcIncrementStrongCountFnType get rust_arc_increment_strong_count_NativePdfSession => wire.rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
-
-RustArcDecrementStrongCountFnType get rust_arc_decrement_strong_count_NativePdfSession => wire.rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
-
-
-
-                  @protected AnyhowException dco_decode_AnyhowException(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return AnyhowException(raw as String); }
-
-@protected NativeEditorSession dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected NativePdfSession dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected NativePdfSession dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected NativeEditorSession dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected NativePdfSession dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected Map<String, String> dco_decode_Map_String_String_None(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return Map.fromEntries(dco_decode_list_record_string_string(raw).map((e) => MapEntry(e.$1, e.$2))); }
-
-@protected NativeEditorSession dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected NativePdfSession dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>); }
-
-@protected RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<NativeAgentEvent> dco_decode_StreamSink_native_agent_event_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected RustStreamSink<NativeEditorEvent> dco_decode_StreamSink_native_editor_event_Sse(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-throw UnimplementedError(); }
-
-@protected String dco_decode_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as String; }
-
-@protected bool dco_decode_bool(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as bool; }
-
-@protected double dco_decode_box_autoadd_f_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected NativeAffineTransform dco_decode_box_autoadd_native_affine_transform(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_affine_transform(raw); }
-
-@protected NativeAnnotationCommandRequest dco_decode_box_autoadd_native_annotation_command_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_annotation_command_request(raw); }
-
-@protected NativeApproveFontFallbackRequest dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_approve_font_fallback_request(raw); }
-
-@protected NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_checkpoint_request(raw); }
-
-@protected NativeCleanPatchRequest dco_decode_box_autoadd_native_clean_patch_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_clean_patch_request(raw); }
-
-@protected NativeCommandResult dco_decode_box_autoadd_native_command_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_command_result(raw); }
-
-@protected NativeConversationImport dco_decode_box_autoadd_native_conversation_import(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_conversation_import(raw); }
-
-@protected NativeDeleteAnnotationRequest dco_decode_box_autoadd_native_delete_annotation_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_delete_annotation_request(raw); }
-
-@protected NativeEditorSaveRequest dco_decode_box_autoadd_native_editor_save_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_editor_save_request(raw); }
-
-@protected NativeFontFallbackProposalRequest dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_font_fallback_proposal_request(raw); }
-
-@protected NativeLivePageImport dco_decode_box_autoadd_native_live_page_import(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_live_page_import(raw); }
-
-@protected NativeObjectDetailsRequest dco_decode_box_autoadd_native_object_details_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_object_details_request(raw); }
-
-@protected NativeOpenEditorRequest dco_decode_box_autoadd_native_open_editor_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_open_editor_request(raw); }
-
-@protected NativePageSceneRequest dco_decode_box_autoadd_native_page_scene_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_page_scene_request(raw); }
-
-@protected NativePdfBox dco_decode_box_autoadd_native_pdf_box(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_pdf_box(raw); }
-
-@protected NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_pdf_compose_request(raw); }
-
-@protected NativePdfSaveRequest dco_decode_box_autoadd_native_pdf_save_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_pdf_save_request(raw); }
-
-@protected NativePhysicalLocator dco_decode_box_autoadd_native_physical_locator(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_physical_locator(raw); }
-
-@protected NativeProviderTestRequest dco_decode_box_autoadd_native_provider_test_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_provider_test_request(raw); }
-
-@protected NativeRagIndexRequest dco_decode_box_autoadd_native_rag_index_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_rag_index_request(raw); }
-
-@protected NativeRagQueryRequest dco_decode_box_autoadd_native_rag_query_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_rag_query_request(raw); }
-
-@protected NativeSearchRequest dco_decode_box_autoadd_native_search_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_search_request(raw); }
-
-@protected NativeSelectionRebase dco_decode_box_autoadd_native_selection_rebase(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_selection_rebase(raw); }
-
-@protected NativeSelectionSet dco_decode_box_autoadd_native_selection_set(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_selection_set(raw); }
-
-@protected NativeStartAgentRunRequest dco_decode_box_autoadd_native_start_agent_run_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_start_agent_run_request(raw); }
-
-@protected NativeSubmitCommandRequest dco_decode_box_autoadd_native_submit_command_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_submit_command_request(raw); }
-
-@protected NativeTextLayoutRecipe dco_decode_box_autoadd_native_text_layout_recipe(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_text_layout_recipe(raw); }
-
-@protected NativeTextStyle dco_decode_box_autoadd_native_text_style(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_native_text_style(raw); }
-
-@protected int dco_decode_box_autoadd_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected BigInt dco_decode_box_autoadd_u_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dco_decode_u_64(raw); }
-
-@protected double dco_decode_f_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected double dco_decode_f_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as double; }
-
-@protected int dco_decode_i_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected List<String> dco_decode_list_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_String).toList(); }
-
-@protected List<NativeAgentEvent> dco_decode_list_native_agent_event(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_agent_event).toList(); }
-
-@protected List<NativeAnnotationRange> dco_decode_list_native_annotation_range(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_annotation_range).toList(); }
-
-@protected List<NativeCompatibilityIssue> dco_decode_list_native_compatibility_issue(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_compatibility_issue).toList(); }
-
-@protected List<NativeConversationMessage> dco_decode_list_native_conversation_message(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_conversation_message).toList(); }
-
-@protected List<NativeLiveTextObject> dco_decode_list_native_live_text_object(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_live_text_object).toList(); }
-
-@protected List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_object_patch).toList(); }
-
-@protected List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_pdf_bookmark).toList(); }
-
-@protected List<NativePdfHighlight> dco_decode_list_native_pdf_highlight(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_pdf_highlight).toList(); }
-
-@protected List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_pdf_source).toList(); }
-
-@protected List<NativePhysicalEditOperation> dco_decode_list_native_physical_edit_operation(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_physical_edit_operation).toList(); }
-
-@protected List<NativeRagChunk> dco_decode_list_native_rag_chunk(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_rag_chunk).toList(); }
-
-@protected List<NativeRagQueryResult> dco_decode_list_native_rag_query_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_rag_query_result).toList(); }
-
-@protected List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_scene_object).toList(); }
-
-@protected List<NativeSearchMatch> dco_decode_list_native_search_match(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_search_match).toList(); }
-
-@protected List<NativeSelectionRange> dco_decode_list_native_selection_range(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_selection_range).toList(); }
-
-@protected List<NativeTextCharacterBox> dco_decode_list_native_text_character_box(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_text_character_box).toList(); }
-
-@protected List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_native_text_run).toList(); }
-
-@protected List<PdfSearchMatch> dco_decode_list_pdf_search_match(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_pdf_search_match).toList(); }
-
-@protected Float32List dco_decode_list_prim_f_32_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Float32List; }
-
-@protected Uint32List dco_decode_list_prim_u_32_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Uint32List; }
-
-@protected List<int> dco_decode_list_prim_u_8_loose(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as List<int>; }
-
-@protected Uint8List dco_decode_list_prim_u_8_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Uint8List; }
-
-@protected Uint64List dco_decode_list_prim_usize_strict(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as Uint64List; }
-
-@protected List<(String,String)> dco_decode_list_record_string_string(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return (raw as List<dynamic>).map(dco_decode_record_string_string).toList(); }
-
-@protected NativeAffineTransform dco_decode_native_affine_transform(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeAffineTransform(a: dco_decode_f_64(arr[0]),
-b: dco_decode_f_64(arr[1]),
-c: dco_decode_f_64(arr[2]),
-d: dco_decode_f_64(arr[3]),
-e: dco_decode_f_64(arr[4]),
-f: dco_decode_f_64(arr[5]),); }
-
-@protected NativeAgentAudit dco_decode_native_agent_audit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeAgentAudit(schemaVersion: dco_decode_u_32(arr[0]),
-runId: dco_decode_String(arr[1]),
-status: dco_decode_String(arr[2]),
-events: dco_decode_list_native_agent_event(arr[3]),); }
-
-@protected NativeAgentEvent dco_decode_native_agent_event(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 7) throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
-                return NativeAgentEvent(schemaVersion: dco_decode_u_32(arr[0]),
-sessionId: dco_decode_String(arr[1]),
-runId: dco_decode_String(arr[2]),
-sequence: dco_decode_u_64(arr[3]),
-documentRevision: dco_decode_u_64(arr[4]),
-kind: dco_decode_String(arr[5]),
-payloadJson: dco_decode_String(arr[6]),); }
-
-@protected NativeAgentRun dco_decode_native_agent_run(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativeAgentRun(schemaVersion: dco_decode_u_32(arr[0]),
-runId: dco_decode_String(arr[1]),
-status: dco_decode_String(arr[2]),); }
-
-@protected NativeAnnotation dco_decode_native_annotation(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 13) throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
-                return NativeAnnotation(objectId: dco_decode_String(arr[0]),
-pageId: dco_decode_String(arr[1]),
-bounds: dco_decode_native_pdf_box(arr[2]),
-kind: dco_decode_native_annotation_kind(arr[3]),
-anchorKind: dco_decode_native_annotation_anchor_kind(arr[4]),
-anchorX: dco_decode_opt_box_autoadd_f_64(arr[5]),
-anchorY: dco_decode_opt_box_autoadd_f_64(arr[6]),
-ranges: dco_decode_list_native_annotation_range(arr[7]),
-title: dco_decode_String(arr[8]),
-body: dco_decode_String(arr[9]),
-colorRgba: dco_decode_list_prim_u_8_strict(arr[10]),
-opacity: dco_decode_f_32(arr[11]),
-resolved: dco_decode_bool(arr[12]),); }
-
-@protected NativeAnnotationAnchorKind dco_decode_native_annotation_anchor_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeAnnotationAnchorKind.values[raw as int]; }
-
-@protected NativeAnnotationCommandRequest dco_decode_native_annotation_command_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeAnnotationCommandRequest(schemaVersion: dco_decode_u_32(arr[0]),
-commandId: dco_decode_String(arr[1]),
-baseRevision: dco_decode_u_64(arr[2]),
-annotation: dco_decode_native_annotation(arr[3]),); }
-
-@protected NativeAnnotationKind dco_decode_native_annotation_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeAnnotationKind.values[raw as int]; }
-
-@protected NativeAnnotationRange dco_decode_native_annotation_range(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativeAnnotationRange(rangeId: dco_decode_String(arr[0]),
-objectId: dco_decode_String(arr[1]),
-startUtf16: dco_decode_u_32(arr[2]),
-endUtf16: dco_decode_u_32(arr[3]),
-quotedText: dco_decode_String(arr[4]),); }
-
-@protected NativeApproveFontFallbackRequest dco_decode_native_approve_font_fallback_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeApproveFontFallbackRequest(schemaVersion: dco_decode_u_32(arr[0]),
-commandId: dco_decode_String(arr[1]),
-baseRevision: dco_decode_u_64(arr[2]),
-proposalToken: dco_decode_String(arr[3]),); }
-
-@protected NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativeCheckpointRequest(baseRevision: dco_decode_u_64(arr[0]),
-label: dco_decode_String(arr[1]),); }
-
-@protected NativeCleanPatchAsset dco_decode_native_clean_patch_asset(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
-                return NativeCleanPatchAsset(handle: dco_decode_String(arr[0]),
-objectId: dco_decode_String(arr[1]),
-bounds: dco_decode_native_pdf_box(arr[2]),
-dpi: dco_decode_u_32(arr[3]),
-width: dco_decode_u_32(arr[4]),
-height: dco_decode_u_32(arr[5]),
-rgbaBytes: dco_decode_list_prim_u_8_strict(arr[6]),
-bleedPoints: dco_decode_f_64(arr[7]),); }
-
-@protected NativeCleanPatchRequest dco_decode_native_clean_patch_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativeCleanPatchRequest(objectId: dco_decode_String(arr[0]),
-dpi: dco_decode_u_32(arr[1]),); }
-
-@protected NativeCommandResult dco_decode_native_command_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
-                return NativeCommandResult(commandId: dco_decode_String(arr[0]),
-previousRevision: dco_decode_u_64(arr[1]),
-committedRevision: dco_decode_u_64(arr[2]),
-durable: dco_decode_bool(arr[3]),
-warnings: dco_decode_list_String(arr[4]),
-removedObjectIds: dco_decode_list_String(arr[5]),
-selectionRebase: dco_decode_opt_box_autoadd_native_selection_rebase(arr[6]),
-objectPatches: dco_decode_list_native_object_patch(arr[7]),); }
-
-@protected NativeCompatibilityIssue dco_decode_native_compatibility_issue(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 7) throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
-                return NativeCompatibilityIssue(objectId: dco_decode_String(arr[0]),
-pageId: dco_decode_String(arr[1]),
-kind: dco_decode_String(arr[2]),
-capability: dco_decode_String(arr[3]),
-code: dco_decode_String(arr[4]),
-message: dco_decode_String(arr[5]),
-supportedOperations: dco_decode_list_String(arr[6]),); }
-
-@protected NativeCompatibilityReport dco_decode_native_compatibility_report(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeCompatibilityReport(schemaVersion: dco_decode_u_32(arr[0]),
-revision: dco_decode_u_64(arr[1]),
-editableCount: dco_decode_u_32(arr[2]),
-overlayOnlyCount: dco_decode_u_32(arr[3]),
-readOnlyCount: dco_decode_u_32(arr[4]),
-issues: dco_decode_list_native_compatibility_issue(arr[5]),); }
-
-@protected NativeConversationImport dco_decode_native_conversation_import(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
-                return NativeConversationImport(legacyId: dco_decode_String(arr[0]),
-documentId: dco_decode_String(arr[1]),
-title: dco_decode_String(arr[2]),
-createdAt: dco_decode_String(arr[3]),
-updatedAt: dco_decode_String(arr[4]),
-summary: dco_decode_opt_String(arr[5]),
-summaryThroughSequence: dco_decode_opt_box_autoadd_u_64(arr[6]),
-messages: dco_decode_list_native_conversation_message(arr[7]),); }
-
-@protected NativeConversationImportReceipt dco_decode_native_conversation_import_receipt(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeConversationImportReceipt(conversationId: dco_decode_String(arr[0]),
-messageCount: dco_decode_u_64(arr[1]),
-digestSha256: dco_decode_String(arr[2]),
-alreadyPresent: dco_decode_bool(arr[3]),); }
-
-@protected NativeConversationMessage dco_decode_native_conversation_message(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
-                return NativeConversationMessage(id: dco_decode_String(arr[0]),
-sequence: dco_decode_u_64(arr[1]),
-role: dco_decode_String(arr[2]),
-content: dco_decode_String(arr[3]),
-citationsJson: dco_decode_String(arr[4]),
-createdAt: dco_decode_String(arr[5]),
-tokenEstimate: dco_decode_u_64(arr[6]),
-isCompacted: dco_decode_bool(arr[7]),); }
-
-@protected NativeDeleteAnnotationRequest dco_decode_native_delete_annotation_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeDeleteAnnotationRequest(schemaVersion: dco_decode_u_32(arr[0]),
-commandId: dco_decode_String(arr[1]),
-baseRevision: dco_decode_u_64(arr[2]),
-objectId: dco_decode_String(arr[3]),); }
-
-@protected NativeEditorCommand dco_decode_native_editor_command(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 12) throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
-                return NativeEditorCommand(kind: dco_decode_native_editor_command_kind(arr[0]),
-objectId: dco_decode_opt_String(arr[1]),
-start: dco_decode_opt_box_autoadd_u_32(arr[2]),
-end: dco_decode_opt_box_autoadd_u_32(arr[3]),
-replacement: dco_decode_opt_String(arr[4]),
-style: dco_decode_opt_box_autoadd_native_text_style(arr[5]),
-transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[6]),
-bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[7]),
-radians: dco_decode_opt_box_autoadd_f_64(arr[8]),
-centerX: dco_decode_opt_box_autoadd_f_64(arr[9]),
-centerY: dco_decode_opt_box_autoadd_f_64(arr[10]),
-label: dco_decode_opt_String(arr[11]),); }
-
-@protected NativeEditorCommandKind dco_decode_native_editor_command_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeEditorCommandKind.values[raw as int]; }
-
-@protected NativeEditorEvent dco_decode_native_editor_event(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeEditorEvent(kind: dco_decode_native_editor_event_kind(arr[0]),
-sessionId: dco_decode_String(arr[1]),
-sequence: dco_decode_u_64(arr[2]),
-revision: dco_decode_opt_box_autoadd_u_64(arr[3]),
-latestRevision: dco_decode_opt_box_autoadd_u_64(arr[4]),
-result: dco_decode_opt_box_autoadd_native_command_result(arr[5]),); }
-
-@protected NativeEditorEventKind dco_decode_native_editor_event_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeEditorEventKind.values[raw as int]; }
-
-@protected NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeEditorMetadata(schemaVersion: dco_decode_u_32(arr[0]),
-sessionId: dco_decode_String(arr[1]),
-documentId: dco_decode_String(arr[2]),
-sourceFingerprint: dco_decode_String(arr[3]),
-revision: dco_decode_u_64(arr[4]),
-pageCount: dco_decode_u_32(arr[5]),); }
-
-@protected NativeEditorSaveMode dco_decode_native_editor_save_mode(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeEditorSaveMode.values[raw as int]; }
-
-@protected NativeEditorSaveRequest dco_decode_native_editor_save_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeEditorSaveRequest(targetPath: dco_decode_String(arr[0]),
-mode: dco_decode_native_editor_save_mode(arr[1]),
-association: dco_decode_native_save_association(arr[2]),
-recoveryDirectory: dco_decode_opt_String(arr[3]),); }
-
-@protected NativeEditorSaveResult dco_decode_native_editor_save_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeEditorSaveResult(schemaVersion: dco_decode_u_32(arr[0]),
-targetPath: dco_decode_String(arr[1]),
-materializedRevision: dco_decode_u_64(arr[2]),
-completedStages: dco_decode_list_String(arr[3]),
-warnings: dco_decode_list_String(arr[4]),
-followsNewSource: dco_decode_bool(arr[5]),); }
-
-@protected NativeFontFallbackProposal dco_decode_native_font_fallback_proposal(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativeFontFallbackProposal(token: dco_decode_String(arr[0]),
-fontName: dco_decode_String(arr[1]),
-source: dco_decode_String(arr[2]),
-embeddingAllowed: dco_decode_bool(arr[3]),
-affectedCharacters: dco_decode_String(arr[4]),); }
-
-@protected NativeFontFallbackProposalRequest dco_decode_native_font_fallback_proposal_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeFontFallbackProposalRequest(schemaVersion: dco_decode_u_32(arr[0]),
-baseRevision: dco_decode_u_64(arr[1]),
-objectId: dco_decode_String(arr[2]),
-start: dco_decode_u_32(arr[3]),
-end: dco_decode_u_32(arr[4]),
-replacement: dco_decode_String(arr[5]),); }
-
-@protected NativeLivePageImport dco_decode_native_live_page_import(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativeLivePageImport(expectedRevision: dco_decode_u_64(arr[0]),
-pageNumber: dco_decode_u_32(arr[1]),
-width: dco_decode_f_64(arr[2]),
-height: dco_decode_f_64(arr[3]),
-objects: dco_decode_list_native_live_text_object(arr[4]),); }
-
-@protected NativeLiveTextObject dco_decode_native_live_text_object(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 8) throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
-                return NativeLiveTextObject(objectId: dco_decode_String(arr[0]),
-sourceKey: dco_decode_String(arr[1]),
-sourceRevision: dco_decode_String(arr[2]),
-text: dco_decode_String(arr[3]),
-bounds: dco_decode_native_pdf_box(arr[4]),
-style: dco_decode_native_text_style(arr[5]),
-baseline: dco_decode_f_64(arr[6]),
-editable: dco_decode_bool(arr[7]),); }
-
-@protected NativeMemoryPressureLevel dco_decode_native_memory_pressure_level(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeMemoryPressureLevel.values[raw as int]; }
-
-@protected NativeObjectDetailsRequest dco_decode_native_object_details_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 1) throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
-                return NativeObjectDetailsRequest(objectId: dco_decode_String(arr[0]),); }
-
-@protected NativeObjectPatch dco_decode_native_object_patch(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 10) throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
-                return NativeObjectPatch(objectId: dco_decode_String(arr[0]),
-pageId: dco_decode_String(arr[1]),
-modifiedRevision: dco_decode_u_64(arr[2]),
-text: dco_decode_opt_String(arr[3]),
-textRuns: dco_decode_opt_list_native_text_run(arr[4]),
-characterBoxes: dco_decode_opt_list_native_text_character_box(arr[5]),
-bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[6]),
-transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
-fontFingerprint: dco_decode_opt_String(arr[8]),
-fontAssetHandle: dco_decode_opt_String(arr[9]),); }
-
-@protected NativeOpenEditorRequest dco_decode_native_open_editor_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativeOpenEditorRequest(sourcePath: dco_decode_String(arr[0]),
-projectRoot: dco_decode_opt_String(arr[1]),); }
-
-@protected NativePageScene dco_decode_native_page_scene(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 7) throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
-                return NativePageScene(schemaVersion: dco_decode_u_32(arr[0]),
-pageId: dco_decode_String(arr[1]),
-pageNumber: dco_decode_u_32(arr[2]),
-width: dco_decode_f_64(arr[3]),
-height: dco_decode_f_64(arr[4]),
-revision: dco_decode_u_64(arr[5]),
-objects: dco_decode_list_native_scene_object(arr[6]),); }
-
-@protected NativePageSceneRequest dco_decode_native_page_scene_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativePageSceneRequest(pageNumber: dco_decode_u_32(arr[0]),
-expectedRevision: dco_decode_u_64(arr[1]),
-priority: dco_decode_native_viewport_priority(arr[2]),); }
-
-@protected NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativePdfAnnotations(bookmarks: dco_decode_list_native_pdf_bookmark(arr[0]),
-highlights: dco_decode_list_native_pdf_highlight(arr[1]),); }
-
-@protected NativePdfBookmark dco_decode_native_pdf_bookmark(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativePdfBookmark(id: dco_decode_String(arr[0]),
-title: dco_decode_String(arr[1]),
-pageNumber: dco_decode_usize(arr[2]),); }
-
-@protected NativePdfBox dco_decode_native_pdf_box(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativePdfBox(left: dco_decode_f_64(arr[0]),
-bottom: dco_decode_f_64(arr[1]),
-right: dco_decode_f_64(arr[2]),
-top: dco_decode_f_64(arr[3]),); }
-
-@protected NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativePdfComposeRequest(sources: dco_decode_list_native_pdf_source(arr[0]),
-outputPath: dco_decode_String(arr[1]),); }
-
-@protected NativePdfComposeResponse dco_decode_native_pdf_compose_response(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativePdfComposeResponse(outputPath: dco_decode_String(arr[0]),
-pageCount: dco_decode_usize(arr[1]),
-message: dco_decode_opt_String(arr[2]),); }
-
-@protected NativePdfHighlight dco_decode_native_pdf_highlight(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 12) throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
-                return NativePdfHighlight(id: dco_decode_String(arr[0]),
-pageNumber: dco_decode_usize(arr[1]),
-left: dco_decode_f_32(arr[2]),
-top: dco_decode_f_32(arr[3]),
-right: dco_decode_f_32(arr[4]),
-bottom: dco_decode_f_32(arr[5]),
-red: dco_decode_f_32(arr[6]),
-green: dco_decode_f_32(arr[7]),
-blue: dco_decode_f_32(arr[8]),
-opacity: dco_decode_f_32(arr[9]),
-text: dco_decode_String(arr[10]),
-quadPoints: dco_decode_list_prim_f_32_strict(arr[11]),); }
-
-@protected NativePdfSaveRequest dco_decode_native_pdf_save_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativePdfSaveRequest(path: dco_decode_String(arr[0]),
-outputPath: dco_decode_opt_String(arr[1]),
-bookmarks: dco_decode_list_native_pdf_bookmark(arr[2]),
-highlights: dco_decode_list_native_pdf_highlight(arr[3]),); }
-
-@protected NativePdfSource dco_decode_native_pdf_source(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativePdfSource(path: dco_decode_String(arr[0]),
-pages: dco_decode_list_prim_usize_strict(arr[1]),); }
-
-@protected NativePhysicalEditOperation dco_decode_native_physical_edit_operation(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 10) throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
-                return NativePhysicalEditOperation(kind: dco_decode_native_physical_edit_operation_kind(arr[0]),
-objectId: dco_decode_String(arr[1]),
-sourceKey: dco_decode_String(arr[2]),
-sourceRevision: dco_decode_String(arr[3]),
-expectedText: dco_decode_opt_String(arr[4]),
-replacement: dco_decode_opt_String(arr[5]),
-expectedTransform: dco_decode_opt_box_autoadd_native_affine_transform(arr[6]),
-transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
-oldBounds: dco_decode_native_pdf_box(arr[8]),
-newBounds: dco_decode_native_pdf_box(arr[9]),); }
-
-@protected NativePhysicalEditOperationKind dco_decode_native_physical_edit_operation_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativePhysicalEditOperationKind.values[raw as int]; }
-
-@protected NativePhysicalEditPlan dco_decode_native_physical_edit_plan(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativePhysicalEditPlan(previousRevision: dco_decode_u_64(arr[0]),
-revision: dco_decode_u_64(arr[1]),
-operations: dco_decode_list_native_physical_edit_operation(arr[2]),
-inverseOperations: dco_decode_list_native_physical_edit_operation(arr[3]),); }
-
-@protected NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativePhysicalLocator(pageNumber: dco_decode_u_32(arr[0]),
-objectPath: dco_decode_list_prim_u_32_strict(arr[1]),
-objectType: dco_decode_String(arr[2]),
-sourceFingerprint: dco_decode_String(arr[3]),
-objectRevision: dco_decode_u_64(arr[4]),); }
-
-@protected NativePreparedLiveCommand dco_decode_native_prepared_live_command(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativePreparedLiveCommand(token: dco_decode_String(arr[0]),
-commandId: dco_decode_String(arr[1]),
-previousRevision: dco_decode_u_64(arr[2]),
-committedRevision: dco_decode_u_64(arr[3]),
-plan: dco_decode_native_physical_edit_plan(arr[4]),); }
-
-@protected NativeProviderTestRequest dco_decode_native_provider_test_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeProviderTestRequest(providerEndpoint: dco_decode_String(arr[0]),
-modelId: dco_decode_String(arr[1]),
-headers: dco_decode_Map_String_String_None(arr[2]),
-apiKey: dco_decode_String(arr[3]),); }
-
-@protected NativeRagChunk dco_decode_native_rag_chunk(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativeRagChunk(id: dco_decode_String(arr[0]),
-text: dco_decode_String(arr[1]),); }
-
-@protected NativeRagIndexRequest dco_decode_native_rag_index_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeRagIndexRequest(storageDirectory: dco_decode_String(arr[0]),
-modelCacheDirectory: dco_decode_String(arr[1]),
-documentFingerprint: dco_decode_String(arr[2]),
-chunks: dco_decode_list_native_rag_chunk(arr[3]),); }
-
-@protected NativeRagIndexResponse dco_decode_native_rag_index_response(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativeRagIndexResponse(status: dco_decode_String(arr[0]),
-message: dco_decode_opt_String(arr[1]),
-outcome: dco_decode_opt_String(arr[2]),); }
-
-@protected NativeRagQueryRequest dco_decode_native_rag_query_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeRagQueryRequest(storageDirectory: dco_decode_String(arr[0]),
-modelCacheDirectory: dco_decode_String(arr[1]),
-documentFingerprint: dco_decode_String(arr[2]),
-chunkIds: dco_decode_list_String(arr[3]),
-query: dco_decode_String(arr[4]),
-limit: dco_decode_usize(arr[5]),); }
-
-@protected NativeRagQueryResponse dco_decode_native_rag_query_response(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativeRagQueryResponse(status: dco_decode_String(arr[0]),
-message: dco_decode_opt_String(arr[1]),
-results: dco_decode_list_native_rag_query_result(arr[2]),); }
-
-@protected NativeRagQueryResult dco_decode_native_rag_query_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 2) throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-                return NativeRagQueryResult(chunkId: dco_decode_String(arr[0]),
-score: dco_decode_f_32(arr[1]),); }
-
-@protected NativeSaveAssociation dco_decode_native_save_association(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeSaveAssociation.values[raw as int]; }
-
-@protected NativeSceneObject dco_decode_native_scene_object(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 15) throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
-                return NativeSceneObject(kind: dco_decode_native_scene_object_kind(arr[0]),
-objectId: dco_decode_String(arr[1]),
-pageId: dco_decode_String(arr[2]),
-text: dco_decode_opt_String(arr[3]),
-bounds: dco_decode_native_pdf_box(arr[4]),
-transform: dco_decode_native_affine_transform(arr[5]),
-capability: dco_decode_String(arr[6]),
-capabilityReason: dco_decode_opt_String(arr[7]),
-modifiedRevision: dco_decode_u_64(arr[8]),
-runs: dco_decode_list_native_text_run(arr[9]),
-characterBoxes: dco_decode_list_native_text_character_box(arr[10]),
-layout: dco_decode_opt_box_autoadd_native_text_layout_recipe(arr[11]),
-fontFingerprint: dco_decode_opt_String(arr[12]),
-fontAssetHandle: dco_decode_opt_String(arr[13]),
-physicalLocator: dco_decode_opt_box_autoadd_native_physical_locator(arr[14]),); }
-
-@protected NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeSceneObjectKind.values[raw as int]; }
-
-@protected NativeSearchMatch dco_decode_native_search_match(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeSearchMatch(objectId: dco_decode_String(arr[0]),
-pageId: dco_decode_String(arr[1]),
-pageNumber: dco_decode_u_32(arr[2]),
-startUtf16: dco_decode_u_32(arr[3]),
-endUtf16: dco_decode_u_32(arr[4]),
-quotedText: dco_decode_String(arr[5]),); }
-
-@protected NativeSearchMode dco_decode_native_search_mode(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeSearchMode.values[raw as int]; }
-
-@protected NativeSearchRequest dco_decode_native_search_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeSearchRequest(expectedRevision: dco_decode_u_64(arr[0]),
-query: dco_decode_String(arr[1]),
-mode: dco_decode_native_search_mode(arr[2]),
-wholeWord: dco_decode_bool(arr[3]),
-offset: dco_decode_u_32(arr[4]),
-limit: dco_decode_u_32(arr[5]),); }
-
-@protected NativeSearchResult dco_decode_native_search_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 7) throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
-                return NativeSearchResult(schemaVersion: dco_decode_u_32(arr[0]),
-revision: dco_decode_u_64(arr[1]),
-matches: dco_decode_list_native_search_match(arr[2]),
-totalMatches: dco_decode_u_32(arr[3]),
-indexedPages: dco_decode_u_32(arr[4]),
-pageCount: dco_decode_u_32(arr[5]),
-isComplete: dco_decode_bool(arr[6]),); }
-
-@protected NativeSelectionContext dco_decode_native_selection_context(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 9) throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
-                return NativeSelectionContext(schemaVersion: dco_decode_u_32(arr[0]),
-documentId: dco_decode_String(arr[1]),
-revision: dco_decode_u_64(arr[2]),
-kind: dco_decode_native_selection_kind(arr[3]),
-ranges: dco_decode_list_native_selection_range(arr[4]),
-pageNumbers: dco_decode_list_prim_u_32_strict(arr[5]),
-nearbyTextBefore: dco_decode_String(arr[6]),
-nearbyTextAfter: dco_decode_String(arr[7]),
-disclosureSha256: dco_decode_String(arr[8]),); }
-
-@protected NativeSelectionKind dco_decode_native_selection_kind(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeSelectionKind.values[raw as int]; }
-
-@protected NativeSelectionRange dco_decode_native_selection_range(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeSelectionRange(objectId: dco_decode_String(arr[0]),
-pageId: dco_decode_String(arr[1]),
-pageNumber: dco_decode_u_32(arr[2]),
-startUtf16: dco_decode_u_32(arr[3]),
-endUtf16: dco_decode_u_32(arr[4]),
-quotedText: dco_decode_String(arr[5]),); }
-
-@protected NativeSelectionRebase dco_decode_native_selection_rebase(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeSelectionRebase(objectId: dco_decode_String(arr[0]),
-start: dco_decode_u_32(arr[1]),
-end: dco_decode_u_32(arr[2]),
-insertedUtf16Length: dco_decode_u_32(arr[3]),); }
-
-@protected NativeSelectionSet dco_decode_native_selection_set(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativeSelectionSet(expectedRevision: dco_decode_u_64(arr[0]),
-kind: dco_decode_native_selection_kind(arr[1]),
-ranges: dco_decode_list_native_selection_range(arr[2]),
-objectIds: dco_decode_list_String(arr[3]),
-primaryIndex: dco_decode_opt_box_autoadd_u_32(arr[4]),); }
-
-@protected NativeStartAgentRunRequest dco_decode_native_start_agent_run_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 13) throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
-                return NativeStartAgentRunRequest(schemaVersion: dco_decode_u_32(arr[0]),
-providerEndpoint: dco_decode_String(arr[1]),
-modelId: dco_decode_String(arr[2]),
-headers: dco_decode_Map_String_String_None(arr[3]),
-apiKey: dco_decode_String(arr[4]),
-conversationId: dco_decode_opt_String(arr[5]),
-userPrompt: dco_decode_String(arr[6]),
-selection: dco_decode_opt_box_autoadd_native_selection_set(arr[7]),
-disclosureSha256: dco_decode_opt_String(arr[8]),
-maxToolCalls: dco_decode_u_32(arr[9]),
-maxProviderRounds: dco_decode_u_32(arr[10]),
-maxElapsedMs: dco_decode_u_64(arr[11]),
-maxOutputTokens: dco_decode_u_32(arr[12]),); }
-
-@protected NativeSubmitCommandRequest dco_decode_native_submit_command_request(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return NativeSubmitCommandRequest(schemaVersion: dco_decode_u_32(arr[0]),
-commandId: dco_decode_String(arr[1]),
-baseRevision: dco_decode_u_64(arr[2]),
-payload: dco_decode_native_editor_command(arr[3]),); }
-
-@protected NativeTextCharacterBox dco_decode_native_text_character_box(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativeTextCharacterBox(start: dco_decode_u_32(arr[0]),
-end: dco_decode_u_32(arr[1]),
-bounds: dco_decode_native_pdf_box(arr[2]),); }
-
-@protected NativeTextLayoutRecipe dco_decode_native_text_layout_recipe(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativeTextLayoutRecipe(baseline: dco_decode_f_64(arr[0]),
-lineHeight: dco_decode_f_64(arr[1]),
-characterSpacing: dco_decode_f_64(arr[2]),
-horizontalScale: dco_decode_f_64(arr[3]),
-direction: dco_decode_String(arr[4]),); }
-
-@protected NativeTextRun dco_decode_native_text_run(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return NativeTextRun(start: dco_decode_u_32(arr[0]),
-end: dco_decode_u_32(arr[1]),
-style: dco_decode_native_text_style(arr[2]),); }
-
-@protected NativeTextStyle dco_decode_native_text_style(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 5) throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
-                return NativeTextStyle(fontFamily: dco_decode_opt_String(arr[0]),
-fontSize: dco_decode_f_64(arr[1]),
-fontWeight: dco_decode_u_16(arr[2]),
-italic: dco_decode_bool(arr[3]),
-colorRgba: dco_decode_list_prim_u_8_strict(arr[4]),); }
-
-@protected NativeValidatedSelection dco_decode_native_validated_selection(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 6) throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
-                return NativeValidatedSelection(schemaVersion: dco_decode_u_32(arr[0]),
-revision: dco_decode_u_64(arr[1]),
-kind: dco_decode_native_selection_kind(arr[2]),
-ranges: dco_decode_list_native_selection_range(arr[3]),
-objectIds: dco_decode_list_String(arr[4]),
-primaryIndex: dco_decode_opt_box_autoadd_u_32(arr[5]),); }
-
-@protected NativeViewportPriority dco_decode_native_viewport_priority(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return NativeViewportPriority.values[raw as int]; }
-
-@protected String? dco_decode_opt_String(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_String(raw); }
-
-@protected double? dco_decode_opt_box_autoadd_f_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_f_64(raw); }
-
-@protected NativeAffineTransform? dco_decode_opt_box_autoadd_native_affine_transform(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_affine_transform(raw); }
-
-@protected NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_command_result(raw); }
-
-@protected NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_pdf_box(raw); }
-
-@protected NativePhysicalLocator? dco_decode_opt_box_autoadd_native_physical_locator(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_physical_locator(raw); }
-
-@protected NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_selection_rebase(raw); }
-
-@protected NativeSelectionSet? dco_decode_opt_box_autoadd_native_selection_set(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_selection_set(raw); }
-
-@protected NativeTextLayoutRecipe? dco_decode_opt_box_autoadd_native_text_layout_recipe(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_text_layout_recipe(raw); }
-
-@protected NativeTextStyle? dco_decode_opt_box_autoadd_native_text_style(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_native_text_style(raw); }
-
-@protected int? dco_decode_opt_box_autoadd_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_u_32(raw); }
-
-@protected BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_box_autoadd_u_64(raw); }
-
-@protected List<NativeTextCharacterBox>? dco_decode_opt_list_native_text_character_box(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_list_native_text_character_box(raw); }
-
-@protected List<NativeTextRun>? dco_decode_opt_list_native_text_run(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw == null ? null : dco_decode_list_native_text_run(raw); }
-
-@protected PdfDocumentMetadata dco_decode_pdf_document_metadata(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 4) throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
-                return PdfDocumentMetadata(documentId: dco_decode_String(arr[0]),
-title: dco_decode_String(arr[1]),
-pageCount: dco_decode_usize(arr[2]),
-isEncrypted: dco_decode_bool(arr[3]),); }
-
-@protected PdfSearchMatch dco_decode_pdf_search_match(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-                if (arr.length != 3) throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
-                return PdfSearchMatch(pageNumber: dco_decode_usize(arr[0]),
-text: dco_decode_String(arr[1]),
-bounds: dco_decode_record_f_32_f_32_f_32_f_32(arr[2]),); }
-
-@protected (double,double,double,double) dco_decode_record_f_32_f_32_f_32_f_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-            if (arr.length != 4) {
-                throw Exception('Expected 4 elements, got ${arr.length}');
-            }
-            return (dco_decode_f_32(arr[0]),dco_decode_f_32(arr[1]),dco_decode_f_32(arr[2]),dco_decode_f_32(arr[3]),); }
-
-@protected (String,String) dco_decode_record_string_string(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-final arr = raw as List<dynamic>;
-            if (arr.length != 2) {
-                throw Exception('Expected 2 elements, got ${arr.length}');
-            }
-            return (dco_decode_String(arr[0]),dco_decode_String(arr[1]),); }
-
-@protected int dco_decode_u_16(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected int dco_decode_u_32(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected BigInt dco_decode_u_64(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeU64(raw); }
-
-@protected int dco_decode_u_8(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return raw as int; }
-
-@protected void dco_decode_unit(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return; }
-
-@protected BigInt dco_decode_usize(dynamic raw){ // Codec=Dco (DartCObject based), see doc to use other codecs
-return dcoDecodeU64(raw); }
-
-@protected AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_String(deserializer);
-        return AnyhowException(inner); }
-
-@protected NativeEditorSession sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativeEditorSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected NativePdfSession sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected NativePdfSession sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected NativeEditorSession sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativeEditorSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected NativePdfSession sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected Map<String, String> sse_decode_Map_String_String_None(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_list_record_string_string(deserializer);
-        return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2))); }
-
-@protected NativeEditorSession sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativeEditorSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected NativePdfSession sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return NativePdfSessionImpl.frbInternalSseDecode(sse_decode_usize(deserializer), sse_decode_i_32(deserializer)); }
-
-@protected RustStreamSink<String> sse_decode_StreamSink_String_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<NativeAgentEvent> sse_decode_StreamSink_native_agent_event_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected RustStreamSink<NativeEditorEvent> sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-throw UnimplementedError('Unreachable ()'); }
-
-@protected String sse_decode_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_list_prim_u_8_strict(deserializer);
-        return utf8.decoder.convert(inner); }
-
-@protected bool sse_decode_bool(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8() != 0; }
-
-@protected double sse_decode_box_autoadd_f_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_f_64(deserializer)); }
-
-@protected NativeAffineTransform sse_decode_box_autoadd_native_affine_transform(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_affine_transform(deserializer)); }
-
-@protected NativeAnnotationCommandRequest sse_decode_box_autoadd_native_annotation_command_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_annotation_command_request(deserializer)); }
-
-@protected NativeApproveFontFallbackRequest sse_decode_box_autoadd_native_approve_font_fallback_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_approve_font_fallback_request(deserializer)); }
-
-@protected NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_checkpoint_request(deserializer)); }
-
-@protected NativeCleanPatchRequest sse_decode_box_autoadd_native_clean_patch_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_clean_patch_request(deserializer)); }
-
-@protected NativeCommandResult sse_decode_box_autoadd_native_command_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_command_result(deserializer)); }
-
-@protected NativeConversationImport sse_decode_box_autoadd_native_conversation_import(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_conversation_import(deserializer)); }
-
-@protected NativeDeleteAnnotationRequest sse_decode_box_autoadd_native_delete_annotation_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_delete_annotation_request(deserializer)); }
-
-@protected NativeEditorSaveRequest sse_decode_box_autoadd_native_editor_save_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_editor_save_request(deserializer)); }
-
-@protected NativeFontFallbackProposalRequest sse_decode_box_autoadd_native_font_fallback_proposal_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_font_fallback_proposal_request(deserializer)); }
-
-@protected NativeLivePageImport sse_decode_box_autoadd_native_live_page_import(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_live_page_import(deserializer)); }
-
-@protected NativeObjectDetailsRequest sse_decode_box_autoadd_native_object_details_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_object_details_request(deserializer)); }
-
-@protected NativeOpenEditorRequest sse_decode_box_autoadd_native_open_editor_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_open_editor_request(deserializer)); }
-
-@protected NativePageSceneRequest sse_decode_box_autoadd_native_page_scene_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_page_scene_request(deserializer)); }
-
-@protected NativePdfBox sse_decode_box_autoadd_native_pdf_box(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_pdf_box(deserializer)); }
-
-@protected NativePdfComposeRequest sse_decode_box_autoadd_native_pdf_compose_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_pdf_compose_request(deserializer)); }
-
-@protected NativePdfSaveRequest sse_decode_box_autoadd_native_pdf_save_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_pdf_save_request(deserializer)); }
-
-@protected NativePhysicalLocator sse_decode_box_autoadd_native_physical_locator(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_physical_locator(deserializer)); }
-
-@protected NativeProviderTestRequest sse_decode_box_autoadd_native_provider_test_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_provider_test_request(deserializer)); }
-
-@protected NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_rag_index_request(deserializer)); }
-
-@protected NativeRagQueryRequest sse_decode_box_autoadd_native_rag_query_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_rag_query_request(deserializer)); }
-
-@protected NativeSearchRequest sse_decode_box_autoadd_native_search_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_search_request(deserializer)); }
-
-@protected NativeSelectionRebase sse_decode_box_autoadd_native_selection_rebase(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_selection_rebase(deserializer)); }
-
-@protected NativeSelectionSet sse_decode_box_autoadd_native_selection_set(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_selection_set(deserializer)); }
-
-@protected NativeStartAgentRunRequest sse_decode_box_autoadd_native_start_agent_run_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_start_agent_run_request(deserializer)); }
-
-@protected NativeSubmitCommandRequest sse_decode_box_autoadd_native_submit_command_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_submit_command_request(deserializer)); }
-
-@protected NativeTextLayoutRecipe sse_decode_box_autoadd_native_text_layout_recipe(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_text_layout_recipe(deserializer)); }
-
-@protected NativeTextStyle sse_decode_box_autoadd_native_text_style(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_native_text_style(deserializer)); }
-
-@protected int sse_decode_box_autoadd_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_u_32(deserializer)); }
-
-@protected BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return (sse_decode_u_64(deserializer)); }
-
-@protected double sse_decode_f_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getFloat32(); }
-
-@protected double sse_decode_f_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getFloat64(); }
-
-@protected int sse_decode_i_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getInt32(); }
-
-@protected List<String> sse_decode_list_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <String>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_String(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeAgentEvent> sse_decode_list_native_agent_event(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeAgentEvent>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_agent_event(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeAnnotationRange> sse_decode_list_native_annotation_range(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeAnnotationRange>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_annotation_range(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeCompatibilityIssue> sse_decode_list_native_compatibility_issue(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeCompatibilityIssue>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_compatibility_issue(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeConversationMessage> sse_decode_list_native_conversation_message(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeConversationMessage>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_conversation_message(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeLiveTextObject> sse_decode_list_native_live_text_object(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeLiveTextObject>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_live_text_object(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeObjectPatch> sse_decode_list_native_object_patch(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeObjectPatch>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_object_patch(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativePdfBookmark> sse_decode_list_native_pdf_bookmark(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativePdfBookmark>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_pdf_bookmark(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativePdfHighlight> sse_decode_list_native_pdf_highlight(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativePdfHighlight>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_pdf_highlight(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativePdfSource> sse_decode_list_native_pdf_source(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativePdfSource>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_pdf_source(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativePhysicalEditOperation> sse_decode_list_native_physical_edit_operation(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativePhysicalEditOperation>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_physical_edit_operation(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeRagChunk> sse_decode_list_native_rag_chunk(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeRagChunk>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_rag_chunk(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeRagQueryResult> sse_decode_list_native_rag_query_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeRagQueryResult>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_rag_query_result(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeSceneObject> sse_decode_list_native_scene_object(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeSceneObject>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_scene_object(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeSearchMatch> sse_decode_list_native_search_match(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeSearchMatch>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_search_match(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeSelectionRange> sse_decode_list_native_selection_range(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeSelectionRange>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_selection_range(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeTextCharacterBox> sse_decode_list_native_text_character_box(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeTextCharacterBox>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_text_character_box(deserializer)); }
-        return ans_;
-         }
-
-@protected List<NativeTextRun> sse_decode_list_native_text_run(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <NativeTextRun>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_native_text_run(deserializer)); }
-        return ans_;
-         }
-
-@protected List<PdfSearchMatch> sse_decode_list_pdf_search_match(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <PdfSearchMatch>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_pdf_search_match(deserializer)); }
-        return ans_;
-         }
-
-@protected Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getFloat32List(len_); }
-
-@protected Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint32List(len_); }
-
-@protected List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint8List(len_); }
-
-@protected Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint8List(len_); }
-
-@protected Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var len_ = sse_decode_i_32(deserializer);
-                return deserializer.buffer.getUint64List(len_); }
-
-@protected List<(String,String)> sse_decode_list_record_string_string(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-        var len_ = sse_decode_i_32(deserializer);
-        var ans_ = <(String,String)>[];
-        for (var idx_ = 0; idx_ < len_; ++idx_) { ans_.add(sse_decode_record_string_string(deserializer)); }
-        return ans_;
-         }
-
-@protected NativeAffineTransform sse_decode_native_affine_transform(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_a = sse_decode_f_64(deserializer);
-var var_b = sse_decode_f_64(deserializer);
-var var_c = sse_decode_f_64(deserializer);
-var var_d = sse_decode_f_64(deserializer);
-var var_e = sse_decode_f_64(deserializer);
-var var_f = sse_decode_f_64(deserializer);
-return NativeAffineTransform(a: var_a, b: var_b, c: var_c, d: var_d, e: var_e, f: var_f); }
-
-@protected NativeAgentAudit sse_decode_native_agent_audit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_runId = sse_decode_String(deserializer);
-var var_status = sse_decode_String(deserializer);
-var var_events = sse_decode_list_native_agent_event(deserializer);
-return NativeAgentAudit(schemaVersion: var_schemaVersion, runId: var_runId, status: var_status, events: var_events); }
-
-@protected NativeAgentEvent sse_decode_native_agent_event(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_sessionId = sse_decode_String(deserializer);
-var var_runId = sse_decode_String(deserializer);
-var var_sequence = sse_decode_u_64(deserializer);
-var var_documentRevision = sse_decode_u_64(deserializer);
-var var_kind = sse_decode_String(deserializer);
-var var_payloadJson = sse_decode_String(deserializer);
-return NativeAgentEvent(schemaVersion: var_schemaVersion, sessionId: var_sessionId, runId: var_runId, sequence: var_sequence, documentRevision: var_documentRevision, kind: var_kind, payloadJson: var_payloadJson); }
-
-@protected NativeAgentRun sse_decode_native_agent_run(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_runId = sse_decode_String(deserializer);
-var var_status = sse_decode_String(deserializer);
-return NativeAgentRun(schemaVersion: var_schemaVersion, runId: var_runId, status: var_status); }
-
-@protected NativeAnnotation sse_decode_native_annotation(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_bounds = sse_decode_native_pdf_box(deserializer);
-var var_kind = sse_decode_native_annotation_kind(deserializer);
-var var_anchorKind = sse_decode_native_annotation_anchor_kind(deserializer);
-var var_anchorX = sse_decode_opt_box_autoadd_f_64(deserializer);
-var var_anchorY = sse_decode_opt_box_autoadd_f_64(deserializer);
-var var_ranges = sse_decode_list_native_annotation_range(deserializer);
-var var_title = sse_decode_String(deserializer);
-var var_body = sse_decode_String(deserializer);
-var var_colorRgba = sse_decode_list_prim_u_8_strict(deserializer);
-var var_opacity = sse_decode_f_32(deserializer);
-var var_resolved = sse_decode_bool(deserializer);
-return NativeAnnotation(objectId: var_objectId, pageId: var_pageId, bounds: var_bounds, kind: var_kind, anchorKind: var_anchorKind, anchorX: var_anchorX, anchorY: var_anchorY, ranges: var_ranges, title: var_title, body: var_body, colorRgba: var_colorRgba, opacity: var_opacity, resolved: var_resolved); }
-
-@protected NativeAnnotationAnchorKind sse_decode_native_annotation_anchor_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeAnnotationAnchorKind.values[inner]; }
-
-@protected NativeAnnotationCommandRequest sse_decode_native_annotation_command_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_commandId = sse_decode_String(deserializer);
-var var_baseRevision = sse_decode_u_64(deserializer);
-var var_annotation = sse_decode_native_annotation(deserializer);
-return NativeAnnotationCommandRequest(schemaVersion: var_schemaVersion, commandId: var_commandId, baseRevision: var_baseRevision, annotation: var_annotation); }
-
-@protected NativeAnnotationKind sse_decode_native_annotation_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeAnnotationKind.values[inner]; }
-
-@protected NativeAnnotationRange sse_decode_native_annotation_range(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_rangeId = sse_decode_String(deserializer);
-var var_objectId = sse_decode_String(deserializer);
-var var_startUtf16 = sse_decode_u_32(deserializer);
-var var_endUtf16 = sse_decode_u_32(deserializer);
-var var_quotedText = sse_decode_String(deserializer);
-return NativeAnnotationRange(rangeId: var_rangeId, objectId: var_objectId, startUtf16: var_startUtf16, endUtf16: var_endUtf16, quotedText: var_quotedText); }
-
-@protected NativeApproveFontFallbackRequest sse_decode_native_approve_font_fallback_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_commandId = sse_decode_String(deserializer);
-var var_baseRevision = sse_decode_u_64(deserializer);
-var var_proposalToken = sse_decode_String(deserializer);
-return NativeApproveFontFallbackRequest(schemaVersion: var_schemaVersion, commandId: var_commandId, baseRevision: var_baseRevision, proposalToken: var_proposalToken); }
-
-@protected NativeCheckpointRequest sse_decode_native_checkpoint_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_baseRevision = sse_decode_u_64(deserializer);
-var var_label = sse_decode_String(deserializer);
-return NativeCheckpointRequest(baseRevision: var_baseRevision, label: var_label); }
-
-@protected NativeCleanPatchAsset sse_decode_native_clean_patch_asset(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_handle = sse_decode_String(deserializer);
-var var_objectId = sse_decode_String(deserializer);
-var var_bounds = sse_decode_native_pdf_box(deserializer);
-var var_dpi = sse_decode_u_32(deserializer);
-var var_width = sse_decode_u_32(deserializer);
-var var_height = sse_decode_u_32(deserializer);
-var var_rgbaBytes = sse_decode_list_prim_u_8_strict(deserializer);
-var var_bleedPoints = sse_decode_f_64(deserializer);
-return NativeCleanPatchAsset(handle: var_handle, objectId: var_objectId, bounds: var_bounds, dpi: var_dpi, width: var_width, height: var_height, rgbaBytes: var_rgbaBytes, bleedPoints: var_bleedPoints); }
-
-@protected NativeCleanPatchRequest sse_decode_native_clean_patch_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_dpi = sse_decode_u_32(deserializer);
-return NativeCleanPatchRequest(objectId: var_objectId, dpi: var_dpi); }
-
-@protected NativeCommandResult sse_decode_native_command_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_commandId = sse_decode_String(deserializer);
-var var_previousRevision = sse_decode_u_64(deserializer);
-var var_committedRevision = sse_decode_u_64(deserializer);
-var var_durable = sse_decode_bool(deserializer);
-var var_warnings = sse_decode_list_String(deserializer);
-var var_removedObjectIds = sse_decode_list_String(deserializer);
-var var_selectionRebase = sse_decode_opt_box_autoadd_native_selection_rebase(deserializer);
-var var_objectPatches = sse_decode_list_native_object_patch(deserializer);
-return NativeCommandResult(commandId: var_commandId, previousRevision: var_previousRevision, committedRevision: var_committedRevision, durable: var_durable, warnings: var_warnings, removedObjectIds: var_removedObjectIds, selectionRebase: var_selectionRebase, objectPatches: var_objectPatches); }
-
-@protected NativeCompatibilityIssue sse_decode_native_compatibility_issue(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_kind = sse_decode_String(deserializer);
-var var_capability = sse_decode_String(deserializer);
-var var_code = sse_decode_String(deserializer);
-var var_message = sse_decode_String(deserializer);
-var var_supportedOperations = sse_decode_list_String(deserializer);
-return NativeCompatibilityIssue(objectId: var_objectId, pageId: var_pageId, kind: var_kind, capability: var_capability, code: var_code, message: var_message, supportedOperations: var_supportedOperations); }
-
-@protected NativeCompatibilityReport sse_decode_native_compatibility_report(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_editableCount = sse_decode_u_32(deserializer);
-var var_overlayOnlyCount = sse_decode_u_32(deserializer);
-var var_readOnlyCount = sse_decode_u_32(deserializer);
-var var_issues = sse_decode_list_native_compatibility_issue(deserializer);
-return NativeCompatibilityReport(schemaVersion: var_schemaVersion, revision: var_revision, editableCount: var_editableCount, overlayOnlyCount: var_overlayOnlyCount, readOnlyCount: var_readOnlyCount, issues: var_issues); }
-
-@protected NativeConversationImport sse_decode_native_conversation_import(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_legacyId = sse_decode_String(deserializer);
-var var_documentId = sse_decode_String(deserializer);
-var var_title = sse_decode_String(deserializer);
-var var_createdAt = sse_decode_String(deserializer);
-var var_updatedAt = sse_decode_String(deserializer);
-var var_summary = sse_decode_opt_String(deserializer);
-var var_summaryThroughSequence = sse_decode_opt_box_autoadd_u_64(deserializer);
-var var_messages = sse_decode_list_native_conversation_message(deserializer);
-return NativeConversationImport(legacyId: var_legacyId, documentId: var_documentId, title: var_title, createdAt: var_createdAt, updatedAt: var_updatedAt, summary: var_summary, summaryThroughSequence: var_summaryThroughSequence, messages: var_messages); }
-
-@protected NativeConversationImportReceipt sse_decode_native_conversation_import_receipt(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_conversationId = sse_decode_String(deserializer);
-var var_messageCount = sse_decode_u_64(deserializer);
-var var_digestSha256 = sse_decode_String(deserializer);
-var var_alreadyPresent = sse_decode_bool(deserializer);
-return NativeConversationImportReceipt(conversationId: var_conversationId, messageCount: var_messageCount, digestSha256: var_digestSha256, alreadyPresent: var_alreadyPresent); }
-
-@protected NativeConversationMessage sse_decode_native_conversation_message(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_id = sse_decode_String(deserializer);
-var var_sequence = sse_decode_u_64(deserializer);
-var var_role = sse_decode_String(deserializer);
-var var_content = sse_decode_String(deserializer);
-var var_citationsJson = sse_decode_String(deserializer);
-var var_createdAt = sse_decode_String(deserializer);
-var var_tokenEstimate = sse_decode_u_64(deserializer);
-var var_isCompacted = sse_decode_bool(deserializer);
-return NativeConversationMessage(id: var_id, sequence: var_sequence, role: var_role, content: var_content, citationsJson: var_citationsJson, createdAt: var_createdAt, tokenEstimate: var_tokenEstimate, isCompacted: var_isCompacted); }
-
-@protected NativeDeleteAnnotationRequest sse_decode_native_delete_annotation_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_commandId = sse_decode_String(deserializer);
-var var_baseRevision = sse_decode_u_64(deserializer);
-var var_objectId = sse_decode_String(deserializer);
-return NativeDeleteAnnotationRequest(schemaVersion: var_schemaVersion, commandId: var_commandId, baseRevision: var_baseRevision, objectId: var_objectId); }
-
-@protected NativeEditorCommand sse_decode_native_editor_command(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_kind = sse_decode_native_editor_command_kind(deserializer);
-var var_objectId = sse_decode_opt_String(deserializer);
-var var_start = sse_decode_opt_box_autoadd_u_32(deserializer);
-var var_end = sse_decode_opt_box_autoadd_u_32(deserializer);
-var var_replacement = sse_decode_opt_String(deserializer);
-var var_style = sse_decode_opt_box_autoadd_native_text_style(deserializer);
-var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(deserializer);
-var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
-var var_radians = sse_decode_opt_box_autoadd_f_64(deserializer);
-var var_centerX = sse_decode_opt_box_autoadd_f_64(deserializer);
-var var_centerY = sse_decode_opt_box_autoadd_f_64(deserializer);
-var var_label = sse_decode_opt_String(deserializer);
-return NativeEditorCommand(kind: var_kind, objectId: var_objectId, start: var_start, end: var_end, replacement: var_replacement, style: var_style, transform: var_transform, bounds: var_bounds, radians: var_radians, centerX: var_centerX, centerY: var_centerY, label: var_label); }
-
-@protected NativeEditorCommandKind sse_decode_native_editor_command_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeEditorCommandKind.values[inner]; }
-
-@protected NativeEditorEvent sse_decode_native_editor_event(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_kind = sse_decode_native_editor_event_kind(deserializer);
-var var_sessionId = sse_decode_String(deserializer);
-var var_sequence = sse_decode_u_64(deserializer);
-var var_revision = sse_decode_opt_box_autoadd_u_64(deserializer);
-var var_latestRevision = sse_decode_opt_box_autoadd_u_64(deserializer);
-var var_result = sse_decode_opt_box_autoadd_native_command_result(deserializer);
-return NativeEditorEvent(kind: var_kind, sessionId: var_sessionId, sequence: var_sequence, revision: var_revision, latestRevision: var_latestRevision, result: var_result); }
-
-@protected NativeEditorEventKind sse_decode_native_editor_event_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeEditorEventKind.values[inner]; }
-
-@protected NativeEditorMetadata sse_decode_native_editor_metadata(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_sessionId = sse_decode_String(deserializer);
-var var_documentId = sse_decode_String(deserializer);
-var var_sourceFingerprint = sse_decode_String(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_pageCount = sse_decode_u_32(deserializer);
-return NativeEditorMetadata(schemaVersion: var_schemaVersion, sessionId: var_sessionId, documentId: var_documentId, sourceFingerprint: var_sourceFingerprint, revision: var_revision, pageCount: var_pageCount); }
-
-@protected NativeEditorSaveMode sse_decode_native_editor_save_mode(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeEditorSaveMode.values[inner]; }
-
-@protected NativeEditorSaveRequest sse_decode_native_editor_save_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_targetPath = sse_decode_String(deserializer);
-var var_mode = sse_decode_native_editor_save_mode(deserializer);
-var var_association = sse_decode_native_save_association(deserializer);
-var var_recoveryDirectory = sse_decode_opt_String(deserializer);
-return NativeEditorSaveRequest(targetPath: var_targetPath, mode: var_mode, association: var_association, recoveryDirectory: var_recoveryDirectory); }
-
-@protected NativeEditorSaveResult sse_decode_native_editor_save_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_targetPath = sse_decode_String(deserializer);
-var var_materializedRevision = sse_decode_u_64(deserializer);
-var var_completedStages = sse_decode_list_String(deserializer);
-var var_warnings = sse_decode_list_String(deserializer);
-var var_followsNewSource = sse_decode_bool(deserializer);
-return NativeEditorSaveResult(schemaVersion: var_schemaVersion, targetPath: var_targetPath, materializedRevision: var_materializedRevision, completedStages: var_completedStages, warnings: var_warnings, followsNewSource: var_followsNewSource); }
-
-@protected NativeFontFallbackProposal sse_decode_native_font_fallback_proposal(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_token = sse_decode_String(deserializer);
-var var_fontName = sse_decode_String(deserializer);
-var var_source = sse_decode_String(deserializer);
-var var_embeddingAllowed = sse_decode_bool(deserializer);
-var var_affectedCharacters = sse_decode_String(deserializer);
-return NativeFontFallbackProposal(token: var_token, fontName: var_fontName, source: var_source, embeddingAllowed: var_embeddingAllowed, affectedCharacters: var_affectedCharacters); }
-
-@protected NativeFontFallbackProposalRequest sse_decode_native_font_fallback_proposal_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_baseRevision = sse_decode_u_64(deserializer);
-var var_objectId = sse_decode_String(deserializer);
-var var_start = sse_decode_u_32(deserializer);
-var var_end = sse_decode_u_32(deserializer);
-var var_replacement = sse_decode_String(deserializer);
-return NativeFontFallbackProposalRequest(schemaVersion: var_schemaVersion, baseRevision: var_baseRevision, objectId: var_objectId, start: var_start, end: var_end, replacement: var_replacement); }
-
-@protected NativeLivePageImport sse_decode_native_live_page_import(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_expectedRevision = sse_decode_u_64(deserializer);
-var var_pageNumber = sse_decode_u_32(deserializer);
-var var_width = sse_decode_f_64(deserializer);
-var var_height = sse_decode_f_64(deserializer);
-var var_objects = sse_decode_list_native_live_text_object(deserializer);
-return NativeLivePageImport(expectedRevision: var_expectedRevision, pageNumber: var_pageNumber, width: var_width, height: var_height, objects: var_objects); }
-
-@protected NativeLiveTextObject sse_decode_native_live_text_object(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_sourceKey = sse_decode_String(deserializer);
-var var_sourceRevision = sse_decode_String(deserializer);
-var var_text = sse_decode_String(deserializer);
-var var_bounds = sse_decode_native_pdf_box(deserializer);
-var var_style = sse_decode_native_text_style(deserializer);
-var var_baseline = sse_decode_f_64(deserializer);
-var var_editable = sse_decode_bool(deserializer);
-return NativeLiveTextObject(objectId: var_objectId, sourceKey: var_sourceKey, sourceRevision: var_sourceRevision, text: var_text, bounds: var_bounds, style: var_style, baseline: var_baseline, editable: var_editable); }
-
-@protected NativeMemoryPressureLevel sse_decode_native_memory_pressure_level(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeMemoryPressureLevel.values[inner]; }
-
-@protected NativeObjectDetailsRequest sse_decode_native_object_details_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-return NativeObjectDetailsRequest(objectId: var_objectId); }
-
-@protected NativeObjectPatch sse_decode_native_object_patch(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_modifiedRevision = sse_decode_u_64(deserializer);
-var var_text = sse_decode_opt_String(deserializer);
-var var_textRuns = sse_decode_opt_list_native_text_run(deserializer);
-var var_characterBoxes = sse_decode_opt_list_native_text_character_box(deserializer);
-var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
-var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(deserializer);
-var var_fontFingerprint = sse_decode_opt_String(deserializer);
-var var_fontAssetHandle = sse_decode_opt_String(deserializer);
-return NativeObjectPatch(objectId: var_objectId, pageId: var_pageId, modifiedRevision: var_modifiedRevision, text: var_text, textRuns: var_textRuns, characterBoxes: var_characterBoxes, bounds: var_bounds, transform: var_transform, fontFingerprint: var_fontFingerprint, fontAssetHandle: var_fontAssetHandle); }
-
-@protected NativeOpenEditorRequest sse_decode_native_open_editor_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_sourcePath = sse_decode_String(deserializer);
-var var_projectRoot = sse_decode_opt_String(deserializer);
-return NativeOpenEditorRequest(sourcePath: var_sourcePath, projectRoot: var_projectRoot); }
-
-@protected NativePageScene sse_decode_native_page_scene(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_pageNumber = sse_decode_u_32(deserializer);
-var var_width = sse_decode_f_64(deserializer);
-var var_height = sse_decode_f_64(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_objects = sse_decode_list_native_scene_object(deserializer);
-return NativePageScene(schemaVersion: var_schemaVersion, pageId: var_pageId, pageNumber: var_pageNumber, width: var_width, height: var_height, revision: var_revision, objects: var_objects); }
-
-@protected NativePageSceneRequest sse_decode_native_page_scene_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_pageNumber = sse_decode_u_32(deserializer);
-var var_expectedRevision = sse_decode_u_64(deserializer);
-var var_priority = sse_decode_native_viewport_priority(deserializer);
-return NativePageSceneRequest(pageNumber: var_pageNumber, expectedRevision: var_expectedRevision, priority: var_priority); }
-
-@protected NativePdfAnnotations sse_decode_native_pdf_annotations(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
-var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
-return NativePdfAnnotations(bookmarks: var_bookmarks, highlights: var_highlights); }
-
-@protected NativePdfBookmark sse_decode_native_pdf_bookmark(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_id = sse_decode_String(deserializer);
-var var_title = sse_decode_String(deserializer);
-var var_pageNumber = sse_decode_usize(deserializer);
-return NativePdfBookmark(id: var_id, title: var_title, pageNumber: var_pageNumber); }
-
-@protected NativePdfBox sse_decode_native_pdf_box(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_left = sse_decode_f_64(deserializer);
-var var_bottom = sse_decode_f_64(deserializer);
-var var_right = sse_decode_f_64(deserializer);
-var var_top = sse_decode_f_64(deserializer);
-return NativePdfBox(left: var_left, bottom: var_bottom, right: var_right, top: var_top); }
-
-@protected NativePdfComposeRequest sse_decode_native_pdf_compose_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_sources = sse_decode_list_native_pdf_source(deserializer);
-var var_outputPath = sse_decode_String(deserializer);
-return NativePdfComposeRequest(sources: var_sources, outputPath: var_outputPath); }
-
-@protected NativePdfComposeResponse sse_decode_native_pdf_compose_response(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_outputPath = sse_decode_String(deserializer);
-var var_pageCount = sse_decode_usize(deserializer);
-var var_message = sse_decode_opt_String(deserializer);
-return NativePdfComposeResponse(outputPath: var_outputPath, pageCount: var_pageCount, message: var_message); }
-
-@protected NativePdfHighlight sse_decode_native_pdf_highlight(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_id = sse_decode_String(deserializer);
-var var_pageNumber = sse_decode_usize(deserializer);
-var var_left = sse_decode_f_32(deserializer);
-var var_top = sse_decode_f_32(deserializer);
-var var_right = sse_decode_f_32(deserializer);
-var var_bottom = sse_decode_f_32(deserializer);
-var var_red = sse_decode_f_32(deserializer);
-var var_green = sse_decode_f_32(deserializer);
-var var_blue = sse_decode_f_32(deserializer);
-var var_opacity = sse_decode_f_32(deserializer);
-var var_text = sse_decode_String(deserializer);
-var var_quadPoints = sse_decode_list_prim_f_32_strict(deserializer);
-return NativePdfHighlight(id: var_id, pageNumber: var_pageNumber, left: var_left, top: var_top, right: var_right, bottom: var_bottom, red: var_red, green: var_green, blue: var_blue, opacity: var_opacity, text: var_text, quadPoints: var_quadPoints); }
-
-@protected NativePdfSaveRequest sse_decode_native_pdf_save_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_path = sse_decode_String(deserializer);
-var var_outputPath = sse_decode_opt_String(deserializer);
-var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
-var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
-return NativePdfSaveRequest(path: var_path, outputPath: var_outputPath, bookmarks: var_bookmarks, highlights: var_highlights); }
-
-@protected NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_path = sse_decode_String(deserializer);
-var var_pages = sse_decode_list_prim_usize_strict(deserializer);
-return NativePdfSource(path: var_path, pages: var_pages); }
-
-@protected NativePhysicalEditOperation sse_decode_native_physical_edit_operation(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_kind = sse_decode_native_physical_edit_operation_kind(deserializer);
-var var_objectId = sse_decode_String(deserializer);
-var var_sourceKey = sse_decode_String(deserializer);
-var var_sourceRevision = sse_decode_String(deserializer);
-var var_expectedText = sse_decode_opt_String(deserializer);
-var var_replacement = sse_decode_opt_String(deserializer);
-var var_expectedTransform = sse_decode_opt_box_autoadd_native_affine_transform(deserializer);
-var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(deserializer);
-var var_oldBounds = sse_decode_native_pdf_box(deserializer);
-var var_newBounds = sse_decode_native_pdf_box(deserializer);
-return NativePhysicalEditOperation(kind: var_kind, objectId: var_objectId, sourceKey: var_sourceKey, sourceRevision: var_sourceRevision, expectedText: var_expectedText, replacement: var_replacement, expectedTransform: var_expectedTransform, transform: var_transform, oldBounds: var_oldBounds, newBounds: var_newBounds); }
-
-@protected NativePhysicalEditOperationKind sse_decode_native_physical_edit_operation_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativePhysicalEditOperationKind.values[inner]; }
-
-@protected NativePhysicalEditPlan sse_decode_native_physical_edit_plan(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_previousRevision = sse_decode_u_64(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_operations = sse_decode_list_native_physical_edit_operation(deserializer);
-var var_inverseOperations = sse_decode_list_native_physical_edit_operation(deserializer);
-return NativePhysicalEditPlan(previousRevision: var_previousRevision, revision: var_revision, operations: var_operations, inverseOperations: var_inverseOperations); }
-
-@protected NativePhysicalLocator sse_decode_native_physical_locator(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_pageNumber = sse_decode_u_32(deserializer);
-var var_objectPath = sse_decode_list_prim_u_32_strict(deserializer);
-var var_objectType = sse_decode_String(deserializer);
-var var_sourceFingerprint = sse_decode_String(deserializer);
-var var_objectRevision = sse_decode_u_64(deserializer);
-return NativePhysicalLocator(pageNumber: var_pageNumber, objectPath: var_objectPath, objectType: var_objectType, sourceFingerprint: var_sourceFingerprint, objectRevision: var_objectRevision); }
-
-@protected NativePreparedLiveCommand sse_decode_native_prepared_live_command(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_token = sse_decode_String(deserializer);
-var var_commandId = sse_decode_String(deserializer);
-var var_previousRevision = sse_decode_u_64(deserializer);
-var var_committedRevision = sse_decode_u_64(deserializer);
-var var_plan = sse_decode_native_physical_edit_plan(deserializer);
-return NativePreparedLiveCommand(token: var_token, commandId: var_commandId, previousRevision: var_previousRevision, committedRevision: var_committedRevision, plan: var_plan); }
-
-@protected NativeProviderTestRequest sse_decode_native_provider_test_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_providerEndpoint = sse_decode_String(deserializer);
-var var_modelId = sse_decode_String(deserializer);
-var var_headers = sse_decode_Map_String_String_None(deserializer);
-var var_apiKey = sse_decode_String(deserializer);
-return NativeProviderTestRequest(providerEndpoint: var_providerEndpoint, modelId: var_modelId, headers: var_headers, apiKey: var_apiKey); }
-
-@protected NativeRagChunk sse_decode_native_rag_chunk(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_id = sse_decode_String(deserializer);
-var var_text = sse_decode_String(deserializer);
-return NativeRagChunk(id: var_id, text: var_text); }
-
-@protected NativeRagIndexRequest sse_decode_native_rag_index_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_storageDirectory = sse_decode_String(deserializer);
-var var_modelCacheDirectory = sse_decode_String(deserializer);
-var var_documentFingerprint = sse_decode_String(deserializer);
-var var_chunks = sse_decode_list_native_rag_chunk(deserializer);
-return NativeRagIndexRequest(storageDirectory: var_storageDirectory, modelCacheDirectory: var_modelCacheDirectory, documentFingerprint: var_documentFingerprint, chunks: var_chunks); }
-
-@protected NativeRagIndexResponse sse_decode_native_rag_index_response(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_status = sse_decode_String(deserializer);
-var var_message = sse_decode_opt_String(deserializer);
-var var_outcome = sse_decode_opt_String(deserializer);
-return NativeRagIndexResponse(status: var_status, message: var_message, outcome: var_outcome); }
-
-@protected NativeRagQueryRequest sse_decode_native_rag_query_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_storageDirectory = sse_decode_String(deserializer);
-var var_modelCacheDirectory = sse_decode_String(deserializer);
-var var_documentFingerprint = sse_decode_String(deserializer);
-var var_chunkIds = sse_decode_list_String(deserializer);
-var var_query = sse_decode_String(deserializer);
-var var_limit = sse_decode_usize(deserializer);
-return NativeRagQueryRequest(storageDirectory: var_storageDirectory, modelCacheDirectory: var_modelCacheDirectory, documentFingerprint: var_documentFingerprint, chunkIds: var_chunkIds, query: var_query, limit: var_limit); }
-
-@protected NativeRagQueryResponse sse_decode_native_rag_query_response(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_status = sse_decode_String(deserializer);
-var var_message = sse_decode_opt_String(deserializer);
-var var_results = sse_decode_list_native_rag_query_result(deserializer);
-return NativeRagQueryResponse(status: var_status, message: var_message, results: var_results); }
-
-@protected NativeRagQueryResult sse_decode_native_rag_query_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_chunkId = sse_decode_String(deserializer);
-var var_score = sse_decode_f_32(deserializer);
-return NativeRagQueryResult(chunkId: var_chunkId, score: var_score); }
-
-@protected NativeSaveAssociation sse_decode_native_save_association(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeSaveAssociation.values[inner]; }
-
-@protected NativeSceneObject sse_decode_native_scene_object(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_kind = sse_decode_native_scene_object_kind(deserializer);
-var var_objectId = sse_decode_String(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_text = sse_decode_opt_String(deserializer);
-var var_bounds = sse_decode_native_pdf_box(deserializer);
-var var_transform = sse_decode_native_affine_transform(deserializer);
-var var_capability = sse_decode_String(deserializer);
-var var_capabilityReason = sse_decode_opt_String(deserializer);
-var var_modifiedRevision = sse_decode_u_64(deserializer);
-var var_runs = sse_decode_list_native_text_run(deserializer);
-var var_characterBoxes = sse_decode_list_native_text_character_box(deserializer);
-var var_layout = sse_decode_opt_box_autoadd_native_text_layout_recipe(deserializer);
-var var_fontFingerprint = sse_decode_opt_String(deserializer);
-var var_fontAssetHandle = sse_decode_opt_String(deserializer);
-var var_physicalLocator = sse_decode_opt_box_autoadd_native_physical_locator(deserializer);
-return NativeSceneObject(kind: var_kind, objectId: var_objectId, pageId: var_pageId, text: var_text, bounds: var_bounds, transform: var_transform, capability: var_capability, capabilityReason: var_capabilityReason, modifiedRevision: var_modifiedRevision, runs: var_runs, characterBoxes: var_characterBoxes, layout: var_layout, fontFingerprint: var_fontFingerprint, fontAssetHandle: var_fontAssetHandle, physicalLocator: var_physicalLocator); }
-
-@protected NativeSceneObjectKind sse_decode_native_scene_object_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeSceneObjectKind.values[inner]; }
-
-@protected NativeSearchMatch sse_decode_native_search_match(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_pageNumber = sse_decode_u_32(deserializer);
-var var_startUtf16 = sse_decode_u_32(deserializer);
-var var_endUtf16 = sse_decode_u_32(deserializer);
-var var_quotedText = sse_decode_String(deserializer);
-return NativeSearchMatch(objectId: var_objectId, pageId: var_pageId, pageNumber: var_pageNumber, startUtf16: var_startUtf16, endUtf16: var_endUtf16, quotedText: var_quotedText); }
-
-@protected NativeSearchMode sse_decode_native_search_mode(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeSearchMode.values[inner]; }
-
-@protected NativeSearchRequest sse_decode_native_search_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_expectedRevision = sse_decode_u_64(deserializer);
-var var_query = sse_decode_String(deserializer);
-var var_mode = sse_decode_native_search_mode(deserializer);
-var var_wholeWord = sse_decode_bool(deserializer);
-var var_offset = sse_decode_u_32(deserializer);
-var var_limit = sse_decode_u_32(deserializer);
-return NativeSearchRequest(expectedRevision: var_expectedRevision, query: var_query, mode: var_mode, wholeWord: var_wholeWord, offset: var_offset, limit: var_limit); }
-
-@protected NativeSearchResult sse_decode_native_search_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_matches = sse_decode_list_native_search_match(deserializer);
-var var_totalMatches = sse_decode_u_32(deserializer);
-var var_indexedPages = sse_decode_u_32(deserializer);
-var var_pageCount = sse_decode_u_32(deserializer);
-var var_isComplete = sse_decode_bool(deserializer);
-return NativeSearchResult(schemaVersion: var_schemaVersion, revision: var_revision, matches: var_matches, totalMatches: var_totalMatches, indexedPages: var_indexedPages, pageCount: var_pageCount, isComplete: var_isComplete); }
-
-@protected NativeSelectionContext sse_decode_native_selection_context(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_documentId = sse_decode_String(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_kind = sse_decode_native_selection_kind(deserializer);
-var var_ranges = sse_decode_list_native_selection_range(deserializer);
-var var_pageNumbers = sse_decode_list_prim_u_32_strict(deserializer);
-var var_nearbyTextBefore = sse_decode_String(deserializer);
-var var_nearbyTextAfter = sse_decode_String(deserializer);
-var var_disclosureSha256 = sse_decode_String(deserializer);
-return NativeSelectionContext(schemaVersion: var_schemaVersion, documentId: var_documentId, revision: var_revision, kind: var_kind, ranges: var_ranges, pageNumbers: var_pageNumbers, nearbyTextBefore: var_nearbyTextBefore, nearbyTextAfter: var_nearbyTextAfter, disclosureSha256: var_disclosureSha256); }
-
-@protected NativeSelectionKind sse_decode_native_selection_kind(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeSelectionKind.values[inner]; }
-
-@protected NativeSelectionRange sse_decode_native_selection_range(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_pageId = sse_decode_String(deserializer);
-var var_pageNumber = sse_decode_u_32(deserializer);
-var var_startUtf16 = sse_decode_u_32(deserializer);
-var var_endUtf16 = sse_decode_u_32(deserializer);
-var var_quotedText = sse_decode_String(deserializer);
-return NativeSelectionRange(objectId: var_objectId, pageId: var_pageId, pageNumber: var_pageNumber, startUtf16: var_startUtf16, endUtf16: var_endUtf16, quotedText: var_quotedText); }
-
-@protected NativeSelectionRebase sse_decode_native_selection_rebase(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_objectId = sse_decode_String(deserializer);
-var var_start = sse_decode_u_32(deserializer);
-var var_end = sse_decode_u_32(deserializer);
-var var_insertedUtf16Length = sse_decode_u_32(deserializer);
-return NativeSelectionRebase(objectId: var_objectId, start: var_start, end: var_end, insertedUtf16Length: var_insertedUtf16Length); }
-
-@protected NativeSelectionSet sse_decode_native_selection_set(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_expectedRevision = sse_decode_u_64(deserializer);
-var var_kind = sse_decode_native_selection_kind(deserializer);
-var var_ranges = sse_decode_list_native_selection_range(deserializer);
-var var_objectIds = sse_decode_list_String(deserializer);
-var var_primaryIndex = sse_decode_opt_box_autoadd_u_32(deserializer);
-return NativeSelectionSet(expectedRevision: var_expectedRevision, kind: var_kind, ranges: var_ranges, objectIds: var_objectIds, primaryIndex: var_primaryIndex); }
-
-@protected NativeStartAgentRunRequest sse_decode_native_start_agent_run_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_providerEndpoint = sse_decode_String(deserializer);
-var var_modelId = sse_decode_String(deserializer);
-var var_headers = sse_decode_Map_String_String_None(deserializer);
-var var_apiKey = sse_decode_String(deserializer);
-var var_conversationId = sse_decode_opt_String(deserializer);
-var var_userPrompt = sse_decode_String(deserializer);
-var var_selection = sse_decode_opt_box_autoadd_native_selection_set(deserializer);
-var var_disclosureSha256 = sse_decode_opt_String(deserializer);
-var var_maxToolCalls = sse_decode_u_32(deserializer);
-var var_maxProviderRounds = sse_decode_u_32(deserializer);
-var var_maxElapsedMs = sse_decode_u_64(deserializer);
-var var_maxOutputTokens = sse_decode_u_32(deserializer);
-return NativeStartAgentRunRequest(schemaVersion: var_schemaVersion, providerEndpoint: var_providerEndpoint, modelId: var_modelId, headers: var_headers, apiKey: var_apiKey, conversationId: var_conversationId, userPrompt: var_userPrompt, selection: var_selection, disclosureSha256: var_disclosureSha256, maxToolCalls: var_maxToolCalls, maxProviderRounds: var_maxProviderRounds, maxElapsedMs: var_maxElapsedMs, maxOutputTokens: var_maxOutputTokens); }
-
-@protected NativeSubmitCommandRequest sse_decode_native_submit_command_request(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_commandId = sse_decode_String(deserializer);
-var var_baseRevision = sse_decode_u_64(deserializer);
-var var_payload = sse_decode_native_editor_command(deserializer);
-return NativeSubmitCommandRequest(schemaVersion: var_schemaVersion, commandId: var_commandId, baseRevision: var_baseRevision, payload: var_payload); }
-
-@protected NativeTextCharacterBox sse_decode_native_text_character_box(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_start = sse_decode_u_32(deserializer);
-var var_end = sse_decode_u_32(deserializer);
-var var_bounds = sse_decode_native_pdf_box(deserializer);
-return NativeTextCharacterBox(start: var_start, end: var_end, bounds: var_bounds); }
-
-@protected NativeTextLayoutRecipe sse_decode_native_text_layout_recipe(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_baseline = sse_decode_f_64(deserializer);
-var var_lineHeight = sse_decode_f_64(deserializer);
-var var_characterSpacing = sse_decode_f_64(deserializer);
-var var_horizontalScale = sse_decode_f_64(deserializer);
-var var_direction = sse_decode_String(deserializer);
-return NativeTextLayoutRecipe(baseline: var_baseline, lineHeight: var_lineHeight, characterSpacing: var_characterSpacing, horizontalScale: var_horizontalScale, direction: var_direction); }
-
-@protected NativeTextRun sse_decode_native_text_run(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_start = sse_decode_u_32(deserializer);
-var var_end = sse_decode_u_32(deserializer);
-var var_style = sse_decode_native_text_style(deserializer);
-return NativeTextRun(start: var_start, end: var_end, style: var_style); }
-
-@protected NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_fontFamily = sse_decode_opt_String(deserializer);
-var var_fontSize = sse_decode_f_64(deserializer);
-var var_fontWeight = sse_decode_u_16(deserializer);
-var var_italic = sse_decode_bool(deserializer);
-var var_colorRgba = sse_decode_list_prim_u_8_strict(deserializer);
-return NativeTextStyle(fontFamily: var_fontFamily, fontSize: var_fontSize, fontWeight: var_fontWeight, italic: var_italic, colorRgba: var_colorRgba); }
-
-@protected NativeValidatedSelection sse_decode_native_validated_selection(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_schemaVersion = sse_decode_u_32(deserializer);
-var var_revision = sse_decode_u_64(deserializer);
-var var_kind = sse_decode_native_selection_kind(deserializer);
-var var_ranges = sse_decode_list_native_selection_range(deserializer);
-var var_objectIds = sse_decode_list_String(deserializer);
-var var_primaryIndex = sse_decode_opt_box_autoadd_u_32(deserializer);
-return NativeValidatedSelection(schemaVersion: var_schemaVersion, revision: var_revision, kind: var_kind, ranges: var_ranges, objectIds: var_objectIds, primaryIndex: var_primaryIndex); }
-
-@protected NativeViewportPriority sse_decode_native_viewport_priority(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var inner = sse_decode_i_32(deserializer);
-        return NativeViewportPriority.values[inner]; }
-
-@protected String? sse_decode_opt_String(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_String(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_f_64(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativeAffineTransform? sse_decode_opt_box_autoadd_native_affine_transform(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_affine_transform(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_command_result(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_pdf_box(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativePhysicalLocator? sse_decode_opt_box_autoadd_native_physical_locator(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_physical_locator(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativeSelectionRebase? sse_decode_opt_box_autoadd_native_selection_rebase(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_selection_rebase(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativeSelectionSet? sse_decode_opt_box_autoadd_native_selection_set(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_selection_set(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativeTextLayoutRecipe? sse_decode_opt_box_autoadd_native_text_layout_recipe(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_text_layout_recipe(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected NativeTextStyle? sse_decode_opt_box_autoadd_native_text_style(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_native_text_style(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_u_32(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_box_autoadd_u_64(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected List<NativeTextCharacterBox>? sse_decode_opt_list_native_text_character_box(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_list_native_text_character_box(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected List<NativeTextRun>? sse_decode_opt_list_native_text_run(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-            if (sse_decode_bool(deserializer)) {
-                return (sse_decode_list_native_text_run(deserializer));
-            } else {
-                return null;
-            }
-             }
-
-@protected PdfDocumentMetadata sse_decode_pdf_document_metadata(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_documentId = sse_decode_String(deserializer);
-var var_title = sse_decode_String(deserializer);
-var var_pageCount = sse_decode_usize(deserializer);
-var var_isEncrypted = sse_decode_bool(deserializer);
-return PdfDocumentMetadata(documentId: var_documentId, title: var_title, pageCount: var_pageCount, isEncrypted: var_isEncrypted); }
-
-@protected PdfSearchMatch sse_decode_pdf_search_match(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_pageNumber = sse_decode_usize(deserializer);
-var var_text = sse_decode_String(deserializer);
-var var_bounds = sse_decode_record_f_32_f_32_f_32_f_32(deserializer);
-return PdfSearchMatch(pageNumber: var_pageNumber, text: var_text, bounds: var_bounds); }
-
-@protected (double,double,double,double) sse_decode_record_f_32_f_32_f_32_f_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_field0 = sse_decode_f_32(deserializer);
-var var_field1 = sse_decode_f_32(deserializer);
-var var_field2 = sse_decode_f_32(deserializer);
-var var_field3 = sse_decode_f_32(deserializer);
-return (var_field0, var_field1, var_field2, var_field3); }
-
-@protected (String,String) sse_decode_record_string_string(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-var var_field0 = sse_decode_String(deserializer);
-var var_field1 = sse_decode_String(deserializer);
-return (var_field0, var_field1); }
-
-@protected int sse_decode_u_16(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint16(); }
-
-@protected int sse_decode_u_32(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint32(); }
-
-@protected BigInt sse_decode_u_64(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getBigUint64(); }
-
-@protected int sse_decode_u_8(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getUint8(); }
-
-@protected void sse_decode_unit(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected BigInt sse_decode_usize(SseDeserializer deserializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-return deserializer.buffer.getBigUint64(); }
-
-@protected void sse_encode_AnyhowException(AnyhowException self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.message, serializer); }
-
-@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(NativeEditorSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativeEditorSessionImpl).frbInternalSseEncode(move: true), serializer); }
-
-@protected void sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(NativePdfSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativePdfSessionImpl).frbInternalSseEncode(move: true), serializer); }
-
-@protected void sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(NativePdfSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativePdfSessionImpl).frbInternalSseEncode(move: false), serializer); }
-
-@protected void sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(NativeEditorSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativeEditorSessionImpl).frbInternalSseEncode(move: false), serializer); }
-
-@protected void sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(NativePdfSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativePdfSessionImpl).frbInternalSseEncode(move: false), serializer); }
-
-@protected void sse_encode_Map_String_String_None(Map<String, String> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_record_string_string(self.entries.map((e) => (e.key, e.value)).toList(), serializer); }
-
-@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(NativeEditorSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativeEditorSessionImpl).frbInternalSseEncode(move: null), serializer); }
-
-@protected void sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(NativePdfSession self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize((self as NativePdfSessionImpl).frbInternalSseEncode(move: null), serializer); }
-
-@protected void sse_encode_StreamSink_String_Sse(RustStreamSink<String> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_String,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_native_agent_event_Sse(RustStreamSink<NativeAgentEvent> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_native_agent_event,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_StreamSink_native_editor_event_Sse(RustStreamSink<NativeEditorEvent> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.setupAndSerialize(codec: SseCodec(
-            decodeSuccessData: sse_decode_native_editor_event,
-            decodeErrorData: sse_decode_AnyhowException,
-        )), serializer); }
-
-@protected void sse_encode_String(String self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer); }
-
-@protected void sse_encode_bool(bool self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self ? 1 : 0); }
-
-@protected void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_f_64(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_affine_transform(NativeAffineTransform self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_affine_transform(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_annotation_command_request(NativeAnnotationCommandRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_annotation_command_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_approve_font_fallback_request(NativeApproveFontFallbackRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_approve_font_fallback_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_checkpoint_request(NativeCheckpointRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_checkpoint_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_clean_patch_request(NativeCleanPatchRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_clean_patch_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_command_result(NativeCommandResult self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_command_result(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_conversation_import(NativeConversationImport self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_conversation_import(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_delete_annotation_request(NativeDeleteAnnotationRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_delete_annotation_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_editor_save_request(NativeEditorSaveRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_editor_save_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_font_fallback_proposal_request(NativeFontFallbackProposalRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_font_fallback_proposal_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_live_page_import(NativeLivePageImport self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_live_page_import(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_object_details_request(NativeObjectDetailsRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_object_details_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_open_editor_request(NativeOpenEditorRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_open_editor_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_page_scene_request(NativePageSceneRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_page_scene_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_pdf_box(NativePdfBox self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_pdf_box(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_pdf_compose_request(NativePdfComposeRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_pdf_compose_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_pdf_save_request(NativePdfSaveRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_pdf_save_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_physical_locator(NativePhysicalLocator self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_physical_locator(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_provider_test_request(NativeProviderTestRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_provider_test_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_rag_index_request(NativeRagIndexRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_rag_index_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_rag_query_request(NativeRagQueryRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_rag_query_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_search_request(NativeSearchRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_search_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_selection_rebase(NativeSelectionRebase self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_selection_rebase(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_selection_set(NativeSelectionSet self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_selection_set(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_start_agent_run_request(NativeStartAgentRunRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_start_agent_run_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_submit_command_request(NativeSubmitCommandRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_submit_command_request(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_text_layout_recipe(NativeTextLayoutRecipe self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_text_layout_recipe(self, serializer); }
-
-@protected void sse_encode_box_autoadd_native_text_style(NativeTextStyle self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_text_style(self, serializer); }
-
-@protected void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self, serializer); }
-
-@protected void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self, serializer); }
-
-@protected void sse_encode_f_32(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putFloat32(self); }
-
-@protected void sse_encode_f_64(double self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putFloat64(self); }
-
-@protected void sse_encode_i_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putInt32(self); }
-
-@protected void sse_encode_list_String(List<String> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_String(item, serializer); } }
-
-@protected void sse_encode_list_native_agent_event(List<NativeAgentEvent> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_agent_event(item, serializer); } }
-
-@protected void sse_encode_list_native_annotation_range(List<NativeAnnotationRange> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_annotation_range(item, serializer); } }
-
-@protected void sse_encode_list_native_compatibility_issue(List<NativeCompatibilityIssue> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_compatibility_issue(item, serializer); } }
-
-@protected void sse_encode_list_native_conversation_message(List<NativeConversationMessage> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_conversation_message(item, serializer); } }
-
-@protected void sse_encode_list_native_live_text_object(List<NativeLiveTextObject> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_live_text_object(item, serializer); } }
-
-@protected void sse_encode_list_native_object_patch(List<NativeObjectPatch> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_object_patch(item, serializer); } }
-
-@protected void sse_encode_list_native_pdf_bookmark(List<NativePdfBookmark> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_pdf_bookmark(item, serializer); } }
-
-@protected void sse_encode_list_native_pdf_highlight(List<NativePdfHighlight> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_pdf_highlight(item, serializer); } }
-
-@protected void sse_encode_list_native_pdf_source(List<NativePdfSource> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_pdf_source(item, serializer); } }
-
-@protected void sse_encode_list_native_physical_edit_operation(List<NativePhysicalEditOperation> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_physical_edit_operation(item, serializer); } }
-
-@protected void sse_encode_list_native_rag_chunk(List<NativeRagChunk> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_rag_chunk(item, serializer); } }
-
-@protected void sse_encode_list_native_rag_query_result(List<NativeRagQueryResult> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_rag_query_result(item, serializer); } }
-
-@protected void sse_encode_list_native_scene_object(List<NativeSceneObject> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_scene_object(item, serializer); } }
-
-@protected void sse_encode_list_native_search_match(List<NativeSearchMatch> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_search_match(item, serializer); } }
-
-@protected void sse_encode_list_native_selection_range(List<NativeSelectionRange> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_selection_range(item, serializer); } }
-
-@protected void sse_encode_list_native_text_character_box(List<NativeTextCharacterBox> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_text_character_box(item, serializer); } }
-
-@protected void sse_encode_list_native_text_run(List<NativeTextRun> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_native_text_run(item, serializer); } }
-
-@protected void sse_encode_list_pdf_search_match(List<PdfSearchMatch> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_pdf_search_match(item, serializer); } }
-
-@protected void sse_encode_list_prim_f_32_strict(Float32List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putFloat32List(self); }
-
-@protected void sse_encode_list_prim_u_32_strict(Uint32List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint32List(self); }
-
-@protected void sse_encode_list_prim_u_8_loose(List<int> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint8List(self is Uint8List ? self : Uint8List.fromList(self)); }
-
-@protected void sse_encode_list_prim_u_8_strict(Uint8List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint8List(self); }
-
-@protected void sse_encode_list_prim_usize_strict(Uint64List self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-                    serializer.buffer.putUint64List(self); }
-
-@protected void sse_encode_list_record_string_string(List<(String,String)> self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.length, serializer);
-        for (final item in self) { sse_encode_record_string_string(item, serializer); } }
-
-@protected void sse_encode_native_affine_transform(NativeAffineTransform self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_f_64(self.a, serializer);
-sse_encode_f_64(self.b, serializer);
-sse_encode_f_64(self.c, serializer);
-sse_encode_f_64(self.d, serializer);
-sse_encode_f_64(self.e, serializer);
-sse_encode_f_64(self.f, serializer);
- }
-
-@protected void sse_encode_native_agent_audit(NativeAgentAudit self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.runId, serializer);
-sse_encode_String(self.status, serializer);
-sse_encode_list_native_agent_event(self.events, serializer);
- }
-
-@protected void sse_encode_native_agent_event(NativeAgentEvent self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.sessionId, serializer);
-sse_encode_String(self.runId, serializer);
-sse_encode_u_64(self.sequence, serializer);
-sse_encode_u_64(self.documentRevision, serializer);
-sse_encode_String(self.kind, serializer);
-sse_encode_String(self.payloadJson, serializer);
- }
-
-@protected void sse_encode_native_agent_run(NativeAgentRun self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.runId, serializer);
-sse_encode_String(self.status, serializer);
- }
-
-@protected void sse_encode_native_annotation(NativeAnnotation self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_native_pdf_box(self.bounds, serializer);
-sse_encode_native_annotation_kind(self.kind, serializer);
-sse_encode_native_annotation_anchor_kind(self.anchorKind, serializer);
-sse_encode_opt_box_autoadd_f_64(self.anchorX, serializer);
-sse_encode_opt_box_autoadd_f_64(self.anchorY, serializer);
-sse_encode_list_native_annotation_range(self.ranges, serializer);
-sse_encode_String(self.title, serializer);
-sse_encode_String(self.body, serializer);
-sse_encode_list_prim_u_8_strict(self.colorRgba, serializer);
-sse_encode_f_32(self.opacity, serializer);
-sse_encode_bool(self.resolved, serializer);
- }
-
-@protected void sse_encode_native_annotation_anchor_kind(NativeAnnotationAnchorKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_annotation_command_request(NativeAnnotationCommandRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.commandId, serializer);
-sse_encode_u_64(self.baseRevision, serializer);
-sse_encode_native_annotation(self.annotation, serializer);
- }
-
-@protected void sse_encode_native_annotation_kind(NativeAnnotationKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_annotation_range(NativeAnnotationRange self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.rangeId, serializer);
-sse_encode_String(self.objectId, serializer);
-sse_encode_u_32(self.startUtf16, serializer);
-sse_encode_u_32(self.endUtf16, serializer);
-sse_encode_String(self.quotedText, serializer);
- }
-
-@protected void sse_encode_native_approve_font_fallback_request(NativeApproveFontFallbackRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.commandId, serializer);
-sse_encode_u_64(self.baseRevision, serializer);
-sse_encode_String(self.proposalToken, serializer);
- }
-
-@protected void sse_encode_native_checkpoint_request(NativeCheckpointRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self.baseRevision, serializer);
-sse_encode_String(self.label, serializer);
- }
-
-@protected void sse_encode_native_clean_patch_asset(NativeCleanPatchAsset self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.handle, serializer);
-sse_encode_String(self.objectId, serializer);
-sse_encode_native_pdf_box(self.bounds, serializer);
-sse_encode_u_32(self.dpi, serializer);
-sse_encode_u_32(self.width, serializer);
-sse_encode_u_32(self.height, serializer);
-sse_encode_list_prim_u_8_strict(self.rgbaBytes, serializer);
-sse_encode_f_64(self.bleedPoints, serializer);
- }
-
-@protected void sse_encode_native_clean_patch_request(NativeCleanPatchRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_u_32(self.dpi, serializer);
- }
-
-@protected void sse_encode_native_command_result(NativeCommandResult self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.commandId, serializer);
-sse_encode_u_64(self.previousRevision, serializer);
-sse_encode_u_64(self.committedRevision, serializer);
-sse_encode_bool(self.durable, serializer);
-sse_encode_list_String(self.warnings, serializer);
-sse_encode_list_String(self.removedObjectIds, serializer);
-sse_encode_opt_box_autoadd_native_selection_rebase(self.selectionRebase, serializer);
-sse_encode_list_native_object_patch(self.objectPatches, serializer);
- }
-
-@protected void sse_encode_native_compatibility_issue(NativeCompatibilityIssue self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_String(self.kind, serializer);
-sse_encode_String(self.capability, serializer);
-sse_encode_String(self.code, serializer);
-sse_encode_String(self.message, serializer);
-sse_encode_list_String(self.supportedOperations, serializer);
- }
-
-@protected void sse_encode_native_compatibility_report(NativeCompatibilityReport self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_u_32(self.editableCount, serializer);
-sse_encode_u_32(self.overlayOnlyCount, serializer);
-sse_encode_u_32(self.readOnlyCount, serializer);
-sse_encode_list_native_compatibility_issue(self.issues, serializer);
- }
-
-@protected void sse_encode_native_conversation_import(NativeConversationImport self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.legacyId, serializer);
-sse_encode_String(self.documentId, serializer);
-sse_encode_String(self.title, serializer);
-sse_encode_String(self.createdAt, serializer);
-sse_encode_String(self.updatedAt, serializer);
-sse_encode_opt_String(self.summary, serializer);
-sse_encode_opt_box_autoadd_u_64(self.summaryThroughSequence, serializer);
-sse_encode_list_native_conversation_message(self.messages, serializer);
- }
-
-@protected void sse_encode_native_conversation_import_receipt(NativeConversationImportReceipt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.conversationId, serializer);
-sse_encode_u_64(self.messageCount, serializer);
-sse_encode_String(self.digestSha256, serializer);
-sse_encode_bool(self.alreadyPresent, serializer);
- }
-
-@protected void sse_encode_native_conversation_message(NativeConversationMessage self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.id, serializer);
-sse_encode_u_64(self.sequence, serializer);
-sse_encode_String(self.role, serializer);
-sse_encode_String(self.content, serializer);
-sse_encode_String(self.citationsJson, serializer);
-sse_encode_String(self.createdAt, serializer);
-sse_encode_u_64(self.tokenEstimate, serializer);
-sse_encode_bool(self.isCompacted, serializer);
- }
-
-@protected void sse_encode_native_delete_annotation_request(NativeDeleteAnnotationRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.commandId, serializer);
-sse_encode_u_64(self.baseRevision, serializer);
-sse_encode_String(self.objectId, serializer);
- }
-
-@protected void sse_encode_native_editor_command(NativeEditorCommand self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_editor_command_kind(self.kind, serializer);
-sse_encode_opt_String(self.objectId, serializer);
-sse_encode_opt_box_autoadd_u_32(self.start, serializer);
-sse_encode_opt_box_autoadd_u_32(self.end, serializer);
-sse_encode_opt_String(self.replacement, serializer);
-sse_encode_opt_box_autoadd_native_text_style(self.style, serializer);
-sse_encode_opt_box_autoadd_native_affine_transform(self.transform, serializer);
-sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
-sse_encode_opt_box_autoadd_f_64(self.radians, serializer);
-sse_encode_opt_box_autoadd_f_64(self.centerX, serializer);
-sse_encode_opt_box_autoadd_f_64(self.centerY, serializer);
-sse_encode_opt_String(self.label, serializer);
- }
-
-@protected void sse_encode_native_editor_command_kind(NativeEditorCommandKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_editor_event(NativeEditorEvent self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_editor_event_kind(self.kind, serializer);
-sse_encode_String(self.sessionId, serializer);
-sse_encode_u_64(self.sequence, serializer);
-sse_encode_opt_box_autoadd_u_64(self.revision, serializer);
-sse_encode_opt_box_autoadd_u_64(self.latestRevision, serializer);
-sse_encode_opt_box_autoadd_native_command_result(self.result, serializer);
- }
-
-@protected void sse_encode_native_editor_event_kind(NativeEditorEventKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_editor_metadata(NativeEditorMetadata self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.sessionId, serializer);
-sse_encode_String(self.documentId, serializer);
-sse_encode_String(self.sourceFingerprint, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_u_32(self.pageCount, serializer);
- }
-
-@protected void sse_encode_native_editor_save_mode(NativeEditorSaveMode self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_editor_save_request(NativeEditorSaveRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.targetPath, serializer);
-sse_encode_native_editor_save_mode(self.mode, serializer);
-sse_encode_native_save_association(self.association, serializer);
-sse_encode_opt_String(self.recoveryDirectory, serializer);
- }
-
-@protected void sse_encode_native_editor_save_result(NativeEditorSaveResult self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.targetPath, serializer);
-sse_encode_u_64(self.materializedRevision, serializer);
-sse_encode_list_String(self.completedStages, serializer);
-sse_encode_list_String(self.warnings, serializer);
-sse_encode_bool(self.followsNewSource, serializer);
- }
-
-@protected void sse_encode_native_font_fallback_proposal(NativeFontFallbackProposal self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.token, serializer);
-sse_encode_String(self.fontName, serializer);
-sse_encode_String(self.source, serializer);
-sse_encode_bool(self.embeddingAllowed, serializer);
-sse_encode_String(self.affectedCharacters, serializer);
- }
-
-@protected void sse_encode_native_font_fallback_proposal_request(NativeFontFallbackProposalRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_u_64(self.baseRevision, serializer);
-sse_encode_String(self.objectId, serializer);
-sse_encode_u_32(self.start, serializer);
-sse_encode_u_32(self.end, serializer);
-sse_encode_String(self.replacement, serializer);
- }
-
-@protected void sse_encode_native_live_page_import(NativeLivePageImport self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self.expectedRevision, serializer);
-sse_encode_u_32(self.pageNumber, serializer);
-sse_encode_f_64(self.width, serializer);
-sse_encode_f_64(self.height, serializer);
-sse_encode_list_native_live_text_object(self.objects, serializer);
- }
-
-@protected void sse_encode_native_live_text_object(NativeLiveTextObject self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.sourceKey, serializer);
-sse_encode_String(self.sourceRevision, serializer);
-sse_encode_String(self.text, serializer);
-sse_encode_native_pdf_box(self.bounds, serializer);
-sse_encode_native_text_style(self.style, serializer);
-sse_encode_f_64(self.baseline, serializer);
-sse_encode_bool(self.editable, serializer);
- }
-
-@protected void sse_encode_native_memory_pressure_level(NativeMemoryPressureLevel self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_object_details_request(NativeObjectDetailsRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
- }
-
-@protected void sse_encode_native_object_patch(NativeObjectPatch self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_u_64(self.modifiedRevision, serializer);
-sse_encode_opt_String(self.text, serializer);
-sse_encode_opt_list_native_text_run(self.textRuns, serializer);
-sse_encode_opt_list_native_text_character_box(self.characterBoxes, serializer);
-sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
-sse_encode_opt_box_autoadd_native_affine_transform(self.transform, serializer);
-sse_encode_opt_String(self.fontFingerprint, serializer);
-sse_encode_opt_String(self.fontAssetHandle, serializer);
- }
-
-@protected void sse_encode_native_open_editor_request(NativeOpenEditorRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.sourcePath, serializer);
-sse_encode_opt_String(self.projectRoot, serializer);
- }
-
-@protected void sse_encode_native_page_scene(NativePageScene self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_u_32(self.pageNumber, serializer);
-sse_encode_f_64(self.width, serializer);
-sse_encode_f_64(self.height, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_list_native_scene_object(self.objects, serializer);
- }
-
-@protected void sse_encode_native_page_scene_request(NativePageSceneRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.pageNumber, serializer);
-sse_encode_u_64(self.expectedRevision, serializer);
-sse_encode_native_viewport_priority(self.priority, serializer);
- }
-
-@protected void sse_encode_native_pdf_annotations(NativePdfAnnotations self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
-sse_encode_list_native_pdf_highlight(self.highlights, serializer);
- }
-
-@protected void sse_encode_native_pdf_bookmark(NativePdfBookmark self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.id, serializer);
-sse_encode_String(self.title, serializer);
-sse_encode_usize(self.pageNumber, serializer);
- }
-
-@protected void sse_encode_native_pdf_box(NativePdfBox self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_f_64(self.left, serializer);
-sse_encode_f_64(self.bottom, serializer);
-sse_encode_f_64(self.right, serializer);
-sse_encode_f_64(self.top, serializer);
- }
-
-@protected void sse_encode_native_pdf_compose_request(NativePdfComposeRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_list_native_pdf_source(self.sources, serializer);
-sse_encode_String(self.outputPath, serializer);
- }
-
-@protected void sse_encode_native_pdf_compose_response(NativePdfComposeResponse self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.outputPath, serializer);
-sse_encode_usize(self.pageCount, serializer);
-sse_encode_opt_String(self.message, serializer);
- }
-
-@protected void sse_encode_native_pdf_highlight(NativePdfHighlight self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.id, serializer);
-sse_encode_usize(self.pageNumber, serializer);
-sse_encode_f_32(self.left, serializer);
-sse_encode_f_32(self.top, serializer);
-sse_encode_f_32(self.right, serializer);
-sse_encode_f_32(self.bottom, serializer);
-sse_encode_f_32(self.red, serializer);
-sse_encode_f_32(self.green, serializer);
-sse_encode_f_32(self.blue, serializer);
-sse_encode_f_32(self.opacity, serializer);
-sse_encode_String(self.text, serializer);
-sse_encode_list_prim_f_32_strict(self.quadPoints, serializer);
- }
-
-@protected void sse_encode_native_pdf_save_request(NativePdfSaveRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.path, serializer);
-sse_encode_opt_String(self.outputPath, serializer);
-sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
-sse_encode_list_native_pdf_highlight(self.highlights, serializer);
- }
-
-@protected void sse_encode_native_pdf_source(NativePdfSource self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.path, serializer);
-sse_encode_list_prim_usize_strict(self.pages, serializer);
- }
-
-@protected void sse_encode_native_physical_edit_operation(NativePhysicalEditOperation self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_physical_edit_operation_kind(self.kind, serializer);
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.sourceKey, serializer);
-sse_encode_String(self.sourceRevision, serializer);
-sse_encode_opt_String(self.expectedText, serializer);
-sse_encode_opt_String(self.replacement, serializer);
-sse_encode_opt_box_autoadd_native_affine_transform(self.expectedTransform, serializer);
-sse_encode_opt_box_autoadd_native_affine_transform(self.transform, serializer);
-sse_encode_native_pdf_box(self.oldBounds, serializer);
-sse_encode_native_pdf_box(self.newBounds, serializer);
- }
-
-@protected void sse_encode_native_physical_edit_operation_kind(NativePhysicalEditOperationKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_physical_edit_plan(NativePhysicalEditPlan self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self.previousRevision, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_list_native_physical_edit_operation(self.operations, serializer);
-sse_encode_list_native_physical_edit_operation(self.inverseOperations, serializer);
- }
-
-@protected void sse_encode_native_physical_locator(NativePhysicalLocator self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.pageNumber, serializer);
-sse_encode_list_prim_u_32_strict(self.objectPath, serializer);
-sse_encode_String(self.objectType, serializer);
-sse_encode_String(self.sourceFingerprint, serializer);
-sse_encode_u_64(self.objectRevision, serializer);
- }
-
-@protected void sse_encode_native_prepared_live_command(NativePreparedLiveCommand self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.token, serializer);
-sse_encode_String(self.commandId, serializer);
-sse_encode_u_64(self.previousRevision, serializer);
-sse_encode_u_64(self.committedRevision, serializer);
-sse_encode_native_physical_edit_plan(self.plan, serializer);
- }
-
-@protected void sse_encode_native_provider_test_request(NativeProviderTestRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.providerEndpoint, serializer);
-sse_encode_String(self.modelId, serializer);
-sse_encode_Map_String_String_None(self.headers, serializer);
-sse_encode_String(self.apiKey, serializer);
- }
-
-@protected void sse_encode_native_rag_chunk(NativeRagChunk self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.id, serializer);
-sse_encode_String(self.text, serializer);
- }
-
-@protected void sse_encode_native_rag_index_request(NativeRagIndexRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.storageDirectory, serializer);
-sse_encode_String(self.modelCacheDirectory, serializer);
-sse_encode_String(self.documentFingerprint, serializer);
-sse_encode_list_native_rag_chunk(self.chunks, serializer);
- }
-
-@protected void sse_encode_native_rag_index_response(NativeRagIndexResponse self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.status, serializer);
-sse_encode_opt_String(self.message, serializer);
-sse_encode_opt_String(self.outcome, serializer);
- }
-
-@protected void sse_encode_native_rag_query_request(NativeRagQueryRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.storageDirectory, serializer);
-sse_encode_String(self.modelCacheDirectory, serializer);
-sse_encode_String(self.documentFingerprint, serializer);
-sse_encode_list_String(self.chunkIds, serializer);
-sse_encode_String(self.query, serializer);
-sse_encode_usize(self.limit, serializer);
- }
-
-@protected void sse_encode_native_rag_query_response(NativeRagQueryResponse self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.status, serializer);
-sse_encode_opt_String(self.message, serializer);
-sse_encode_list_native_rag_query_result(self.results, serializer);
- }
-
-@protected void sse_encode_native_rag_query_result(NativeRagQueryResult self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.chunkId, serializer);
-sse_encode_f_32(self.score, serializer);
- }
-
-@protected void sse_encode_native_save_association(NativeSaveAssociation self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_scene_object(NativeSceneObject self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_native_scene_object_kind(self.kind, serializer);
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_opt_String(self.text, serializer);
-sse_encode_native_pdf_box(self.bounds, serializer);
-sse_encode_native_affine_transform(self.transform, serializer);
-sse_encode_String(self.capability, serializer);
-sse_encode_opt_String(self.capabilityReason, serializer);
-sse_encode_u_64(self.modifiedRevision, serializer);
-sse_encode_list_native_text_run(self.runs, serializer);
-sse_encode_list_native_text_character_box(self.characterBoxes, serializer);
-sse_encode_opt_box_autoadd_native_text_layout_recipe(self.layout, serializer);
-sse_encode_opt_String(self.fontFingerprint, serializer);
-sse_encode_opt_String(self.fontAssetHandle, serializer);
-sse_encode_opt_box_autoadd_native_physical_locator(self.physicalLocator, serializer);
- }
-
-@protected void sse_encode_native_scene_object_kind(NativeSceneObjectKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_search_match(NativeSearchMatch self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_u_32(self.pageNumber, serializer);
-sse_encode_u_32(self.startUtf16, serializer);
-sse_encode_u_32(self.endUtf16, serializer);
-sse_encode_String(self.quotedText, serializer);
- }
-
-@protected void sse_encode_native_search_mode(NativeSearchMode self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_search_request(NativeSearchRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self.expectedRevision, serializer);
-sse_encode_String(self.query, serializer);
-sse_encode_native_search_mode(self.mode, serializer);
-sse_encode_bool(self.wholeWord, serializer);
-sse_encode_u_32(self.offset, serializer);
-sse_encode_u_32(self.limit, serializer);
- }
-
-@protected void sse_encode_native_search_result(NativeSearchResult self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_list_native_search_match(self.matches, serializer);
-sse_encode_u_32(self.totalMatches, serializer);
-sse_encode_u_32(self.indexedPages, serializer);
-sse_encode_u_32(self.pageCount, serializer);
-sse_encode_bool(self.isComplete, serializer);
- }
-
-@protected void sse_encode_native_selection_context(NativeSelectionContext self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.documentId, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_native_selection_kind(self.kind, serializer);
-sse_encode_list_native_selection_range(self.ranges, serializer);
-sse_encode_list_prim_u_32_strict(self.pageNumbers, serializer);
-sse_encode_String(self.nearbyTextBefore, serializer);
-sse_encode_String(self.nearbyTextAfter, serializer);
-sse_encode_String(self.disclosureSha256, serializer);
- }
-
-@protected void sse_encode_native_selection_kind(NativeSelectionKind self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_native_selection_range(NativeSelectionRange self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_String(self.pageId, serializer);
-sse_encode_u_32(self.pageNumber, serializer);
-sse_encode_u_32(self.startUtf16, serializer);
-sse_encode_u_32(self.endUtf16, serializer);
-sse_encode_String(self.quotedText, serializer);
- }
-
-@protected void sse_encode_native_selection_rebase(NativeSelectionRebase self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.objectId, serializer);
-sse_encode_u_32(self.start, serializer);
-sse_encode_u_32(self.end, serializer);
-sse_encode_u_32(self.insertedUtf16Length, serializer);
- }
-
-@protected void sse_encode_native_selection_set(NativeSelectionSet self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_64(self.expectedRevision, serializer);
-sse_encode_native_selection_kind(self.kind, serializer);
-sse_encode_list_native_selection_range(self.ranges, serializer);
-sse_encode_list_String(self.objectIds, serializer);
-sse_encode_opt_box_autoadd_u_32(self.primaryIndex, serializer);
- }
-
-@protected void sse_encode_native_start_agent_run_request(NativeStartAgentRunRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.providerEndpoint, serializer);
-sse_encode_String(self.modelId, serializer);
-sse_encode_Map_String_String_None(self.headers, serializer);
-sse_encode_String(self.apiKey, serializer);
-sse_encode_opt_String(self.conversationId, serializer);
-sse_encode_String(self.userPrompt, serializer);
-sse_encode_opt_box_autoadd_native_selection_set(self.selection, serializer);
-sse_encode_opt_String(self.disclosureSha256, serializer);
-sse_encode_u_32(self.maxToolCalls, serializer);
-sse_encode_u_32(self.maxProviderRounds, serializer);
-sse_encode_u_64(self.maxElapsedMs, serializer);
-sse_encode_u_32(self.maxOutputTokens, serializer);
- }
-
-@protected void sse_encode_native_submit_command_request(NativeSubmitCommandRequest self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_String(self.commandId, serializer);
-sse_encode_u_64(self.baseRevision, serializer);
-sse_encode_native_editor_command(self.payload, serializer);
- }
-
-@protected void sse_encode_native_text_character_box(NativeTextCharacterBox self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.start, serializer);
-sse_encode_u_32(self.end, serializer);
-sse_encode_native_pdf_box(self.bounds, serializer);
- }
-
-@protected void sse_encode_native_text_layout_recipe(NativeTextLayoutRecipe self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_f_64(self.baseline, serializer);
-sse_encode_f_64(self.lineHeight, serializer);
-sse_encode_f_64(self.characterSpacing, serializer);
-sse_encode_f_64(self.horizontalScale, serializer);
-sse_encode_String(self.direction, serializer);
- }
-
-@protected void sse_encode_native_text_run(NativeTextRun self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.start, serializer);
-sse_encode_u_32(self.end, serializer);
-sse_encode_native_text_style(self.style, serializer);
- }
-
-@protected void sse_encode_native_text_style(NativeTextStyle self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_opt_String(self.fontFamily, serializer);
-sse_encode_f_64(self.fontSize, serializer);
-sse_encode_u_16(self.fontWeight, serializer);
-sse_encode_bool(self.italic, serializer);
-sse_encode_list_prim_u_8_strict(self.colorRgba, serializer);
- }
-
-@protected void sse_encode_native_validated_selection(NativeValidatedSelection self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_u_32(self.schemaVersion, serializer);
-sse_encode_u_64(self.revision, serializer);
-sse_encode_native_selection_kind(self.kind, serializer);
-sse_encode_list_native_selection_range(self.ranges, serializer);
-sse_encode_list_String(self.objectIds, serializer);
-sse_encode_opt_box_autoadd_u_32(self.primaryIndex, serializer);
- }
-
-@protected void sse_encode_native_viewport_priority(NativeViewportPriority self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_i_32(self.index, serializer); }
-
-@protected void sse_encode_opt_String(String? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_String(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_f_64(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_affine_transform(NativeAffineTransform? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_affine_transform(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_command_result(NativeCommandResult? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_command_result(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_pdf_box(NativePdfBox? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_pdf_box(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_physical_locator(NativePhysicalLocator? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_physical_locator(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_selection_rebase(NativeSelectionRebase? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_selection_rebase(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_selection_set(NativeSelectionSet? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_selection_set(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_text_layout_recipe(NativeTextLayoutRecipe? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_text_layout_recipe(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_native_text_style(NativeTextStyle? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_native_text_style(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_u_32(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_box_autoadd_u_64(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_list_native_text_character_box(List<NativeTextCharacterBox>? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_list_native_text_character_box(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_opt_list_native_text_run(List<NativeTextRun>? self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-
-                sse_encode_bool(self != null, serializer);
-                if (self != null) {
-                    sse_encode_list_native_text_run(self, serializer);
-                }
-                 }
-
-@protected void sse_encode_pdf_document_metadata(PdfDocumentMetadata self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.documentId, serializer);
-sse_encode_String(self.title, serializer);
-sse_encode_usize(self.pageCount, serializer);
-sse_encode_bool(self.isEncrypted, serializer);
- }
-
-@protected void sse_encode_pdf_search_match(PdfSearchMatch self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_usize(self.pageNumber, serializer);
-sse_encode_String(self.text, serializer);
-sse_encode_record_f_32_f_32_f_32_f_32(self.bounds, serializer);
- }
-
-@protected void sse_encode_record_f_32_f_32_f_32_f_32((double,double,double,double) self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_f_32(self.$1, serializer);
-sse_encode_f_32(self.$2, serializer);
-sse_encode_f_32(self.$3, serializer);
-sse_encode_f_32(self.$4, serializer);
- }
-
-@protected void sse_encode_record_string_string((String,String) self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-sse_encode_String(self.$1, serializer);
-sse_encode_String(self.$2, serializer);
- }
-
-@protected void sse_encode_u_16(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint16(self); }
-
-@protected void sse_encode_u_32(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint32(self); }
-
-@protected void sse_encode_u_64(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putBigUint64(self); }
-
-@protected void sse_encode_u_8(int self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putUint8(self); }
-
-@protected void sse_encode_unit(void self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
- }
-
-@protected void sse_encode_usize(BigInt self, SseSerializer serializer){ // Codec=Sse (Serialization based), see doc to use other codecs
-serializer.buffer.putBigUint64(self); }
-                }
-                
-
-            @sealed class NativeEditorSessionImpl extends RustOpaque implements NativeEditorSession {
-                // Not to be used by end users
-                NativeEditorSessionImpl.frbInternalDcoDecode(List<dynamic> wire):
-                    super.frbInternalDcoDecode(wire, _kStaticData);
-
-                // Not to be used by end users
-                NativeEditorSessionImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative):
-                    super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
-
-                static final _kStaticData = RustArcStaticData(
-                    rustArcIncrementStrongCount: RustLib.instance.api.rust_arc_increment_strong_count_NativeEditorSession,
-                    rustArcDecrementStrongCount: RustLib.instance.api.rust_arc_decrement_strong_count_NativeEditorSession,
-                    rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_NativeEditorSessionPtr,
-                );
-
-                 Stream<NativeAgentEvent>  agentEvents({required String runId })=>RustLib.instance.api.crateEditingApiNativeEditorSessionAgentEvents(that: this, runId: runId);
-
-
- Future<NativeAnnotation>  annotationDetails({required String objectId })=>RustLib.instance.api.crateEditingApiNativeEditorSessionAnnotationDetails(that: this, objectId: objectId);
-
-
- Future<NativeAgentRun>  approveAgentProposal({required String runId , required String approvalId })=>RustLib.instance.api.crateEditingApiNativeEditorSessionApproveAgentProposal(that: this, runId: runId, approvalId: approvalId);
-
-
- Future<NativeCommandResult>  approveFontFallback({required NativeApproveFontFallbackRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionApproveFontFallback(that: this, request: request);
-
-
- Future<void>  cancelAgentRun({required String runId })=>RustLib.instance.api.crateEditingApiNativeEditorSessionCancelAgentRun(that: this, runId: runId);
-
-
- Future<NativeCommandResult>  checkpoint({required NativeCheckpointRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionCheckpoint(that: this, request: request);
-
-
- Future<NativeCleanPatchAsset>  cleanPatch({required NativeCleanPatchRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionCleanPatch(that: this, request: request);
-
-
- Future<void>  close()=>RustLib.instance.api.crateEditingApiNativeEditorSessionClose(that: this, );
-
-
- Future<NativeCompatibilityReport>  compatibilityReport({required BigInt expectedRevision })=>RustLib.instance.api.crateEditingApiNativeEditorSessionCompatibilityReport(that: this, expectedRevision: expectedRevision);
-
-
- Future<NativeCommandResult>  createAnnotation({required NativeAnnotationCommandRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionCreateAnnotation(that: this, request: request);
-
-
- Future<NativeCommandResult>  deleteAnnotation({required NativeDeleteAnnotationRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionDeleteAnnotation(that: this, request: request);
-
-
- Stream<NativeEditorEvent>  events()=>RustLib.instance.api.crateEditingApiNativeEditorSessionEvents(that: this, );
-
-
- Future<NativeConversationImportReceipt>  importAgentConversation({required NativeConversationImport value })=>RustLib.instance.api.crateEditingApiNativeEditorSessionImportAgentConversation(that: this, value: value);
-
-
- Future<void>  importLivePage({required NativeLivePageImport request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionImportLivePage(that: this, request: request);
-
-
- Future<NativeEditorMetadata>  metadata()=>RustLib.instance.api.crateEditingApiNativeEditorSessionMetadata(that: this, );
-
-
- Future<NativeSceneObject>  objectDetails({required NativeObjectDetailsRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionObjectDetails(that: this, request: request);
-
-
- Future<NativePageScene>  pageScene({required NativePageSceneRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionPageScene(that: this, request: request);
-
-
-/// Validates a semantic command and exposes its live-PDFium physical plan
-/// without changing the canonical Rust revision or durable journal.
- Future<NativePreparedLiveCommand>  prepareLiveCommand({required NativeSubmitCommandRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionPrepareLiveCommand(that: this, request: request);
-
-
- Future<NativeFontFallbackProposal>  proposeFontFallback({required NativeFontFallbackProposalRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionProposeFontFallback(that: this, request: request);
-
-
-/// Publishes the prepared command only after the Dart-owned live PDFium
-/// document reports that it applied the returned physical edit plan.
- Future<NativeCommandResult>  publishPreparedLiveCommand({required String token })=>RustLib.instance.api.crateEditingApiNativeEditorSessionPublishPreparedLiveCommand(that: this, token: token);
-
-
- Future<NativeAgentAudit>  readAgentAudit({required String runId })=>RustLib.instance.api.crateEditingApiNativeEditorSessionReadAgentAudit(that: this, runId: runId);
-
-
- Future<NativeAgentRun>  rebaseAgentProposal({required String runId , required String approvalId , required BigInt currentRevision })=>RustLib.instance.api.crateEditingApiNativeEditorSessionRebaseAgentProposal(that: this, runId: runId, approvalId: approvalId, currentRevision: currentRevision);
-
-
- Future<NativeAgentRun>  rejectAgentProposal({required String runId , required String approvalId })=>RustLib.instance.api.crateEditingApiNativeEditorSessionRejectAgentProposal(that: this, runId: runId, approvalId: approvalId);
-
-
- Future<void>  releaseCleanPatchMemory()=>RustLib.instance.api.crateEditingApiNativeEditorSessionReleaseCleanPatchMemory(that: this, );
-
-
- Future<void>  reportMemoryPressure({required NativeMemoryPressureLevel level })=>RustLib.instance.api.crateEditingApiNativeEditorSessionReportMemoryPressure(that: this, level: level);
-
-
- Future<NativeEditorSaveResult>  save({required NativeEditorSaveRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionSave(that: this, request: request);
-
-
- Future<NativeEditorSaveResult>  saveLivePdfium({required NativeEditorSaveRequest request , required List<int> pdfBytes })=>RustLib.instance.api.crateEditingApiNativeEditorSessionSaveLivePdfium(that: this, request: request, pdfBytes: pdfBytes);
-
-
- Future<NativeSearchResult>  search({required NativeSearchRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionSearch(that: this, request: request);
-
-
- Future<NativeSelectionContext>  selectionContext({required NativeSelectionSet selection , required int beforeUtf16 , required int afterUtf16 , required int maxRanges })=>RustLib.instance.api.crateEditingApiNativeEditorSessionSelectionContext(that: this, selection: selection, beforeUtf16: beforeUtf16, afterUtf16: afterUtf16, maxRanges: maxRanges);
-
-
- Future<NativeAgentRun>  startAgentRun({required NativeStartAgentRunRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionStartAgentRun(that: this, request: request);
-
-
- Future<NativeCommandResult>  submit({required NativeSubmitCommandRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionSubmit(that: this, request: request);
-
-
- Future<NativeCommandResult>  updateAnnotation({required NativeAnnotationCommandRequest request })=>RustLib.instance.api.crateEditingApiNativeEditorSessionUpdateAnnotation(that: this, request: request);
-
-
- Future<NativeValidatedSelection>  validateSelection({required NativeSelectionSet selection })=>RustLib.instance.api.crateEditingApiNativeEditorSessionValidateSelection(that: this, selection: selection);
-
-
-            }
-            @sealed class NativePdfSessionImpl extends RustOpaque implements NativePdfSession {
-                // Not to be used by end users
-                NativePdfSessionImpl.frbInternalDcoDecode(List<dynamic> wire):
-                    super.frbInternalDcoDecode(wire, _kStaticData);
-
-                // Not to be used by end users
-                NativePdfSessionImpl.frbInternalSseDecode(BigInt ptr, int externalSizeOnNative):
-                    super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
-
-                static final _kStaticData = RustArcStaticData(
-                    rustArcIncrementStrongCount: RustLib.instance.api.rust_arc_increment_strong_count_NativePdfSession,
-                    rustArcDecrementStrongCount: RustLib.instance.api.rust_arc_decrement_strong_count_NativePdfSession,
-                    rustArcDecrementStrongCountPtr: RustLib.instance.api.rust_arc_decrement_strong_count_NativePdfSessionPtr,
-                );
-
-                 Stream<String>  index({required BigInt maxCharsPerChunk , required BigInt batchSize })=>RustLib.instance.api.crateApiNativePdfSessionIndex(that: this, maxCharsPerChunk: maxCharsPerChunk, batchSize: batchSize);
-
-
- Future<PdfDocumentMetadata>  metadata()=>RustLib.instance.api.crateApiNativePdfSessionMetadata(that: this, );
-
-
- Future<String>  pageText({required BigInt pageNumber })=>RustLib.instance.api.crateApiNativePdfSessionPageText(that: this, pageNumber: pageNumber);
-
-
- Future<List<PdfSearchMatch>>  search({required String query })=>RustLib.instance.api.crateApiNativePdfSessionSearch(that: this, query: query);
-
-
-            }
+        ),
+        constMeta: kCrateAgentApiTestAgentProviderConstMeta,
+        argValues: [request],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateAgentApiTestAgentProviderConstMeta =>
+      const TaskConstMeta(
+        debugName: "test_agent_provider",
+        argNames: ["request"],
+      );
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_NativeEditorSession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_NativeEditorSession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession;
+
+  RustArcIncrementStrongCountFnType
+  get rust_arc_increment_strong_count_NativePdfSession => wire
+      .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
+
+  RustArcDecrementStrongCountFnType
+  get rust_arc_decrement_strong_count_NativePdfSession => wire
+      .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession;
+
+  @protected
+  AnyhowException dco_decode_AnyhowException(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return AnyhowException(raw as String);
+  }
+
+  @protected
+  NativeEditorSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  NativePdfSession
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  NativePdfSession
+  dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  NativeEditorSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  NativePdfSession
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  Map<String, String> dco_decode_Map_String_String_None(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return Map.fromEntries(
+      dco_decode_list_record_string_string(
+        raw,
+      ).map((e) => MapEntry(e.$1, e.$2)),
+    );
+  }
+
+  @protected
+  NativeEditorSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  NativePdfSession
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalDcoDecode(raw as List<dynamic>);
+  }
+
+  @protected
+  RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<NativeAgentEvent> dco_decode_StreamSink_native_agent_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<NativeChatEvent> dco_decode_StreamSink_native_chat_event_Sse(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<NativeEditorEvent>
+  dco_decode_StreamSink_native_editor_event_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  String dco_decode_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as String;
+  }
+
+  @protected
+  bool dco_decode_bool(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as bool;
+  }
+
+  @protected
+  double dco_decode_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  NativeAffineTransform dco_decode_box_autoadd_native_affine_transform(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_affine_transform(raw);
+  }
+
+  @protected
+  NativeAnnotationCommandRequest
+  dco_decode_box_autoadd_native_annotation_command_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_annotation_command_request(raw);
+  }
+
+  @protected
+  NativeApproveFontFallbackRequest
+  dco_decode_box_autoadd_native_approve_font_fallback_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_approve_font_fallback_request(raw);
+  }
+
+  @protected
+  NativeChatEvent dco_decode_box_autoadd_native_chat_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_chat_event(raw);
+  }
+
+  @protected
+  NativeChatRequest dco_decode_box_autoadd_native_chat_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_chat_request(raw);
+  }
+
+  @protected
+  NativeCheckpointRequest dco_decode_box_autoadd_native_checkpoint_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_checkpoint_request(raw);
+  }
+
+  @protected
+  NativeCleanPatchRequest dco_decode_box_autoadd_native_clean_patch_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_clean_patch_request(raw);
+  }
+
+  @protected
+  NativeCommandResult dco_decode_box_autoadd_native_command_result(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_command_result(raw);
+  }
+
+  @protected
+  NativeConversationImport dco_decode_box_autoadd_native_conversation_import(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_conversation_import(raw);
+  }
+
+  @protected
+  NativeDeleteAnnotationRequest
+  dco_decode_box_autoadd_native_delete_annotation_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_delete_annotation_request(raw);
+  }
+
+  @protected
+  NativeEditorSaveRequest dco_decode_box_autoadd_native_editor_save_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_editor_save_request(raw);
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  dco_decode_box_autoadd_native_font_fallback_proposal_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_font_fallback_proposal_request(raw);
+  }
+
+  @protected
+  NativeLivePageImport dco_decode_box_autoadd_native_live_page_import(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_live_page_import(raw);
+  }
+
+  @protected
+  NativeObjectDetailsRequest
+  dco_decode_box_autoadd_native_object_details_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_object_details_request(raw);
+  }
+
+  @protected
+  NativeOpenEditorRequest dco_decode_box_autoadd_native_open_editor_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_open_editor_request(raw);
+  }
+
+  @protected
+  NativePageSceneRequest dco_decode_box_autoadd_native_page_scene_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_page_scene_request(raw);
+  }
+
+  @protected
+  NativePdfBox dco_decode_box_autoadd_native_pdf_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_pdf_box(raw);
+  }
+
+  @protected
+  NativePdfComposeRequest dco_decode_box_autoadd_native_pdf_compose_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_pdf_compose_request(raw);
+  }
+
+  @protected
+  NativePdfSaveRequest dco_decode_box_autoadd_native_pdf_save_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_pdf_save_request(raw);
+  }
+
+  @protected
+  NativePhysicalLocator dco_decode_box_autoadd_native_physical_locator(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_physical_locator(raw);
+  }
+
+  @protected
+  NativeProviderTestRequest dco_decode_box_autoadd_native_provider_test_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_provider_test_request(raw);
+  }
+
+  @protected
+  NativeRagIndexRequest dco_decode_box_autoadd_native_rag_index_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_rag_index_request(raw);
+  }
+
+  @protected
+  NativeRagQueryRequest dco_decode_box_autoadd_native_rag_query_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_rag_query_request(raw);
+  }
+
+  @protected
+  NativeSearchRequest dco_decode_box_autoadd_native_search_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_search_request(raw);
+  }
+
+  @protected
+  NativeSelectionRebase dco_decode_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_selection_rebase(raw);
+  }
+
+  @protected
+  NativeSelectionSet dco_decode_box_autoadd_native_selection_set(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_selection_set(raw);
+  }
+
+  @protected
+  NativeStartAgentRunRequest
+  dco_decode_box_autoadd_native_start_agent_run_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_start_agent_run_request(raw);
+  }
+
+  @protected
+  NativeSubmitCommandRequest
+  dco_decode_box_autoadd_native_submit_command_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_submit_command_request(raw);
+  }
+
+  @protected
+  NativeTextLayoutRecipe dco_decode_box_autoadd_native_text_layout_recipe(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_text_layout_recipe(raw);
+  }
+
+  @protected
+  NativeTextStyle dco_decode_box_autoadd_native_text_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_native_text_style(raw);
+  }
+
+  @protected
+  int dco_decode_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_u_64(raw);
+  }
+
+  @protected
+  double dco_decode_f_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  double dco_decode_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as double;
+  }
+
+  @protected
+  int dco_decode_i_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  List<String> dco_decode_list_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_String).toList();
+  }
+
+  @protected
+  List<NativeAgentEvent> dco_decode_list_native_agent_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_agent_event).toList();
+  }
+
+  @protected
+  List<NativeAnnotationRange> dco_decode_list_native_annotation_range(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_annotation_range)
+        .toList();
+  }
+
+  @protected
+  List<NativeChatMessage> dco_decode_list_native_chat_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_chat_message).toList();
+  }
+
+  @protected
+  List<NativeCompatibilityIssue> dco_decode_list_native_compatibility_issue(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_compatibility_issue)
+        .toList();
+  }
+
+  @protected
+  List<NativeConversationMessage> dco_decode_list_native_conversation_message(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_conversation_message)
+        .toList();
+  }
+
+  @protected
+  List<NativeLiveTextObject> dco_decode_list_native_live_text_object(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_live_text_object)
+        .toList();
+  }
+
+  @protected
+  List<NativeObjectPatch> dco_decode_list_native_object_patch(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_object_patch).toList();
+  }
+
+  @protected
+  List<NativePdfBookmark> dco_decode_list_native_pdf_bookmark(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_pdf_bookmark).toList();
+  }
+
+  @protected
+  List<NativePdfHighlight> dco_decode_list_native_pdf_highlight(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_pdf_highlight).toList();
+  }
+
+  @protected
+  List<NativePdfSource> dco_decode_list_native_pdf_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_pdf_source).toList();
+  }
+
+  @protected
+  List<NativePhysicalEditOperation>
+  dco_decode_list_native_physical_edit_operation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_physical_edit_operation)
+        .toList();
+  }
+
+  @protected
+  List<NativeRagChunk> dco_decode_list_native_rag_chunk(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_rag_chunk).toList();
+  }
+
+  @protected
+  List<NativeRagQueryResult> dco_decode_list_native_rag_query_result(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_rag_query_result)
+        .toList();
+  }
+
+  @protected
+  List<NativeSceneObject> dco_decode_list_native_scene_object(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_scene_object).toList();
+  }
+
+  @protected
+  List<NativeSearchMatch> dco_decode_list_native_search_match(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_search_match).toList();
+  }
+
+  @protected
+  List<NativeSelectionRange> dco_decode_list_native_selection_range(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_selection_range)
+        .toList();
+  }
+
+  @protected
+  List<NativeTextCharacterBox> dco_decode_list_native_text_character_box(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_native_text_character_box)
+        .toList();
+  }
+
+  @protected
+  List<NativeTextRun> dco_decode_list_native_text_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_native_text_run).toList();
+  }
+
+  @protected
+  List<PdfSearchMatch> dco_decode_list_pdf_search_match(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_pdf_search_match).toList();
+  }
+
+  @protected
+  Float32List dco_decode_list_prim_f_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Float32List;
+  }
+
+  @protected
+  Uint32List dco_decode_list_prim_u_32_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint32List;
+  }
+
+  @protected
+  List<int> dco_decode_list_prim_u_8_loose(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as List<int>;
+  }
+
+  @protected
+  Uint8List dco_decode_list_prim_u_8_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint8List;
+  }
+
+  @protected
+  Uint64List dco_decode_list_prim_usize_strict(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as Uint64List;
+  }
+
+  @protected
+  List<(String, String)> dco_decode_list_record_string_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_record_string_string).toList();
+  }
+
+  @protected
+  NativeAffineTransform dco_decode_native_affine_transform(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeAffineTransform(
+      a: dco_decode_f_64(arr[0]),
+      b: dco_decode_f_64(arr[1]),
+      c: dco_decode_f_64(arr[2]),
+      d: dco_decode_f_64(arr[3]),
+      e: dco_decode_f_64(arr[4]),
+      f: dco_decode_f_64(arr[5]),
+    );
+  }
+
+  @protected
+  NativeAgentAudit dco_decode_native_agent_audit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeAgentAudit(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      runId: dco_decode_String(arr[1]),
+      status: dco_decode_String(arr[2]),
+      events: dco_decode_list_native_agent_event(arr[3]),
+    );
+  }
+
+  @protected
+  NativeAgentEvent dco_decode_native_agent_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativeAgentEvent(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      sessionId: dco_decode_String(arr[1]),
+      runId: dco_decode_String(arr[2]),
+      sequence: dco_decode_u_64(arr[3]),
+      documentRevision: dco_decode_u_64(arr[4]),
+      kind: dco_decode_String(arr[5]),
+      payloadJson: dco_decode_String(arr[6]),
+    );
+  }
+
+  @protected
+  NativeAgentRun dco_decode_native_agent_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeAgentRun(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      runId: dco_decode_String(arr[1]),
+      status: dco_decode_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativeAnnotation dco_decode_native_annotation(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    return NativeAnnotation(
+      objectId: dco_decode_String(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      bounds: dco_decode_native_pdf_box(arr[2]),
+      kind: dco_decode_native_annotation_kind(arr[3]),
+      anchorKind: dco_decode_native_annotation_anchor_kind(arr[4]),
+      anchorX: dco_decode_opt_box_autoadd_f_64(arr[5]),
+      anchorY: dco_decode_opt_box_autoadd_f_64(arr[6]),
+      ranges: dco_decode_list_native_annotation_range(arr[7]),
+      title: dco_decode_String(arr[8]),
+      body: dco_decode_String(arr[9]),
+      colorRgba: dco_decode_list_prim_u_8_strict(arr[10]),
+      opacity: dco_decode_f_32(arr[11]),
+      resolved: dco_decode_bool(arr[12]),
+    );
+  }
+
+  @protected
+  NativeAnnotationAnchorKind dco_decode_native_annotation_anchor_kind(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeAnnotationAnchorKind.values[raw as int];
+  }
+
+  @protected
+  NativeAnnotationCommandRequest dco_decode_native_annotation_command_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeAnnotationCommandRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      baseRevision: dco_decode_u_64(arr[2]),
+      annotation: dco_decode_native_annotation(arr[3]),
+    );
+  }
+
+  @protected
+  NativeAnnotationKind dco_decode_native_annotation_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeAnnotationKind.values[raw as int];
+  }
+
+  @protected
+  NativeAnnotationRange dco_decode_native_annotation_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeAnnotationRange(
+      rangeId: dco_decode_String(arr[0]),
+      objectId: dco_decode_String(arr[1]),
+      startUtf16: dco_decode_u_32(arr[2]),
+      endUtf16: dco_decode_u_32(arr[3]),
+      quotedText: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  NativeApproveFontFallbackRequest
+  dco_decode_native_approve_font_fallback_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeApproveFontFallbackRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      baseRevision: dco_decode_u_64(arr[2]),
+      proposalToken: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  NativeChatEvent dco_decode_native_chat_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return NativeChatEvent_TextDelta(text: dco_decode_String(raw[1]));
+      case 1:
+        return NativeChatEvent_Error(message: dco_decode_String(raw[1]));
+      case 2:
+        return NativeChatEvent_Done();
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
+  NativeChatMessage dco_decode_native_chat_message(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeChatMessage(
+      role: dco_decode_String(arr[0]),
+      content: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativeChatRequest dco_decode_native_chat_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeChatRequest(
+      providerEndpoint: dco_decode_String(arr[0]),
+      modelId: dco_decode_String(arr[1]),
+      headers: dco_decode_Map_String_String_None(arr[2]),
+      apiKey: dco_decode_String(arr[3]),
+      messages: dco_decode_list_native_chat_message(arr[4]),
+    );
+  }
+
+  @protected
+  NativeCheckpointRequest dco_decode_native_checkpoint_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeCheckpointRequest(
+      baseRevision: dco_decode_u_64(arr[0]),
+      label: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativeCleanPatchAsset dco_decode_native_clean_patch_asset(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return NativeCleanPatchAsset(
+      handle: dco_decode_String(arr[0]),
+      objectId: dco_decode_String(arr[1]),
+      bounds: dco_decode_native_pdf_box(arr[2]),
+      dpi: dco_decode_u_32(arr[3]),
+      width: dco_decode_u_32(arr[4]),
+      height: dco_decode_u_32(arr[5]),
+      rgbaBytes: dco_decode_list_prim_u_8_strict(arr[6]),
+      bleedPoints: dco_decode_f_64(arr[7]),
+    );
+  }
+
+  @protected
+  NativeCleanPatchRequest dco_decode_native_clean_patch_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeCleanPatchRequest(
+      objectId: dco_decode_String(arr[0]),
+      dpi: dco_decode_u_32(arr[1]),
+    );
+  }
+
+  @protected
+  NativeCommandResult dco_decode_native_command_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return NativeCommandResult(
+      commandId: dco_decode_String(arr[0]),
+      previousRevision: dco_decode_u_64(arr[1]),
+      committedRevision: dco_decode_u_64(arr[2]),
+      durable: dco_decode_bool(arr[3]),
+      warnings: dco_decode_list_String(arr[4]),
+      removedObjectIds: dco_decode_list_String(arr[5]),
+      selectionRebase: dco_decode_opt_box_autoadd_native_selection_rebase(
+        arr[6],
+      ),
+      objectPatches: dco_decode_list_native_object_patch(arr[7]),
+    );
+  }
+
+  @protected
+  NativeCompatibilityIssue dco_decode_native_compatibility_issue(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativeCompatibilityIssue(
+      objectId: dco_decode_String(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      kind: dco_decode_String(arr[2]),
+      capability: dco_decode_String(arr[3]),
+      code: dco_decode_String(arr[4]),
+      message: dco_decode_String(arr[5]),
+      supportedOperations: dco_decode_list_String(arr[6]),
+    );
+  }
+
+  @protected
+  NativeCompatibilityReport dco_decode_native_compatibility_report(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeCompatibilityReport(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      revision: dco_decode_u_64(arr[1]),
+      editableCount: dco_decode_u_32(arr[2]),
+      overlayOnlyCount: dco_decode_u_32(arr[3]),
+      readOnlyCount: dco_decode_u_32(arr[4]),
+      issues: dco_decode_list_native_compatibility_issue(arr[5]),
+    );
+  }
+
+  @protected
+  NativeConversationImport dco_decode_native_conversation_import(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return NativeConversationImport(
+      legacyId: dco_decode_String(arr[0]),
+      documentId: dco_decode_String(arr[1]),
+      title: dco_decode_String(arr[2]),
+      createdAt: dco_decode_String(arr[3]),
+      updatedAt: dco_decode_String(arr[4]),
+      summary: dco_decode_opt_String(arr[5]),
+      summaryThroughSequence: dco_decode_opt_box_autoadd_u_64(arr[6]),
+      messages: dco_decode_list_native_conversation_message(arr[7]),
+    );
+  }
+
+  @protected
+  NativeConversationImportReceipt dco_decode_native_conversation_import_receipt(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeConversationImportReceipt(
+      conversationId: dco_decode_String(arr[0]),
+      messageCount: dco_decode_u_64(arr[1]),
+      digestSha256: dco_decode_String(arr[2]),
+      alreadyPresent: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
+  NativeConversationMessage dco_decode_native_conversation_message(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return NativeConversationMessage(
+      id: dco_decode_String(arr[0]),
+      sequence: dco_decode_u_64(arr[1]),
+      role: dco_decode_String(arr[2]),
+      content: dco_decode_String(arr[3]),
+      citationsJson: dco_decode_String(arr[4]),
+      createdAt: dco_decode_String(arr[5]),
+      tokenEstimate: dco_decode_u_64(arr[6]),
+      isCompacted: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
+  NativeDeleteAnnotationRequest dco_decode_native_delete_annotation_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeDeleteAnnotationRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      baseRevision: dco_decode_u_64(arr[2]),
+      objectId: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  NativeEditorCommand dco_decode_native_editor_command(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return NativeEditorCommand(
+      kind: dco_decode_native_editor_command_kind(arr[0]),
+      objectId: dco_decode_opt_String(arr[1]),
+      start: dco_decode_opt_box_autoadd_u_32(arr[2]),
+      end: dco_decode_opt_box_autoadd_u_32(arr[3]),
+      replacement: dco_decode_opt_String(arr[4]),
+      style: dco_decode_opt_box_autoadd_native_text_style(arr[5]),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[6]),
+      bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[7]),
+      radians: dco_decode_opt_box_autoadd_f_64(arr[8]),
+      centerX: dco_decode_opt_box_autoadd_f_64(arr[9]),
+      centerY: dco_decode_opt_box_autoadd_f_64(arr[10]),
+      label: dco_decode_opt_String(arr[11]),
+    );
+  }
+
+  @protected
+  NativeEditorCommandKind dco_decode_native_editor_command_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorCommandKind.values[raw as int];
+  }
+
+  @protected
+  NativeEditorEvent dco_decode_native_editor_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeEditorEvent(
+      kind: dco_decode_native_editor_event_kind(arr[0]),
+      sessionId: dco_decode_String(arr[1]),
+      sequence: dco_decode_u_64(arr[2]),
+      revision: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      latestRevision: dco_decode_opt_box_autoadd_u_64(arr[4]),
+      result: dco_decode_opt_box_autoadd_native_command_result(arr[5]),
+    );
+  }
+
+  @protected
+  NativeEditorEventKind dco_decode_native_editor_event_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorEventKind.values[raw as int];
+  }
+
+  @protected
+  NativeEditorMetadata dco_decode_native_editor_metadata(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeEditorMetadata(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      sessionId: dco_decode_String(arr[1]),
+      documentId: dco_decode_String(arr[2]),
+      sourceFingerprint: dco_decode_String(arr[3]),
+      revision: dco_decode_u_64(arr[4]),
+      pageCount: dco_decode_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  NativeEditorSaveMode dco_decode_native_editor_save_mode(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeEditorSaveMode.values[raw as int];
+  }
+
+  @protected
+  NativeEditorSaveRequest dco_decode_native_editor_save_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeEditorSaveRequest(
+      targetPath: dco_decode_String(arr[0]),
+      mode: dco_decode_native_editor_save_mode(arr[1]),
+      association: dco_decode_native_save_association(arr[2]),
+      recoveryDirectory: dco_decode_opt_String(arr[3]),
+    );
+  }
+
+  @protected
+  NativeEditorSaveResult dco_decode_native_editor_save_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeEditorSaveResult(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      targetPath: dco_decode_String(arr[1]),
+      materializedRevision: dco_decode_u_64(arr[2]),
+      completedStages: dco_decode_list_String(arr[3]),
+      warnings: dco_decode_list_String(arr[4]),
+      followsNewSource: dco_decode_bool(arr[5]),
+    );
+  }
+
+  @protected
+  NativeFontFallbackProposal dco_decode_native_font_fallback_proposal(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeFontFallbackProposal(
+      token: dco_decode_String(arr[0]),
+      fontName: dco_decode_String(arr[1]),
+      source: dco_decode_String(arr[2]),
+      embeddingAllowed: dco_decode_bool(arr[3]),
+      affectedCharacters: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  dco_decode_native_font_fallback_proposal_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeFontFallbackProposalRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      baseRevision: dco_decode_u_64(arr[1]),
+      objectId: dco_decode_String(arr[2]),
+      start: dco_decode_u_32(arr[3]),
+      end: dco_decode_u_32(arr[4]),
+      replacement: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
+  NativeLivePageImport dco_decode_native_live_page_import(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeLivePageImport(
+      expectedRevision: dco_decode_u_64(arr[0]),
+      pageNumber: dco_decode_u_32(arr[1]),
+      width: dco_decode_f_64(arr[2]),
+      height: dco_decode_f_64(arr[3]),
+      objects: dco_decode_list_native_live_text_object(arr[4]),
+    );
+  }
+
+  @protected
+  NativeLiveTextObject dco_decode_native_live_text_object(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    return NativeLiveTextObject(
+      objectId: dco_decode_String(arr[0]),
+      sourceKey: dco_decode_String(arr[1]),
+      sourceRevision: dco_decode_String(arr[2]),
+      text: dco_decode_String(arr[3]),
+      bounds: dco_decode_native_pdf_box(arr[4]),
+      style: dco_decode_native_text_style(arr[5]),
+      baseline: dco_decode_f_64(arr[6]),
+      editable: dco_decode_bool(arr[7]),
+    );
+  }
+
+  @protected
+  NativeMemoryPressureLevel dco_decode_native_memory_pressure_level(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeMemoryPressureLevel.values[raw as int];
+  }
+
+  @protected
+  NativeObjectDetailsRequest dco_decode_native_object_details_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 1)
+      throw Exception('unexpected arr length: expect 1 but see ${arr.length}');
+    return NativeObjectDetailsRequest(objectId: dco_decode_String(arr[0]));
+  }
+
+  @protected
+  NativeObjectPatch dco_decode_native_object_patch(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return NativeObjectPatch(
+      objectId: dco_decode_String(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      modifiedRevision: dco_decode_u_64(arr[2]),
+      text: dco_decode_opt_String(arr[3]),
+      textRuns: dco_decode_opt_list_native_text_run(arr[4]),
+      characterBoxes: dco_decode_opt_list_native_text_character_box(arr[5]),
+      bounds: dco_decode_opt_box_autoadd_native_pdf_box(arr[6]),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
+      fontFingerprint: dco_decode_opt_String(arr[8]),
+      fontAssetHandle: dco_decode_opt_String(arr[9]),
+    );
+  }
+
+  @protected
+  NativeOpenEditorRequest dco_decode_native_open_editor_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeOpenEditorRequest(
+      sourcePath: dco_decode_String(arr[0]),
+      projectRoot: dco_decode_opt_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativePageScene dco_decode_native_page_scene(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativePageScene(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      pageNumber: dco_decode_u_32(arr[2]),
+      width: dco_decode_f_64(arr[3]),
+      height: dco_decode_f_64(arr[4]),
+      revision: dco_decode_u_64(arr[5]),
+      objects: dco_decode_list_native_scene_object(arr[6]),
+    );
+  }
+
+  @protected
+  NativePageSceneRequest dco_decode_native_page_scene_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativePageSceneRequest(
+      pageNumber: dco_decode_u_32(arr[0]),
+      expectedRevision: dco_decode_u_64(arr[1]),
+      priority: dco_decode_native_viewport_priority(arr[2]),
+    );
+  }
+
+  @protected
+  NativePdfAnnotations dco_decode_native_pdf_annotations(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePdfAnnotations(
+      bookmarks: dco_decode_list_native_pdf_bookmark(arr[0]),
+      highlights: dco_decode_list_native_pdf_highlight(arr[1]),
+    );
+  }
+
+  @protected
+  NativePdfBookmark dco_decode_native_pdf_bookmark(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativePdfBookmark(
+      id: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      pageNumber: dco_decode_usize(arr[2]),
+    );
+  }
+
+  @protected
+  NativePdfBox dco_decode_native_pdf_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativePdfBox(
+      left: dco_decode_f_64(arr[0]),
+      bottom: dco_decode_f_64(arr[1]),
+      right: dco_decode_f_64(arr[2]),
+      top: dco_decode_f_64(arr[3]),
+    );
+  }
+
+  @protected
+  NativePdfComposeRequest dco_decode_native_pdf_compose_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePdfComposeRequest(
+      sources: dco_decode_list_native_pdf_source(arr[0]),
+      outputPath: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativePdfComposeResponse dco_decode_native_pdf_compose_response(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativePdfComposeResponse(
+      outputPath: dco_decode_String(arr[0]),
+      pageCount: dco_decode_usize(arr[1]),
+      message: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativePdfHighlight dco_decode_native_pdf_highlight(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 12)
+      throw Exception('unexpected arr length: expect 12 but see ${arr.length}');
+    return NativePdfHighlight(
+      id: dco_decode_String(arr[0]),
+      pageNumber: dco_decode_usize(arr[1]),
+      left: dco_decode_f_32(arr[2]),
+      top: dco_decode_f_32(arr[3]),
+      right: dco_decode_f_32(arr[4]),
+      bottom: dco_decode_f_32(arr[5]),
+      red: dco_decode_f_32(arr[6]),
+      green: dco_decode_f_32(arr[7]),
+      blue: dco_decode_f_32(arr[8]),
+      opacity: dco_decode_f_32(arr[9]),
+      text: dco_decode_String(arr[10]),
+      quadPoints: dco_decode_list_prim_f_32_strict(arr[11]),
+    );
+  }
+
+  @protected
+  NativePdfSaveRequest dco_decode_native_pdf_save_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativePdfSaveRequest(
+      path: dco_decode_String(arr[0]),
+      outputPath: dco_decode_opt_String(arr[1]),
+      bookmarks: dco_decode_list_native_pdf_bookmark(arr[2]),
+      highlights: dco_decode_list_native_pdf_highlight(arr[3]),
+    );
+  }
+
+  @protected
+  NativePdfSource dco_decode_native_pdf_source(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativePdfSource(
+      path: dco_decode_String(arr[0]),
+      pages: dco_decode_list_prim_usize_strict(arr[1]),
+    );
+  }
+
+  @protected
+  NativePhysicalEditOperation dco_decode_native_physical_edit_operation(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    return NativePhysicalEditOperation(
+      kind: dco_decode_native_physical_edit_operation_kind(arr[0]),
+      objectId: dco_decode_String(arr[1]),
+      sourceKey: dco_decode_String(arr[2]),
+      sourceRevision: dco_decode_String(arr[3]),
+      expectedText: dco_decode_opt_String(arr[4]),
+      replacement: dco_decode_opt_String(arr[5]),
+      expectedTransform: dco_decode_opt_box_autoadd_native_affine_transform(
+        arr[6],
+      ),
+      transform: dco_decode_opt_box_autoadd_native_affine_transform(arr[7]),
+      oldBounds: dco_decode_native_pdf_box(arr[8]),
+      newBounds: dco_decode_native_pdf_box(arr[9]),
+    );
+  }
+
+  @protected
+  NativePhysicalEditOperationKind
+  dco_decode_native_physical_edit_operation_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativePhysicalEditOperationKind.values[raw as int];
+  }
+
+  @protected
+  NativePhysicalEditPlan dco_decode_native_physical_edit_plan(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativePhysicalEditPlan(
+      previousRevision: dco_decode_u_64(arr[0]),
+      revision: dco_decode_u_64(arr[1]),
+      operations: dco_decode_list_native_physical_edit_operation(arr[2]),
+      inverseOperations: dco_decode_list_native_physical_edit_operation(arr[3]),
+    );
+  }
+
+  @protected
+  NativePhysicalLocator dco_decode_native_physical_locator(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativePhysicalLocator(
+      pageNumber: dco_decode_u_32(arr[0]),
+      objectPath: dco_decode_list_prim_u_32_strict(arr[1]),
+      objectType: dco_decode_String(arr[2]),
+      sourceFingerprint: dco_decode_String(arr[3]),
+      objectRevision: dco_decode_u_64(arr[4]),
+    );
+  }
+
+  @protected
+  NativePreparedLiveCommand dco_decode_native_prepared_live_command(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativePreparedLiveCommand(
+      token: dco_decode_String(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      previousRevision: dco_decode_u_64(arr[2]),
+      committedRevision: dco_decode_u_64(arr[3]),
+      plan: dco_decode_native_physical_edit_plan(arr[4]),
+    );
+  }
+
+  @protected
+  NativeProviderTestRequest dco_decode_native_provider_test_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeProviderTestRequest(
+      providerEndpoint: dco_decode_String(arr[0]),
+      modelId: dco_decode_String(arr[1]),
+      headers: dco_decode_Map_String_String_None(arr[2]),
+      apiKey: dco_decode_String(arr[3]),
+    );
+  }
+
+  @protected
+  NativeRagChunk dco_decode_native_rag_chunk(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeRagChunk(
+      id: dco_decode_String(arr[0]),
+      text: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
+  NativeRagIndexRequest dco_decode_native_rag_index_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeRagIndexRequest(
+      storageDirectory: dco_decode_String(arr[0]),
+      modelCacheDirectory: dco_decode_String(arr[1]),
+      documentFingerprint: dco_decode_String(arr[2]),
+      chunks: dco_decode_list_native_rag_chunk(arr[3]),
+    );
+  }
+
+  @protected
+  NativeRagIndexResponse dco_decode_native_rag_index_response(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeRagIndexResponse(
+      status: dco_decode_String(arr[0]),
+      message: dco_decode_opt_String(arr[1]),
+      outcome: dco_decode_opt_String(arr[2]),
+    );
+  }
+
+  @protected
+  NativeRagQueryRequest dco_decode_native_rag_query_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeRagQueryRequest(
+      storageDirectory: dco_decode_String(arr[0]),
+      modelCacheDirectory: dco_decode_String(arr[1]),
+      documentFingerprint: dco_decode_String(arr[2]),
+      chunkIds: dco_decode_list_String(arr[3]),
+      query: dco_decode_String(arr[4]),
+      limit: dco_decode_usize(arr[5]),
+    );
+  }
+
+  @protected
+  NativeRagQueryResponse dco_decode_native_rag_query_response(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeRagQueryResponse(
+      status: dco_decode_String(arr[0]),
+      message: dco_decode_opt_String(arr[1]),
+      results: dco_decode_list_native_rag_query_result(arr[2]),
+    );
+  }
+
+  @protected
+  NativeRagQueryResult dco_decode_native_rag_query_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return NativeRagQueryResult(
+      chunkId: dco_decode_String(arr[0]),
+      score: dco_decode_f_32(arr[1]),
+    );
+  }
+
+  @protected
+  NativeSaveAssociation dco_decode_native_save_association(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeSaveAssociation.values[raw as int];
+  }
+
+  @protected
+  NativeSceneObject dco_decode_native_scene_object(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 15)
+      throw Exception('unexpected arr length: expect 15 but see ${arr.length}');
+    return NativeSceneObject(
+      kind: dco_decode_native_scene_object_kind(arr[0]),
+      objectId: dco_decode_String(arr[1]),
+      pageId: dco_decode_String(arr[2]),
+      text: dco_decode_opt_String(arr[3]),
+      bounds: dco_decode_native_pdf_box(arr[4]),
+      transform: dco_decode_native_affine_transform(arr[5]),
+      capability: dco_decode_String(arr[6]),
+      capabilityReason: dco_decode_opt_String(arr[7]),
+      modifiedRevision: dco_decode_u_64(arr[8]),
+      runs: dco_decode_list_native_text_run(arr[9]),
+      characterBoxes: dco_decode_list_native_text_character_box(arr[10]),
+      layout: dco_decode_opt_box_autoadd_native_text_layout_recipe(arr[11]),
+      fontFingerprint: dco_decode_opt_String(arr[12]),
+      fontAssetHandle: dco_decode_opt_String(arr[13]),
+      physicalLocator: dco_decode_opt_box_autoadd_native_physical_locator(
+        arr[14],
+      ),
+    );
+  }
+
+  @protected
+  NativeSceneObjectKind dco_decode_native_scene_object_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeSceneObjectKind.values[raw as int];
+  }
+
+  @protected
+  NativeSearchMatch dco_decode_native_search_match(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeSearchMatch(
+      objectId: dco_decode_String(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      pageNumber: dco_decode_u_32(arr[2]),
+      startUtf16: dco_decode_u_32(arr[3]),
+      endUtf16: dco_decode_u_32(arr[4]),
+      quotedText: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
+  NativeSearchMode dco_decode_native_search_mode(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeSearchMode.values[raw as int];
+  }
+
+  @protected
+  NativeSearchRequest dco_decode_native_search_request(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeSearchRequest(
+      expectedRevision: dco_decode_u_64(arr[0]),
+      query: dco_decode_String(arr[1]),
+      mode: dco_decode_native_search_mode(arr[2]),
+      wholeWord: dco_decode_bool(arr[3]),
+      offset: dco_decode_u_32(arr[4]),
+      limit: dco_decode_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  NativeSearchResult dco_decode_native_search_result(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
+    return NativeSearchResult(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      revision: dco_decode_u_64(arr[1]),
+      matches: dco_decode_list_native_search_match(arr[2]),
+      totalMatches: dco_decode_u_32(arr[3]),
+      indexedPages: dco_decode_u_32(arr[4]),
+      pageCount: dco_decode_u_32(arr[5]),
+      isComplete: dco_decode_bool(arr[6]),
+    );
+  }
+
+  @protected
+  NativeSelectionContext dco_decode_native_selection_context(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return NativeSelectionContext(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      documentId: dco_decode_String(arr[1]),
+      revision: dco_decode_u_64(arr[2]),
+      kind: dco_decode_native_selection_kind(arr[3]),
+      ranges: dco_decode_list_native_selection_range(arr[4]),
+      pageNumbers: dco_decode_list_prim_u_32_strict(arr[5]),
+      nearbyTextBefore: dco_decode_String(arr[6]),
+      nearbyTextAfter: dco_decode_String(arr[7]),
+      disclosureSha256: dco_decode_String(arr[8]),
+    );
+  }
+
+  @protected
+  NativeSelectionKind dco_decode_native_selection_kind(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeSelectionKind.values[raw as int];
+  }
+
+  @protected
+  NativeSelectionRange dco_decode_native_selection_range(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeSelectionRange(
+      objectId: dco_decode_String(arr[0]),
+      pageId: dco_decode_String(arr[1]),
+      pageNumber: dco_decode_u_32(arr[2]),
+      startUtf16: dco_decode_u_32(arr[3]),
+      endUtf16: dco_decode_u_32(arr[4]),
+      quotedText: dco_decode_String(arr[5]),
+    );
+  }
+
+  @protected
+  NativeSelectionRebase dco_decode_native_selection_rebase(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeSelectionRebase(
+      objectId: dco_decode_String(arr[0]),
+      start: dco_decode_u_32(arr[1]),
+      end: dco_decode_u_32(arr[2]),
+      insertedUtf16Length: dco_decode_u_32(arr[3]),
+    );
+  }
+
+  @protected
+  NativeSelectionSet dco_decode_native_selection_set(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeSelectionSet(
+      expectedRevision: dco_decode_u_64(arr[0]),
+      kind: dco_decode_native_selection_kind(arr[1]),
+      ranges: dco_decode_list_native_selection_range(arr[2]),
+      objectIds: dco_decode_list_String(arr[3]),
+      primaryIndex: dco_decode_opt_box_autoadd_u_32(arr[4]),
+    );
+  }
+
+  @protected
+  NativeStartAgentRunRequest dco_decode_native_start_agent_run_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 13)
+      throw Exception('unexpected arr length: expect 13 but see ${arr.length}');
+    return NativeStartAgentRunRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      providerEndpoint: dco_decode_String(arr[1]),
+      modelId: dco_decode_String(arr[2]),
+      headers: dco_decode_Map_String_String_None(arr[3]),
+      apiKey: dco_decode_String(arr[4]),
+      conversationId: dco_decode_opt_String(arr[5]),
+      userPrompt: dco_decode_String(arr[6]),
+      selection: dco_decode_opt_box_autoadd_native_selection_set(arr[7]),
+      disclosureSha256: dco_decode_opt_String(arr[8]),
+      maxToolCalls: dco_decode_u_32(arr[9]),
+      maxProviderRounds: dco_decode_u_32(arr[10]),
+      maxElapsedMs: dco_decode_u_64(arr[11]),
+      maxOutputTokens: dco_decode_u_32(arr[12]),
+    );
+  }
+
+  @protected
+  NativeSubmitCommandRequest dco_decode_native_submit_command_request(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return NativeSubmitCommandRequest(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      commandId: dco_decode_String(arr[1]),
+      baseRevision: dco_decode_u_64(arr[2]),
+      payload: dco_decode_native_editor_command(arr[3]),
+    );
+  }
+
+  @protected
+  NativeTextCharacterBox dco_decode_native_text_character_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeTextCharacterBox(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+      bounds: dco_decode_native_pdf_box(arr[2]),
+    );
+  }
+
+  @protected
+  NativeTextLayoutRecipe dco_decode_native_text_layout_recipe(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeTextLayoutRecipe(
+      baseline: dco_decode_f_64(arr[0]),
+      lineHeight: dco_decode_f_64(arr[1]),
+      characterSpacing: dco_decode_f_64(arr[2]),
+      horizontalScale: dco_decode_f_64(arr[3]),
+      direction: dco_decode_String(arr[4]),
+    );
+  }
+
+  @protected
+  NativeTextRun dco_decode_native_text_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return NativeTextRun(
+      start: dco_decode_u_32(arr[0]),
+      end: dco_decode_u_32(arr[1]),
+      style: dco_decode_native_text_style(arr[2]),
+    );
+  }
+
+  @protected
+  NativeTextStyle dco_decode_native_text_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
+    return NativeTextStyle(
+      fontFamily: dco_decode_opt_String(arr[0]),
+      fontSize: dco_decode_f_64(arr[1]),
+      fontWeight: dco_decode_u_16(arr[2]),
+      italic: dco_decode_bool(arr[3]),
+      colorRgba: dco_decode_list_prim_u_8_strict(arr[4]),
+    );
+  }
+
+  @protected
+  NativeValidatedSelection dco_decode_native_validated_selection(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return NativeValidatedSelection(
+      schemaVersion: dco_decode_u_32(arr[0]),
+      revision: dco_decode_u_64(arr[1]),
+      kind: dco_decode_native_selection_kind(arr[2]),
+      ranges: dco_decode_list_native_selection_range(arr[3]),
+      objectIds: dco_decode_list_String(arr[4]),
+      primaryIndex: dco_decode_opt_box_autoadd_u_32(arr[5]),
+    );
+  }
+
+  @protected
+  NativeViewportPriority dco_decode_native_viewport_priority(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return NativeViewportPriority.values[raw as int];
+  }
+
+  @protected
+  String? dco_decode_opt_String(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_String(raw);
+  }
+
+  @protected
+  double? dco_decode_opt_box_autoadd_f_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_f_64(raw);
+  }
+
+  @protected
+  NativeAffineTransform? dco_decode_opt_box_autoadd_native_affine_transform(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_affine_transform(raw);
+  }
+
+  @protected
+  NativeChatEvent? dco_decode_opt_box_autoadd_native_chat_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_native_chat_event(raw);
+  }
+
+  @protected
+  NativeCommandResult? dco_decode_opt_box_autoadd_native_command_result(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_command_result(raw);
+  }
+
+  @protected
+  NativePdfBox? dco_decode_opt_box_autoadd_native_pdf_box(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_native_pdf_box(raw);
+  }
+
+  @protected
+  NativePhysicalLocator? dco_decode_opt_box_autoadd_native_physical_locator(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_physical_locator(raw);
+  }
+
+  @protected
+  NativeSelectionRebase? dco_decode_opt_box_autoadd_native_selection_rebase(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_selection_rebase(raw);
+  }
+
+  @protected
+  NativeSelectionSet? dco_decode_opt_box_autoadd_native_selection_set(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_selection_set(raw);
+  }
+
+  @protected
+  NativeTextLayoutRecipe? dco_decode_opt_box_autoadd_native_text_layout_recipe(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_native_text_layout_recipe(raw);
+  }
+
+  @protected
+  NativeTextStyle? dco_decode_opt_box_autoadd_native_text_style(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_native_text_style(raw);
+  }
+
+  @protected
+  int? dco_decode_opt_box_autoadd_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_32(raw);
+  }
+
+  @protected
+  BigInt? dco_decode_opt_box_autoadd_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_box_autoadd_u_64(raw);
+  }
+
+  @protected
+  List<NativeTextCharacterBox>? dco_decode_opt_list_native_text_character_box(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_native_text_character_box(raw);
+  }
+
+  @protected
+  List<NativeTextRun>? dco_decode_opt_list_native_text_run(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null ? null : dco_decode_list_native_text_run(raw);
+  }
+
+  @protected
+  PdfDocumentMetadata dco_decode_pdf_document_metadata(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return PdfDocumentMetadata(
+      documentId: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      pageCount: dco_decode_usize(arr[2]),
+      isEncrypted: dco_decode_bool(arr[3]),
+    );
+  }
+
+  @protected
+  PdfSearchMatch dco_decode_pdf_search_match(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return PdfSearchMatch(
+      pageNumber: dco_decode_usize(arr[0]),
+      text: dco_decode_String(arr[1]),
+      bounds: dco_decode_record_f_32_f_32_f_32_f_32(arr[2]),
+    );
+  }
+
+  @protected
+  (double, double, double, double) dco_decode_record_f_32_f_32_f_32_f_32(
+    dynamic raw,
+  ) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4) {
+      throw Exception('Expected 4 elements, got ${arr.length}');
+    }
+    return (
+      dco_decode_f_32(arr[0]),
+      dco_decode_f_32(arr[1]),
+      dco_decode_f_32(arr[2]),
+      dco_decode_f_32(arr[3]),
+    );
+  }
+
+  @protected
+  (String, String) dco_decode_record_string_string(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2) {
+      throw Exception('Expected 2 elements, got ${arr.length}');
+    }
+    return (dco_decode_String(arr[0]), dco_decode_String(arr[1]));
+  }
+
+  @protected
+  int dco_decode_u_16(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  int dco_decode_u_32(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  BigInt dco_decode_u_64(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  int dco_decode_u_8(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw as int;
+  }
+
+  @protected
+  void dco_decode_unit(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return;
+  }
+
+  @protected
+  BigInt dco_decode_usize(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dcoDecodeU64(raw);
+  }
+
+  @protected
+  AnyhowException sse_decode_AnyhowException(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_String(deserializer);
+    return AnyhowException(inner);
+  }
+
+  @protected
+  NativeEditorSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  NativePdfSession
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  NativePdfSession
+  sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  NativeEditorSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  NativePdfSession
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  Map<String, String> sse_decode_Map_String_String_None(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_record_string_string(deserializer);
+    return Map.fromEntries(inner.map((e) => MapEntry(e.$1, e.$2)));
+  }
+
+  @protected
+  NativeEditorSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativeEditorSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  NativePdfSession
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return NativePdfSessionImpl.frbInternalSseDecode(
+      sse_decode_usize(deserializer),
+      sse_decode_i_32(deserializer),
+    );
+  }
+
+  @protected
+  RustStreamSink<String> sse_decode_StreamSink_String_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<NativeAgentEvent> sse_decode_StreamSink_native_agent_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<NativeChatEvent> sse_decode_StreamSink_native_chat_event_Sse(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<NativeEditorEvent>
+  sse_decode_StreamSink_native_editor_event_Sse(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  String sse_decode_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_list_prim_u_8_strict(deserializer);
+    return utf8.decoder.convert(inner);
+  }
+
+  @protected
+  bool sse_decode_bool(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8() != 0;
+  }
+
+  @protected
+  double sse_decode_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_f_64(deserializer));
+  }
+
+  @protected
+  NativeAffineTransform sse_decode_box_autoadd_native_affine_transform(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_affine_transform(deserializer));
+  }
+
+  @protected
+  NativeAnnotationCommandRequest
+  sse_decode_box_autoadd_native_annotation_command_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_annotation_command_request(deserializer));
+  }
+
+  @protected
+  NativeApproveFontFallbackRequest
+  sse_decode_box_autoadd_native_approve_font_fallback_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_approve_font_fallback_request(deserializer));
+  }
+
+  @protected
+  NativeChatEvent sse_decode_box_autoadd_native_chat_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_chat_event(deserializer));
+  }
+
+  @protected
+  NativeChatRequest sse_decode_box_autoadd_native_chat_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_chat_request(deserializer));
+  }
+
+  @protected
+  NativeCheckpointRequest sse_decode_box_autoadd_native_checkpoint_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_checkpoint_request(deserializer));
+  }
+
+  @protected
+  NativeCleanPatchRequest sse_decode_box_autoadd_native_clean_patch_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_clean_patch_request(deserializer));
+  }
+
+  @protected
+  NativeCommandResult sse_decode_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_command_result(deserializer));
+  }
+
+  @protected
+  NativeConversationImport sse_decode_box_autoadd_native_conversation_import(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_conversation_import(deserializer));
+  }
+
+  @protected
+  NativeDeleteAnnotationRequest
+  sse_decode_box_autoadd_native_delete_annotation_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_delete_annotation_request(deserializer));
+  }
+
+  @protected
+  NativeEditorSaveRequest sse_decode_box_autoadd_native_editor_save_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_editor_save_request(deserializer));
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  sse_decode_box_autoadd_native_font_fallback_proposal_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_font_fallback_proposal_request(deserializer));
+  }
+
+  @protected
+  NativeLivePageImport sse_decode_box_autoadd_native_live_page_import(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_live_page_import(deserializer));
+  }
+
+  @protected
+  NativeObjectDetailsRequest
+  sse_decode_box_autoadd_native_object_details_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_object_details_request(deserializer));
+  }
+
+  @protected
+  NativeOpenEditorRequest sse_decode_box_autoadd_native_open_editor_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_open_editor_request(deserializer));
+  }
+
+  @protected
+  NativePageSceneRequest sse_decode_box_autoadd_native_page_scene_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_page_scene_request(deserializer));
+  }
+
+  @protected
+  NativePdfBox sse_decode_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_pdf_box(deserializer));
+  }
+
+  @protected
+  NativePdfComposeRequest sse_decode_box_autoadd_native_pdf_compose_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_pdf_compose_request(deserializer));
+  }
+
+  @protected
+  NativePdfSaveRequest sse_decode_box_autoadd_native_pdf_save_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_pdf_save_request(deserializer));
+  }
+
+  @protected
+  NativePhysicalLocator sse_decode_box_autoadd_native_physical_locator(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_physical_locator(deserializer));
+  }
+
+  @protected
+  NativeProviderTestRequest sse_decode_box_autoadd_native_provider_test_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_provider_test_request(deserializer));
+  }
+
+  @protected
+  NativeRagIndexRequest sse_decode_box_autoadd_native_rag_index_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_rag_index_request(deserializer));
+  }
+
+  @protected
+  NativeRagQueryRequest sse_decode_box_autoadd_native_rag_query_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_rag_query_request(deserializer));
+  }
+
+  @protected
+  NativeSearchRequest sse_decode_box_autoadd_native_search_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_search_request(deserializer));
+  }
+
+  @protected
+  NativeSelectionRebase sse_decode_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_selection_rebase(deserializer));
+  }
+
+  @protected
+  NativeSelectionSet sse_decode_box_autoadd_native_selection_set(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_selection_set(deserializer));
+  }
+
+  @protected
+  NativeStartAgentRunRequest
+  sse_decode_box_autoadd_native_start_agent_run_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_start_agent_run_request(deserializer));
+  }
+
+  @protected
+  NativeSubmitCommandRequest
+  sse_decode_box_autoadd_native_submit_command_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_submit_command_request(deserializer));
+  }
+
+  @protected
+  NativeTextLayoutRecipe sse_decode_box_autoadd_native_text_layout_recipe(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_text_layout_recipe(deserializer));
+  }
+
+  @protected
+  NativeTextStyle sse_decode_box_autoadd_native_text_style(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_native_text_style(deserializer));
+  }
+
+  @protected
+  int sse_decode_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_32(deserializer));
+  }
+
+  @protected
+  BigInt sse_decode_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_u_64(deserializer));
+  }
+
+  @protected
+  double sse_decode_f_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat32();
+  }
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getFloat64();
+  }
+
+  @protected
+  int sse_decode_i_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getInt32();
+  }
+
+  @protected
+  List<String> sse_decode_list_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <String>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_String(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeAgentEvent> sse_decode_list_native_agent_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeAgentEvent>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_agent_event(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeAnnotationRange> sse_decode_list_native_annotation_range(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeAnnotationRange>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_annotation_range(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeChatMessage> sse_decode_list_native_chat_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeChatMessage>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_chat_message(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeCompatibilityIssue> sse_decode_list_native_compatibility_issue(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeCompatibilityIssue>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_compatibility_issue(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeConversationMessage> sse_decode_list_native_conversation_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeConversationMessage>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_conversation_message(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeLiveTextObject> sse_decode_list_native_live_text_object(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeLiveTextObject>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_live_text_object(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeObjectPatch> sse_decode_list_native_object_patch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeObjectPatch>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_object_patch(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePdfBookmark> sse_decode_list_native_pdf_bookmark(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePdfBookmark>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_pdf_bookmark(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePdfHighlight> sse_decode_list_native_pdf_highlight(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePdfHighlight>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_pdf_highlight(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePdfSource> sse_decode_list_native_pdf_source(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePdfSource>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_pdf_source(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativePhysicalEditOperation>
+  sse_decode_list_native_physical_edit_operation(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativePhysicalEditOperation>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_physical_edit_operation(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeRagChunk> sse_decode_list_native_rag_chunk(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeRagChunk>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_rag_chunk(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeRagQueryResult> sse_decode_list_native_rag_query_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeRagQueryResult>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_rag_query_result(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeSceneObject> sse_decode_list_native_scene_object(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeSceneObject>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_scene_object(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeSearchMatch> sse_decode_list_native_search_match(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeSearchMatch>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_search_match(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeSelectionRange> sse_decode_list_native_selection_range(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeSelectionRange>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_selection_range(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeTextCharacterBox> sse_decode_list_native_text_character_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeTextCharacterBox>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_text_character_box(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<NativeTextRun> sse_decode_list_native_text_run(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <NativeTextRun>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_native_text_run(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<PdfSearchMatch> sse_decode_list_pdf_search_match(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <PdfSearchMatch>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_pdf_search_match(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  Float32List sse_decode_list_prim_f_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getFloat32List(len_);
+  }
+
+  @protected
+  Uint32List sse_decode_list_prim_u_32_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint32List(len_);
+  }
+
+  @protected
+  List<int> sse_decode_list_prim_u_8_loose(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint8List(len_);
+  }
+
+  @protected
+  Uint64List sse_decode_list_prim_usize_strict(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var len_ = sse_decode_i_32(deserializer);
+    return deserializer.buffer.getUint64List(len_);
+  }
+
+  @protected
+  List<(String, String)> sse_decode_list_record_string_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <(String, String)>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_record_string_string(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  NativeAffineTransform sse_decode_native_affine_transform(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_a = sse_decode_f_64(deserializer);
+    var var_b = sse_decode_f_64(deserializer);
+    var var_c = sse_decode_f_64(deserializer);
+    var var_d = sse_decode_f_64(deserializer);
+    var var_e = sse_decode_f_64(deserializer);
+    var var_f = sse_decode_f_64(deserializer);
+    return NativeAffineTransform(
+      a: var_a,
+      b: var_b,
+      c: var_c,
+      d: var_d,
+      e: var_e,
+      f: var_f,
+    );
+  }
+
+  @protected
+  NativeAgentAudit sse_decode_native_agent_audit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_runId = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    var var_events = sse_decode_list_native_agent_event(deserializer);
+    return NativeAgentAudit(
+      schemaVersion: var_schemaVersion,
+      runId: var_runId,
+      status: var_status,
+      events: var_events,
+    );
+  }
+
+  @protected
+  NativeAgentEvent sse_decode_native_agent_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_sessionId = sse_decode_String(deserializer);
+    var var_runId = sse_decode_String(deserializer);
+    var var_sequence = sse_decode_u_64(deserializer);
+    var var_documentRevision = sse_decode_u_64(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_payloadJson = sse_decode_String(deserializer);
+    return NativeAgentEvent(
+      schemaVersion: var_schemaVersion,
+      sessionId: var_sessionId,
+      runId: var_runId,
+      sequence: var_sequence,
+      documentRevision: var_documentRevision,
+      kind: var_kind,
+      payloadJson: var_payloadJson,
+    );
+  }
+
+  @protected
+  NativeAgentRun sse_decode_native_agent_run(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_runId = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    return NativeAgentRun(
+      schemaVersion: var_schemaVersion,
+      runId: var_runId,
+      status: var_status,
+    );
+  }
+
+  @protected
+  NativeAnnotation sse_decode_native_annotation(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    var var_kind = sse_decode_native_annotation_kind(deserializer);
+    var var_anchorKind = sse_decode_native_annotation_anchor_kind(deserializer);
+    var var_anchorX = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_anchorY = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_ranges = sse_decode_list_native_annotation_range(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_body = sse_decode_String(deserializer);
+    var var_colorRgba = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_opacity = sse_decode_f_32(deserializer);
+    var var_resolved = sse_decode_bool(deserializer);
+    return NativeAnnotation(
+      objectId: var_objectId,
+      pageId: var_pageId,
+      bounds: var_bounds,
+      kind: var_kind,
+      anchorKind: var_anchorKind,
+      anchorX: var_anchorX,
+      anchorY: var_anchorY,
+      ranges: var_ranges,
+      title: var_title,
+      body: var_body,
+      colorRgba: var_colorRgba,
+      opacity: var_opacity,
+      resolved: var_resolved,
+    );
+  }
+
+  @protected
+  NativeAnnotationAnchorKind sse_decode_native_annotation_anchor_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeAnnotationAnchorKind.values[inner];
+  }
+
+  @protected
+  NativeAnnotationCommandRequest sse_decode_native_annotation_command_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_annotation = sse_decode_native_annotation(deserializer);
+    return NativeAnnotationCommandRequest(
+      schemaVersion: var_schemaVersion,
+      commandId: var_commandId,
+      baseRevision: var_baseRevision,
+      annotation: var_annotation,
+    );
+  }
+
+  @protected
+  NativeAnnotationKind sse_decode_native_annotation_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeAnnotationKind.values[inner];
+  }
+
+  @protected
+  NativeAnnotationRange sse_decode_native_annotation_range(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_rangeId = sse_decode_String(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_startUtf16 = sse_decode_u_32(deserializer);
+    var var_endUtf16 = sse_decode_u_32(deserializer);
+    var var_quotedText = sse_decode_String(deserializer);
+    return NativeAnnotationRange(
+      rangeId: var_rangeId,
+      objectId: var_objectId,
+      startUtf16: var_startUtf16,
+      endUtf16: var_endUtf16,
+      quotedText: var_quotedText,
+    );
+  }
+
+  @protected
+  NativeApproveFontFallbackRequest
+  sse_decode_native_approve_font_fallback_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_proposalToken = sse_decode_String(deserializer);
+    return NativeApproveFontFallbackRequest(
+      schemaVersion: var_schemaVersion,
+      commandId: var_commandId,
+      baseRevision: var_baseRevision,
+      proposalToken: var_proposalToken,
+    );
+  }
+
+  @protected
+  NativeChatEvent sse_decode_native_chat_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_text = sse_decode_String(deserializer);
+        return NativeChatEvent_TextDelta(text: var_text);
+      case 1:
+        var var_message = sse_decode_String(deserializer);
+        return NativeChatEvent_Error(message: var_message);
+      case 2:
+        return NativeChatEvent_Done();
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
+  NativeChatMessage sse_decode_native_chat_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_role = sse_decode_String(deserializer);
+    var var_content = sse_decode_String(deserializer);
+    return NativeChatMessage(role: var_role, content: var_content);
+  }
+
+  @protected
+  NativeChatRequest sse_decode_native_chat_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_providerEndpoint = sse_decode_String(deserializer);
+    var var_modelId = sse_decode_String(deserializer);
+    var var_headers = sse_decode_Map_String_String_None(deserializer);
+    var var_apiKey = sse_decode_String(deserializer);
+    var var_messages = sse_decode_list_native_chat_message(deserializer);
+    return NativeChatRequest(
+      providerEndpoint: var_providerEndpoint,
+      modelId: var_modelId,
+      headers: var_headers,
+      apiKey: var_apiKey,
+      messages: var_messages,
+    );
+  }
+
+  @protected
+  NativeCheckpointRequest sse_decode_native_checkpoint_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_label = sse_decode_String(deserializer);
+    return NativeCheckpointRequest(
+      baseRevision: var_baseRevision,
+      label: var_label,
+    );
+  }
+
+  @protected
+  NativeCleanPatchAsset sse_decode_native_clean_patch_asset(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_handle = sse_decode_String(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    var var_dpi = sse_decode_u_32(deserializer);
+    var var_width = sse_decode_u_32(deserializer);
+    var var_height = sse_decode_u_32(deserializer);
+    var var_rgbaBytes = sse_decode_list_prim_u_8_strict(deserializer);
+    var var_bleedPoints = sse_decode_f_64(deserializer);
+    return NativeCleanPatchAsset(
+      handle: var_handle,
+      objectId: var_objectId,
+      bounds: var_bounds,
+      dpi: var_dpi,
+      width: var_width,
+      height: var_height,
+      rgbaBytes: var_rgbaBytes,
+      bleedPoints: var_bleedPoints,
+    );
+  }
+
+  @protected
+  NativeCleanPatchRequest sse_decode_native_clean_patch_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_dpi = sse_decode_u_32(deserializer);
+    return NativeCleanPatchRequest(objectId: var_objectId, dpi: var_dpi);
+  }
+
+  @protected
+  NativeCommandResult sse_decode_native_command_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_commandId = sse_decode_String(deserializer);
+    var var_previousRevision = sse_decode_u_64(deserializer);
+    var var_committedRevision = sse_decode_u_64(deserializer);
+    var var_durable = sse_decode_bool(deserializer);
+    var var_warnings = sse_decode_list_String(deserializer);
+    var var_removedObjectIds = sse_decode_list_String(deserializer);
+    var var_selectionRebase =
+        sse_decode_opt_box_autoadd_native_selection_rebase(deserializer);
+    var var_objectPatches = sse_decode_list_native_object_patch(deserializer);
+    return NativeCommandResult(
+      commandId: var_commandId,
+      previousRevision: var_previousRevision,
+      committedRevision: var_committedRevision,
+      durable: var_durable,
+      warnings: var_warnings,
+      removedObjectIds: var_removedObjectIds,
+      selectionRebase: var_selectionRebase,
+      objectPatches: var_objectPatches,
+    );
+  }
+
+  @protected
+  NativeCompatibilityIssue sse_decode_native_compatibility_issue(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_kind = sse_decode_String(deserializer);
+    var var_capability = sse_decode_String(deserializer);
+    var var_code = sse_decode_String(deserializer);
+    var var_message = sse_decode_String(deserializer);
+    var var_supportedOperations = sse_decode_list_String(deserializer);
+    return NativeCompatibilityIssue(
+      objectId: var_objectId,
+      pageId: var_pageId,
+      kind: var_kind,
+      capability: var_capability,
+      code: var_code,
+      message: var_message,
+      supportedOperations: var_supportedOperations,
+    );
+  }
+
+  @protected
+  NativeCompatibilityReport sse_decode_native_compatibility_report(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_editableCount = sse_decode_u_32(deserializer);
+    var var_overlayOnlyCount = sse_decode_u_32(deserializer);
+    var var_readOnlyCount = sse_decode_u_32(deserializer);
+    var var_issues = sse_decode_list_native_compatibility_issue(deserializer);
+    return NativeCompatibilityReport(
+      schemaVersion: var_schemaVersion,
+      revision: var_revision,
+      editableCount: var_editableCount,
+      overlayOnlyCount: var_overlayOnlyCount,
+      readOnlyCount: var_readOnlyCount,
+      issues: var_issues,
+    );
+  }
+
+  @protected
+  NativeConversationImport sse_decode_native_conversation_import(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_legacyId = sse_decode_String(deserializer);
+    var var_documentId = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_createdAt = sse_decode_String(deserializer);
+    var var_updatedAt = sse_decode_String(deserializer);
+    var var_summary = sse_decode_opt_String(deserializer);
+    var var_summaryThroughSequence = sse_decode_opt_box_autoadd_u_64(
+      deserializer,
+    );
+    var var_messages = sse_decode_list_native_conversation_message(
+      deserializer,
+    );
+    return NativeConversationImport(
+      legacyId: var_legacyId,
+      documentId: var_documentId,
+      title: var_title,
+      createdAt: var_createdAt,
+      updatedAt: var_updatedAt,
+      summary: var_summary,
+      summaryThroughSequence: var_summaryThroughSequence,
+      messages: var_messages,
+    );
+  }
+
+  @protected
+  NativeConversationImportReceipt sse_decode_native_conversation_import_receipt(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_conversationId = sse_decode_String(deserializer);
+    var var_messageCount = sse_decode_u_64(deserializer);
+    var var_digestSha256 = sse_decode_String(deserializer);
+    var var_alreadyPresent = sse_decode_bool(deserializer);
+    return NativeConversationImportReceipt(
+      conversationId: var_conversationId,
+      messageCount: var_messageCount,
+      digestSha256: var_digestSha256,
+      alreadyPresent: var_alreadyPresent,
+    );
+  }
+
+  @protected
+  NativeConversationMessage sse_decode_native_conversation_message(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_sequence = sse_decode_u_64(deserializer);
+    var var_role = sse_decode_String(deserializer);
+    var var_content = sse_decode_String(deserializer);
+    var var_citationsJson = sse_decode_String(deserializer);
+    var var_createdAt = sse_decode_String(deserializer);
+    var var_tokenEstimate = sse_decode_u_64(deserializer);
+    var var_isCompacted = sse_decode_bool(deserializer);
+    return NativeConversationMessage(
+      id: var_id,
+      sequence: var_sequence,
+      role: var_role,
+      content: var_content,
+      citationsJson: var_citationsJson,
+      createdAt: var_createdAt,
+      tokenEstimate: var_tokenEstimate,
+      isCompacted: var_isCompacted,
+    );
+  }
+
+  @protected
+  NativeDeleteAnnotationRequest sse_decode_native_delete_annotation_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    return NativeDeleteAnnotationRequest(
+      schemaVersion: var_schemaVersion,
+      commandId: var_commandId,
+      baseRevision: var_baseRevision,
+      objectId: var_objectId,
+    );
+  }
+
+  @protected
+  NativeEditorCommand sse_decode_native_editor_command(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_editor_command_kind(deserializer);
+    var var_objectId = sse_decode_opt_String(deserializer);
+    var var_start = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_end = sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_replacement = sse_decode_opt_String(deserializer);
+    var var_style = sse_decode_opt_box_autoadd_native_text_style(deserializer);
+    var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
+      deserializer,
+    );
+    var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
+    var var_radians = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_centerX = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_centerY = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_label = sse_decode_opt_String(deserializer);
+    return NativeEditorCommand(
+      kind: var_kind,
+      objectId: var_objectId,
+      start: var_start,
+      end: var_end,
+      replacement: var_replacement,
+      style: var_style,
+      transform: var_transform,
+      bounds: var_bounds,
+      radians: var_radians,
+      centerX: var_centerX,
+      centerY: var_centerY,
+      label: var_label,
+    );
+  }
+
+  @protected
+  NativeEditorCommandKind sse_decode_native_editor_command_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeEditorCommandKind.values[inner];
+  }
+
+  @protected
+  NativeEditorEvent sse_decode_native_editor_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_editor_event_kind(deserializer);
+    var var_sessionId = sse_decode_String(deserializer);
+    var var_sequence = sse_decode_u_64(deserializer);
+    var var_revision = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_latestRevision = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_result = sse_decode_opt_box_autoadd_native_command_result(
+      deserializer,
+    );
+    return NativeEditorEvent(
+      kind: var_kind,
+      sessionId: var_sessionId,
+      sequence: var_sequence,
+      revision: var_revision,
+      latestRevision: var_latestRevision,
+      result: var_result,
+    );
+  }
+
+  @protected
+  NativeEditorEventKind sse_decode_native_editor_event_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeEditorEventKind.values[inner];
+  }
+
+  @protected
+  NativeEditorMetadata sse_decode_native_editor_metadata(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_sessionId = sse_decode_String(deserializer);
+    var var_documentId = sse_decode_String(deserializer);
+    var var_sourceFingerprint = sse_decode_String(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_pageCount = sse_decode_u_32(deserializer);
+    return NativeEditorMetadata(
+      schemaVersion: var_schemaVersion,
+      sessionId: var_sessionId,
+      documentId: var_documentId,
+      sourceFingerprint: var_sourceFingerprint,
+      revision: var_revision,
+      pageCount: var_pageCount,
+    );
+  }
+
+  @protected
+  NativeEditorSaveMode sse_decode_native_editor_save_mode(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeEditorSaveMode.values[inner];
+  }
+
+  @protected
+  NativeEditorSaveRequest sse_decode_native_editor_save_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_targetPath = sse_decode_String(deserializer);
+    var var_mode = sse_decode_native_editor_save_mode(deserializer);
+    var var_association = sse_decode_native_save_association(deserializer);
+    var var_recoveryDirectory = sse_decode_opt_String(deserializer);
+    return NativeEditorSaveRequest(
+      targetPath: var_targetPath,
+      mode: var_mode,
+      association: var_association,
+      recoveryDirectory: var_recoveryDirectory,
+    );
+  }
+
+  @protected
+  NativeEditorSaveResult sse_decode_native_editor_save_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_targetPath = sse_decode_String(deserializer);
+    var var_materializedRevision = sse_decode_u_64(deserializer);
+    var var_completedStages = sse_decode_list_String(deserializer);
+    var var_warnings = sse_decode_list_String(deserializer);
+    var var_followsNewSource = sse_decode_bool(deserializer);
+    return NativeEditorSaveResult(
+      schemaVersion: var_schemaVersion,
+      targetPath: var_targetPath,
+      materializedRevision: var_materializedRevision,
+      completedStages: var_completedStages,
+      warnings: var_warnings,
+      followsNewSource: var_followsNewSource,
+    );
+  }
+
+  @protected
+  NativeFontFallbackProposal sse_decode_native_font_fallback_proposal(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_token = sse_decode_String(deserializer);
+    var var_fontName = sse_decode_String(deserializer);
+    var var_source = sse_decode_String(deserializer);
+    var var_embeddingAllowed = sse_decode_bool(deserializer);
+    var var_affectedCharacters = sse_decode_String(deserializer);
+    return NativeFontFallbackProposal(
+      token: var_token,
+      fontName: var_fontName,
+      source: var_source,
+      embeddingAllowed: var_embeddingAllowed,
+      affectedCharacters: var_affectedCharacters,
+    );
+  }
+
+  @protected
+  NativeFontFallbackProposalRequest
+  sse_decode_native_font_fallback_proposal_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_replacement = sse_decode_String(deserializer);
+    return NativeFontFallbackProposalRequest(
+      schemaVersion: var_schemaVersion,
+      baseRevision: var_baseRevision,
+      objectId: var_objectId,
+      start: var_start,
+      end: var_end,
+      replacement: var_replacement,
+    );
+  }
+
+  @protected
+  NativeLivePageImport sse_decode_native_live_page_import(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_expectedRevision = sse_decode_u_64(deserializer);
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_width = sse_decode_f_64(deserializer);
+    var var_height = sse_decode_f_64(deserializer);
+    var var_objects = sse_decode_list_native_live_text_object(deserializer);
+    return NativeLivePageImport(
+      expectedRevision: var_expectedRevision,
+      pageNumber: var_pageNumber,
+      width: var_width,
+      height: var_height,
+      objects: var_objects,
+    );
+  }
+
+  @protected
+  NativeLiveTextObject sse_decode_native_live_text_object(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_sourceKey = sse_decode_String(deserializer);
+    var var_sourceRevision = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    var var_style = sse_decode_native_text_style(deserializer);
+    var var_baseline = sse_decode_f_64(deserializer);
+    var var_editable = sse_decode_bool(deserializer);
+    return NativeLiveTextObject(
+      objectId: var_objectId,
+      sourceKey: var_sourceKey,
+      sourceRevision: var_sourceRevision,
+      text: var_text,
+      bounds: var_bounds,
+      style: var_style,
+      baseline: var_baseline,
+      editable: var_editable,
+    );
+  }
+
+  @protected
+  NativeMemoryPressureLevel sse_decode_native_memory_pressure_level(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeMemoryPressureLevel.values[inner];
+  }
+
+  @protected
+  NativeObjectDetailsRequest sse_decode_native_object_details_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    return NativeObjectDetailsRequest(objectId: var_objectId);
+  }
+
+  @protected
+  NativeObjectPatch sse_decode_native_object_patch(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_modifiedRevision = sse_decode_u_64(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_textRuns = sse_decode_opt_list_native_text_run(deserializer);
+    var var_characterBoxes = sse_decode_opt_list_native_text_character_box(
+      deserializer,
+    );
+    var var_bounds = sse_decode_opt_box_autoadd_native_pdf_box(deserializer);
+    var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
+      deserializer,
+    );
+    var var_fontFingerprint = sse_decode_opt_String(deserializer);
+    var var_fontAssetHandle = sse_decode_opt_String(deserializer);
+    return NativeObjectPatch(
+      objectId: var_objectId,
+      pageId: var_pageId,
+      modifiedRevision: var_modifiedRevision,
+      text: var_text,
+      textRuns: var_textRuns,
+      characterBoxes: var_characterBoxes,
+      bounds: var_bounds,
+      transform: var_transform,
+      fontFingerprint: var_fontFingerprint,
+      fontAssetHandle: var_fontAssetHandle,
+    );
+  }
+
+  @protected
+  NativeOpenEditorRequest sse_decode_native_open_editor_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sourcePath = sse_decode_String(deserializer);
+    var var_projectRoot = sse_decode_opt_String(deserializer);
+    return NativeOpenEditorRequest(
+      sourcePath: var_sourcePath,
+      projectRoot: var_projectRoot,
+    );
+  }
+
+  @protected
+  NativePageScene sse_decode_native_page_scene(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_width = sse_decode_f_64(deserializer);
+    var var_height = sse_decode_f_64(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_objects = sse_decode_list_native_scene_object(deserializer);
+    return NativePageScene(
+      schemaVersion: var_schemaVersion,
+      pageId: var_pageId,
+      pageNumber: var_pageNumber,
+      width: var_width,
+      height: var_height,
+      revision: var_revision,
+      objects: var_objects,
+    );
+  }
+
+  @protected
+  NativePageSceneRequest sse_decode_native_page_scene_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_expectedRevision = sse_decode_u_64(deserializer);
+    var var_priority = sse_decode_native_viewport_priority(deserializer);
+    return NativePageSceneRequest(
+      pageNumber: var_pageNumber,
+      expectedRevision: var_expectedRevision,
+      priority: var_priority,
+    );
+  }
+
+  @protected
+  NativePdfAnnotations sse_decode_native_pdf_annotations(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
+    var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
+    return NativePdfAnnotations(
+      bookmarks: var_bookmarks,
+      highlights: var_highlights,
+    );
+  }
+
+  @protected
+  NativePdfBookmark sse_decode_native_pdf_bookmark(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_usize(deserializer);
+    return NativePdfBookmark(
+      id: var_id,
+      title: var_title,
+      pageNumber: var_pageNumber,
+    );
+  }
+
+  @protected
+  NativePdfBox sse_decode_native_pdf_box(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_left = sse_decode_f_64(deserializer);
+    var var_bottom = sse_decode_f_64(deserializer);
+    var var_right = sse_decode_f_64(deserializer);
+    var var_top = sse_decode_f_64(deserializer);
+    return NativePdfBox(
+      left: var_left,
+      bottom: var_bottom,
+      right: var_right,
+      top: var_top,
+    );
+  }
+
+  @protected
+  NativePdfComposeRequest sse_decode_native_pdf_compose_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_sources = sse_decode_list_native_pdf_source(deserializer);
+    var var_outputPath = sse_decode_String(deserializer);
+    return NativePdfComposeRequest(
+      sources: var_sources,
+      outputPath: var_outputPath,
+    );
+  }
+
+  @protected
+  NativePdfComposeResponse sse_decode_native_pdf_compose_response(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_outputPath = sse_decode_String(deserializer);
+    var var_pageCount = sse_decode_usize(deserializer);
+    var var_message = sse_decode_opt_String(deserializer);
+    return NativePdfComposeResponse(
+      outputPath: var_outputPath,
+      pageCount: var_pageCount,
+      message: var_message,
+    );
+  }
+
+  @protected
+  NativePdfHighlight sse_decode_native_pdf_highlight(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_usize(deserializer);
+    var var_left = sse_decode_f_32(deserializer);
+    var var_top = sse_decode_f_32(deserializer);
+    var var_right = sse_decode_f_32(deserializer);
+    var var_bottom = sse_decode_f_32(deserializer);
+    var var_red = sse_decode_f_32(deserializer);
+    var var_green = sse_decode_f_32(deserializer);
+    var var_blue = sse_decode_f_32(deserializer);
+    var var_opacity = sse_decode_f_32(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_quadPoints = sse_decode_list_prim_f_32_strict(deserializer);
+    return NativePdfHighlight(
+      id: var_id,
+      pageNumber: var_pageNumber,
+      left: var_left,
+      top: var_top,
+      right: var_right,
+      bottom: var_bottom,
+      red: var_red,
+      green: var_green,
+      blue: var_blue,
+      opacity: var_opacity,
+      text: var_text,
+      quadPoints: var_quadPoints,
+    );
+  }
+
+  @protected
+  NativePdfSaveRequest sse_decode_native_pdf_save_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_outputPath = sse_decode_opt_String(deserializer);
+    var var_bookmarks = sse_decode_list_native_pdf_bookmark(deserializer);
+    var var_highlights = sse_decode_list_native_pdf_highlight(deserializer);
+    return NativePdfSaveRequest(
+      path: var_path,
+      outputPath: var_outputPath,
+      bookmarks: var_bookmarks,
+      highlights: var_highlights,
+    );
+  }
+
+  @protected
+  NativePdfSource sse_decode_native_pdf_source(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_path = sse_decode_String(deserializer);
+    var var_pages = sse_decode_list_prim_usize_strict(deserializer);
+    return NativePdfSource(path: var_path, pages: var_pages);
+  }
+
+  @protected
+  NativePhysicalEditOperation sse_decode_native_physical_edit_operation(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_physical_edit_operation_kind(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_sourceKey = sse_decode_String(deserializer);
+    var var_sourceRevision = sse_decode_String(deserializer);
+    var var_expectedText = sse_decode_opt_String(deserializer);
+    var var_replacement = sse_decode_opt_String(deserializer);
+    var var_expectedTransform =
+        sse_decode_opt_box_autoadd_native_affine_transform(deserializer);
+    var var_transform = sse_decode_opt_box_autoadd_native_affine_transform(
+      deserializer,
+    );
+    var var_oldBounds = sse_decode_native_pdf_box(deserializer);
+    var var_newBounds = sse_decode_native_pdf_box(deserializer);
+    return NativePhysicalEditOperation(
+      kind: var_kind,
+      objectId: var_objectId,
+      sourceKey: var_sourceKey,
+      sourceRevision: var_sourceRevision,
+      expectedText: var_expectedText,
+      replacement: var_replacement,
+      expectedTransform: var_expectedTransform,
+      transform: var_transform,
+      oldBounds: var_oldBounds,
+      newBounds: var_newBounds,
+    );
+  }
+
+  @protected
+  NativePhysicalEditOperationKind
+  sse_decode_native_physical_edit_operation_kind(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativePhysicalEditOperationKind.values[inner];
+  }
+
+  @protected
+  NativePhysicalEditPlan sse_decode_native_physical_edit_plan(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_previousRevision = sse_decode_u_64(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_operations = sse_decode_list_native_physical_edit_operation(
+      deserializer,
+    );
+    var var_inverseOperations = sse_decode_list_native_physical_edit_operation(
+      deserializer,
+    );
+    return NativePhysicalEditPlan(
+      previousRevision: var_previousRevision,
+      revision: var_revision,
+      operations: var_operations,
+      inverseOperations: var_inverseOperations,
+    );
+  }
+
+  @protected
+  NativePhysicalLocator sse_decode_native_physical_locator(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_objectPath = sse_decode_list_prim_u_32_strict(deserializer);
+    var var_objectType = sse_decode_String(deserializer);
+    var var_sourceFingerprint = sse_decode_String(deserializer);
+    var var_objectRevision = sse_decode_u_64(deserializer);
+    return NativePhysicalLocator(
+      pageNumber: var_pageNumber,
+      objectPath: var_objectPath,
+      objectType: var_objectType,
+      sourceFingerprint: var_sourceFingerprint,
+      objectRevision: var_objectRevision,
+    );
+  }
+
+  @protected
+  NativePreparedLiveCommand sse_decode_native_prepared_live_command(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_token = sse_decode_String(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_previousRevision = sse_decode_u_64(deserializer);
+    var var_committedRevision = sse_decode_u_64(deserializer);
+    var var_plan = sse_decode_native_physical_edit_plan(deserializer);
+    return NativePreparedLiveCommand(
+      token: var_token,
+      commandId: var_commandId,
+      previousRevision: var_previousRevision,
+      committedRevision: var_committedRevision,
+      plan: var_plan,
+    );
+  }
+
+  @protected
+  NativeProviderTestRequest sse_decode_native_provider_test_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_providerEndpoint = sse_decode_String(deserializer);
+    var var_modelId = sse_decode_String(deserializer);
+    var var_headers = sse_decode_Map_String_String_None(deserializer);
+    var var_apiKey = sse_decode_String(deserializer);
+    return NativeProviderTestRequest(
+      providerEndpoint: var_providerEndpoint,
+      modelId: var_modelId,
+      headers: var_headers,
+      apiKey: var_apiKey,
+    );
+  }
+
+  @protected
+  NativeRagChunk sse_decode_native_rag_chunk(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_id = sse_decode_String(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    return NativeRagChunk(id: var_id, text: var_text);
+  }
+
+  @protected
+  NativeRagIndexRequest sse_decode_native_rag_index_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_storageDirectory = sse_decode_String(deserializer);
+    var var_modelCacheDirectory = sse_decode_String(deserializer);
+    var var_documentFingerprint = sse_decode_String(deserializer);
+    var var_chunks = sse_decode_list_native_rag_chunk(deserializer);
+    return NativeRagIndexRequest(
+      storageDirectory: var_storageDirectory,
+      modelCacheDirectory: var_modelCacheDirectory,
+      documentFingerprint: var_documentFingerprint,
+      chunks: var_chunks,
+    );
+  }
+
+  @protected
+  NativeRagIndexResponse sse_decode_native_rag_index_response(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_status = sse_decode_String(deserializer);
+    var var_message = sse_decode_opt_String(deserializer);
+    var var_outcome = sse_decode_opt_String(deserializer);
+    return NativeRagIndexResponse(
+      status: var_status,
+      message: var_message,
+      outcome: var_outcome,
+    );
+  }
+
+  @protected
+  NativeRagQueryRequest sse_decode_native_rag_query_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_storageDirectory = sse_decode_String(deserializer);
+    var var_modelCacheDirectory = sse_decode_String(deserializer);
+    var var_documentFingerprint = sse_decode_String(deserializer);
+    var var_chunkIds = sse_decode_list_String(deserializer);
+    var var_query = sse_decode_String(deserializer);
+    var var_limit = sse_decode_usize(deserializer);
+    return NativeRagQueryRequest(
+      storageDirectory: var_storageDirectory,
+      modelCacheDirectory: var_modelCacheDirectory,
+      documentFingerprint: var_documentFingerprint,
+      chunkIds: var_chunkIds,
+      query: var_query,
+      limit: var_limit,
+    );
+  }
+
+  @protected
+  NativeRagQueryResponse sse_decode_native_rag_query_response(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_status = sse_decode_String(deserializer);
+    var var_message = sse_decode_opt_String(deserializer);
+    var var_results = sse_decode_list_native_rag_query_result(deserializer);
+    return NativeRagQueryResponse(
+      status: var_status,
+      message: var_message,
+      results: var_results,
+    );
+  }
+
+  @protected
+  NativeRagQueryResult sse_decode_native_rag_query_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_chunkId = sse_decode_String(deserializer);
+    var var_score = sse_decode_f_32(deserializer);
+    return NativeRagQueryResult(chunkId: var_chunkId, score: var_score);
+  }
+
+  @protected
+  NativeSaveAssociation sse_decode_native_save_association(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeSaveAssociation.values[inner];
+  }
+
+  @protected
+  NativeSceneObject sse_decode_native_scene_object(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_kind = sse_decode_native_scene_object_kind(deserializer);
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_text = sse_decode_opt_String(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    var var_transform = sse_decode_native_affine_transform(deserializer);
+    var var_capability = sse_decode_String(deserializer);
+    var var_capabilityReason = sse_decode_opt_String(deserializer);
+    var var_modifiedRevision = sse_decode_u_64(deserializer);
+    var var_runs = sse_decode_list_native_text_run(deserializer);
+    var var_characterBoxes = sse_decode_list_native_text_character_box(
+      deserializer,
+    );
+    var var_layout = sse_decode_opt_box_autoadd_native_text_layout_recipe(
+      deserializer,
+    );
+    var var_fontFingerprint = sse_decode_opt_String(deserializer);
+    var var_fontAssetHandle = sse_decode_opt_String(deserializer);
+    var var_physicalLocator =
+        sse_decode_opt_box_autoadd_native_physical_locator(deserializer);
+    return NativeSceneObject(
+      kind: var_kind,
+      objectId: var_objectId,
+      pageId: var_pageId,
+      text: var_text,
+      bounds: var_bounds,
+      transform: var_transform,
+      capability: var_capability,
+      capabilityReason: var_capabilityReason,
+      modifiedRevision: var_modifiedRevision,
+      runs: var_runs,
+      characterBoxes: var_characterBoxes,
+      layout: var_layout,
+      fontFingerprint: var_fontFingerprint,
+      fontAssetHandle: var_fontAssetHandle,
+      physicalLocator: var_physicalLocator,
+    );
+  }
+
+  @protected
+  NativeSceneObjectKind sse_decode_native_scene_object_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeSceneObjectKind.values[inner];
+  }
+
+  @protected
+  NativeSearchMatch sse_decode_native_search_match(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_startUtf16 = sse_decode_u_32(deserializer);
+    var var_endUtf16 = sse_decode_u_32(deserializer);
+    var var_quotedText = sse_decode_String(deserializer);
+    return NativeSearchMatch(
+      objectId: var_objectId,
+      pageId: var_pageId,
+      pageNumber: var_pageNumber,
+      startUtf16: var_startUtf16,
+      endUtf16: var_endUtf16,
+      quotedText: var_quotedText,
+    );
+  }
+
+  @protected
+  NativeSearchMode sse_decode_native_search_mode(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeSearchMode.values[inner];
+  }
+
+  @protected
+  NativeSearchRequest sse_decode_native_search_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_expectedRevision = sse_decode_u_64(deserializer);
+    var var_query = sse_decode_String(deserializer);
+    var var_mode = sse_decode_native_search_mode(deserializer);
+    var var_wholeWord = sse_decode_bool(deserializer);
+    var var_offset = sse_decode_u_32(deserializer);
+    var var_limit = sse_decode_u_32(deserializer);
+    return NativeSearchRequest(
+      expectedRevision: var_expectedRevision,
+      query: var_query,
+      mode: var_mode,
+      wholeWord: var_wholeWord,
+      offset: var_offset,
+      limit: var_limit,
+    );
+  }
+
+  @protected
+  NativeSearchResult sse_decode_native_search_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_matches = sse_decode_list_native_search_match(deserializer);
+    var var_totalMatches = sse_decode_u_32(deserializer);
+    var var_indexedPages = sse_decode_u_32(deserializer);
+    var var_pageCount = sse_decode_u_32(deserializer);
+    var var_isComplete = sse_decode_bool(deserializer);
+    return NativeSearchResult(
+      schemaVersion: var_schemaVersion,
+      revision: var_revision,
+      matches: var_matches,
+      totalMatches: var_totalMatches,
+      indexedPages: var_indexedPages,
+      pageCount: var_pageCount,
+      isComplete: var_isComplete,
+    );
+  }
+
+  @protected
+  NativeSelectionContext sse_decode_native_selection_context(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_documentId = sse_decode_String(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_kind = sse_decode_native_selection_kind(deserializer);
+    var var_ranges = sse_decode_list_native_selection_range(deserializer);
+    var var_pageNumbers = sse_decode_list_prim_u_32_strict(deserializer);
+    var var_nearbyTextBefore = sse_decode_String(deserializer);
+    var var_nearbyTextAfter = sse_decode_String(deserializer);
+    var var_disclosureSha256 = sse_decode_String(deserializer);
+    return NativeSelectionContext(
+      schemaVersion: var_schemaVersion,
+      documentId: var_documentId,
+      revision: var_revision,
+      kind: var_kind,
+      ranges: var_ranges,
+      pageNumbers: var_pageNumbers,
+      nearbyTextBefore: var_nearbyTextBefore,
+      nearbyTextAfter: var_nearbyTextAfter,
+      disclosureSha256: var_disclosureSha256,
+    );
+  }
+
+  @protected
+  NativeSelectionKind sse_decode_native_selection_kind(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeSelectionKind.values[inner];
+  }
+
+  @protected
+  NativeSelectionRange sse_decode_native_selection_range(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_pageId = sse_decode_String(deserializer);
+    var var_pageNumber = sse_decode_u_32(deserializer);
+    var var_startUtf16 = sse_decode_u_32(deserializer);
+    var var_endUtf16 = sse_decode_u_32(deserializer);
+    var var_quotedText = sse_decode_String(deserializer);
+    return NativeSelectionRange(
+      objectId: var_objectId,
+      pageId: var_pageId,
+      pageNumber: var_pageNumber,
+      startUtf16: var_startUtf16,
+      endUtf16: var_endUtf16,
+      quotedText: var_quotedText,
+    );
+  }
+
+  @protected
+  NativeSelectionRebase sse_decode_native_selection_rebase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_objectId = sse_decode_String(deserializer);
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_insertedUtf16Length = sse_decode_u_32(deserializer);
+    return NativeSelectionRebase(
+      objectId: var_objectId,
+      start: var_start,
+      end: var_end,
+      insertedUtf16Length: var_insertedUtf16Length,
+    );
+  }
+
+  @protected
+  NativeSelectionSet sse_decode_native_selection_set(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_expectedRevision = sse_decode_u_64(deserializer);
+    var var_kind = sse_decode_native_selection_kind(deserializer);
+    var var_ranges = sse_decode_list_native_selection_range(deserializer);
+    var var_objectIds = sse_decode_list_String(deserializer);
+    var var_primaryIndex = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return NativeSelectionSet(
+      expectedRevision: var_expectedRevision,
+      kind: var_kind,
+      ranges: var_ranges,
+      objectIds: var_objectIds,
+      primaryIndex: var_primaryIndex,
+    );
+  }
+
+  @protected
+  NativeStartAgentRunRequest sse_decode_native_start_agent_run_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_providerEndpoint = sse_decode_String(deserializer);
+    var var_modelId = sse_decode_String(deserializer);
+    var var_headers = sse_decode_Map_String_String_None(deserializer);
+    var var_apiKey = sse_decode_String(deserializer);
+    var var_conversationId = sse_decode_opt_String(deserializer);
+    var var_userPrompt = sse_decode_String(deserializer);
+    var var_selection = sse_decode_opt_box_autoadd_native_selection_set(
+      deserializer,
+    );
+    var var_disclosureSha256 = sse_decode_opt_String(deserializer);
+    var var_maxToolCalls = sse_decode_u_32(deserializer);
+    var var_maxProviderRounds = sse_decode_u_32(deserializer);
+    var var_maxElapsedMs = sse_decode_u_64(deserializer);
+    var var_maxOutputTokens = sse_decode_u_32(deserializer);
+    return NativeStartAgentRunRequest(
+      schemaVersion: var_schemaVersion,
+      providerEndpoint: var_providerEndpoint,
+      modelId: var_modelId,
+      headers: var_headers,
+      apiKey: var_apiKey,
+      conversationId: var_conversationId,
+      userPrompt: var_userPrompt,
+      selection: var_selection,
+      disclosureSha256: var_disclosureSha256,
+      maxToolCalls: var_maxToolCalls,
+      maxProviderRounds: var_maxProviderRounds,
+      maxElapsedMs: var_maxElapsedMs,
+      maxOutputTokens: var_maxOutputTokens,
+    );
+  }
+
+  @protected
+  NativeSubmitCommandRequest sse_decode_native_submit_command_request(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_commandId = sse_decode_String(deserializer);
+    var var_baseRevision = sse_decode_u_64(deserializer);
+    var var_payload = sse_decode_native_editor_command(deserializer);
+    return NativeSubmitCommandRequest(
+      schemaVersion: var_schemaVersion,
+      commandId: var_commandId,
+      baseRevision: var_baseRevision,
+      payload: var_payload,
+    );
+  }
+
+  @protected
+  NativeTextCharacterBox sse_decode_native_text_character_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_bounds = sse_decode_native_pdf_box(deserializer);
+    return NativeTextCharacterBox(
+      start: var_start,
+      end: var_end,
+      bounds: var_bounds,
+    );
+  }
+
+  @protected
+  NativeTextLayoutRecipe sse_decode_native_text_layout_recipe(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_baseline = sse_decode_f_64(deserializer);
+    var var_lineHeight = sse_decode_f_64(deserializer);
+    var var_characterSpacing = sse_decode_f_64(deserializer);
+    var var_horizontalScale = sse_decode_f_64(deserializer);
+    var var_direction = sse_decode_String(deserializer);
+    return NativeTextLayoutRecipe(
+      baseline: var_baseline,
+      lineHeight: var_lineHeight,
+      characterSpacing: var_characterSpacing,
+      horizontalScale: var_horizontalScale,
+      direction: var_direction,
+    );
+  }
+
+  @protected
+  NativeTextRun sse_decode_native_text_run(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_start = sse_decode_u_32(deserializer);
+    var var_end = sse_decode_u_32(deserializer);
+    var var_style = sse_decode_native_text_style(deserializer);
+    return NativeTextRun(start: var_start, end: var_end, style: var_style);
+  }
+
+  @protected
+  NativeTextStyle sse_decode_native_text_style(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_fontFamily = sse_decode_opt_String(deserializer);
+    var var_fontSize = sse_decode_f_64(deserializer);
+    var var_fontWeight = sse_decode_u_16(deserializer);
+    var var_italic = sse_decode_bool(deserializer);
+    var var_colorRgba = sse_decode_list_prim_u_8_strict(deserializer);
+    return NativeTextStyle(
+      fontFamily: var_fontFamily,
+      fontSize: var_fontSize,
+      fontWeight: var_fontWeight,
+      italic: var_italic,
+      colorRgba: var_colorRgba,
+    );
+  }
+
+  @protected
+  NativeValidatedSelection sse_decode_native_validated_selection(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_schemaVersion = sse_decode_u_32(deserializer);
+    var var_revision = sse_decode_u_64(deserializer);
+    var var_kind = sse_decode_native_selection_kind(deserializer);
+    var var_ranges = sse_decode_list_native_selection_range(deserializer);
+    var var_objectIds = sse_decode_list_String(deserializer);
+    var var_primaryIndex = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return NativeValidatedSelection(
+      schemaVersion: var_schemaVersion,
+      revision: var_revision,
+      kind: var_kind,
+      ranges: var_ranges,
+      objectIds: var_objectIds,
+      primaryIndex: var_primaryIndex,
+    );
+  }
+
+  @protected
+  NativeViewportPriority sse_decode_native_viewport_priority(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var inner = sse_decode_i_32(deserializer);
+    return NativeViewportPriority.values[inner];
+  }
+
+  @protected
+  String? sse_decode_opt_String(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_String(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  double? sse_decode_opt_box_autoadd_f_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_f_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeAffineTransform? sse_decode_opt_box_autoadd_native_affine_transform(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_affine_transform(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeChatEvent? sse_decode_opt_box_autoadd_native_chat_event(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_chat_event(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeCommandResult? sse_decode_opt_box_autoadd_native_command_result(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_command_result(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativePdfBox? sse_decode_opt_box_autoadd_native_pdf_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_pdf_box(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativePhysicalLocator? sse_decode_opt_box_autoadd_native_physical_locator(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_physical_locator(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeSelectionRebase? sse_decode_opt_box_autoadd_native_selection_rebase(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_selection_rebase(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeSelectionSet? sse_decode_opt_box_autoadd_native_selection_set(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_selection_set(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeTextLayoutRecipe? sse_decode_opt_box_autoadd_native_text_layout_recipe(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_text_layout_recipe(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  NativeTextStyle? sse_decode_opt_box_autoadd_native_text_style(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_native_text_style(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_32(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  BigInt? sse_decode_opt_box_autoadd_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_u_64(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  List<NativeTextCharacterBox>? sse_decode_opt_list_native_text_character_box(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_native_text_character_box(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  List<NativeTextRun>? sse_decode_opt_list_native_text_run(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_list_native_text_run(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
+  PdfDocumentMetadata sse_decode_pdf_document_metadata(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_documentId = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_pageCount = sse_decode_usize(deserializer);
+    var var_isEncrypted = sse_decode_bool(deserializer);
+    return PdfDocumentMetadata(
+      documentId: var_documentId,
+      title: var_title,
+      pageCount: var_pageCount,
+      isEncrypted: var_isEncrypted,
+    );
+  }
+
+  @protected
+  PdfSearchMatch sse_decode_pdf_search_match(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_pageNumber = sse_decode_usize(deserializer);
+    var var_text = sse_decode_String(deserializer);
+    var var_bounds = sse_decode_record_f_32_f_32_f_32_f_32(deserializer);
+    return PdfSearchMatch(
+      pageNumber: var_pageNumber,
+      text: var_text,
+      bounds: var_bounds,
+    );
+  }
+
+  @protected
+  (double, double, double, double) sse_decode_record_f_32_f_32_f_32_f_32(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_f_32(deserializer);
+    var var_field1 = sse_decode_f_32(deserializer);
+    var var_field2 = sse_decode_f_32(deserializer);
+    var var_field3 = sse_decode_f_32(deserializer);
+    return (var_field0, var_field1, var_field2, var_field3);
+  }
+
+  @protected
+  (String, String) sse_decode_record_string_string(
+    SseDeserializer deserializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_field0 = sse_decode_String(deserializer);
+    var var_field1 = sse_decode_String(deserializer);
+    return (var_field0, var_field1);
+  }
+
+  @protected
+  int sse_decode_u_16(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint16();
+  }
+
+  @protected
+  int sse_decode_u_32(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint32();
+  }
+
+  @protected
+  BigInt sse_decode_u_64(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  int sse_decode_u_8(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getUint8();
+  }
+
+  @protected
+  void sse_decode_unit(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  BigInt sse_decode_usize(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return deserializer.buffer.getBigUint64();
+  }
+
+  @protected
+  void sse_encode_AnyhowException(
+    AnyhowException self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.message, serializer);
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativeEditorSessionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    NativePdfSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativePdfSessionImpl).frbInternalSseEncode(move: true),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    NativePdfSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativePdfSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativeEditorSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    NativePdfSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativePdfSessionImpl).frbInternalSseEncode(move: false),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_Map_String_String_None(
+    Map<String, String> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_record_string_string(
+      self.entries.map((e) => (e.key, e.value)).toList(),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativeEditorSession(
+    NativeEditorSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativeEditorSessionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNativePdfSession(
+    NativePdfSession self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(
+      (self as NativePdfSessionImpl).frbInternalSseEncode(move: null),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_String_Sse(
+    RustStreamSink<String> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_native_agent_event_Sse(
+    RustStreamSink<NativeAgentEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_agent_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_native_chat_event_Sse(
+    RustStreamSink<NativeChatEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_chat_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_StreamSink_native_editor_event_Sse(
+    RustStreamSink<NativeEditorEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+      self.setupAndSerialize(
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_native_editor_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+      ),
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_String(String self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_prim_u_8_strict(utf8.encoder.convert(self), serializer);
+  }
+
+  @protected
+  void sse_encode_bool(bool self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self ? 1 : 0);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_affine_transform(
+    NativeAffineTransform self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_affine_transform(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_annotation_command_request(
+    NativeAnnotationCommandRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_annotation_command_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_approve_font_fallback_request(
+    NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_approve_font_fallback_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_chat_event(
+    NativeChatEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_chat_event(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_chat_request(
+    NativeChatRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_chat_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_checkpoint_request(
+    NativeCheckpointRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_checkpoint_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_clean_patch_request(
+    NativeCleanPatchRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_clean_patch_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_command_result(
+    NativeCommandResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_command_result(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_conversation_import(
+    NativeConversationImport self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_conversation_import(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_delete_annotation_request(
+    NativeDeleteAnnotationRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_delete_annotation_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_editor_save_request(
+    NativeEditorSaveRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_editor_save_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_font_fallback_proposal_request(
+    NativeFontFallbackProposalRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_font_fallback_proposal_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_live_page_import(
+    NativeLivePageImport self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_live_page_import(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_object_details_request(
+    NativeObjectDetailsRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_object_details_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_open_editor_request(
+    NativeOpenEditorRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_open_editor_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_page_scene_request(
+    NativePageSceneRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_page_scene_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_pdf_box(
+    NativePdfBox self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_pdf_box(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_pdf_compose_request(
+    NativePdfComposeRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_pdf_compose_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_pdf_save_request(
+    NativePdfSaveRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_pdf_save_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_physical_locator(
+    NativePhysicalLocator self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_physical_locator(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_provider_test_request(
+    NativeProviderTestRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_provider_test_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_rag_index_request(
+    NativeRagIndexRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_rag_index_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_rag_query_request(
+    NativeRagQueryRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_rag_query_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_search_request(
+    NativeSearchRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_search_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_selection_rebase(
+    NativeSelectionRebase self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_selection_rebase(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_selection_set(
+    NativeSelectionSet self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_selection_set(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_start_agent_run_request(
+    NativeStartAgentRunRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_start_agent_run_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_submit_command_request(
+    NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_submit_command_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_text_layout_recipe(
+    NativeTextLayoutRecipe self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_text_layout_recipe(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_native_text_style(
+    NativeTextStyle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_text_style(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self, serializer);
+  }
+
+  @protected
+  void sse_encode_f_32(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat32(self);
+  }
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putFloat64(self);
+  }
+
+  @protected
+  void sse_encode_i_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putInt32(self);
+  }
+
+  @protected
+  void sse_encode_list_String(List<String> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_String(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_agent_event(
+    List<NativeAgentEvent> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_agent_event(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_annotation_range(
+    List<NativeAnnotationRange> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_annotation_range(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_chat_message(
+    List<NativeChatMessage> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_chat_message(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_compatibility_issue(
+    List<NativeCompatibilityIssue> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_compatibility_issue(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_conversation_message(
+    List<NativeConversationMessage> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_conversation_message(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_live_text_object(
+    List<NativeLiveTextObject> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_live_text_object(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_object_patch(
+    List<NativeObjectPatch> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_object_patch(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_pdf_bookmark(
+    List<NativePdfBookmark> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_pdf_bookmark(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_pdf_highlight(
+    List<NativePdfHighlight> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_pdf_highlight(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_pdf_source(
+    List<NativePdfSource> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_pdf_source(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_physical_edit_operation(
+    List<NativePhysicalEditOperation> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_physical_edit_operation(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_rag_chunk(
+    List<NativeRagChunk> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_rag_chunk(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_rag_query_result(
+    List<NativeRagQueryResult> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_rag_query_result(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_scene_object(
+    List<NativeSceneObject> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_scene_object(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_search_match(
+    List<NativeSearchMatch> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_search_match(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_selection_range(
+    List<NativeSelectionRange> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_selection_range(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_text_character_box(
+    List<NativeTextCharacterBox> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_text_character_box(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_native_text_run(
+    List<NativeTextRun> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_native_text_run(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_pdf_search_match(
+    List<PdfSearchMatch> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_pdf_search_match(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_list_prim_f_32_strict(
+    Float32List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putFloat32List(self);
+  }
+
+  @protected
+  void sse_encode_list_prim_u_32_strict(
+    Uint32List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint32List(self);
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_loose(
+    List<int> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(
+      self is Uint8List ? self : Uint8List.fromList(self),
+    );
+  }
+
+  @protected
+  void sse_encode_list_prim_u_8_strict(
+    Uint8List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint8List(self);
+  }
+
+  @protected
+  void sse_encode_list_prim_usize_strict(
+    Uint64List self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    serializer.buffer.putUint64List(self);
+  }
+
+  @protected
+  void sse_encode_list_record_string_string(
+    List<(String, String)> self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_record_string_string(item, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_native_affine_transform(
+    NativeAffineTransform self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.a, serializer);
+    sse_encode_f_64(self.b, serializer);
+    sse_encode_f_64(self.c, serializer);
+    sse_encode_f_64(self.d, serializer);
+    sse_encode_f_64(self.e, serializer);
+    sse_encode_f_64(self.f, serializer);
+  }
+
+  @protected
+  void sse_encode_native_agent_audit(
+    NativeAgentAudit self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.runId, serializer);
+    sse_encode_String(self.status, serializer);
+    sse_encode_list_native_agent_event(self.events, serializer);
+  }
+
+  @protected
+  void sse_encode_native_agent_event(
+    NativeAgentEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.sessionId, serializer);
+    sse_encode_String(self.runId, serializer);
+    sse_encode_u_64(self.sequence, serializer);
+    sse_encode_u_64(self.documentRevision, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.payloadJson, serializer);
+  }
+
+  @protected
+  void sse_encode_native_agent_run(
+    NativeAgentRun self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.runId, serializer);
+    sse_encode_String(self.status, serializer);
+  }
+
+  @protected
+  void sse_encode_native_annotation(
+    NativeAnnotation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+    sse_encode_native_annotation_kind(self.kind, serializer);
+    sse_encode_native_annotation_anchor_kind(self.anchorKind, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.anchorX, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.anchorY, serializer);
+    sse_encode_list_native_annotation_range(self.ranges, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.body, serializer);
+    sse_encode_list_prim_u_8_strict(self.colorRgba, serializer);
+    sse_encode_f_32(self.opacity, serializer);
+    sse_encode_bool(self.resolved, serializer);
+  }
+
+  @protected
+  void sse_encode_native_annotation_anchor_kind(
+    NativeAnnotationAnchorKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_annotation_command_request(
+    NativeAnnotationCommandRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_native_annotation(self.annotation, serializer);
+  }
+
+  @protected
+  void sse_encode_native_annotation_kind(
+    NativeAnnotationKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_annotation_range(
+    NativeAnnotationRange self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.rangeId, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_u_32(self.startUtf16, serializer);
+    sse_encode_u_32(self.endUtf16, serializer);
+    sse_encode_String(self.quotedText, serializer);
+  }
+
+  @protected
+  void sse_encode_native_approve_font_fallback_request(
+    NativeApproveFontFallbackRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.proposalToken, serializer);
+  }
+
+  @protected
+  void sse_encode_native_chat_event(
+    NativeChatEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case NativeChatEvent_TextDelta(text: final text):
+        sse_encode_i_32(0, serializer);
+        sse_encode_String(text, serializer);
+      case NativeChatEvent_Error(message: final message):
+        sse_encode_i_32(1, serializer);
+        sse_encode_String(message, serializer);
+      case NativeChatEvent_Done():
+        sse_encode_i_32(2, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_native_chat_message(
+    NativeChatMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.role, serializer);
+    sse_encode_String(self.content, serializer);
+  }
+
+  @protected
+  void sse_encode_native_chat_request(
+    NativeChatRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.providerEndpoint, serializer);
+    sse_encode_String(self.modelId, serializer);
+    sse_encode_Map_String_String_None(self.headers, serializer);
+    sse_encode_String(self.apiKey, serializer);
+    sse_encode_list_native_chat_message(self.messages, serializer);
+  }
+
+  @protected
+  void sse_encode_native_checkpoint_request(
+    NativeCheckpointRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_native_clean_patch_asset(
+    NativeCleanPatchAsset self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.handle, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+    sse_encode_u_32(self.dpi, serializer);
+    sse_encode_u_32(self.width, serializer);
+    sse_encode_u_32(self.height, serializer);
+    sse_encode_list_prim_u_8_strict(self.rgbaBytes, serializer);
+    sse_encode_f_64(self.bleedPoints, serializer);
+  }
+
+  @protected
+  void sse_encode_native_clean_patch_request(
+    NativeCleanPatchRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_u_32(self.dpi, serializer);
+  }
+
+  @protected
+  void sse_encode_native_command_result(
+    NativeCommandResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.previousRevision, serializer);
+    sse_encode_u_64(self.committedRevision, serializer);
+    sse_encode_bool(self.durable, serializer);
+    sse_encode_list_String(self.warnings, serializer);
+    sse_encode_list_String(self.removedObjectIds, serializer);
+    sse_encode_opt_box_autoadd_native_selection_rebase(
+      self.selectionRebase,
+      serializer,
+    );
+    sse_encode_list_native_object_patch(self.objectPatches, serializer);
+  }
+
+  @protected
+  void sse_encode_native_compatibility_issue(
+    NativeCompatibilityIssue self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_String(self.kind, serializer);
+    sse_encode_String(self.capability, serializer);
+    sse_encode_String(self.code, serializer);
+    sse_encode_String(self.message, serializer);
+    sse_encode_list_String(self.supportedOperations, serializer);
+  }
+
+  @protected
+  void sse_encode_native_compatibility_report(
+    NativeCompatibilityReport self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_u_32(self.editableCount, serializer);
+    sse_encode_u_32(self.overlayOnlyCount, serializer);
+    sse_encode_u_32(self.readOnlyCount, serializer);
+    sse_encode_list_native_compatibility_issue(self.issues, serializer);
+  }
+
+  @protected
+  void sse_encode_native_conversation_import(
+    NativeConversationImport self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.legacyId, serializer);
+    sse_encode_String(self.documentId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.createdAt, serializer);
+    sse_encode_String(self.updatedAt, serializer);
+    sse_encode_opt_String(self.summary, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.summaryThroughSequence, serializer);
+    sse_encode_list_native_conversation_message(self.messages, serializer);
+  }
+
+  @protected
+  void sse_encode_native_conversation_import_receipt(
+    NativeConversationImportReceipt self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.conversationId, serializer);
+    sse_encode_u_64(self.messageCount, serializer);
+    sse_encode_String(self.digestSha256, serializer);
+    sse_encode_bool(self.alreadyPresent, serializer);
+  }
+
+  @protected
+  void sse_encode_native_conversation_message(
+    NativeConversationMessage self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_u_64(self.sequence, serializer);
+    sse_encode_String(self.role, serializer);
+    sse_encode_String(self.content, serializer);
+    sse_encode_String(self.citationsJson, serializer);
+    sse_encode_String(self.createdAt, serializer);
+    sse_encode_u_64(self.tokenEstimate, serializer);
+    sse_encode_bool(self.isCompacted, serializer);
+  }
+
+  @protected
+  void sse_encode_native_delete_annotation_request(
+    NativeDeleteAnnotationRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.objectId, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_command(
+    NativeEditorCommand self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_editor_command_kind(self.kind, serializer);
+    sse_encode_opt_String(self.objectId, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.start, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.end, serializer);
+    sse_encode_opt_String(self.replacement, serializer);
+    sse_encode_opt_box_autoadd_native_text_style(self.style, serializer);
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.transform,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.radians, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.centerX, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.centerY, serializer);
+    sse_encode_opt_String(self.label, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_command_kind(
+    NativeEditorCommandKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_event(
+    NativeEditorEvent self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_editor_event_kind(self.kind, serializer);
+    sse_encode_String(self.sessionId, serializer);
+    sse_encode_u_64(self.sequence, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.revision, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.latestRevision, serializer);
+    sse_encode_opt_box_autoadd_native_command_result(self.result, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_event_kind(
+    NativeEditorEventKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_metadata(
+    NativeEditorMetadata self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.sessionId, serializer);
+    sse_encode_String(self.documentId, serializer);
+    sse_encode_String(self.sourceFingerprint, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_u_32(self.pageCount, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_save_mode(
+    NativeEditorSaveMode self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_save_request(
+    NativeEditorSaveRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.targetPath, serializer);
+    sse_encode_native_editor_save_mode(self.mode, serializer);
+    sse_encode_native_save_association(self.association, serializer);
+    sse_encode_opt_String(self.recoveryDirectory, serializer);
+  }
+
+  @protected
+  void sse_encode_native_editor_save_result(
+    NativeEditorSaveResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.targetPath, serializer);
+    sse_encode_u_64(self.materializedRevision, serializer);
+    sse_encode_list_String(self.completedStages, serializer);
+    sse_encode_list_String(self.warnings, serializer);
+    sse_encode_bool(self.followsNewSource, serializer);
+  }
+
+  @protected
+  void sse_encode_native_font_fallback_proposal(
+    NativeFontFallbackProposal self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.token, serializer);
+    sse_encode_String(self.fontName, serializer);
+    sse_encode_String(self.source, serializer);
+    sse_encode_bool(self.embeddingAllowed, serializer);
+    sse_encode_String(self.affectedCharacters, serializer);
+  }
+
+  @protected
+  void sse_encode_native_font_fallback_proposal_request(
+    NativeFontFallbackProposalRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_String(self.replacement, serializer);
+  }
+
+  @protected
+  void sse_encode_native_live_page_import(
+    NativeLivePageImport self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.expectedRevision, serializer);
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_f_64(self.width, serializer);
+    sse_encode_f_64(self.height, serializer);
+    sse_encode_list_native_live_text_object(self.objects, serializer);
+  }
+
+  @protected
+  void sse_encode_native_live_text_object(
+    NativeLiveTextObject self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.sourceKey, serializer);
+    sse_encode_String(self.sourceRevision, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+    sse_encode_native_text_style(self.style, serializer);
+    sse_encode_f_64(self.baseline, serializer);
+    sse_encode_bool(self.editable, serializer);
+  }
+
+  @protected
+  void sse_encode_native_memory_pressure_level(
+    NativeMemoryPressureLevel self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_object_details_request(
+    NativeObjectDetailsRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+  }
+
+  @protected
+  void sse_encode_native_object_patch(
+    NativeObjectPatch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_u_64(self.modifiedRevision, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_opt_list_native_text_run(self.textRuns, serializer);
+    sse_encode_opt_list_native_text_character_box(
+      self.characterBoxes,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_native_pdf_box(self.bounds, serializer);
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.transform,
+      serializer,
+    );
+    sse_encode_opt_String(self.fontFingerprint, serializer);
+    sse_encode_opt_String(self.fontAssetHandle, serializer);
+  }
+
+  @protected
+  void sse_encode_native_open_editor_request(
+    NativeOpenEditorRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.sourcePath, serializer);
+    sse_encode_opt_String(self.projectRoot, serializer);
+  }
+
+  @protected
+  void sse_encode_native_page_scene(
+    NativePageScene self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_f_64(self.width, serializer);
+    sse_encode_f_64(self.height, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_list_native_scene_object(self.objects, serializer);
+  }
+
+  @protected
+  void sse_encode_native_page_scene_request(
+    NativePageSceneRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_u_64(self.expectedRevision, serializer);
+    sse_encode_native_viewport_priority(self.priority, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_annotations(
+    NativePdfAnnotations self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
+    sse_encode_list_native_pdf_highlight(self.highlights, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_bookmark(
+    NativePdfBookmark self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_usize(self.pageNumber, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_box(NativePdfBox self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.left, serializer);
+    sse_encode_f_64(self.bottom, serializer);
+    sse_encode_f_64(self.right, serializer);
+    sse_encode_f_64(self.top, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_compose_request(
+    NativePdfComposeRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_list_native_pdf_source(self.sources, serializer);
+    sse_encode_String(self.outputPath, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_compose_response(
+    NativePdfComposeResponse self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.outputPath, serializer);
+    sse_encode_usize(self.pageCount, serializer);
+    sse_encode_opt_String(self.message, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_highlight(
+    NativePdfHighlight self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_usize(self.pageNumber, serializer);
+    sse_encode_f_32(self.left, serializer);
+    sse_encode_f_32(self.top, serializer);
+    sse_encode_f_32(self.right, serializer);
+    sse_encode_f_32(self.bottom, serializer);
+    sse_encode_f_32(self.red, serializer);
+    sse_encode_f_32(self.green, serializer);
+    sse_encode_f_32(self.blue, serializer);
+    sse_encode_f_32(self.opacity, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_list_prim_f_32_strict(self.quadPoints, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_save_request(
+    NativePdfSaveRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_opt_String(self.outputPath, serializer);
+    sse_encode_list_native_pdf_bookmark(self.bookmarks, serializer);
+    sse_encode_list_native_pdf_highlight(self.highlights, serializer);
+  }
+
+  @protected
+  void sse_encode_native_pdf_source(
+    NativePdfSource self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.path, serializer);
+    sse_encode_list_prim_usize_strict(self.pages, serializer);
+  }
+
+  @protected
+  void sse_encode_native_physical_edit_operation(
+    NativePhysicalEditOperation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_physical_edit_operation_kind(self.kind, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.sourceKey, serializer);
+    sse_encode_String(self.sourceRevision, serializer);
+    sse_encode_opt_String(self.expectedText, serializer);
+    sse_encode_opt_String(self.replacement, serializer);
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.expectedTransform,
+      serializer,
+    );
+    sse_encode_opt_box_autoadd_native_affine_transform(
+      self.transform,
+      serializer,
+    );
+    sse_encode_native_pdf_box(self.oldBounds, serializer);
+    sse_encode_native_pdf_box(self.newBounds, serializer);
+  }
+
+  @protected
+  void sse_encode_native_physical_edit_operation_kind(
+    NativePhysicalEditOperationKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_physical_edit_plan(
+    NativePhysicalEditPlan self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.previousRevision, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_list_native_physical_edit_operation(self.operations, serializer);
+    sse_encode_list_native_physical_edit_operation(
+      self.inverseOperations,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_native_physical_locator(
+    NativePhysicalLocator self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_list_prim_u_32_strict(self.objectPath, serializer);
+    sse_encode_String(self.objectType, serializer);
+    sse_encode_String(self.sourceFingerprint, serializer);
+    sse_encode_u_64(self.objectRevision, serializer);
+  }
+
+  @protected
+  void sse_encode_native_prepared_live_command(
+    NativePreparedLiveCommand self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.token, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.previousRevision, serializer);
+    sse_encode_u_64(self.committedRevision, serializer);
+    sse_encode_native_physical_edit_plan(self.plan, serializer);
+  }
+
+  @protected
+  void sse_encode_native_provider_test_request(
+    NativeProviderTestRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.providerEndpoint, serializer);
+    sse_encode_String(self.modelId, serializer);
+    sse_encode_Map_String_String_None(self.headers, serializer);
+    sse_encode_String(self.apiKey, serializer);
+  }
+
+  @protected
+  void sse_encode_native_rag_chunk(
+    NativeRagChunk self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.id, serializer);
+    sse_encode_String(self.text, serializer);
+  }
+
+  @protected
+  void sse_encode_native_rag_index_request(
+    NativeRagIndexRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.storageDirectory, serializer);
+    sse_encode_String(self.modelCacheDirectory, serializer);
+    sse_encode_String(self.documentFingerprint, serializer);
+    sse_encode_list_native_rag_chunk(self.chunks, serializer);
+  }
+
+  @protected
+  void sse_encode_native_rag_index_response(
+    NativeRagIndexResponse self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.status, serializer);
+    sse_encode_opt_String(self.message, serializer);
+    sse_encode_opt_String(self.outcome, serializer);
+  }
+
+  @protected
+  void sse_encode_native_rag_query_request(
+    NativeRagQueryRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.storageDirectory, serializer);
+    sse_encode_String(self.modelCacheDirectory, serializer);
+    sse_encode_String(self.documentFingerprint, serializer);
+    sse_encode_list_String(self.chunkIds, serializer);
+    sse_encode_String(self.query, serializer);
+    sse_encode_usize(self.limit, serializer);
+  }
+
+  @protected
+  void sse_encode_native_rag_query_response(
+    NativeRagQueryResponse self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.status, serializer);
+    sse_encode_opt_String(self.message, serializer);
+    sse_encode_list_native_rag_query_result(self.results, serializer);
+  }
+
+  @protected
+  void sse_encode_native_rag_query_result(
+    NativeRagQueryResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.chunkId, serializer);
+    sse_encode_f_32(self.score, serializer);
+  }
+
+  @protected
+  void sse_encode_native_save_association(
+    NativeSaveAssociation self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_scene_object(
+    NativeSceneObject self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_native_scene_object_kind(self.kind, serializer);
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_opt_String(self.text, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+    sse_encode_native_affine_transform(self.transform, serializer);
+    sse_encode_String(self.capability, serializer);
+    sse_encode_opt_String(self.capabilityReason, serializer);
+    sse_encode_u_64(self.modifiedRevision, serializer);
+    sse_encode_list_native_text_run(self.runs, serializer);
+    sse_encode_list_native_text_character_box(self.characterBoxes, serializer);
+    sse_encode_opt_box_autoadd_native_text_layout_recipe(
+      self.layout,
+      serializer,
+    );
+    sse_encode_opt_String(self.fontFingerprint, serializer);
+    sse_encode_opt_String(self.fontAssetHandle, serializer);
+    sse_encode_opt_box_autoadd_native_physical_locator(
+      self.physicalLocator,
+      serializer,
+    );
+  }
+
+  @protected
+  void sse_encode_native_scene_object_kind(
+    NativeSceneObjectKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_search_match(
+    NativeSearchMatch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_u_32(self.startUtf16, serializer);
+    sse_encode_u_32(self.endUtf16, serializer);
+    sse_encode_String(self.quotedText, serializer);
+  }
+
+  @protected
+  void sse_encode_native_search_mode(
+    NativeSearchMode self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_search_request(
+    NativeSearchRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.expectedRevision, serializer);
+    sse_encode_String(self.query, serializer);
+    sse_encode_native_search_mode(self.mode, serializer);
+    sse_encode_bool(self.wholeWord, serializer);
+    sse_encode_u_32(self.offset, serializer);
+    sse_encode_u_32(self.limit, serializer);
+  }
+
+  @protected
+  void sse_encode_native_search_result(
+    NativeSearchResult self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_list_native_search_match(self.matches, serializer);
+    sse_encode_u_32(self.totalMatches, serializer);
+    sse_encode_u_32(self.indexedPages, serializer);
+    sse_encode_u_32(self.pageCount, serializer);
+    sse_encode_bool(self.isComplete, serializer);
+  }
+
+  @protected
+  void sse_encode_native_selection_context(
+    NativeSelectionContext self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.documentId, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_native_selection_kind(self.kind, serializer);
+    sse_encode_list_native_selection_range(self.ranges, serializer);
+    sse_encode_list_prim_u_32_strict(self.pageNumbers, serializer);
+    sse_encode_String(self.nearbyTextBefore, serializer);
+    sse_encode_String(self.nearbyTextAfter, serializer);
+    sse_encode_String(self.disclosureSha256, serializer);
+  }
+
+  @protected
+  void sse_encode_native_selection_kind(
+    NativeSelectionKind self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_native_selection_range(
+    NativeSelectionRange self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_String(self.pageId, serializer);
+    sse_encode_u_32(self.pageNumber, serializer);
+    sse_encode_u_32(self.startUtf16, serializer);
+    sse_encode_u_32(self.endUtf16, serializer);
+    sse_encode_String(self.quotedText, serializer);
+  }
+
+  @protected
+  void sse_encode_native_selection_rebase(
+    NativeSelectionRebase self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.objectId, serializer);
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_u_32(self.insertedUtf16Length, serializer);
+  }
+
+  @protected
+  void sse_encode_native_selection_set(
+    NativeSelectionSet self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.expectedRevision, serializer);
+    sse_encode_native_selection_kind(self.kind, serializer);
+    sse_encode_list_native_selection_range(self.ranges, serializer);
+    sse_encode_list_String(self.objectIds, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.primaryIndex, serializer);
+  }
+
+  @protected
+  void sse_encode_native_start_agent_run_request(
+    NativeStartAgentRunRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.providerEndpoint, serializer);
+    sse_encode_String(self.modelId, serializer);
+    sse_encode_Map_String_String_None(self.headers, serializer);
+    sse_encode_String(self.apiKey, serializer);
+    sse_encode_opt_String(self.conversationId, serializer);
+    sse_encode_String(self.userPrompt, serializer);
+    sse_encode_opt_box_autoadd_native_selection_set(self.selection, serializer);
+    sse_encode_opt_String(self.disclosureSha256, serializer);
+    sse_encode_u_32(self.maxToolCalls, serializer);
+    sse_encode_u_32(self.maxProviderRounds, serializer);
+    sse_encode_u_64(self.maxElapsedMs, serializer);
+    sse_encode_u_32(self.maxOutputTokens, serializer);
+  }
+
+  @protected
+  void sse_encode_native_submit_command_request(
+    NativeSubmitCommandRequest self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_String(self.commandId, serializer);
+    sse_encode_u_64(self.baseRevision, serializer);
+    sse_encode_native_editor_command(self.payload, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_character_box(
+    NativeTextCharacterBox self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_native_pdf_box(self.bounds, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_layout_recipe(
+    NativeTextLayoutRecipe self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_64(self.baseline, serializer);
+    sse_encode_f_64(self.lineHeight, serializer);
+    sse_encode_f_64(self.characterSpacing, serializer);
+    sse_encode_f_64(self.horizontalScale, serializer);
+    sse_encode_String(self.direction, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_run(
+    NativeTextRun self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.start, serializer);
+    sse_encode_u_32(self.end, serializer);
+    sse_encode_native_text_style(self.style, serializer);
+  }
+
+  @protected
+  void sse_encode_native_text_style(
+    NativeTextStyle self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_opt_String(self.fontFamily, serializer);
+    sse_encode_f_64(self.fontSize, serializer);
+    sse_encode_u_16(self.fontWeight, serializer);
+    sse_encode_bool(self.italic, serializer);
+    sse_encode_list_prim_u_8_strict(self.colorRgba, serializer);
+  }
+
+  @protected
+  void sse_encode_native_validated_selection(
+    NativeValidatedSelection self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.schemaVersion, serializer);
+    sse_encode_u_64(self.revision, serializer);
+    sse_encode_native_selection_kind(self.kind, serializer);
+    sse_encode_list_native_selection_range(self.ranges, serializer);
+    sse_encode_list_String(self.objectIds, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.primaryIndex, serializer);
+  }
+
+  @protected
+  void sse_encode_native_viewport_priority(
+    NativeViewportPriority self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.index, serializer);
+  }
+
+  @protected
+  void sse_encode_opt_String(String? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_String(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_f_64(double? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_f_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_affine_transform(
+    NativeAffineTransform? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_affine_transform(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_chat_event(
+    NativeChatEvent? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_chat_event(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_command_result(
+    NativeCommandResult? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_command_result(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_pdf_box(
+    NativePdfBox? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_pdf_box(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_physical_locator(
+    NativePhysicalLocator? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_physical_locator(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_selection_rebase(
+    NativeSelectionRebase? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_selection_rebase(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_selection_set(
+    NativeSelectionSet? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_selection_set(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_text_layout_recipe(
+    NativeTextLayoutRecipe? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_text_layout_recipe(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_native_text_style(
+    NativeTextStyle? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_native_text_style(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_32(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_box_autoadd_u_64(BigInt? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_u_64(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_native_text_character_box(
+    List<NativeTextCharacterBox>? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_native_text_character_box(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_opt_list_native_text_run(
+    List<NativeTextRun>? self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_list_native_text_run(self, serializer);
+    }
+  }
+
+  @protected
+  void sse_encode_pdf_document_metadata(
+    PdfDocumentMetadata self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.documentId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_usize(self.pageCount, serializer);
+    sse_encode_bool(self.isEncrypted, serializer);
+  }
+
+  @protected
+  void sse_encode_pdf_search_match(
+    PdfSearchMatch self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_usize(self.pageNumber, serializer);
+    sse_encode_String(self.text, serializer);
+    sse_encode_record_f_32_f_32_f_32_f_32(self.bounds, serializer);
+  }
+
+  @protected
+  void sse_encode_record_f_32_f_32_f_32_f_32(
+    (double, double, double, double) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_f_32(self.$1, serializer);
+    sse_encode_f_32(self.$2, serializer);
+    sse_encode_f_32(self.$3, serializer);
+    sse_encode_f_32(self.$4, serializer);
+  }
+
+  @protected
+  void sse_encode_record_string_string(
+    (String, String) self,
+    SseSerializer serializer,
+  ) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.$1, serializer);
+    sse_encode_String(self.$2, serializer);
+  }
+
+  @protected
+  void sse_encode_u_16(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint16(self);
+  }
+
+  @protected
+  void sse_encode_u_32(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint32(self);
+  }
+
+  @protected
+  void sse_encode_u_64(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+
+  @protected
+  void sse_encode_u_8(int self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putUint8(self);
+  }
+
+  @protected
+  void sse_encode_unit(void self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+  }
+
+  @protected
+  void sse_encode_usize(BigInt self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    serializer.buffer.putBigUint64(self);
+  }
+}
+
+@sealed
+class NativeEditorSessionImpl extends RustOpaque
+    implements NativeEditorSession {
+  // Not to be used by end users
+  NativeEditorSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  NativeEditorSessionImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_increment_strong_count_NativeEditorSession,
+    rustArcDecrementStrongCount: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_NativeEditorSession,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_NativeEditorSessionPtr,
+  );
+
+  Stream<NativeAgentEvent> agentEvents({required String runId}) => RustLib
+      .instance
+      .api
+      .crateEditingApiNativeEditorSessionAgentEvents(that: this, runId: runId);
+
+  Future<NativeAnnotation> annotationDetails({required String objectId}) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionAnnotationDetails(
+        that: this,
+        objectId: objectId,
+      );
+
+  Future<NativeAgentRun> approveAgentProposal({
+    required String runId,
+    required String approvalId,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionApproveAgentProposal(
+        that: this,
+        runId: runId,
+        approvalId: approvalId,
+      );
+
+  Future<NativeCommandResult> approveFontFallback({
+    required NativeApproveFontFallbackRequest request,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionApproveFontFallback(
+        that: this,
+        request: request,
+      );
+
+  Future<void> cancelAgentRun({required String runId}) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionCancelAgentRun(
+        that: this,
+        runId: runId,
+      );
+
+  Future<NativeCommandResult> checkpoint({
+    required NativeCheckpointRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionCheckpoint(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeCleanPatchAsset> cleanPatch({
+    required NativeCleanPatchRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionCleanPatch(
+    that: this,
+    request: request,
+  );
+
+  Future<void> close() =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionClose(that: this);
+
+  Future<NativeCompatibilityReport> compatibilityReport({
+    required BigInt expectedRevision,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionCompatibilityReport(
+        that: this,
+        expectedRevision: expectedRevision,
+      );
+
+  Future<NativeCommandResult> createAnnotation({
+    required NativeAnnotationCommandRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionCreateAnnotation(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeCommandResult> deleteAnnotation({
+    required NativeDeleteAnnotationRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionDeleteAnnotation(
+    that: this,
+    request: request,
+  );
+
+  Stream<NativeEditorEvent> events() =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionEvents(that: this);
+
+  Future<NativeConversationImportReceipt> importAgentConversation({
+    required NativeConversationImport value,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionImportAgentConversation(
+        that: this,
+        value: value,
+      );
+
+  Future<void> importLivePage({required NativeLivePageImport request}) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionImportLivePage(
+        that: this,
+        request: request,
+      );
+
+  Future<NativeEditorMetadata> metadata() => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionMetadata(that: this);
+
+  Future<NativeSceneObject> objectDetails({
+    required NativeObjectDetailsRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionObjectDetails(
+    that: this,
+    request: request,
+  );
+
+  Future<NativePageScene> pageScene({
+    required NativePageSceneRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionPageScene(
+    that: this,
+    request: request,
+  );
+
+  /// Validates a semantic command and exposes its live-PDFium physical plan
+  /// without changing the canonical Rust revision or durable journal.
+  Future<NativePreparedLiveCommand> prepareLiveCommand({
+    required NativeSubmitCommandRequest request,
+  }) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionPrepareLiveCommand(
+        that: this,
+        request: request,
+      );
+
+  Future<NativeFontFallbackProposal> proposeFontFallback({
+    required NativeFontFallbackProposalRequest request,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionProposeFontFallback(
+        that: this,
+        request: request,
+      );
+
+  /// Publishes the prepared command only after the Dart-owned live PDFium
+  /// document reports that it applied the returned physical edit plan.
+  Future<NativeCommandResult> publishPreparedLiveCommand({
+    required String token,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionPublishPreparedLiveCommand(
+        that: this,
+        token: token,
+      );
+
+  Future<NativeAgentAudit> readAgentAudit({required String runId}) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionReadAgentAudit(
+        that: this,
+        runId: runId,
+      );
+
+  Future<NativeAgentRun> rebaseAgentProposal({
+    required String runId,
+    required String approvalId,
+    required BigInt currentRevision,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionRebaseAgentProposal(
+        that: this,
+        runId: runId,
+        approvalId: approvalId,
+        currentRevision: currentRevision,
+      );
+
+  Future<NativeAgentRun> rejectAgentProposal({
+    required String runId,
+    required String approvalId,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionRejectAgentProposal(
+        that: this,
+        runId: runId,
+        approvalId: approvalId,
+      );
+
+  Future<void> releaseCleanPatchMemory() => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionReleaseCleanPatchMemory(that: this);
+
+  Future<void> reportMemoryPressure({
+    required NativeMemoryPressureLevel level,
+  }) => RustLib.instance.api
+      .crateEditingApiNativeEditorSessionReportMemoryPressure(
+        that: this,
+        level: level,
+      );
+
+  Future<NativeEditorSaveResult> save({
+    required NativeEditorSaveRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionSave(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeEditorSaveResult> saveLivePdfium({
+    required NativeEditorSaveRequest request,
+    required List<int> pdfBytes,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionSaveLivePdfium(
+    that: this,
+    request: request,
+    pdfBytes: pdfBytes,
+  );
+
+  Future<NativeSearchResult> search({required NativeSearchRequest request}) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionSearch(
+        that: this,
+        request: request,
+      );
+
+  Future<NativeSelectionContext> selectionContext({
+    required NativeSelectionSet selection,
+    required int beforeUtf16,
+    required int afterUtf16,
+    required int maxRanges,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionSelectionContext(
+    that: this,
+    selection: selection,
+    beforeUtf16: beforeUtf16,
+    afterUtf16: afterUtf16,
+    maxRanges: maxRanges,
+  );
+
+  Future<NativeAgentRun> startAgentRun({
+    required NativeStartAgentRunRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionStartAgentRun(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeCommandResult> submit({
+    required NativeSubmitCommandRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionSubmit(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeCommandResult> updateAnnotation({
+    required NativeAnnotationCommandRequest request,
+  }) => RustLib.instance.api.crateEditingApiNativeEditorSessionUpdateAnnotation(
+    that: this,
+    request: request,
+  );
+
+  Future<NativeValidatedSelection> validateSelection({
+    required NativeSelectionSet selection,
+  }) =>
+      RustLib.instance.api.crateEditingApiNativeEditorSessionValidateSelection(
+        that: this,
+        selection: selection,
+      );
+}
+
+@sealed
+class NativePdfSessionImpl extends RustOpaque implements NativePdfSession {
+  // Not to be used by end users
+  NativePdfSessionImpl.frbInternalDcoDecode(List<dynamic> wire)
+    : super.frbInternalDcoDecode(wire, _kStaticData);
+
+  // Not to be used by end users
+  NativePdfSessionImpl.frbInternalSseDecode(
+    BigInt ptr,
+    int externalSizeOnNative,
+  ) : super.frbInternalSseDecode(ptr, externalSizeOnNative, _kStaticData);
+
+  static final _kStaticData = RustArcStaticData(
+    rustArcIncrementStrongCount:
+        RustLib.instance.api.rust_arc_increment_strong_count_NativePdfSession,
+    rustArcDecrementStrongCount:
+        RustLib.instance.api.rust_arc_decrement_strong_count_NativePdfSession,
+    rustArcDecrementStrongCountPtr: RustLib
+        .instance
+        .api
+        .rust_arc_decrement_strong_count_NativePdfSessionPtr,
+  );
+
+  Stream<String> index({
+    required BigInt maxCharsPerChunk,
+    required BigInt batchSize,
+  }) => RustLib.instance.api.crateApiNativePdfSessionIndex(
+    that: this,
+    maxCharsPerChunk: maxCharsPerChunk,
+    batchSize: batchSize,
+  );
+
+  Future<PdfDocumentMetadata> metadata() =>
+      RustLib.instance.api.crateApiNativePdfSessionMetadata(that: this);
+
+  Future<String> pageText({required BigInt pageNumber}) => RustLib.instance.api
+      .crateApiNativePdfSessionPageText(that: this, pageNumber: pageNumber);
+
+  Future<List<PdfSearchMatch>> search({required String query}) => RustLib
+      .instance
+      .api
+      .crateApiNativePdfSessionSearch(that: this, query: query);
+}

@@ -3,18 +3,23 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../../../core/clarix_logger.dart';
+import '../../../core/clarix_rust_runtime.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
 import '../infrastructure/provider_profile_store.dart';
-import 'agent_run_controller.dart';
 
 class AiRuntimeService {
-  AiRuntimeService({required this.providerProfiles});
+  AiRuntimeService({
+    required this.providerProfiles,
+    Future<void> Function()? ensureNativeReady,
+  }) : _ensureNativeReady =
+           ensureNativeReady ?? ClarixRustRuntime.requireInitialized;
 
   final ProviderProfileStore providerProfiles;
-  AgentRunController? _activeController;
+  final Future<void> Function() _ensureNativeReady;
 
   Future<void> testProvider(AiProviderProfile profile, String apiKey) async {
+    await _ensureNativeReady();
     final client = HttpClient();
     try {
       final String endpoint = profile.baseUrl.endsWith('/chat/completions')
@@ -50,8 +55,9 @@ class AiRuntimeService {
   Future<AiReply> sendPrompt({
     required String prompt,
     required String profileId,
-    required String conversationId,
-    required AgentRunController? controller,
+    String? conversationId,
+    dynamic controller,
+    List<CitationSnippet> documentSnippets = const <CitationSnippet>[],
     required void Function(String token) onToken,
     List<Map<String, String>>? history,
     void Function(AiRuntimePhase phase, String message)? onStatus,
@@ -62,7 +68,9 @@ class AiRuntimeService {
       clarixLog.w('AI runtime rejected prompt: selected provider is missing.');
       throw StateError('Select an AI provider to chat.');
     }
+    await _ensureNativeReady();
     final key = await providerProfiles.readApiKey(profile.id) ?? '';
+
     clarixLog.i(
       'AI runtime prepared ${profile.label} direct HTTP streaming request '
       '(model=${profile.modelId}, endpoint=${profile.baseUrl}).',
@@ -84,7 +92,7 @@ class AiRuntimeService {
 
       final isLocal = profile.baseUrl.contains('localhost') || profile.baseUrl.contains('127.0.0.1');
 
-      const systemPrompt = '''You are Clarix, an autonomous AI PDF document agent powered by local Gemma & PDFOxide.
+      String systemPrompt = '''You are Clarix, an autonomous AI PDF document agent powered by local Gemma & PDFOxide.
 You HAVE direct control over the active PDF workspace and Markdown Document Editor.
 
 Supported Autonomous Operations:
@@ -106,11 +114,14 @@ Capabilities & Rules:
   4. Include `[[CREATE_SOLUTION_PDF: {"solutionName": "<document>-solution.pdf"}]]` tag.
 - Put the command tag at the very beginning of your response whenever an action is requested.''';
 
+      if (documentSnippets.isNotEmpty) {
+        systemPrompt += '\n\n${_documentContext(documentSnippets)}';
+      }
+
       final messageList = <Map<String, String>>[
         {'role': 'system', 'content': systemPrompt},
       ];
       if (history != null && history.isNotEmpty) {
-        // Retain context from past conversation turns (up to 16 entries)
         final startIndex = (history.length - 16).clamp(0, history.length);
         messageList.addAll(history.sublist(startIndex));
       }
@@ -177,14 +188,25 @@ Capabilities & Rules:
           } catch (_) {}
         }
       }
-      return AiReply(text: fullText.toString(), citations: const <CitationSnippet>[]);
+      return AiReply(text: fullText.toString(), citations: documentSnippets);
     } finally {
       client.close();
     }
   }
 
-  Future<void> stopGeneration() async => _activeController?.cancel();
-  Future<void> dispose() async => stopGeneration();
+  Future<void> stopGeneration() async {}
+  Future<void> dispose() async {}
+}
+
+String _documentContext(List<CitationSnippet> snippets) {
+  final String excerpts = snippets
+      .map(
+        (CitationSnippet snippet) =>
+            '[${snippet.label}, page ${snippet.pageNumber}]\n${snippet.snippet}',
+      )
+      .join('\n\n');
+  return 'Answer using the supplied PDF excerpts when relevant. '
+      'Mention page numbers when you rely on an excerpt.\n\n$excerpts';
 }
 
 class AiReply {

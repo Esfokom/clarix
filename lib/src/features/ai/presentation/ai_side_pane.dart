@@ -51,7 +51,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
     final AiWorkspaceState ai = widget.aiState.chat;
-    final agentController = widget.documentContext?.agentController;
     final composerEnabled =
         ai.providerReady && !ai.chatBusy && widget.documentContext != null;
     final composerHint = !ai.providerReady
@@ -59,7 +58,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
         : widget.documentContext == null
         ? 'Opening document editor…'
         : 'Ask anything about this document…';
-    final editorRevision = widget.documentContext?.editorRevision ?? 0;
     final int contextLimit =
         widget.aiState.providerProfiles
             .where((profile) => profile.id == ai.selectedProviderId)
@@ -152,16 +150,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
             ),
           ),
           _ProviderSelectorBar(aiState: widget.aiState, colors: colors),
-          if (agentController != null)
-            StreamBuilder<AgentRunControllerState>(
-              stream: agentController.changes,
-              initialData: agentController.state,
-              builder: (context, snapshot) => _AgentRunPanel(
-                state: snapshot.data ?? agentController.state,
-                currentRevision: editorRevision,
-                controller: agentController,
-              ),
-            ),
           Expanded(
             child: ai.messages.isEmpty
                 ? _EmptyConversation(
@@ -278,46 +266,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
     } else if (selected != null) {
       await ref.read(aiNotifierProvider.notifier).selectConversation(selected);
     }
-  }
-}
-
-class _AgentRunPanel extends StatelessWidget {
-  const _AgentRunPanel({
-    required this.state,
-    required this.currentRevision,
-    required this.controller,
-  });
-
-  final AgentRunControllerState state;
-  final int currentRevision;
-  final AgentRunController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final proposal = state.pendingProposal;
-    if (state.activeRunId == null && proposal == null) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          if (state.progressLabel.isNotEmpty)
-            Text(state.progressLabel, key: const Key('agent-progress-label')),
-          if (state.assistantText.isNotEmpty) Text(state.assistantText),
-          if (proposal != null)
-            AgentApprovalCard(
-              proposal: proposal,
-              currentRevision: currentRevision,
-              onApprove: () => unawaited(controller.approve(proposal)),
-              onReject: () => unawaited(controller.reject(proposal)),
-              onRebase: () =>
-                  unawaited(controller.rebase(proposal, currentRevision)),
-            ),
-        ],
-      ),
-    );
   }
 }
 

@@ -8,7 +8,7 @@ import '../../domain/workspace_feature_state.dart';
 import 'pdf_utilities_dialogs.dart';
 import 'workspace_common.dart';
 import 'package:clarix/src/core/models.dart';
-import 'package:clarix/src/features/ai/presentation/study_mode_side_pane.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 
 class QuickstartSurface extends ConsumerWidget {
   const QuickstartSurface({required this.state, super.key});

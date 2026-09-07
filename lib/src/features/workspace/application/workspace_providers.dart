@@ -12,10 +12,15 @@ import '../../../core/editing/editor_command_id.dart';
 import '../../../core/session_store.dart';
 import '../../utilities/application/pdf_utility_service.dart';
 import '../infrastructure/document_metadata_store.dart';
+import '../../annotations/infrastructure/annotation_sidecar_store.dart';
 import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
+
+final annotationSidecarStoreProvider = Provider<AnnotationSidecarStore>(
+  (Ref ref) => AnnotationSidecarStore(),
+);
 
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),

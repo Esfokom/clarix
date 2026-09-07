@@ -17,7 +17,6 @@ import 'workspace_common.dart';
 
 import 'package:clarix/src/core/theme_controller.dart';
 import 'package:clarix/src/core/theme_profile.dart';
-import 'package:clarix/src/features/ai/presentation/study_mode_side_pane.dart';
 
 class WorkspaceBody extends ConsumerStatefulWidget {
   const WorkspaceBody({

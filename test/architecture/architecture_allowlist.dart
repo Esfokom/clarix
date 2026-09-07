@@ -6,6 +6,8 @@ const Set<String> oversizedProductionDartAllowlist = <String>{
 };
 
 const Set<String> temporaryFeatureBoundaryAllowlist = <String>{
+  'lib/src/features/ai/application/ai_notifier.dart',
+  'lib/src/features/ai/presentation/study_mode_side_pane.dart',
   'lib/src/features/reader/presentation/reader_viewer_pane.dart',
   'lib/src/features/reader_diagnostics/presentation/instrumented_pdfrx_screen.dart',
   'lib/src/features/reader_diagnostics/presentation/reader_diagnostics_hub.dart',

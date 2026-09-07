@@ -6,59 +6,57 @@
 import 'frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+class PdfDocumentMetadata {
+  final String documentId;
+  final String title;
+  final BigInt pageCount;
+  final bool isEncrypted;
 
-            
+  const PdfDocumentMetadata({
+    required this.documentId,
+    required this.title,
+    required this.pageCount,
+    required this.isEncrypted,
+  });
 
-            
+  @override
+  int get hashCode =>
+      documentId.hashCode ^
+      title.hashCode ^
+      pageCount.hashCode ^
+      isEncrypted.hashCode;
 
-            class PdfDocumentMetadata  {
-                final String documentId;
-final String title;
-final BigInt pageCount;
-final bool isEncrypted;
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PdfDocumentMetadata &&
+          runtimeType == other.runtimeType &&
+          documentId == other.documentId &&
+          title == other.title &&
+          pageCount == other.pageCount &&
+          isEncrypted == other.isEncrypted;
+}
 
-                const PdfDocumentMetadata({required this.documentId ,required this.title ,required this.pageCount ,required this.isEncrypted ,});
+class PdfSearchMatch {
+  final BigInt pageNumber;
+  final String text;
+  final (double, double, double, double) bounds;
 
+  const PdfSearchMatch({
+    required this.pageNumber,
+    required this.text,
+    required this.bounds,
+  });
 
+  @override
+  int get hashCode => pageNumber.hashCode ^ text.hashCode ^ bounds.hashCode;
 
-
-
-        @override
-        int get hashCode => documentId.hashCode^title.hashCode^pageCount.hashCode^isEncrypted.hashCode;
-
-
-
-        @override
-        bool operator ==(Object other) =>
-            identical(this, other) ||
-            other is PdfDocumentMetadata &&
-                runtimeType == other.runtimeType
-                && documentId == other.documentId&& title == other.title&& pageCount == other.pageCount&& isEncrypted == other.isEncrypted;
-
-            }
-
-class PdfSearchMatch  {
-                final BigInt pageNumber;
-final String text;
-final (double,double,double,double) bounds;
-
-                const PdfSearchMatch({required this.pageNumber ,required this.text ,required this.bounds ,});
-
-
-
-
-
-        @override
-        int get hashCode => pageNumber.hashCode^text.hashCode^bounds.hashCode;
-
-
-
-        @override
-        bool operator ==(Object other) =>
-            identical(this, other) ||
-            other is PdfSearchMatch &&
-                runtimeType == other.runtimeType
-                && pageNumber == other.pageNumber&& text == other.text&& bounds == other.bounds;
-
-            }
-            
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is PdfSearchMatch &&
+          runtimeType == other.runtimeType &&
+          pageNumber == other.pageNumber &&
+          text == other.text &&
+          bounds == other.bounds;
+}
