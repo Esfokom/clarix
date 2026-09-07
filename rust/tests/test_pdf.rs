@@ -1,0 +1,1 @@
+use pdf_oxide::api::Pdf; #[test] fn test_edit() -> Result<(), Box<dyn std::error::Error>> { let mut doc = Pdf::open("../test_input.pdf")?; let page = doc.get_page_mut(0).ok_or("No page found")?; page.replace_text("the grammar of a language", "A language\x27s grammar     ")?; doc.save("../test_output.pdf")?; Ok(()) }

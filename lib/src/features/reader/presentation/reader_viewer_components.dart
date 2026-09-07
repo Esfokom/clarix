@@ -436,6 +436,10 @@ class _ViewerHud extends StatelessWidget {
     required this.onHighlightSelection,
     required this.textEditing,
     required this.onToggleTextEditing,
+    this.onRefreshCanvas,
+    this.onUndo,
+    this.onRedo,
+    this.onSave,
     this.scanning = false,
   });
 
@@ -450,6 +454,10 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onHighlightSelection;
   final bool textEditing;
   final VoidCallback? onToggleTextEditing;
+  final VoidCallback? onRefreshCanvas;
+  final VoidCallback? onUndo;
+  final VoidCallback? onRedo;
+  final VoidCallback? onSave;
   final bool scanning;
 
   @override
@@ -534,15 +542,42 @@ class _ViewerHud extends StatelessWidget {
             const SizedBox(width: 6),
             Tooltip(
               message: textEditing
-                  ? 'Leave PDF object editing'
-                  : 'Edit PDF objects',
+                  ? 'Exit manual text editing'
+                  : 'Enter manual text editing (Adobe bounding boxes)',
               child: _HudIcon(
                 key: const Key('pdf-text-edit-toggle'),
-                icon: LucideIcons.textCursorInput,
+                icon: LucideIcons.squarePen,
                 onPressed: onToggleTextEditing,
                 active: textEditing,
               ),
             ),
+
+            if (textEditing) ...<Widget>[
+              const SizedBox(width: 6),
+              Tooltip(
+                message: 'Undo edit (Ctrl+Z)',
+                child: _HudIcon(
+                  icon: LucideIcons.undo2,
+                  onPressed: onUndo,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: 'Redo edit (Ctrl+Y)',
+                child: _HudIcon(
+                  icon: LucideIcons.redo2,
+                  onPressed: onRedo,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Tooltip(
+                message: 'Save PDF edits (Ctrl+S)',
+                child: _HudIcon(
+                  icon: LucideIcons.save,
+                  onPressed: onSave,
+                ),
+              ),
+            ],
             if (textEditing && scanning) ...<Widget>[
               const SizedBox(width: 10),
               const _HudDivider(),
@@ -582,12 +617,14 @@ class _ViewerHud extends StatelessWidget {
 enum _ZoomPreset {
   fitWidth('Fit width'),
   fitPage('Fit page'),
+  percent25('25%'),
   percent50('50%'),
   percent75('75%'),
   percent100('100%'),
   percent125('125%'),
   percent150('150%'),
-  percent200('200%');
+  percent200('200%'),
+  percent300('300%');
 
   const _ZoomPreset(this.label);
 
@@ -630,9 +667,9 @@ class _HudDivider extends StatelessWidget {
 
 PdfTextSelectionParams textSelectionParamsFor(
   PdfEditingInteraction interaction,
-) => PdfTextSelectionParams(
-  enabled: interaction == PdfEditingInteraction.reading,
-  showContextMenuAutomatically: interaction == PdfEditingInteraction.reading,
+) => const PdfTextSelectionParams(
+  enabled: true,
+  showContextMenuAutomatically: true,
 );
 
 PdfViewerOnKeyCallback viewerKeyHandlerFor(PdfEditingInteraction interaction) =>

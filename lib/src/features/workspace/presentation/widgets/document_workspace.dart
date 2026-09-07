@@ -144,6 +144,21 @@ class _TabStripState extends ConsumerState<_TabStrip> {
           ),
           child: Row(
             children: <Widget>[
+              Tooltip(
+                message: 'Welcome to Clarix (Home)',
+                child: IconButton(
+                  key: const Key('tabstrip-home-button'),
+                  onPressed: () {
+                    ref.read(workspaceNotifierProvider.notifier).setActiveTab(null);
+                  },
+                  icon: Icon(
+                    LucideIcons.house,
+                    size: 16,
+                    color: widget.colors.textMuted,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
               Expanded(
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,

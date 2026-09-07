@@ -6,7 +6,7 @@ import 'ocr_models.dart';
 
 enum SidebarPane { thumbnails, outline }
 
-enum RightToolWindow { none, document, textFormat, ai }
+enum RightToolWindow { none, document, textFormat, ai, studyMode }
 
 const double minWorkspacePaneWidth = 200;
 const double maxWorkspacePaneWidth = 480;
@@ -43,6 +43,7 @@ class WorkspaceSession {
     required this.leftPaneCollapsed,
     required this.rightPaneCollapsed,
     required this.rightToolWindow,
+    this.studyModeFullScreen = false,
   });
 
   factory WorkspaceSession.initial() => WorkspaceSession(
@@ -57,6 +58,7 @@ class WorkspaceSession {
     leftPaneCollapsed: false,
     rightPaneCollapsed: false,
     rightToolWindow: RightToolWindow.none,
+    studyModeFullScreen: false,
   );
 
   factory WorkspaceSession.fromJson(Map<String, dynamic> json) {
@@ -89,6 +91,7 @@ class WorkspaceSession {
       rightToolWindow: RightToolWindow.values.byName(
         json['rightToolWindow'] as String? ?? RightToolWindow.none.name,
       ),
+      studyModeFullScreen: json['studyModeFullScreen'] as bool? ?? false,
     );
   }
 
@@ -103,6 +106,7 @@ class WorkspaceSession {
   final bool leftPaneCollapsed;
   final bool rightPaneCollapsed;
   final RightToolWindow rightToolWindow;
+  final bool studyModeFullScreen;
 
   WorkspaceSession copyWith({
     bool? restorePreviousSession,
@@ -117,6 +121,7 @@ class WorkspaceSession {
     bool? leftPaneCollapsed,
     bool? rightPaneCollapsed,
     RightToolWindow? rightToolWindow,
+    bool? studyModeFullScreen,
   }) {
     return WorkspaceSession(
       restorePreviousSession:
@@ -131,6 +136,7 @@ class WorkspaceSession {
       leftPaneCollapsed: leftPaneCollapsed ?? this.leftPaneCollapsed,
       rightPaneCollapsed: rightPaneCollapsed ?? this.rightPaneCollapsed,
       rightToolWindow: rightToolWindow ?? this.rightToolWindow,
+      studyModeFullScreen: studyModeFullScreen ?? this.studyModeFullScreen,
     );
   }
 
@@ -146,6 +152,7 @@ class WorkspaceSession {
     'leftPaneCollapsed': leftPaneCollapsed,
     'rightPaneCollapsed': rightPaneCollapsed,
     'rightToolWindow': rightToolWindow.name,
+    'studyModeFullScreen': studyModeFullScreen,
   };
 }
 

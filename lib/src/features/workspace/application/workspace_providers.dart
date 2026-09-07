@@ -124,3 +124,16 @@ final agentRunControllerProvider = Provider.family<AgentRunController?, String>(
 final installedFontCatalogProvider = FutureProvider<InstalledFontCatalog>(
   (Ref ref) => InstalledFontCatalog.scan(),
 );
+
+final activeMarkdownEditorTabIdProvider =
+    NotifierProvider<ActiveMarkdownEditorTabIdNotifier, String?>(
+      ActiveMarkdownEditorTabIdNotifier.new,
+    );
+
+class ActiveMarkdownEditorTabIdNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+
+  void setTabId(String? tabId) => state = tabId;
+}
+

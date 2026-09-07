@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/clarix_logger.dart';
@@ -7,6 +10,8 @@ import '../domain/ai_provider.dart';
 import '../infrastructure/native_conversation_migrator.dart';
 import 'ai_document_context.dart';
 import 'ai_providers.dart';
+import '../../pdf_editor/application/markdown_pdf_compiler.dart';
+import '../../workspace/application/workspace_providers.dart';
 
 /// Owns persisted AI preferences and the active document conversation.
 ///
@@ -218,37 +223,182 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     try {
       clarixLog.i('AI conversation migration started.');
       final store = await ref.read(conversationStoreProvider.future);
-      await NativeConversationMigrator(
-        legacy: store,
-        importConversation: context.agentController.importConversation,
-        documentId: context.documentId,
-      ).run();
+      if (context.agentController != null) {
+        await NativeConversationMigrator(
+          legacy: store,
+          importConversation: context.agentController!.importConversation,
+          documentId: context.documentId,
+        ).run();
+      }
       final threads = await store.listThreads(context.documentId);
       clarixLog.i(
         'AI provider run starting with ${threads.length} persisted thread(s).',
       );
+      final chatHistory = current.chat.messages
+          .where((m) => m.text.trim().isNotEmpty)
+          .map((m) => <String, String>{
+                'role': m.role == 'assistant' ? 'assistant' : 'user',
+                'content': m.text.trim(),
+              })
+          .toList();
+
+      String finalPrompt = prompt.trim();
+      try {
+        final chunkStore = ref.read(chunkStoreProvider);
+        final workspaceState = ref.read(workspaceNotifierProvider).value;
+        final StringBuffer contextBuffer = StringBuffer();
+
+        if (workspaceState != null && workspaceState.session.tabs.isNotEmpty) {
+          contextBuffer.writeln('[ACTIVE WORKSPACE DOCUMENT SOURCE TEXT]');
+          for (final tab in workspaceState.session.tabs) {
+            final chunks = await chunkStore.readChunks(tab.documentId);
+            if (chunks.isNotEmpty) {
+              contextBuffer.writeln('\n--- DOCUMENT SOURCE: "${tab.title}" ---');
+              for (final c in chunks.take(15)) {
+                contextBuffer.writeln('[Page ${c.pageNumber}]: ${c.text}');
+              }
+            }
+          }
+        } else if (context.documentId.isNotEmpty && context.documentId != 'study_mode_home') {
+          final chunks = await chunkStore.readChunks(context.documentId);
+          if (chunks.isNotEmpty) {
+            contextBuffer.writeln('[DOCUMENT SOURCE TEXT: "${context.title}"]');
+            for (final c in chunks.take(20)) {
+              contextBuffer.writeln('[Page ${c.pageNumber}]: ${c.text}');
+            }
+          }
+        }
+
+        if (contextBuffer.isNotEmpty) {
+          finalPrompt = '${contextBuffer.toString()}\n\n[USER REQUEST]:\n$finalPrompt';
+        }
+      } catch (e) {
+        clarixLog.w('Failed to extract document chunks for AI prompt: $e');
+      }
+
       final reply = await ref
           .read(aiRuntimeServiceProvider)
           .sendPrompt(
-            prompt: prompt.trim(),
+            prompt: finalPrompt,
             profileId: current.chat.selectedProviderId!,
             conversationId: threads.isEmpty
                 ? 'native:${context.documentId}'
                 : threads.first.id,
             controller: context.agentController,
+            history: chatHistory,
             onStatus: _setActivity,
             onToken: (token) {
               buffer.write(token);
-              _replaceLastAssistant(buffer.toString(), busy: true);
+              final fullText = buffer.toString();
+              _replaceLastAssistant(fullText, assistantId: assistant.id, busy: true);
+
+              if (fullText.contains('[[SCROLL_TO_PAGE:')) {
+                final match = RegExp(r'\[\[SCROLL_TO_PAGE:\s*\{"page":\s*(\d+)\}\]\]').firstMatch(fullText);
+                if (match != null) {
+                  final pageNum = int.tryParse(match.group(1) ?? '');
+                  if (pageNum != null) {
+                    ref.read(workspaceNotifierProvider.notifier).updateViewerState(
+                          tabId: context.tabId,
+                          currentPage: pageNum,
+                        );
+                  }
+                }
+              }
+
+              if (fullText.contains('[[EDIT_TEXT:')) {
+                final match = RegExp(r'\[\[EDIT_TEXT:\s*(\{.*?\})\]\]').firstMatch(fullText);
+                if (match != null) {
+                  try {
+                    final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+                    final int page = jsonMap['page'] as int? ?? 1;
+                    final String oldText = jsonMap['oldText'] as String? ?? '';
+                    final String newText = jsonMap['newText'] as String? ?? '';
+                    if (newText.isNotEmpty || oldText.isNotEmpty) {
+                      ref.read(workspaceNotifierProvider.notifier).updateViewerState(
+                        tabId: context.tabId,
+                        currentPage: page,
+                      );
+                      clarixLog.i('AI EDIT_TEXT targeted to Markdown Document Editor: page=$page, old="$oldText", new="$newText"');
+                    }
+                  } catch (e) {
+                    clarixLog.w('AI edit text parsing failed: $e');
+                  }
+                }
+              }
             },
           );
       _replaceLastAssistant(
         reply.text,
+        assistantId: assistant.id,
         citations: reply.citations,
         busy: false,
         phase: AiRuntimePhase.idle,
         status: 'Ready to chat with your remote provider.',
       );
+
+      if (reply.text.contains('[[CREATE_SOLUTION_PDF:')) {
+        final match = RegExp(r'\[\[CREATE_SOLUTION_PDF:\s*(\{[\s\S]*?\})\]\]').firstMatch(reply.text);
+        String solutionName = 'solution.pdf';
+        if (match != null) {
+          try {
+            final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+            solutionName = jsonMap['solutionName'] as String? ?? 'solution.pdf';
+          } catch (e) {
+            clarixLog.w('Failed to parse solutionName JSON: $e');
+          }
+        }
+        solutionName = solutionName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+
+        final cleanText = reply.text
+            .replaceAll(RegExp(r'\[\[CREATE_SOLUTION_PDF:[\s\S]*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[SAVE_DOCUMENT:[\s\S]*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[SCROLL_TO_PAGE:[\s\S]*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[EDIT_TEXT:[\s\S]*?\]\]'), '')
+            .trim();
+
+        try {
+          final pdfBytes = await MarkdownPdfCompiler.compile(cleanText, title: solutionName);
+          final saveDir = Directory.current.path;
+          final solutionFile = File('$saveDir/$solutionName');
+          await solutionFile.writeAsBytes(pdfBytes);
+          clarixLog.i('Successfully created solution PDF at ${solutionFile.path}');
+
+          await ref.read(workspaceNotifierProvider.notifier).openPdfFiles([solutionFile.path]);
+        } catch (e, st) {
+          clarixLog.e('Failed to compile solution PDF: $e', error: e, stackTrace: st);
+        }
+      }
+
+      if (reply.text.contains('[[SAVE_DOCUMENT:')) {
+        final match = RegExp(r'\[\[SAVE_DOCUMENT:\s*(\{[\s\S]*?\})\]\]').firstMatch(reply.text);
+        String filename = 'edited_document.pdf';
+        if (match != null) {
+          try {
+            final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+            filename = jsonMap['filename'] as String? ?? 'edited_document.pdf';
+          } catch (e) {
+            clarixLog.w('Failed to parse SAVE_DOCUMENT JSON: $e');
+          }
+        }
+        filename = filename.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+
+        final cleanText = reply.text
+            .replaceAll(RegExp(r'\[\[SAVE_DOCUMENT:.*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[CREATE_SOLUTION_PDF:.*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[SCROLL_TO_PAGE:.*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[EDIT_TEXT:.*?\]\]'), '')
+            .trim();
+
+        try {
+          final pdfBytes = await MarkdownPdfCompiler.compile(cleanText, title: filename);
+          final saveDir = Directory.current.path;
+          final targetFile = File('$saveDir/$filename');
+          await targetFile.writeAsBytes(pdfBytes);
+          clarixLog.i('Successfully saved document PDF at ${targetFile.path}');
+        } catch (e, st) {
+          clarixLog.e('Failed to save document PDF: $e', error: e, stackTrace: st);
+        }
+      }
     } catch (error, stackTrace) {
       clarixLog.w(
         'Prompt generation failed.',
@@ -257,6 +407,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
       );
       _replaceLastAssistant(
         'I could not generate a response.\n\n$error',
+        assistantId: assistant.id,
         busy: false,
         phase: AiRuntimePhase.failed,
         status: 'Generation failed.',
@@ -295,6 +446,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
 
   void _replaceLastAssistant(
     String text, {
+    String? assistantId,
     List<CitationSnippet>? citations,
     bool? busy,
     AiRuntimePhase? phase,
@@ -303,7 +455,11 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
     final value = _current;
     if (value.chat.messages.isEmpty) return;
     final messages = List<ComposerMessage>.from(value.chat.messages);
-    messages[messages.length - 1] = messages.last.copyWith(
+    final targetIndex = assistantId != null
+        ? messages.indexWhere((m) => m.id == assistantId)
+        : -1;
+    final idx = targetIndex != -1 ? targetIndex : messages.length - 1;
+    messages[idx] = messages[idx].copyWith(
       text: text,
       citations: citations,
     );

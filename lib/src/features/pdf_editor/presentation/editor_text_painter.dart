@@ -192,8 +192,16 @@ class EditorTextPainter extends CustomPainter {
   TextStyle _style(EditorTextStyle? style) {
     final effective = style ?? (object.runs.firstOrNull?.style);
     final rgba = effective?.colorRgba ?? const <int>[0, 0, 0, 255];
+    final hlRgba = effective?.highlightRgba;
+    final decoration = <TextDecoration>[
+      if (effective?.underline == true) TextDecoration.underline,
+      if (effective?.strikethrough == true) TextDecoration.lineThrough,
+    ];
     return TextStyle(
       color: Color.fromARGB(rgba[3], rgba[0], rgba[1], rgba[2]),
+      backgroundColor: hlRgba != null && hlRgba.length == 4
+          ? Color.fromARGB(hlRgba[3], hlRgba[0], hlRgba[1], hlRgba[2])
+          : null,
       fontFamily: effective?.fontFamily,
       fontSize: effective?.fontSize ?? 12,
       fontWeight: FontWeight
@@ -201,6 +209,7 @@ class EditorTextPainter extends CustomPainter {
       fontStyle: effective?.italic == true
           ? FontStyle.italic
           : FontStyle.normal,
+      decoration: decoration.isEmpty ? null : TextDecoration.combine(decoration),
       letterSpacing: object.layout?.characterSpacing,
       height: object.layout == null || effective == null
           ? null

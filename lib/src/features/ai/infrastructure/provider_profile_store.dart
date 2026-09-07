@@ -38,16 +38,44 @@ class ProviderProfileStore {
   final SharedPreferencesAsync preferences;
   final ProviderSecretStore secretStore;
 
+  static final _defaultLocalGemmaProfile = AiProviderProfile.create(
+    id: 'local-gemma',
+    label: 'Local Gemma 4 (Ollama)',
+    baseUrl: 'http://localhost:11434/v1',
+    modelId: 'gemma-eab',
+    shareRetrievedPassages: true,
+    contextWindowTokens: 131072,
+  );
+  static final _defaultDeepSeekProfile = AiProviderProfile.create(
+    id: 'deepseek',
+    label: 'DeepSeek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    modelId: 'deepseek-chat',
+    shareRetrievedPassages: true,
+    contextWindowTokens: 256000,
+  );
+  static const String _defaultDeepSeekApiKey =
+      'sk-f15e93cfb40d4c17915e64d800f876f5';
+
   Future<List<AiProviderProfile>> readProfiles() async {
     final String? encoded = await preferences.getString(_profilesKey);
-    if (encoded == null || encoded.isEmpty) return const <AiProviderProfile>[];
+    if (encoded == null || encoded.isEmpty) {
+      return <AiProviderProfile>[_defaultLocalGemmaProfile, _defaultDeepSeekProfile];
+    }
     final List<dynamic> values = jsonDecode(encoded) as List<dynamic>;
-    return values
+    final List<AiProviderProfile> profiles = values
         .map(
           (dynamic value) =>
               AiProviderProfile.fromJson(value as Map<String, dynamic>),
         )
-        .toList(growable: false);
+        .toList(growable: true);
+    if (!profiles.any((AiProviderProfile p) => p.id == 'local-gemma')) {
+      profiles.insert(0, _defaultLocalGemmaProfile);
+    }
+    if (!profiles.any((AiProviderProfile p) => p.id == 'deepseek')) {
+      profiles.insert(1, _defaultDeepSeekProfile);
+    }
+    return profiles;
   }
 
   Future<void> saveProfile(AiProviderProfile profile, {String? apiKey}) async {
@@ -68,11 +96,21 @@ class ProviderProfileStore {
     }
   }
 
-  Future<String?> readApiKey(String profileId) =>
-      secretStore.read(_secretKey(profileId));
+  Future<String?> readApiKey(String profileId) async {
+    final String? key = await secretStore.read(_secretKey(profileId));
+    if ((key == null || key.isEmpty) && profileId == 'deepseek') {
+      return _defaultDeepSeekApiKey;
+    }
+    if ((key == null || key.isEmpty) && profileId == 'local-gemma') {
+      return 'ollama';
+    }
+    return key;
+  }
 
-  Future<String?> readDefaultProfileId() =>
-      preferences.getString(_defaultProfileKey);
+  Future<String?> readDefaultProfileId() async {
+    final String? id = await preferences.getString(_defaultProfileKey);
+    return id ?? 'local-gemma';
+  }
 
   Future<void> saveDefaultProfileId(String profileId) =>
       preferences.setString(_defaultProfileKey, profileId);

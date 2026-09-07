@@ -15,7 +15,10 @@ class ClarixRustRuntime {
   static Object? get initializationError => _initializationError;
   static Future<bool>? _initializing;
 
-  static Future<bool> ensureInitialized() => _initializing ??= _initialize();
+  static Future<bool> ensureInitialized() {
+    if (_available) return Future.value(true);
+    return _initializing ??= _initialize();
+  }
 
   static Future<void> requireInitialized() async {
     if (!await ensureInitialized()) {

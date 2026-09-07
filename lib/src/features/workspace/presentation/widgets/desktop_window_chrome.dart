@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
+import '../../application/workspace_providers.dart';
 import 'workspace_common.dart';
 
 class DesktopWindowChrome extends ConsumerWidget {
@@ -43,6 +44,10 @@ class DesktopWindowChrome extends ConsumerWidget {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
     );
+    ref.watch(workspaceNotifierProvider);
+    final notifier = ref.read(workspaceNotifierProvider.notifier);
+    final bool canGoBack = notifier.canGoBack;
+
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
       child: Column(
@@ -53,7 +58,35 @@ class DesktopWindowChrome extends ConsumerWidget {
             color: colors.canvas,
             child: Row(
               children: <Widget>[
-                const SizedBox(width: 24),
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Back',
+                  child: IconButton(
+                    key: const Key('chrome-back'),
+                    onPressed: canGoBack ? () => notifier.goBack() : null,
+                    icon: Icon(
+                      Icons.arrow_back_rounded,
+                      color: canGoBack
+                          ? colors.textStrong
+                          : colors.textMuted.withValues(alpha: 0.38),
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: 'Welcome to Clarix (Home)',
+                  child: IconButton(
+                    key: const Key('chrome-home'),
+                    onPressed: () => notifier.navigateHome(),
+                    icon: Icon(
+                      Icons.home_rounded,
+                      color: colors.textStrong,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
                 if (showDocumentActions)
                   Tooltip(
                     message: isTextEditingActive

@@ -18,7 +18,7 @@ clarix_editing_core = { path = "../clarix_editing_core" }
 clarix_editing_store = { path = "../clarix_editing_store" }
 clarix_pdf_adapter = { path = "../clarix_pdf_adapter" }
 clarix_agent_core = { path = "../clarix_agent_core" }
-flutter_rust_bridge.workspace = true
+flutter_rust_bridge = "=2.13.0"
 lopdf.workspace = true
 pdf_oxide.workspace = true
 reqwest.workspace = true

@@ -87,6 +87,15 @@ impl OpenAiStreamDecoder {
                     })?;
                     self.text.push_str(content);
                     events.push(ProviderEvent::TextDelta(content.to_owned()));
+                } else if let Some(reasoning) = delta.get("reasoning_content").filter(|value| !value.is_null()) {
+                    let reasoning = reasoning.as_str().ok_or_else(|| {
+                        provider_error(
+                            "malformed_provider_stream",
+                            "provider reasoning delta must be a string",
+                        )
+                    })?;
+                    self.text.push_str(reasoning);
+                    events.push(ProviderEvent::TextDelta(reasoning.to_owned()));
                 }
                 if let Some(tool_calls) = delta.get("tool_calls") {
                     let tool_calls = tool_calls.as_array().ok_or_else(|| {

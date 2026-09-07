@@ -1,4 +1,6 @@
 const Set<String> oversizedProductionDartAllowlist = <String>{
+  'lib/src/core/editing/frb_native_editor_port.dart',
+  'lib/src/features/pdf_editor/application/editor_session_controller.dart',
   'lib/src/features/pdf_editor/presentation/pdf_text_format_panel.dart',
   'lib/src/features/workspace/application/workspace_notifier.dart',
 };

@@ -29,7 +29,12 @@ final class LibreOfficeConverter implements OfficePdfConverter {
 
   static const List<String> standardWindowsExecutables = <String>[
     r'C:\Program Files\LibreOffice\program\soffice.com',
+    r'C:\Program Files\LibreOffice\program\soffice.exe',
     r'C:\Program Files (x86)\LibreOffice\program\soffice.com',
+    r'C:\Program Files (x86)\LibreOffice\program\soffice.exe',
+    r'C:\Program Files\LibreOffice 7\program\soffice.com',
+    r'C:\Program Files\LibreOffice 24\program\soffice.com',
+    r'C:\Program Files\OpenOffice 4\program\soffice.exe',
   ];
 
   final String? configuredExecutable;
@@ -48,6 +53,18 @@ final class LibreOfficeConverter implements OfficePdfConverter {
       if (await _fileExists(candidate)) {
         return candidate;
       }
+    }
+    // Also check PATH for `soffice` or `soffice.exe`
+    if (Platform.isWindows) {
+      try {
+        final result = await Process.run('where', ['soffice']);
+        if (result.exitCode == 0 && result.stdout.toString().trim().isNotEmpty) {
+          final firstMatch = result.stdout.toString().trim().split(RegExp(r'[\r\n]+')).first.trim();
+          if (firstMatch.isNotEmpty && await _fileExists(firstMatch)) {
+            return firstMatch;
+          }
+        }
+      } catch (_) {}
     }
     return null;
   }

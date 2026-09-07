@@ -18,9 +18,88 @@ import 'package:clarix/src/features/pdf_editor/pdf_editor.dart';
 import '../infrastructure/document_metadata_store.dart';
 import 'workspace_providers.dart';
 
+class WorkspaceRouteRecord {
+  const WorkspaceRouteRecord({
+    required this.activeTabId,
+    required this.rightToolWindow,
+    required this.studyModeFullScreen,
+  });
+
+  final String? activeTabId;
+  final RightToolWindow rightToolWindow;
+  final bool studyModeFullScreen;
+}
+
 class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   final Map<String, DocumentMetadata> _savedPdfMetadata =
       <String, DocumentMetadata>{};
+  final List<WorkspaceRouteRecord> _navigationHistory =
+      <WorkspaceRouteRecord>[];
+
+  bool get canGoBack => _navigationHistory.isNotEmpty;
+
+  void _pushNavigationHistory() {
+    final current = state.value;
+    if (current == null) return;
+    final record = WorkspaceRouteRecord(
+      activeTabId: current.session.activeTabId,
+      rightToolWindow: current.session.rightToolWindow,
+      studyModeFullScreen: current.session.studyModeFullScreen,
+    );
+    if (_navigationHistory.isNotEmpty) {
+      final last = _navigationHistory.last;
+      if (last.activeTabId == record.activeTabId &&
+          last.rightToolWindow == record.rightToolWindow &&
+          last.studyModeFullScreen == record.studyModeFullScreen) {
+        return;
+      }
+    }
+    _navigationHistory.add(record);
+    if (_navigationHistory.length > 50) {
+      _navigationHistory.removeAt(0);
+    }
+  }
+
+  Future<void> goBack() async {
+    if (_navigationHistory.isEmpty) return;
+    final previous = _navigationHistory.removeLast();
+    final current = _requireState();
+    String? targetTabId = previous.activeTabId;
+    if (targetTabId != null &&
+        !current.session.tabs.any((t) => t.id == targetTabId)) {
+      targetTabId =
+          current.session.tabs.isNotEmpty ? current.session.tabs.first.id : null;
+    }
+    final session = current.session.copyWith(
+      activeTabId: targetTabId,
+      clearActiveTabId: targetTabId == null,
+      rightToolWindow: previous.rightToolWindow,
+      studyModeFullScreen: previous.studyModeFullScreen,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
+  Future<void> navigateHome() async {
+    _pushNavigationHistory();
+    final WorkspaceFeatureState current = _requireState();
+    final WorkspaceSession session = current.session.copyWith(
+      activeTabId: null,
+      clearActiveTabId: true,
+      rightToolWindow: RightToolWindow.none,
+      studyModeFullScreen: false,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
+  Future<void> setStudyModeFullScreen(bool isFullScreen) async {
+    _pushNavigationHistory();
+    final WorkspaceFeatureState current = _requireState();
+    final WorkspaceSession session = current.session.copyWith(
+      studyModeFullScreen: isFullScreen,
+    );
+    await _commit(current.copyWith(session: session), persistAi: false);
+  }
+
   ClarixSessionStore get _sessionStore => ref.read(sessionStoreProvider);
   HybridPdfExtractionService get _pdfExtraction =>
       ref.read(pdfExtractionServiceProvider);
@@ -68,6 +147,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   }
 
   Future<void> openPdfFiles(List<String> paths) async {
+    _pushNavigationHistory();
     final WorkspaceFeatureState current = _requireState();
     final List<DocumentTabState> tabs = List<DocumentTabState>.from(
       current.session.tabs,
@@ -249,7 +329,47 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
       ),
     );
     try {
-      final result = await controller.save(request);
+      EditorSaveResult result;
+      try {
+        result = await controller.save(request);
+        if (controller.state.save.phase == EditorSavePhase.failed) {
+          final err = controller.state.save.errorCode ?? '';
+          if (err.contains('Access is denied') ||
+              err.contains('os error 5') ||
+              err.contains('permission') ||
+              err.contains('save_failed')) {
+            final dir = File(tab.filePath).parent.path;
+            final name = tab.filePath.split(Platform.pathSeparator).last;
+            final fallbackPath = '$dir${Platform.pathSeparator}edited_$name';
+            result = await controller.save(
+              EditorSaveRequest(
+                targetPath: fallbackPath,
+                mode: EditorSaveMode.saveAs,
+                association: EditorSaveAssociation.followNewSource,
+              ),
+            );
+          }
+        }
+      } catch (saveError) {
+        final err = saveError.toString();
+        if (err.contains('Access is denied') ||
+            err.contains('os error 5') ||
+            err.contains('permission_denied') ||
+            err.contains('save_failed')) {
+          final dir = File(tab.filePath).parent.path;
+          final name = tab.filePath.split(Platform.pathSeparator).last;
+          final fallbackPath = '$dir${Platform.pathSeparator}edited_$name';
+          result = await controller.save(
+            EditorSaveRequest(
+              targetPath: fallbackPath,
+              mode: EditorSaveMode.saveAs,
+              association: EditorSaveAssociation.followNewSource,
+            ),
+          );
+        } else {
+          rethrow;
+        }
+      }
       ref.invalidate(pdfDocumentRefProvider(request.targetPath));
       final latest = _requireState();
       var nextSession = latest.session;
@@ -474,18 +594,24 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     final WorkspaceFeatureState current = _requireState();
     final String? tabId = current.session.activeTabId;
     if (tabId == null) return;
-    final EditorSessionController? native = ref.read(
-      editorSessionRegistryProvider,
-    )[tabId];
-    if (native != null) {
-      if (undo ? native.canUndo : native.canRedo) {
-        if (undo) {
-          await native.undo();
-        } else {
-          await native.redo();
-        }
+    var native = ref.read(editorSessionRegistryProvider)[tabId];
+    if (native == null) {
+      final tab = current.session.tabs.where((t) => t.id == tabId).firstOrNull;
+      if (tab != null) {
+        try {
+          native = await ref.read(editorSessionRegistryProvider).open(
+            tabId: tab.id,
+            sourcePath: tab.filePath,
+          );
+        } catch (_) {}
       }
-      return;
+    }
+    if (native != null) {
+      if (undo) {
+        await native.undo();
+      } else {
+        await native.redo();
+      }
     }
   }
 
@@ -499,6 +625,7 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     String tabId, {
     EditorCloseChoice? nativeDirtyChoice,
   }) async {
+    _pushNavigationHistory();
     final WorkspaceFeatureState current = _requireState();
     final native = ref.read(editorSessionRegistryProvider)[tabId];
     if (native != null && native.state.save.phase != EditorSavePhase.clean) {
@@ -548,19 +675,24 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     return true;
   }
 
-  Future<void> setActiveTab(String tabId) async {
+  Future<void> setActiveTab(String? tabId) async {
+    _pushNavigationHistory();
     final WorkspaceFeatureState current = _requireState();
     final WorkspaceSession session = current.session.copyWith(
       activeTabId: tabId,
+      clearActiveTabId: tabId == null,
+      studyModeFullScreen: false,
     );
     await _commit(current.copyWith(session: session), persistAi: false);
-    final DocumentTabState? tab = session.tabs
-        .where((DocumentTabState item) => item.id == tabId)
-        .firstOrNull;
-    if (tab != null) {
-      await ref
-          .read(aiNotifierProvider.notifier)
-          .loadLatestConversation(tab.documentId);
+    if (tabId != null) {
+      final DocumentTabState? tab = session.tabs
+          .where((DocumentTabState item) => item.id == tabId)
+          .firstOrNull;
+      if (tab != null) {
+        await ref
+            .read(aiNotifierProvider.notifier)
+            .loadLatestConversation(tab.documentId);
+      }
     }
   }
 
@@ -630,17 +762,23 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
   }
 
   Future<void> selectRightToolWindow(RightToolWindow tool) async {
+    _pushNavigationHistory();
     final WorkspaceFeatureState current = _requireState();
     final RightToolWindow next = current.session.rightToolWindow == tool
         ? RightToolWindow.none
         : tool;
     final WorkspaceSession session = current.session.copyWith(
       rightToolWindow: next,
+      studyModeFullScreen:
+          next == RightToolWindow.studyMode
+              ? current.session.studyModeFullScreen
+              : false,
     );
     await _commit(current.copyWith(session: session), persistAi: false);
   }
 
   Future<void> navigateToCitation(CitationSnippet citation) async {
+    _pushNavigationHistory();
     final WorkspaceFeatureState current = _requireState();
     final DocumentTabState? tab = current.session.tabs
         .where(

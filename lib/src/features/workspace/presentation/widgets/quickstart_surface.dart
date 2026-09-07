@@ -7,6 +7,8 @@ import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'pdf_utilities_dialogs.dart';
 import 'workspace_common.dart';
+import 'package:clarix/src/core/models.dart';
+import 'package:clarix/src/features/ai/presentation/study_mode_side_pane.dart';
 
 class QuickstartSurface extends ConsumerWidget {
   const QuickstartSurface({required this.state, super.key});
@@ -58,6 +60,15 @@ class QuickstartSurface extends ConsumerWidget {
                           .read(workspaceNotifierProvider.notifier)
                           .pickAndOpenPdfs(),
                       child: const Text('Open PDF'),
+                    ),
+                    const SizedBox(width: 8),
+                    ShadButton.outline(
+                      height: 34,
+                      leading: const QaMergedIcon(size: 15),
+                      onPressed: () => ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .selectRightToolWindow(RightToolWindow.studyMode),
+                      child: const Text('Enter Study Mode'),
                     ),
                   ],
                 ),

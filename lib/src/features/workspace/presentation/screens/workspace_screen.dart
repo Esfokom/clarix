@@ -155,12 +155,12 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
             : () => ref
                   .read(workspaceNotifierProvider.notifier)
                   .saveActivePdfEdits(),
-        onUndo: ref.read(workspaceNotifierProvider.notifier).canUndoActive
-            ? () => ref.read(workspaceNotifierProvider.notifier).undoPdfEdit()
-            : null,
-        onRedo: ref.read(workspaceNotifierProvider.notifier).canRedoActive
-            ? () => ref.read(workspaceNotifierProvider.notifier).redoPdfEdit()
-            : null,
+        onUndo: activeTab == null
+            ? null
+            : () => ref.read(workspaceNotifierProvider.notifier).undoPdfEdit(),
+        onRedo: activeTab == null
+            ? null
+            : () => ref.read(workspaceNotifierProvider.notifier).redoPdfEdit(),
         onSearch: (String query) {
           final String? tabId = asyncState.value?.session.activeTabId;
           if (tabId != null) {

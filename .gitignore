@@ -50,3 +50,12 @@ app.*.map.json
 
 .superpowers/
 .worktrees/
+
+# Local Model Artifacts & Test PDF dumps
+*.gguf
+*.part
+rust/*.pdf
+Modelfile
+rust/test_folder/
+
+

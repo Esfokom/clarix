@@ -145,7 +145,9 @@ class PageSceneLifecycle extends ChangeNotifier {
     if (!_started || invalidations.isEmpty) return;
     final dpi = (144 * surface.viewport.zoom).round().clamp(72, 576);
     final visible = invalidations
-        .where((invalidation) => visiblePages.contains(invalidation.pageNumber))
+        .where((invalidation) =>
+            visiblePages.contains(invalidation.pageNumber) ||
+            visiblePages.isEmpty)
         .toList(growable: false);
     if (visible.isEmpty) return;
     try {
@@ -199,8 +201,9 @@ class PageSceneLifecycle extends ChangeNotifier {
   Future<void> _ensureCleanPatches() async {
     if (!_started || controller.state.isClosed) return;
     final targetDpi = (144 * surface.viewport.zoom).round().clamp(72, 576);
+    final activePages = visiblePages.isEmpty ? controller.state.scenes.keys : visiblePages;
     final objects = <EditorSceneObject>[
-      for (final page in visiblePages)
+      for (final page in activePages)
         if (!_liveTiles.containsKey(page))
           ...?controller.state.scenes[page]?.objects,
     ];
@@ -223,7 +226,7 @@ class PageSceneLifecycle extends ChangeNotifier {
           height: native.height,
           rgbaBytes: native.rgbaBytes,
         );
-        if (!_started || !_isObjectVisible(object.objectId)) {
+        if (!_started || (visiblePages.isNotEmpty && !_isObjectVisible(object.objectId))) {
           decoded.image.dispose();
           continue;
         }
@@ -350,12 +353,17 @@ class PageSceneHost extends StatelessWidget {
       // a delivered scene is safe to render; gating on visiblePages here made
       // preloaded scenes flash empty on scroll. Tile/patch memory discipline
       // keeps its own visibility gates.
-      final scene = lifecycle.sceneFor(pageNumber);
+      var scene = lifecycle.sceneFor(pageNumber);
+      if (scene == null && lifecycle.started) {
+        lifecycle.controller.refreshPage(pageNumber);
+      }
       if (!lifecycle.started || scene == null) {
         return const SizedBox.shrink();
       }
       return KeyedSubtree(
-        key: ValueKey<String>('page-edit-scene-$pageNumber'),
+        key: ValueKey<String>(
+          'page-edit-scene-$pageNumber:${lifecycle.controller.state.revision}:${lifecycle.controller.state.hasEdits}:${scene.revision}',
+        ),
         child: builder?.call(context, scene) ?? const SizedBox.expand(),
       );
     },

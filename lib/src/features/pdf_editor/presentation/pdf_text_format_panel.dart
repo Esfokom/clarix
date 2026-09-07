@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../core/editing/editor_bridge_types.dart';
 import '../application/editor_session_controller.dart';
@@ -180,6 +182,7 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
               _Toggle(
                 key: const Key('pdf-font-bold'),
                 label: 'B',
+                tooltip: 'Bold',
                 selected: weight != null && weight >= 600,
                 onPressed: () => _apply(
                   PdfTextStylePatch(
@@ -190,6 +193,7 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
               _Toggle(
                 key: const Key('pdf-font-italic'),
                 label: 'I',
+                tooltip: 'Italic',
                 selected: italic ?? false,
                 onPressed: () =>
                     _apply(PdfTextStylePatch(italic: !(italic ?? false))),
@@ -197,6 +201,7 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
               _Toggle(
                 key: const Key('pdf-font-underline'),
                 label: 'U',
+                tooltip: 'Underline',
                 selected: underline ?? false,
                 onPressed: () =>
                     _apply(PdfTextStylePatch(underline: !(underline ?? false))),
@@ -204,6 +209,7 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
               _Toggle(
                 key: const Key('pdf-font-superscript'),
                 label: 'x²',
+                tooltip: 'Superscript',
                 selected: (shift ?? 0) > 0,
                 onPressed: () => _apply(
                   PdfTextStylePatch(baselineShift: (shift ?? 0) > 0 ? 0 : 0.35),
@@ -212,6 +218,7 @@ final class _PdfTextFormatPanelState extends State<PdfTextFormatPanel> {
               _Toggle(
                 key: const Key('pdf-font-subscript'),
                 label: 'x₂',
+                tooltip: 'Subscript',
                 selected: (shift ?? 0) < 0,
                 onPressed: () => _apply(
                   PdfTextStylePatch(baselineShift: (shift ?? 0) < 0 ? 0 : -0.2),
@@ -405,24 +412,29 @@ final class _Toggle extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onPressed,
+    this.tooltip,
     super.key,
   });
   final String label;
+  final String? tooltip;
   final bool selected;
   final VoidCallback onPressed;
 
   @override
-  Widget build(BuildContext context) => OutlinedButton(
-    style: OutlinedButton.styleFrom(
-      backgroundColor: selected
-          ? Theme.of(context).colorScheme.secondaryContainer
-          : null,
-      minimumSize: const Size(38, 38),
-      padding: EdgeInsets.zero,
-    ),
-    onPressed: onPressed,
-    child: Text(label),
-  );
+  Widget build(BuildContext context) {
+    final button = OutlinedButton(
+      style: OutlinedButton.styleFrom(
+        backgroundColor: selected
+            ? Theme.of(context).colorScheme.secondaryContainer
+            : null,
+        minimumSize: const Size(38, 38),
+        padding: EdgeInsets.zero,
+      ),
+      onPressed: onPressed,
+      child: Text(label),
+    );
+    return tooltip != null ? Tooltip(message: tooltip!, child: button) : button;
+  }
 }
 
 final class _AlignmentToggle extends StatelessWidget {
@@ -478,12 +490,19 @@ final class CanonicalPdfTextFormatPanel extends StatefulWidget {
       _CanonicalPdfTextFormatPanelState();
 }
 
+enum EditorRibbonTab { home, insert, layout, references, review, view }
+
 final class _CanonicalPdfTextFormatPanelState
     extends State<CanonicalPdfTextFormatPanel> {
   late final TextEditingController _sizeController;
   late final TextEditingController _lineHeightController;
   late final TextEditingController _charSpacingController;
   late final TextEditingController _scaleController;
+  late final TextEditingController _textEditingController;
+  late final TextEditingController _docTitleController;
+  late final TextEditingController _docAuthorController;
+
+  EditorRibbonTab _activeRibbonTab = EditorRibbonTab.home;
 
   static const List<String> _commonFontFamilies = <String>[
     'Helvetica',
@@ -534,6 +553,11 @@ final class _CanonicalPdfTextFormatPanelState
     _scaleController = TextEditingController(
       text: ((widget.object.layout?.horizontalScale ?? 1.0) * 100).toStringAsFixed(0),
     );
+    _textEditingController = TextEditingController(
+      text: widget.object.text ?? '',
+    );
+    _docTitleController = TextEditingController(text: 'Clarix PDF Document');
+    _docAuthorController = TextEditingController(text: 'Author');
   }
 
   @override
@@ -548,6 +572,9 @@ final class _CanonicalPdfTextFormatPanelState
           (widget.object.layout?.characterSpacing ?? 0.0).toStringAsFixed(2);
       _scaleController.text =
           ((widget.object.layout?.horizontalScale ?? 1.0) * 100).toStringAsFixed(0);
+      if (_textEditingController.text != (widget.object.text ?? '')) {
+        _textEditingController.text = widget.object.text ?? '';
+      }
     }
   }
 
@@ -557,7 +584,134 @@ final class _CanonicalPdfTextFormatPanelState
     _lineHeightController.dispose();
     _charSpacingController.dispose();
     _scaleController.dispose();
+    _textEditingController.dispose();
+    _docTitleController.dispose();
+    _docAuthorController.dispose();
     super.dispose();
+  }
+
+  void _applyTextReplacement(String newText) {
+    final currentText = widget.object.text ?? '';
+    widget.session.dispatchCommand(
+      EditorCommand(
+        kind: EditorCommandKind.replaceTextRange,
+        objectId: widget.object.objectId,
+        start: 0,
+        end: currentText.length,
+        replacement: newText,
+      ),
+    );
+  }
+
+  void _insertSnippet(String snippet) {
+    final currentText = _textEditingController.text;
+    final updated = '$currentText\n$snippet';
+    _textEditingController.text = updated;
+    _applyTextReplacement(updated);
+  }
+
+  void _applyParagraphStylePreset(String preset) {
+    switch (preset) {
+      case 'heading1':
+        _submit(styleWith(_style, fontSize: 24, fontWeight: 700, italic: false));
+        break;
+      case 'heading2':
+        _submit(styleWith(_style, fontSize: 18, fontWeight: 700, italic: false));
+        break;
+      case 'heading3':
+        _submit(styleWith(_style, fontSize: 14, fontWeight: 700, italic: false));
+        break;
+      case 'title':
+        _submit(styleWith(_style, fontSize: 28, fontWeight: 800, italic: false));
+        break;
+      case 'subtitle':
+        _submit(styleWith(_style, fontSize: 15, fontWeight: 400, italic: true));
+        break;
+      case 'code':
+        _submit(styleWith(_style, fontFamily: 'Courier', fontSize: 11, fontWeight: 400, italic: false));
+        break;
+      case 'normal':
+      default:
+        _submit(styleWith(_style, fontSize: 12, fontWeight: 400, italic: false));
+        break;
+    }
+  }
+
+  void _toggleBulletList() {
+    final text = widget.object.text ?? '';
+    final lines = text.split('\n');
+    final isBulleted = lines.every((line) => line.startsWith('• '));
+    final newLines = lines.map((line) {
+      if (isBulleted) {
+        return line.startsWith('• ') ? line.substring(2) : line;
+      } else {
+        return '• $line';
+      }
+    }).join('\n');
+    _textEditingController.text = newLines;
+    _applyTextReplacement(newLines);
+  }
+
+  void _toggleNumberedList() {
+    final text = widget.object.text ?? '';
+    final lines = text.split('\n');
+    final isNumbered = lines.isNotEmpty && RegExp(r'^\d+\.\s').hasMatch(lines.first);
+    var index = 1;
+    final newLines = lines.map((line) {
+      if (isNumbered) {
+        return line.replaceFirst(RegExp(r'^\d+\.\s'), '');
+      } else {
+        return '${index++}. $line';
+      }
+    }).join('\n');
+    _textEditingController.text = newLines;
+    _applyTextReplacement(newLines);
+  }
+
+  void _indentText() {
+    final text = widget.object.text ?? '';
+    final lines = text.split('\n').map((line) => '  $line').join('\n');
+    _textEditingController.text = lines;
+    _applyTextReplacement(lines);
+  }
+
+  void _outdentText() {
+    final text = widget.object.text ?? '';
+    final lines = text.split('\n').map((line) {
+      if (line.startsWith('  ')) return line.substring(2);
+      if (line.startsWith(' ')) return line.substring(1);
+      return line;
+    }).join('\n');
+    _textEditingController.text = lines;
+    _applyTextReplacement(lines);
+  }
+
+  void _changeCase(String mode) {
+    final text = widget.object.text ?? '';
+    if (text.isEmpty) return;
+    String result = text;
+    if (mode == 'upper') {
+      result = text.toUpperCase();
+    } else if (mode == 'lower') {
+      result = text.toLowerCase();
+    } else if (mode == 'title') {
+      result = text.split(' ').map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}' : '').join(' ');
+    } else if (mode == 'sentence') {
+      result = text.isNotEmpty ? '${text[0].toUpperCase()}${text.substring(1).toLowerCase()}' : text;
+    }
+    _textEditingController.text = result;
+    _applyTextReplacement(result);
+  }
+
+  Future<void> _pickAndInsertImage() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      _insertSnippet('![Inserted Image]($path)');
+    }
   }
 
   @override
@@ -576,265 +730,800 @@ final class _CanonicalPdfTextFormatPanelState
 
     return Material(
       color: colorScheme.surface,
-      child: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Text(
-                'Format',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              const Icon(Icons.tune, size: 16),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1),
-          const SizedBox(height: 12),
-          Row(
-            children: <Widget>[
-              const Icon(Icons.arrow_drop_down, size: 18),
-              const SizedBox(width: 4),
-              Text(
-                'Text Style',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (widget.object.capability != 'editable')
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                widget.object.capabilityReason ?? 'This text is read only.',
-                key: const Key('canonical-format-read-only-reason'),
-                style: TextStyle(color: colorScheme.error, fontSize: 11),
+      child: Column(
+        children: [
+          // Ribbon Tab Bar Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+              border: Border(bottom: BorderSide(color: theme.dividerColor)),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _ribbonTabChip('Home', EditorRibbonTab.home, Icons.home_outlined),
+                  _ribbonTabChip('Insert', EditorRibbonTab.insert, Icons.add_circle_outline),
+                  _ribbonTabChip('Layout', EditorRibbonTab.layout, Icons.auto_awesome_mosaic_outlined),
+                  _ribbonTabChip('References', EditorRibbonTab.references, Icons.bookmark_border_outlined),
+                  _ribbonTabChip('Review', EditorRibbonTab.review, Icons.rate_review_outlined),
+                  _ribbonTabChip('View', EditorRibbonTab.view, Icons.visibility_outlined),
+                ],
               ),
             ),
-          // Row 1: Font family & Font size & Color
-          Row(
-            children: <Widget>[
-              Expanded(
-                flex: 5,
-                child: DropdownButtonFormField<String>(
-                  key: const Key('font-family-field'),
-                  initialValue: allFamilies.contains(style.fontFamily)
-                      ? style.fontFamily
-                      : allFamilies.firstOrNull,
-                  isDense: true,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: allFamilies
-                      .map(
-                        (family) => DropdownMenuItem<String>(
-                          value: family,
-                          child: Text(
-                            family,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      )
-                      .toList(growable: false),
-                  onChanged: _enabled
-                      ? (family) {
-                          if (family != null) {
-                            _submit(styleWith(style, fontFamily: family));
-                          }
-                        }
-                      : null,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  key: const Key('font-size-field'),
-                  controller: _sizeController,
-                  enabled: _enabled,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  textInputAction: TextInputAction.done,
-                  style: const TextStyle(fontSize: 12),
-                  decoration: const InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  onSubmitted: (value) {
-                    final size = double.tryParse(value);
-                    if (size != null && size > 0) {
-                      _submit(styleWith(style, fontSize: size));
-                    }
-                  },
-                ),
-              ),
-              const SizedBox(width: 6),
-              _ColorPickerButton(
-                color: currentColor,
-                enabled: _enabled,
-                onColorChanged: (newColor) {
-                  _submit(
-                    styleWith(
-                      style,
-                      colorRgba: <int>[
-                        (newColor.r * 255.0).round().clamp(0, 255),
-                        (newColor.g * 255.0).round().clamp(0, 255),
-                        (newColor.b * 255.0).round().clamp(0, 255),
-                        (newColor.a * 255.0).round().clamp(0, 255),
-                      ],
+          ),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              children: [
+                if (widget.object.capability != 'editable')
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      widget.object.capabilityReason ?? 'This text is read only.',
+                      key: const Key('canonical-format-read-only-reason'),
+                      style: TextStyle(color: colorScheme.error, fontSize: 11),
                     ),
-                  );
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Row 2: B, I, U, S, T^1, T_1
-          Wrap(
-            spacing: 4,
-            runSpacing: 4,
-            children: <Widget>[
-              _StyleIconButton(
-                key: const Key('canonical-font-bold'),
-                label: 'B',
-                tooltip: 'Bold',
-                selected: style.fontWeight >= 600,
-                textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                enabled: _enabled,
-                onPressed: () => _submit(
-                  styleWith(
-                    style,
-                    fontWeight: style.fontWeight >= 600 ? 400 : 700,
                   ),
-                ),
-              ),
-              _StyleIconButton(
-                key: const Key('canonical-font-italic'),
-                label: 'I',
-                tooltip: 'Italic',
-                selected: style.italic,
-                textStyle: const TextStyle(fontStyle: FontStyle.italic),
-                enabled: _enabled,
-                onPressed: () => _submit(styleWith(style, italic: !style.italic)),
-              ),
-              _StyleIconButton(
-                key: const Key('canonical-font-underline'),
-                label: 'U',
-                tooltip: 'Underline',
-                selected: false,
-                textStyle: const TextStyle(decoration: TextDecoration.underline),
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-              _StyleIconButton(
-                key: const Key('canonical-font-strikethrough'),
-                label: 'S',
-                tooltip: 'Strikethrough',
-                selected: false,
-                textStyle: const TextStyle(decoration: TextDecoration.lineThrough),
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-              _StyleIconButton(
-                key: const Key('canonical-font-superscript'),
-                label: 'T¹',
-                tooltip: 'Superscript',
-                selected: false,
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-              _StyleIconButton(
-                key: const Key('canonical-font-subscript'),
-                label: 'T₁',
-                tooltip: 'Subscript',
-                selected: false,
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // Row 3: Alignment (Left, Center, Right, Justify)
-          Row(
-            children: <Widget>[
-              _AlignmentButton(
-                icon: Icons.format_align_left,
-                tooltip: 'Align Left',
-                selected: true,
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-              const SizedBox(width: 4),
-              _AlignmentButton(
-                icon: Icons.format_align_center,
-                tooltip: 'Center',
-                selected: false,
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-              const SizedBox(width: 4),
-              _AlignmentButton(
-                icon: Icons.format_align_right,
-                tooltip: 'Align Right',
-                selected: false,
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-              const SizedBox(width: 4),
-              _AlignmentButton(
-                icon: Icons.format_align_justify,
-                tooltip: 'Justify',
-                selected: false,
-                enabled: _enabled,
-                onPressed: () {},
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          // Row 4: Metrics (Line Height, Char Spacing, Scale)
-          Row(
-            children: <Widget>[
-              Expanded(
-                child: _MetricInputField(
-                  icon: Icons.format_line_spacing,
-                  tooltip: 'Line Spacing',
-                  controller: _lineHeightController,
-                  enabled: _enabled,
-                  onSubmitted: (value) {},
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _MetricInputField(
-                  icon: Icons.space_bar,
-                  tooltip: 'Character Spacing',
-                  controller: _charSpacingController,
-                  enabled: _enabled,
-                  onSubmitted: (value) {},
-                ),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _MetricInputField(
-                  icon: Icons.aspect_ratio,
-                  tooltip: 'Horizontal Scale (%)',
-                  controller: _scaleController,
-                  enabled: _enabled,
-                  onSubmitted: (value) {},
-                ),
-              ),
-            ],
+                switch (_activeRibbonTab) {
+                  EditorRibbonTab.home => _buildHomeRibbon(style, currentColor, allFamilies),
+                  EditorRibbonTab.insert => _buildInsertRibbon(),
+                  EditorRibbonTab.layout => _buildLayoutRibbon(),
+                  EditorRibbonTab.references => _buildReferencesRibbon(),
+                  EditorRibbonTab.review => _buildReviewRibbon(),
+                  EditorRibbonTab.view => _buildViewRibbon(),
+                },
+              ],
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _ribbonTabChip(String label, EditorRibbonTab tab, IconData icon) {
+    final isSelected = _activeRibbonTab == tab;
+    return Padding(
+      padding: const EdgeInsets.only(right: 4),
+      child: Tooltip(
+        message: 'Switch to $label tab',
+        child: ChoiceChip(
+          showCheckmark: false,
+          avatar: Icon(icon, size: 12, color: isSelected ? Colors.white : Colors.grey.shade700),
+          label: Text(label, style: TextStyle(fontSize: 11, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+          selected: isSelected,
+          selectedColor: Theme.of(context).colorScheme.primary,
+          onSelected: (_) => setState(() => _activeRibbonTab = tab),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHomeRibbon(EditorTextStyle style, Color currentColor, List<String> allFamilies) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Undo / Redo & Clipboard Toolbar
+        Row(
+          children: [
+            Tooltip(
+              message: 'Undo (Ctrl+Z)',
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: () => widget.session.undo(),
+                icon: const Icon(Icons.undo, size: 14),
+                label: const Text('Undo', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Tooltip(
+              message: 'Redo (Ctrl+Shift+Z)',
+              child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: const EdgeInsets.symmetric(horizontal: 8)),
+                onPressed: () => widget.session.redo(),
+                icon: const Icon(Icons.redo, size: 14),
+                label: const Text('Redo', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.copy, size: 14),
+              tooltip: 'Copy Text',
+              onPressed: () => Clipboard.setData(ClipboardData(text: _textEditingController.text)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.content_cut, size: 14),
+              tooltip: 'Cut Text',
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: _textEditingController.text));
+                _textEditingController.clear();
+                _applyTextReplacement('');
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // Live Text Content Editor Box
+        const Text('Content Editor', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 4),
+        TextField(
+          controller: _textEditingController,
+          enabled: _enabled,
+          maxLines: 3,
+          minLines: 1,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(
+            hintText: 'Edit text content...',
+            contentPadding: EdgeInsets.all(8),
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerRight,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              minimumSize: const Size(0, 28),
+            ),
+            onPressed: _enabled ? () => _applyTextReplacement(_textEditingController.text) : null,
+            icon: const Icon(Icons.check, size: 14),
+            label: const Text('Update Text', style: TextStyle(fontSize: 11)),
+          ),
+        ),
+        const SizedBox(height: 10),
+        const Divider(height: 1),
+        const SizedBox(height: 10),
+
+        // Style Preset Dropdown
+        DropdownButtonFormField<String>(
+          decoration: const InputDecoration(
+            labelText: 'Style Preset',
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            border: OutlineInputBorder(),
+            isDense: true,
+          ),
+          initialValue: 'normal',
+          items: const [
+            DropdownMenuItem(value: 'normal', child: Text('Normal Text (12pt)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'heading1', child: Text('Heading 1 (24pt Bold)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+            DropdownMenuItem(value: 'heading2', child: Text('Heading 2 (18pt Bold)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+            DropdownMenuItem(value: 'heading3', child: Text('Heading 3 (14pt Bold)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+            DropdownMenuItem(value: 'title', child: Text('Title (28pt Heavy)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900))),
+            DropdownMenuItem(value: 'subtitle', child: Text('Subtitle (15pt Italic)', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic))),
+            DropdownMenuItem(value: 'code', child: Text('Code Block (11pt Mono)', style: TextStyle(fontSize: 12, fontFamily: 'Courier'))),
+          ],
+          onChanged: _enabled ? (value) { if (value != null) _applyParagraphStylePreset(value); } : null,
+        ),
+        const SizedBox(height: 8),
+
+        // Font family, Size & Step Buttons (A+, A-)
+        Row(
+          children: <Widget>[
+            Expanded(
+              flex: 5,
+              child: DropdownButtonFormField<String>(
+                key: const Key('font-family-field'),
+                initialValue: allFamilies.contains(style.fontFamily)
+                    ? style.fontFamily
+                    : allFamilies.firstOrNull,
+                isDense: true,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  border: OutlineInputBorder(),
+                ),
+                items: allFamilies
+                    .map(
+                      (family) => DropdownMenuItem<String>(
+                        value: family,
+                        child: Text(
+                          family,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    )
+                    .toList(growable: false),
+                onChanged: _enabled
+                    ? (family) {
+                        if (family != null) {
+                          _submit(styleWith(style, fontFamily: family));
+                        }
+                      }
+                    : null,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              flex: 3,
+              child: TextField(
+                key: const Key('font-size-field'),
+                controller: _sizeController,
+                enabled: _enabled,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                style: const TextStyle(fontSize: 12),
+                decoration: const InputDecoration(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onSubmitted: (value) {
+                  final size = double.tryParse(value);
+                  if (size != null && size > 0) {
+                    _submit(styleWith(style, fontSize: size));
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 4),
+            _StyleIconButton(
+              label: 'A+',
+              tooltip: 'Increase Size',
+              selected: false,
+              enabled: _enabled,
+              onPressed: () {
+                final newSize = style.fontSize + 1.0;
+                _sizeController.text = newSize.toStringAsFixed(1);
+                _submit(styleWith(style, fontSize: newSize));
+              },
+            ),
+            const SizedBox(width: 2),
+            _StyleIconButton(
+              label: 'A-',
+              tooltip: 'Decrease Size',
+              selected: false,
+              enabled: _enabled,
+              onPressed: () {
+                final newSize = (style.fontSize - 1.0).clamp(6.0, 120.0);
+                _sizeController.text = newSize.toStringAsFixed(1);
+                _submit(styleWith(style, fontSize: newSize));
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Typography Toggles & Colors
+        Wrap(
+          spacing: 4,
+          runSpacing: 4,
+          children: <Widget>[
+            _StyleIconButton(
+              key: const Key('canonical-font-bold'),
+              label: 'B',
+              tooltip: 'Bold',
+              selected: style.fontWeight >= 600,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              enabled: _enabled,
+              onPressed: () => _submit(
+                styleWith(
+                  style,
+                  fontWeight: style.fontWeight >= 600 ? 400 : 700,
+                ),
+              ),
+            ),
+            _StyleIconButton(
+              key: const Key('canonical-font-italic'),
+              label: 'I',
+              tooltip: 'Italic',
+              selected: style.italic,
+              textStyle: const TextStyle(fontStyle: FontStyle.italic),
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, italic: !style.italic)),
+            ),
+            _StyleIconButton(
+              key: const Key('canonical-font-underline'),
+              label: 'U',
+              tooltip: 'Underline',
+              selected: style.underline,
+              textStyle: const TextStyle(decoration: TextDecoration.underline),
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, underline: !style.underline)),
+            ),
+            _StyleIconButton(
+              key: const Key('canonical-font-strikethrough'),
+              label: 'S',
+              tooltip: 'Strikethrough',
+              selected: style.strikethrough,
+              textStyle: const TextStyle(decoration: TextDecoration.lineThrough),
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, strikethrough: !style.strikethrough)),
+            ),
+            _StyleIconButton(
+              key: const Key('canonical-font-superscript'),
+              label: 'T¹',
+              tooltip: 'Superscript',
+              selected: style.baselineShift > 0,
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, baselineShift: style.baselineShift > 0 ? 0.0 : 0.35)),
+            ),
+            _StyleIconButton(
+              key: const Key('canonical-font-subscript'),
+              label: 'T₁',
+              tooltip: 'Subscript',
+              selected: style.baselineShift < 0,
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, baselineShift: style.baselineShift < 0 ? 0.0 : -0.2)),
+            ),
+            _ColorPickerButton(
+              color: currentColor,
+              enabled: _enabled,
+              onColorChanged: (newColor) {
+                _submit(
+                  styleWith(
+                    style,
+                    colorRgba: <int>[
+                      (newColor.r * 255.0).round().clamp(0, 255),
+                      (newColor.g * 255.0).round().clamp(0, 255),
+                      (newColor.b * 255.0).round().clamp(0, 255),
+                      (newColor.a * 255.0).round().clamp(0, 255),
+                    ],
+                  ),
+                );
+              },
+            ),
+            _HighlightColorPickerButton(
+              enabled: _enabled,
+              onColorChanged: (newColor) {
+                _submit(
+                  styleWith(
+                    style,
+                    highlightRgba: newColor == null ? null : <int>[
+                      (newColor.r * 255.0).round().clamp(0, 255),
+                      (newColor.g * 255.0).round().clamp(0, 255),
+                      (newColor.b * 255.0).round().clamp(0, 255),
+                      (newColor.a * 255.0).round().clamp(0, 255),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+
+        // Alignment, Lists & Indentation
+        Row(
+          children: <Widget>[
+            _AlignmentButton(
+              icon: Icons.format_align_left,
+              tooltip: 'Align Left',
+              selected: style.alignment == 'left',
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, alignment: 'left')),
+            ),
+            const SizedBox(width: 4),
+            _AlignmentButton(
+              icon: Icons.format_align_center,
+              tooltip: 'Center',
+              selected: style.alignment == 'center',
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, alignment: 'center')),
+            ),
+            const SizedBox(width: 4),
+            _AlignmentButton(
+              icon: Icons.format_align_right,
+              tooltip: 'Align Right',
+              selected: style.alignment == 'right',
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, alignment: 'right')),
+            ),
+            const SizedBox(width: 4),
+            _AlignmentButton(
+              icon: Icons.format_align_justify,
+              tooltip: 'Justify',
+              selected: style.alignment == 'justify',
+              enabled: _enabled,
+              onPressed: () => _submit(styleWith(style, alignment: 'justify')),
+            ),
+            const SizedBox(width: 4),
+            _StyleIconButton(
+              label: '•',
+              tooltip: 'Bullet List',
+              selected: false,
+              enabled: _enabled,
+              onPressed: _toggleBulletList,
+            ),
+            const SizedBox(width: 2),
+            _StyleIconButton(
+              label: '1.',
+              tooltip: 'Numbered List',
+              selected: false,
+              enabled: _enabled,
+              onPressed: _toggleNumberedList,
+            ),
+            const SizedBox(width: 2),
+            _StyleIconButton(
+              label: '→|',
+              tooltip: 'Indent',
+              selected: false,
+              enabled: _enabled,
+              onPressed: _indentText,
+            ),
+            const SizedBox(width: 2),
+            _StyleIconButton(
+              label: '|←',
+              tooltip: 'Outdent',
+              selected: false,
+              enabled: _enabled,
+              onPressed: _outdentText,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsertRibbon() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Insert Document Elements', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.table_chart_outlined, size: 14),
+              label: const Text('Insert Table', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('| Column 1 | Column 2 |\n| --- | --- |\n| Item 1 | Item 2 |') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.image_outlined, size: 14),
+              label: const Text('Insert Image', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? _pickAndInsertImage : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.horizontal_rule_outlined, size: 14),
+              label: const Text('Page Break', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('\n---\n') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.format_quote_outlined, size: 14),
+              label: const Text('Blockquote / Callout', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('> Important Callout: ') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.link_outlined, size: 14),
+              label: const Text('Hyperlink', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('[Link Title](https://example.com)') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.code_outlined, size: 14),
+              label: const Text('Code Block', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('```dart\n// Code snippet\n```') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.functions_outlined, size: 14),
+              label: const Text('Math Formula', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('\$\$\nE = mc^2\n\$\$') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.space_bar_outlined, size: 14),
+              label: const Text('Horizontal Rule', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('\n***\n') : null,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLayoutRibbon() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Page Setup & Margins', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        DropdownButtonFormField<String>(
+          decoration: const InputDecoration(
+            labelText: 'Page Orientation',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            isDense: true,
+          ),
+          initialValue: 'portrait',
+          items: const [
+            DropdownMenuItem(value: 'portrait', child: Text('Portrait (Vertical A4)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'landscape', child: Text('Landscape (Horizontal A4)', style: TextStyle(fontSize: 12))),
+          ],
+          onChanged: (_) {},
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          decoration: const InputDecoration(
+            labelText: 'Paper Size',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            isDense: true,
+          ),
+          initialValue: 'a4',
+          items: const [
+            DropdownMenuItem(value: 'a4', child: Text('A4 (210 x 297 mm)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'letter', child: Text('US Letter (8.5 x 11 in)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'legal', child: Text('US Legal (8.5 x 14 in)', style: TextStyle(fontSize: 12))),
+          ],
+          onChanged: (_) {},
+        ),
+        const SizedBox(height: 12),
+        const Text('Line Spacing Presets', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () => _lineHeightController.text = '12.0',
+                child: const Text('1.0x', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () => _lineHeightController.text = '14.0',
+                child: const Text('1.15x', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () => _lineHeightController.text = '18.0',
+                child: const Text('1.5x', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () => _lineHeightController.text = '24.0',
+                child: const Text('2.0x', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: _MetricInputField(
+                icon: Icons.format_line_spacing,
+                tooltip: 'Line Spacing (pt)',
+                controller: _lineHeightController,
+                enabled: _enabled,
+                onSubmitted: (_) {},
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _MetricInputField(
+                icon: Icons.space_bar,
+                tooltip: 'Character Spacing',
+                controller: _charSpacingController,
+                enabled: _enabled,
+                onSubmitted: (_) {},
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: _MetricInputField(
+                icon: Icons.aspect_ratio,
+                tooltip: 'Horizontal Scale (%)',
+                controller: _scaleController,
+                enabled: _enabled,
+                onSubmitted: (_) {},
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReferencesRibbon() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Document References & Metadata', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton.icon(
+              icon: const Icon(Icons.toc_outlined, size: 14),
+              label: const Text('Insert Table of Contents', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('\n[[TOC]]\n') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.short_text_outlined, size: 14),
+              label: const Text('Insert Footnote', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('[^1]\n\n[^1]: Footnote details...') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.bookmark_outline, size: 14),
+              label: const Text('Insert Citation', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('(Clarix Research, 2026)') : null,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        const Text('Document Metadata', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        TextField(
+          controller: _docTitleController,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(labelText: 'Document Title', border: OutlineInputBorder(), isDense: true),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _docAuthorController,
+          style: const TextStyle(fontSize: 12),
+          decoration: const InputDecoration(labelText: 'Author Name', border: OutlineInputBorder(), isDense: true),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReviewRibbon() {
+    final text = _textEditingController.text;
+    final wordCount = text.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length;
+    final charCount = text.length;
+    final lineCount = text.isEmpty ? 0 : text.split('\n').length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Review & Proofreading Toolkit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+
+        // Live Document Statistics Card
+        Card(
+          elevation: 0,
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _statWidget('$wordCount', 'Words'),
+                _statWidget('$charCount', 'Chars'),
+                _statWidget('$lineCount', 'Lines'),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const Text('Case Conversion', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: Tooltip(
+                message: 'UPPERCASE',
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                  onPressed: _enabled ? () => _changeCase('upper') : null,
+                  child: const Text('AA', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Tooltip(
+                message: 'lowercase',
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                  onPressed: _enabled ? () => _changeCase('lower') : null,
+                  child: const Text('aa', style: TextStyle(fontSize: 10)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Tooltip(
+                message: 'Title Case',
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                  onPressed: _enabled ? () => _changeCase('title') : null,
+                  child: const Text('Aa', style: TextStyle(fontSize: 10)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Tooltip(
+                message: 'Sentence case',
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                  onPressed: _enabled ? () => _changeCase('sentence') : null,
+                  child: const Text('A.a', style: TextStyle(fontSize: 10)),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ElevatedButton.icon(
+              icon: const Icon(Icons.auto_awesome, size: 14),
+              label: const Text('AI Rewrite & Polish', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('<!-- AI Polish Requested -->') : null,
+            ),
+            OutlinedButton.icon(
+              icon: const Icon(Icons.comment_outlined, size: 14),
+              label: const Text('Add Review Note', style: TextStyle(fontSize: 11)),
+              onPressed: _enabled ? () => _insertSnippet('<!-- Review Note: Check accuracy -->') : null,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _statWidget(String count, String label) {
+    return Column(
+      children: [
+        Text(count, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+      ],
+    );
+  }
+
+  Widget _buildViewRibbon() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('View & Workspace Modes', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        const Text('Zoom Presets', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () {},
+                child: const Text('75%', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () {},
+                child: const Text('100%', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () {},
+                child: const Text('125%', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size(0, 30), padding: EdgeInsets.zero),
+                onPressed: () {},
+                child: const Text('150%', style: TextStyle(fontSize: 11)),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -846,6 +1535,98 @@ final class _CanonicalPdfTextFormatPanelState
         start: widget.selection.range.start,
         end: widget.selection.range.end,
         style: style,
+      ),
+    );
+  }
+}
+
+class _HighlightColorPickerButton extends StatelessWidget {
+  const _HighlightColorPickerButton({
+    required this.enabled,
+    required this.onColorChanged,
+  });
+
+  final bool enabled;
+  final ValueChanged<Color?> onColorChanged;
+
+  static const List<Color> _palette = <Color>[
+    Color(0xFFFEF08A), // Yellow
+    Color(0xFFBBF7D0), // Green
+    Color(0xFFBFDBFE), // Blue
+    Color(0xFFFBCFE8), // Pink
+    Color(0xFFFED7AA), // Orange
+    Color(0xFFE9D5FF), // Purple
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<Color?>(
+      enabled: enabled,
+      tooltip: 'Highlight Color',
+      color: Theme.of(context).colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Theme.of(context).dividerColor),
+      ),
+      itemBuilder: (context) => <PopupMenuEntry<Color?>>[
+        PopupMenuItem<Color?>(
+          enabled: false,
+          child: SizedBox(
+            width: 140,
+            child: Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ..._palette.map((palColor) {
+                  return InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      onColorChanged(palColor);
+                    },
+                    child: Container(
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        color: palColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                    ),
+                  );
+                }),
+                InkWell(
+                  onTap: () {
+                    Navigator.pop(context);
+                    onColorChanged(null);
+                  },
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.grey.shade400),
+                    ),
+                    child: const Icon(Icons.block, size: 14, color: Colors.grey),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+      child: Container(
+        width: 32,
+        height: 32,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF08A),
+          borderRadius: BorderRadius.circular(4),
+          border: Border.all(color: Colors.grey.shade500),
+        ),
+        child: const Icon(Icons.border_color, size: 14, color: Colors.black87),
       ),
     );
   }
@@ -1053,10 +1834,21 @@ EditorTextStyle styleWith(
   int? fontWeight,
   bool? italic,
   List<int>? colorRgba,
+  bool? underline,
+  bool? strikethrough,
+  double? baselineShift,
+  String? alignment,
+  List<int>? highlightRgba,
 }) => EditorTextStyle(
   fontFamily: fontFamily ?? source.fontFamily,
   fontSize: fontSize ?? source.fontSize,
   fontWeight: fontWeight ?? source.fontWeight,
   italic: italic ?? source.italic,
   colorRgba: colorRgba ?? source.colorRgba,
+  underline: underline ?? source.underline,
+  strikethrough: strikethrough ?? source.strikethrough,
+  baselineShift: baselineShift ?? source.baselineShift,
+  alignment: alignment ?? source.alignment,
+  highlightRgba: highlightRgba ?? source.highlightRgba,
 );
+

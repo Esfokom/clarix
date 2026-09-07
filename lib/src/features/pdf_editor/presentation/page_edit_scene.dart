@@ -73,7 +73,7 @@ class PageEditScene extends StatelessWidget {
     final activeSession = editingEnabled ? session : null;
     final pageSize = Size(scene.width, scene.height);
     final interactive = scene.objects
-        .where((object) => object.capability == 'editable')
+        .where((object) => object.kind == EditorSceneObjectKind.text || object.capability == 'editable')
         .toList(growable: false);
     final hitTestIndex = EditorHitTestIndex(
       pageSize: pageSize,
@@ -131,56 +131,49 @@ class PageEditScene extends StatelessWidget {
       context,
       scene.pageNumber,
     );
+    final bool isEditedOrEditing =
+        editingEnabled || document.hasEdits || scene.revision > 0;
+    if (!isEditedOrEditing && pageOverlay == null) {
+      return const SizedBox.shrink();
+    }
     return KeyedSubtree(
-      key: ValueKey<String>('${scene.pageId}:${scene.revision}'),
-      child: SizedBox.fromSize(
-        size: displaySize,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            if (usesLivePdfiumTiles)
-              LivePdfiumTileLayer(
-                tiles: liveTiles,
+      key: ValueKey<String>('${scene.pageId}:${document.revision}:${document.hasEdits}:${scene.revision}'),
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          if (usesLivePdfiumTiles)
+            LivePdfiumTileLayer(
+              tiles: liveTiles,
+              pageSize: pageSize,
+              displaySize: displaySize,
+            ),
+          for (final object in overlayObjects)
+            if (cleanPatches.containsKey(object.objectId))
+              CleanPatchLayer(
+                asset: cleanPatches[object.objectId]!,
                 pageSize: pageSize,
                 displaySize: displaySize,
+                observer: observer,
+              )
+            else if (_isEdited(object.objectId))
+              Positioned.fromRect(
+                rect: EditorPageGeometry.rectForBox(
+                  object.bounds,
+                  pageSize: pageSize,
+                  displaySize: displaySize,
+                  bleedPoints: 1.0,
+                ),
+                child: const ColoredBox(color: Color(0xFFFFFFFF)),
               ),
-            for (final object in overlayObjects)
-              if (!usesLivePdfiumTiles)
-                if (cleanPatches.containsKey(object.objectId))
-                  CleanPatchLayer(
-                    asset: cleanPatches[object.objectId]!,
-                    pageSize: pageSize,
-                    displaySize: displaySize,
-                    observer: observer,
-                  )
-                else if (_isEdited(object.objectId))
-                  // Only mask objects that have been actively edited, so
-                  // the base PDF remains visible for untouched content.
-                  // Use a nearly-transparent tint instead of opaque white
-                  // so the page content is still readable while the clean
-                  // patch loads.
-                  Positioned.fromRect(
-                    rect: EditorPageGeometry.rectForBox(
-                      object.bounds,
-                      pageSize: pageSize,
-                      displaySize: displaySize,
-                      bleedPoints: 1.0,
-                    ),
-                    child: const ColoredBox(color: Color(0x0A000000)),
-                  ),
-            for (final object in overlayObjects)
-              if (!usesLivePdfiumTiles)
-                if (object.objectId != activeObject?.objectId)
-                  EditorTextObjectLayer(
-                    object: object,
-                    text:
-                        document.visibleText(object.objectId) ??
-                        object.text ??
-                        '',
-                    pageSize: pageSize,
-                    displaySize: displaySize,
-                    observer: observer,
-                  ),
+          for (final object in overlayObjects)
+            if (object.objectId != activeObject?.objectId)
+              EditorTextObjectLayer(
+                object: object,
+                text: _getVisibleText(object),
+                pageSize: pageSize,
+                displaySize: displaySize,
+                observer: observer,
+              ),
             if (activeSession != null)
               for (final object in interactive)
                 Positioned.fromRect(
@@ -197,12 +190,16 @@ class PageEditScene extends StatelessWidget {
                           'clarix-edit-target-${object.objectId}',
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0x052F80ED),
+                          color: object.objectId == activeObject?.objectId
+                              ? const Color(0x1A2563EB)
+                              : const Color(0x0C2563EB),
                           border: Border.all(
-                            color: const Color(0x332F80ED),
-                            width: 1,
+                            color: object.objectId == activeObject?.objectId
+                                ? const Color(0xFF2563EB)
+                                : const Color(0x802563EB),
+                            width: object.objectId == activeObject?.objectId ? 1.5 : 1.2,
                           ),
-                          borderRadius: BorderRadius.circular(3),
+                          borderRadius: BorderRadius.circular(4),
                         ),
                       ),
                     ),
@@ -226,15 +223,13 @@ class PageEditScene extends StatelessWidget {
                       final hit = hitTestIndex.hitTest(
                         localInBox + objectRect.topLeft,
                       );
-                      if (hit == null) return;
                       activeSession.updateSelection(
                         EditorSelection(
-                          objectId: hit.objectId,
+                          objectId: hit?.objectId ?? object.objectId,
                           range: EditorTextRange(
-                            start: hit.utf16Offset,
-                            end: hit.utf16Offset,
+                            start: hit?.utf16Offset ?? 0,
+                            end: hit?.utf16Offset ?? (object.text?.length ?? 0),
                           ),
-                          affinity: hit.affinity,
                         ),
                       );
                     },
@@ -379,16 +374,42 @@ class PageEditScene extends StatelessWidget {
               Align(alignment: Alignment.topRight, child: pageOverlay),
           ],
         ),
-      ),
-    );
+      );
   }
 
   bool _isEdited(String objectId) {
+    if (document.optimisticEdit?.objectId == objectId ||
+        document.queuedEdit?.objectId == objectId) {
+      return true;
+    }
+    if (document.visibleText(objectId) != null) {
+      return true;
+    }
+    final object =
+        scene.objects.where((o) => o.objectId == objectId).firstOrNull;
+    if (object != null && object.modifiedRevision > 0) {
+      return true;
+    }
     final state = document.objects[objectId];
-    return state != null &&
-        (state.modifiedRevision > 0 ||
-            document.optimisticEdit?.objectId == objectId ||
-            document.queuedEdit?.objectId == objectId);
+    return state != null && state.modifiedRevision > 0;
+  }
+
+  String _getVisibleText(EditorSceneObject object) {
+    if (document.optimisticEdit?.objectId == object.objectId) {
+      final edit = document.optimisticEdit!;
+      final baseText = object.text ?? '';
+      final start = edit.range.start.clamp(0, baseText.length);
+      final end = edit.range.end.clamp(start, baseText.length);
+      return baseText.replaceRange(start, end, edit.replacement);
+    }
+    if (document.queuedEdit?.objectId == object.objectId) {
+      final edit = document.queuedEdit!;
+      final baseText = object.text ?? '';
+      final start = edit.range.start.clamp(0, baseText.length);
+      final end = edit.range.end.clamp(start, baseText.length);
+      return baseText.replaceRange(start, end, edit.replacement);
+    }
+    return document.visibleText(object.objectId) ?? object.text ?? '';
   }
 }
 

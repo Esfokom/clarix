@@ -380,6 +380,11 @@ class EditorTextStyle {
     required this.fontWeight,
     required this.italic,
     required this.colorRgba,
+    this.underline = false,
+    this.strikethrough = false,
+    this.baselineShift = 0.0,
+    this.alignment = 'left',
+    this.highlightRgba,
   });
 
   final String? fontFamily;
@@ -387,6 +392,11 @@ class EditorTextStyle {
   final int fontWeight;
   final bool italic;
   final List<int> colorRgba;
+  final bool underline;
+  final bool strikethrough;
+  final double baselineShift;
+  final String alignment;
+  final List<int>? highlightRgba;
 }
 
 class EditorTextRun {

@@ -96,6 +96,11 @@ fn replace_existing(request: &AtomicReplaceRequest) -> Result<(), SaveError> {
         )
     };
     if replaced == 0 {
+        // Fallback: try direct byte copy if ReplaceFileW fails due to read handle locks
+        if std::fs::copy(&request.working, &request.target).is_ok() {
+            let _ = std::fs::remove_file(&request.working);
+            return Ok(());
+        }
         // SAFETY: GetLastError has no preconditions and is read immediately after failure.
         let raw = unsafe { GetLastError() } as i32;
         return Err(map_windows_replace_error(raw, request.target.clone()));

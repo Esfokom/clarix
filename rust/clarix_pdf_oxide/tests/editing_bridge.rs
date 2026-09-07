@@ -654,10 +654,13 @@ fn live_command_prepares_a_physical_plan_before_it_is_published() {
     assert_eq!(prepared.committed_revision, 1);
     assert_eq!(prepared.plan.operations.len(), 1);
     assert_eq!(prepared.plan.operations[0].object_id, object.object_id);
-    assert_eq!(prepared.plan.operations[0].expected_text, *original);
     assert_eq!(
-        prepared.plan.operations[0].replacement,
-        "Prepared replacement"
+        prepared.plan.operations[0].expected_text.as_deref(),
+        Some(original.as_str())
+    );
+    assert_eq!(
+        prepared.plan.operations[0].replacement.as_deref(),
+        Some("Prepared replacement")
     );
     assert_eq!(session.metadata().unwrap().revision, 0);
 

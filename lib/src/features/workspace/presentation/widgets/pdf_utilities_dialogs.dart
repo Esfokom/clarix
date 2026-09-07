@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import 'package:file_picker/file_picker.dart';
+
 import '../../../utilities/domain/utility_job.dart';
 import '../../../utilities/infrastructure/document_conversion_service.dart';
+import '../../../utilities/infrastructure/libreoffice_converter.dart';
 import '../../../utilities/infrastructure/pdf_export_service.dart';
 import '../../application/workspace_providers.dart';
 import 'workspace_common.dart';
@@ -386,9 +389,17 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
   final List<String> _files = <String>[];
   bool _busy = false;
   String? _error;
+  String? _customLibreOfficePath;
 
   DocumentConversionService get _service =>
-      widget.service ?? DocumentConversionService();
+      widget.service ??
+      (_customLibreOfficePath != null
+          ? DocumentConversionService(
+              office: LibreOfficeConverter(
+                configuredExecutable: _customLibreOfficePath,
+              ),
+            )
+          : DocumentConversionService());
 
   @override
   Widget build(BuildContext context) {
@@ -531,6 +542,29 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
                   fontSize: 12,
                 ),
               ),
+              if (_error!.contains('LibreOffice is required')) ...<Widget>[
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: ShadButton.outline(
+                    leading: const Icon(LucideIcons.folderOpen, size: 14),
+                    onPressed: () async {
+                      final result = await FilePicker.pickFiles(
+                        dialogTitle: 'Select soffice.exe or soffice.com',
+                        type: FileType.custom,
+                        allowedExtensions: ['com', 'exe'],
+                      );
+                      if (result != null && result.files.single.path != null) {
+                        setState(() {
+                          _customLibreOfficePath = result.files.single.path;
+                          _error = null;
+                        });
+                      }
+                    },
+                    child: const Text('Locate soffice.exe executable'),
+                  ),
+                ),
+              ],
             ],
           ],
         ),

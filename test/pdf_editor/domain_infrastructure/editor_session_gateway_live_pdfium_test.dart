@@ -433,12 +433,14 @@ final class _NativePort
         revision: 1,
         operations: <EditorPhysicalEditOperation>[
           EditorPhysicalEditOperation(
+            kind: EditorPhysicalEditOperationKind.replaceText,
             objectId: _objectId,
             sourceKey: 'manifest/page/1/object/0',
             sourceRevision: 'source',
             expectedText: 'Before',
             replacement: 'Changed',
-            bounds: EditorPdfBox(left: 0, bottom: 0, right: 1, top: 1),
+            oldBounds: EditorPdfBox(left: 0, bottom: 0, right: 1, top: 1),
+            newBounds: EditorPdfBox(left: 0, bottom: 0, right: 1, top: 1),
           ),
         ],
         inverseOperations: <EditorPhysicalEditOperation>[],

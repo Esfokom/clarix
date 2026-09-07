@@ -145,33 +145,35 @@ fn normalize_endpoint(raw: &str) -> Result<Url, AgentError> {
             "provider endpoint must use HTTPS except for loopback testing",
         ));
     }
-    if !endpoint
-        .path()
-        .trim_end_matches('/')
-        .ends_with("/chat/completions")
-    {
-        let path = format!("{}/chat/completions", endpoint.path().trim_end_matches('/'));
-        endpoint.set_path(&path);
+    let path = endpoint.path().trim_end_matches('/');
+    if path.is_empty() {
+        endpoint.set_path("/v1/chat/completions");
+    } else if !path.ends_with("/chat/completions") {
+        let new_path = format!("{path}/chat/completions");
+        endpoint.set_path(&new_path);
     }
     Ok(endpoint)
 }
 
 fn openai_request(model: &str, request: ProviderRequest) -> Value {
-    json!({
+    let mut payload = json!({
         "model": model,
         "messages": request.messages.iter().map(openai_message).collect::<Vec<_>>(),
-        "tools": request.tools.into_iter().map(|tool| json!({
-            "type":"function",
-            "function":{
-                "name":tool.name,
-                "description":tool.description,
-                "parameters":tool.parameters
-            }
-        })).collect::<Vec<_>>(),
         "max_tokens": request.max_output_tokens,
         "stream": true,
-        "stream_options":{"include_usage":true}
-    })
+        "stream_options": {"include_usage": true}
+    });
+    if !request.tools.is_empty() {
+        payload["tools"] = json!(request.tools.into_iter().map(|tool| json!({
+            "type": "function",
+            "function": {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.parameters
+            }
+        })).collect::<Vec<_>>());
+    }
+    payload
 }
 
 fn openai_message(message: &ProviderMessage) -> Value {

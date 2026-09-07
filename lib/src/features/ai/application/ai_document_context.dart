@@ -7,7 +7,7 @@ class AiDocumentContext {
     required this.title,
     required this.filePath,
     required this.editorRevision,
-    required this.agentController,
+    this.agentController,
     this.isMissingFile = false,
   });
 
@@ -16,6 +16,6 @@ class AiDocumentContext {
   final String title;
   final String filePath;
   final int editorRevision;
-  final AgentRunController agentController;
+  final AgentRunController? agentController;
   final bool isMissingFile;
 }

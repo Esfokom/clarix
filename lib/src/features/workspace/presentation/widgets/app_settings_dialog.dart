@@ -650,15 +650,39 @@ class _ProviderTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isOffline = profile.baseUrl.contains('localhost') ||
+        profile.baseUrl.contains('127.0.0.1') ||
+        profile.id.contains('local') ||
+        profile.id.contains('gemma');
+
+    final accentColor = isOffline ? const Color(0xFF10B981) : const Color(0xFF3B82F6);
+    final typeLabel = isOffline ? '100% Offline (No Internet)' : 'Cloud API (Requires Internet)';
+    final typeIcon = isOffline ? Icons.laptop_windows_outlined : Icons.cloud_outlined;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: WorkspaceColors.border),
+        color: isDefault
+            ? accentColor.withValues(alpha: 0.08)
+            : WorkspaceColors.panelRaised,
+        border: Border.all(
+          color: isDefault ? accentColor : WorkspaceColors.border,
+          width: isDefault ? 2 : 1,
+        ),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         children: <Widget>[
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: accentColor.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(typeIcon, size: 18, color: accentColor),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -668,33 +692,73 @@ class _ProviderTile extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         profile.label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: WorkspaceColors.textStrong,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: isDefault ? FontWeight.w700 : FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: accentColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 0.8),
+                      ),
+                      child: Text(
+                        isOffline ? '100% Offline' : 'Cloud API',
+                        style: TextStyle(
+                          color: accentColor,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                     if (isDefault) ...<Widget>[
-                      const SizedBox(width: 8),
-                      const Chip(label: Text('Default')),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: accentColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'ACTIVE',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ],
                   ],
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '${profile.baseUrl} · ${profile.modelId}',
-                  style: const TextStyle(color: WorkspaceColors.textMuted),
+                  style: const TextStyle(color: WorkspaceColors.textMuted, fontSize: 12),
+                ),
+                Text(
+                  typeLabel,
+                  style: TextStyle(color: accentColor.withValues(alpha: 0.85), fontSize: 11, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
           ),
           if (!isDefault)
-            IconButton(
-              tooltip: 'Make ${profile.label} default',
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                foregroundColor: accentColor,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              ),
               onPressed: () => ref
                   .read(aiNotifierProvider.notifier)
                   .selectProvider(profile.id),
-              icon: const Icon(Icons.check_circle_outline),
+              icon: const Icon(Icons.check_circle_outline, size: 16),
+              label: const Text('Select', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
             ),
           IconButton(
             tooltip: 'Edit ${profile.label}',
@@ -702,12 +766,12 @@ class _ProviderTile extends ConsumerWidget {
               context: context,
               builder: (_) => ProviderEditorDialog(profile: profile),
             ),
-            icon: const Icon(Icons.edit_outlined),
+            icon: const Icon(Icons.edit_outlined, size: 18),
           ),
           IconButton(
             tooltip: 'Delete ${profile.label}',
             onPressed: () => _confirmDelete(context, ref),
-            icon: const Icon(Icons.delete_outline),
+            icon: const Icon(Icons.delete_outline, size: 18),
           ),
         ],
       ),

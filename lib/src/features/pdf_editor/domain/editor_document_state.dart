@@ -85,6 +85,12 @@ class EditorDocumentState {
   /// True while page scenes are being hydrated from the native side.
   final bool scanning;
 
+  bool get hasEdits =>
+      revision > 0 ||
+      optimisticEdit != null ||
+      queuedEdit != null ||
+      objects.values.any((o) => o.modifiedRevision > 0);
+
   String? visibleText(String objectId) {
     final object = objects[objectId];
     if (object == null) return null;

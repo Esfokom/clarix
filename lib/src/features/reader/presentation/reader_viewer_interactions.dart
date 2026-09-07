@@ -75,6 +75,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
         surface: _pageSurface,
         controller: controller,
       )..start();
+      await controller.refreshPage(widget.tab.currentPage);
       _updateState();
       return controller;
     } catch (error) {
@@ -97,6 +98,10 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
           ref.read(editorSessionRegistryProvider)[widget.tab.id] ??
           await _openNativeEditor(widget.tab.id, widget.tab.filePath);
       if (controller == null) return;
+      final maxPages = widget.tab.pageCountHint ?? 10;
+      for (var i = 1; i <= (maxPages > 10 ? 10 : maxPages); i++) {
+        await controller.refreshPage(i);
+      }
       await notifier.selectRightToolWindow(RightToolWindow.textFormat);
     } else {
       final controller = ref.read(editorSessionRegistryProvider)[widget.tab.id];
@@ -244,95 +249,10 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     }
   }
 
-  void _rememberPointerPosition(PointerEvent event) {
-    _lastPointerGlobalPosition = event.position;
-  }
-
-  Future<void> _showSelectionMenuAfterDrag(PointerUpEvent event) async {
-    final Offset? start = _selectionDragStart;
-    _selectionDragStart = null;
-    if (start == null || (event.localPosition - start).distance < 4) return;
-    if (!_controller.isReady) return;
-    final ranges = await _controller.textSelectionDelegate
-        .getSelectedTextRanges();
-    if (!mounted || ranges.isEmpty) return;
-    _updateState(
-      () => _selectionMenuPosition = event.localPosition.translate(8, 8),
-    );
-  }
-
-  void _updateSelectionAutoPan(PointerMoveEvent event) {
-    if (_selectionDragStart == null ||
-        event.buttons == 0 ||
-        !_controller.isReady) {
-      _stopSelectionAutoPan();
-      return;
-    }
-    _selectionAutoPanPointer = event.localPosition;
-    const edge = 32.0;
-    final Size size = _controller.viewSize;
-    final Offset point = event.localPosition;
-    final bool nearEdge =
-        point.dx < edge ||
-        point.dx > size.width - edge ||
-        point.dy < edge ||
-        point.dy > size.height - edge;
-    if (nearEdge && _selectionAutoPanTimer == null) {
-      _selectionAutoPanTimer = Timer.periodic(
-        const Duration(milliseconds: 16),
-        (_) => _autoPanSelection(),
-      );
-    } else if (!nearEdge) {
-      _stopSelectionAutoPan();
-    }
-  }
-
-  void _autoPanSelection() {
-    final Offset? point = _selectionAutoPanPointer;
-    if (point == null || !_controller.isReady) return;
-    const edge = 32.0;
-    const maxSpeed = 12.0;
-    final Size size = _controller.viewSize;
-    double velocity(double value, double extent) {
-      if (value < edge) return maxSpeed * (1 - value / edge);
-      if (value > extent - edge) {
-        return -maxSpeed * (1 - (extent - value) / edge);
-      }
-      return 0;
-    }
-
-    final double dx = velocity(point.dx, size.width);
-    final double dy = velocity(point.dy, size.height);
-    if (dx == 0 && dy == 0) return;
-    final matrix = _controller.value.clone()
-      ..setEntry(0, 3, _controller.value.entry(0, 3) + dx)
-      ..setEntry(1, 3, _controller.value.entry(1, 3) + dy);
-    _controller.value = _controller.makeMatrixInSafeRange(
-      matrix,
-      forceClamp: true,
-    );
-  }
-
-  void _stopSelectionAutoPan() {
-    _selectionAutoPanTimer?.cancel();
-    _selectionAutoPanTimer = null;
-    _selectionAutoPanPointer = null;
-  }
-
   Future<void> _copyCurrentSelection() async {
     final String text = await _controller.textSelectionDelegate
         .getSelectedText();
     await Clipboard.setData(ClipboardData(text: text));
-  }
-
-  void _rememberTrackpadZoomStart(PointerPanZoomStartEvent event) {
-    _lastPointerGlobalPosition = event.position;
-  }
-
-  void _rememberTrackpadZoomPosition(PointerPanZoomUpdateEvent event) {
-    // PointerPanZoomUpdateEvent.position is the stationary mouse cursor.
-    // event.pan is two-finger content translation, not cursor movement.
-    _lastPointerGlobalPosition = event.position;
   }
 
   Widget? _buildSelectionContextMenu(
@@ -353,10 +273,40 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
                 final text = await params.textSelectionDelegate
                     .getSelectedText();
                 await Clipboard.setData(ClipboardData(text: text));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Selected text copied to clipboard'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
                 params.dismissContextMenu();
               },
               icon: const Icon(LucideIcons.copy, size: 14),
               label: const Text('Copy'),
+            ),
+            TextButton.icon(
+              onPressed: () async {
+                final text = await params.textSelectionDelegate
+                    .getSelectedText();
+                params.dismissContextMenu();
+                if (text.isNotEmpty) {
+                  ref.read(aiNotifierProvider.notifier).sendPrompt(
+                    'Explain this selected text:\n"$text"',
+                    AiDocumentContext(
+                      tabId: widget.tab.id,
+                      documentId: widget.tab.filePath,
+                      title: widget.tab.title,
+                      filePath: widget.tab.filePath,
+                      editorRevision: 0,
+                    ),
+                  );
+                  ref.read(workspaceNotifierProvider.notifier).selectRightToolWindow(RightToolWindow.ai);
+                }
+              },
+              icon: const Icon(LucideIcons.sparkles, size: 14),
+              label: const Text('Ask AI'),
             ),
             TextButton.icon(
               onPressed: () async {
@@ -517,6 +467,9 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
           duration: const Duration(milliseconds: 120),
         );
         break;
+      case _ZoomPreset.percent25:
+        await _zoomOnPointer(0.25);
+        break;
       case _ZoomPreset.percent50:
         await _zoomOnPointer(0.5);
         break;
@@ -534,6 +487,9 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
         break;
       case _ZoomPreset.percent200:
         await _zoomOnPointer(2);
+        break;
+      case _ZoomPreset.percent300:
+        await _zoomOnPointer(3);
         break;
     }
 

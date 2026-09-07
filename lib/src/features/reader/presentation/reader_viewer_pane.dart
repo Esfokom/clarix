@@ -1,14 +1,16 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image/image.dart' as img;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:smooth_corner/smooth_corner.dart';
 import 'package:clarix/src/core/agent/agent_bridge_types.dart';
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
+import 'package:clarix/src/core/ffi/api.dart';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/theme_controller.dart';
 import 'package:clarix/src/features/ai/ai.dart';
@@ -58,11 +60,10 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   bool _colorInspectorOpen = false;
   int _customHighlightColor = 0x66FFD54F;
   final Map<String, List<Rect>> _annotationHitAreas = <String, List<Rect>>{};
-  Offset? _selectionDragStart;
   Offset? _selectionMenuPosition;
-  Offset? _selectionAutoPanPointer;
   Timer? _selectionAutoPanTimer;
   bool _nativeLifecycleSyncScheduled = false;
+  bool _isCanvasEditingActive = false;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -178,6 +179,208 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   void initState() {
     super.initState();
     _createController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initNativeSession();
+      _loadFullPdfTextViaNativeSession();
+    });
+  }
+
+  Future<void> _initNativeSession() async {
+    if (_pageSceneLifecycle == null && mounted) {
+      await _openNativeEditor(widget.tab.id, widget.tab.filePath);
+    }
+  }
+
+  Future<void> _refreshCanvasOverlay() async {
+    if (_controller.isReady) {
+      _controller.invalidate();
+    }
+    var session = ref.read(editorSessionRegistryProvider)[widget.tab.id];
+    session ??= await _openNativeEditor(widget.tab.id, widget.tab.filePath);
+    if (session != null) {
+      await session.refreshPage(widget.tab.currentPage);
+    }
+    _updateState();
+  }
+
+  String? _cachedFullMarkdownText;
+
+  Future<void> _loadFullPdfTextViaNativeSession() async {
+    try {
+      final nativeSession = await NativePdfSession.open(path: widget.tab.filePath);
+      final pageCount = widget.tab.pageCountHint ?? 26;
+      final buffer = StringBuffer();
+
+      PdfDocument? pdfrxDoc;
+      try {
+        await pdfrxInitialize();
+        pdfrxDoc = await PdfDocument.openFile(widget.tab.filePath);
+      } catch (_) {}
+
+      for (var i = 1; i <= pageCount; i++) {
+        try {
+          final text = await nativeSession.pageText(pageNumber: BigInt.from(i));
+          final cleanText = text.trim();
+          if (cleanText.isNotEmpty || pdfrxDoc != null) {
+            buffer.writeln('## Page $i\n');
+            final formattedText = _formatExtractedTables(cleanText);
+            buffer.writeln(formattedText);
+            buffer.writeln();
+
+            // If textual content is sparse or empty (scanned diagram page), render page diagram image
+            if (cleanText.isEmpty && pdfrxDoc != null && i <= pdfrxDoc.pages.length) {
+              try {
+                final page = await pdfrxDoc.pages[i - 1].ensureLoaded();
+                final pixelWidth = (page.width * 1.5).round();
+                final pixelHeight = (page.height * 1.5).round();
+                final rendered = await page.render(
+                  width: pixelWidth,
+                  height: pixelHeight,
+                  fullWidth: pixelWidth.toDouble(),
+                  fullHeight: pixelHeight.toDouble(),
+                  backgroundColor: 0xffffffff,
+                );
+                if (rendered != null) {
+                  try {
+                    final raster = rendered.createImageNF();
+                    final pngBytes = img.encodePng(raster);
+                    final tempDir = Directory.systemTemp;
+                    final tempFile = File('${tempDir.path}${Platform.pathSeparator}clarix_page_${i}_${DateTime.now().millisecondsSinceEpoch}.png');
+                    await tempFile.writeAsBytes(pngBytes);
+                    final fileUri = Uri.file(tempFile.path).toString();
+                    buffer.writeln('![Page $i Diagram]($fileUri)\n');
+                  } finally {
+                    rendered.dispose();
+                  }
+                }
+              } catch (_) {}
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (pdfrxDoc != null) {
+        await pdfrxDoc.dispose();
+      }
+
+      final result = buffer.toString().trim();
+      if (result.isNotEmpty && mounted) {
+        setState(() {
+          _cachedFullMarkdownText = result;
+        });
+      }
+    } catch (_) {}
+  }
+
+  String _formatExtractedTables(String text) {
+    final lines = text.split('\n');
+    final result = <String>[];
+    List<List<String>> currentTable = [];
+
+    void flushCurrentTable() {
+      if (currentTable.isNotEmpty) {
+        if (currentTable.length >= 2) {
+          final headers = currentTable.first;
+          result.add('| ${headers.join(' | ')} |');
+          result.add('| ${headers.map((_) => '---').join(' | ')} |');
+          for (final row in currentTable.skip(1)) {
+            result.add('| ${row.join(' | ')} |');
+          }
+        } else {
+          for (final row in currentTable) {
+            result.add(row.join(' '));
+          }
+        }
+        currentTable.clear();
+      }
+    }
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) {
+        flushCurrentTable();
+        result.add('');
+        continue;
+      }
+
+      final parts = trimmed.split(RegExp(r'\s{2,}|\t'));
+      if (parts.length >= 2) {
+        currentTable.add(parts.map((p) => p.trim()).toList());
+      } else {
+        flushCurrentTable();
+        result.add(trimmed);
+      }
+    }
+    flushCurrentTable();
+    return result.join('\n');
+  }
+
+  String _extractCurrentMarkdownText() {
+    if (_cachedFullMarkdownText != null && _cachedFullMarkdownText!.isNotEmpty) {
+      return _cachedFullMarkdownText!;
+    }
+    _loadFullPdfTextViaNativeSession();
+    return '# Extracting Document Text...\n\nPlease wait a moment while the full PDF text is being extracted.';
+  }
+
+  bool get _isEditedDocument {
+    final name = widget.tab.filePath.split(Platform.pathSeparator).last.toLowerCase();
+    return name.startsWith('edited_') || name.contains('_edited');
+  }
+
+  Future<void> _overwriteCurrentMarkdownPdf(String markdown) async {
+    try {
+      await MarkdownPdfCompiler.saveToFile(markdown, widget.tab.filePath);
+      _cachedFullMarkdownText = markdown;
+      if (mounted) {
+        setState(() => _isCanvasEditingActive = false);
+        if (_controller.isReady) {
+          _controller.invalidate();
+        }
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Document updated cleanly.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not overwrite PDF: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveAsNewMarkdownPdf(String markdown) async {
+    try {
+      final defaultName = 'edited_${widget.tab.title}';
+      final savePath = await FilePicker.saveFile(
+        dialogTitle: 'Save As New PDF',
+        fileName: defaultName.endsWith('.pdf') ? defaultName : '$defaultName.pdf',
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (savePath != null && savePath.isNotEmpty) {
+        final targetPath = savePath.endsWith('.pdf') ? savePath : '$savePath.pdf';
+        await MarkdownPdfCompiler.saveToFile(markdown, targetPath);
+
+        if (mounted) {
+          setState(() => _isCanvasEditingActive = false);
+        }
+
+        await ref
+            .read(workspaceNotifierProvider.notifier)
+            .openPdfFiles([targetPath]);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not save new PDF: $e')),
+        );
+      }
+    }
   }
 
   void _createController() {
@@ -209,6 +412,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       _lastPointerGlobalPosition = null;
       _pendingSearchQuery = null;
       _createController();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initNativeSession();
+      });
       return;
     }
 
@@ -344,9 +550,11 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
     // A persisted inspector selection is not an editor session. Only expose
     // edit interaction after the native session has actually opened.
     final isEditingMode =
-        editorState?.isOpen == true &&
-        (workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
-            editorState?.selection != null);
+        _isCanvasEditingActive ||
+        (editorState?.isOpen == true &&
+            (workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
+                editorState?.selection != null ||
+                (editorState?.revision ?? 0) > 0));
     final interaction = isEditingMode
         ? PdfEditingInteraction.textEditing
         : PdfEditingInteraction.reading;
@@ -355,8 +563,8 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       decoration: BoxDecoration(color: widget.colors.canvas),
       child: Theme(
         data: Theme.of(context).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            selectionColor: widget.colors.selection,
+          textSelectionTheme: const TextSelectionThemeData(
+            selectionColor: Color(0x662563EB),
           ),
         ),
         child: Stack(
@@ -369,35 +577,40 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                   errorBuilder: (_, _, _) => const SizedBox(),
                 ),
               ),
-            Positioned.fill(
-              child: Listener(
-                onPointerHover: _rememberPointerPosition,
-                onPointerDown: (PointerDownEvent event) {
-                  _rememberPointerPosition(event);
-                  _selectionDragStart = event.localPosition;
-                },
-                onPointerMove: (PointerMoveEvent event) {
-                  _rememberPointerPosition(event);
-                  _updateSelectionAutoPan(event);
-                },
-                onPointerUp: (PointerUpEvent event) {
-                  _rememberPointerPosition(event);
-                  _stopSelectionAutoPan();
-                  unawaited(_showSelectionMenuAfterDrag(event));
-                },
-                onPointerCancel: _rememberPointerPosition,
-                onPointerPanZoomStart: _rememberTrackpadZoomStart,
-                onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
+            if (_isCanvasEditingActive || ref.watch(activeMarkdownEditorTabIdProvider) == widget.tab.id)
+              Positioned.fill(
+                child: MarkdownEditorPane(
+                  initialMarkdown: _extractCurrentMarkdownText(),
+                  onSave: (markdown) async {
+                    if (_isEditedDocument) {
+                      await _overwriteCurrentMarkdownPdf(markdown);
+                    } else {
+                      await _saveAsNewMarkdownPdf(markdown);
+                    }
+                  },
+                  onSaveAs: _isEditedDocument
+                      ? (markdown) async {
+                          await _saveAsNewMarkdownPdf(markdown);
+                        }
+                      : null,
+                  onClose: () {
+                    setState(() => _isCanvasEditingActive = false);
+                    ref.read(activeMarkdownEditorTabIdProvider.notifier).setTabId(null);
+                  },
+                ),
+              )
+            else
+              Positioned.fill(
                 child: ReaderCursorLockedPdfRegion(
                   controller: _controller,
                   onViewChanged: _queueViewerStatePersistence,
                   builder:
-                      (BuildContext context, ReaderCursorLockedPdfInput input) {
-                        return PdfViewer(
+                      (BuildContext context, ReaderCursorLockedPdfInput input) {                        return PdfViewer(
                           widget.documentRef,
                           controller: _controller,
                           initialPageNumber: widget.tab.currentPage,
                           params: PdfViewerParams(
+                            sizeDelegateProvider: const PdfViewerSizeDelegateProviderLegacy(minScale: 0.1, maxScale: 6.0),
                             backgroundColor: readerBackgroundPath == null
                                 ? widget.colors.viewerBackground
                                 : Colors.transparent,
@@ -421,10 +634,6 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             buildContextMenu: _buildSelectionContextMenu,
                             interactionDelegateProvider:
                                 input.interactionDelegateProvider,
-                            // pdfrx can finish a gesture after this pane has
-                            // been removed.  Persist through the debounced
-                            // path so dispose can cancel the pending work
-                            // before it notifies the workspace provider.
                             onInteractionEnd: (_) =>
                                 _queueViewerStatePersistence(),
                             onPageChanged: _onPageChanged,
@@ -437,94 +646,89 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             onGeneralTap: _onViewerTap,
                             viewerOverlayBuilder: _buildViewerOverlay,
                             pageOverlaysBuilder: (context, pageRect, page) {
-                              // pdfrx invokes this builder lazily, outside
-                              // this widget's build — it can run after the
-                              // pane has been disposed or its lifecycle torn
-                              // down for a tab switch.
                               if (!mounted) return <Widget>[];
                               return <Widget>[
-                                  if (_pageSceneLifecycle
-                                      case final PageSceneLifecycle lifecycle
-                                          when !lifecycle.isDisposed)
-                                    Positioned.fill(
-                                      child: PageSceneHost(
-                                        lifecycle: lifecycle,
-                                        pageNumber: page.pageNumber,
-                                        builder: (context, scene) {
-                                          Widget sceneWidget(
-                                            AgentRunControllerState? agentState,
-                                          ) => PageEditScene(
-                                            scene: scene,
-                                            document:
-                                                lifecycle.controller.state,
-                                            session: lifecycle.controller,
-                                            editingEnabled: isEditingMode,
-                                            displaySize: pageRect.size,
-                                            cleanPatches: lifecycle
-                                                .cleanPatchesFor(
-                                                  page.pageNumber,
-                                                ),
-                                            liveTiles: lifecycle.liveTilesFor(
-                                              page.pageNumber,
-                                            ),
-                                            selectionActionsBuilder:
-                                                (
-                                                  context,
-                                                  selection,
-                                                  object,
-                                                  pageNumber,
-                                                ) => SelectionAiToolbar(
-                                                  hasValidatedSelection: true,
-                                                  sharingEnabled:
-                                                      _selectedProvider()
-                                                          ?.shareRetrievedPassages ??
-                                                      false,
-                                                  onAction: (action) =>
-                                                      _runSelectionAction(
-                                                        action,
-                                                        selection,
-                                                        object,
-                                                        pageNumber,
-                                                      ),
-                                                ),
-                                            pageOverlayBuilder:
-                                                (context, pageNumber) {
-                                                  final proposal = agentState
-                                                      ?.pendingProposal;
-                                                  if (proposal == null ||
-                                                      !proposal.targets.any(
-                                                        (target) =>
-                                                            target.pageNumber ==
-                                                            pageNumber,
-                                                      )) {
-                                                    return null;
-                                                  }
-                                                  return AgentDiffOverlay(
-                                                    proposal: proposal,
-                                                  );
-                                                },
-                                          );
-                                          if (agent == null) {
-                                            return sceneWidget(null);
-                                          }
-                                          return StreamBuilder<
-                                            AgentRunControllerState
-                                          >(
-                                            stream: agent.changes,
-                                            initialData: agent.state,
-                                            builder: (context, snapshot) =>
-                                                sceneWidget(snapshot.data),
-                                          );
-                                        },
-                                      ),
+                                if (_pageSceneLifecycle
+                                    case final PageSceneLifecycle lifecycle
+                                        when !lifecycle.isDisposed)
+                                  Positioned.fill(
+                                    child: PageSceneHost(
+                                      lifecycle: lifecycle,
+                                      pageNumber: page.pageNumber,
+                                      builder: (context, scene) {
+                                        Widget sceneWidget(
+                                          AgentRunControllerState? agentState,
+                                        ) => PageEditScene(
+                                          scene: scene,
+                                          document:
+                                              lifecycle.controller.state,
+                                          session: lifecycle.controller,
+                                          editingEnabled: isEditingMode,
+                                          displaySize: pageRect.size,
+                                          cleanPatches: lifecycle
+                                              .cleanPatchesFor(
+                                                page.pageNumber,
+                                              ),
+                                          liveTiles: lifecycle.liveTilesFor(
+                                            page.pageNumber,
+                                          ),
+                                          selectionActionsBuilder:
+                                              (
+                                                context,
+                                                selection,
+                                                object,
+                                                pageNumber,
+                                              ) => SelectionAiToolbar(
+                                                hasValidatedSelection: true,
+                                                sharingEnabled:
+                                                    _selectedProvider()
+                                                        ?.shareRetrievedPassages ??
+                                                    false,
+                                                onAction: (action) =>
+                                                    _runSelectionAction(
+                                                      action,
+                                                      selection,
+                                                      object,
+                                                      pageNumber,
+                                                    ),
+                                              ),
+                                          pageOverlayBuilder:
+                                              (context, pageNumber) {
+                                                final proposal = agentState
+                                                    ?.pendingProposal;
+                                                if (proposal == null ||
+                                                    !proposal.targets.any(
+                                                      (target) =>
+                                                          target.pageNumber ==
+                                                          pageNumber,
+                                                    )) {
+                                                  return null;
+                                                }
+                                                return AgentDiffOverlay(
+                                                  proposal: proposal,
+                                                );
+                                              },
+                                        );
+                                        if (agent == null) {
+                                          return sceneWidget(null);
+                                        }
+                                        return StreamBuilder<
+                                          AgentRunControllerState
+                                        >(
+                                          stream: agent.changes,
+                                          initialData: agent.state,
+                                          builder: (context, snapshot) =>
+                                              sceneWidget(snapshot.data),
+                                        );
+                                      },
                                     ),
+                                  ),
                               ];
                             },
                           ),
                         );
                       },
-                ),
-              ),
+                    ),
             ),
             if (_shouldShowSearchOverlay)
               Positioned(
@@ -617,6 +821,35 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                   ),
                 ),
               ),
+            if (!_isCanvasEditingActive)
+              Positioned(
+                top: 14,
+                right: 18,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    _EditDocumentModeButton(
+                      isEditingMode: _isCanvasEditingActive,
+                      onToggle: () async {
+                        if (!_isCanvasEditingActive) {
+                          try {
+                            await ref.read(editorSessionRegistryProvider).open(
+                                  tabId: widget.tab.id,
+                                  sourcePath: widget.tab.filePath,
+                                );
+                          } catch (error) {
+                            ref.read(workspaceNotifierProvider.notifier).reportPdfEditFailure(error);
+                          }
+                        }
+                        if (mounted) {
+                          setState(() => _isCanvasEditingActive = !_isCanvasEditingActive);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+
             Positioned(
               left: 0,
               right: 0,
@@ -669,6 +902,10 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             onToggleTextEditing: _controller.isReady
                                 ? _toggleTextEditing
                                 : null,
+                            onRefreshCanvas: _refreshCanvasOverlay,
+                            onUndo: null,
+                            onRedo: null,
+                            onSave: () => ref.read(workspaceNotifierProvider.notifier).saveActivePdfEdits(),
                           );
                         },
                   ),
@@ -676,6 +913,69 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditDocumentModeButton extends StatelessWidget {
+  const _EditDocumentModeButton({
+    required this.isEditingMode,
+    required this.onToggle,
+  });
+
+  final bool isEditingMode;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onToggle,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isEditingMode
+                ? const Color(0xFF16A34A)
+                : const Color(0xCC0F172A),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isEditingMode
+                  ? const Color(0xFF22C55E)
+                  : const Color(0x33FFFFFF),
+              width: 1,
+            ),
+            boxShadow: const <BoxShadow>[
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 8,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                isEditingMode ? LucideIcons.check : LucideIcons.pencil,
+                size: 14,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isEditingMode ? 'Done Editing' : 'Edit Document',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

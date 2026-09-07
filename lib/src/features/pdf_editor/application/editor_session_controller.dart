@@ -273,7 +273,23 @@ class EditorSessionController {
       throw StateError('an editor command is already outstanding');
     }
     if (!_state.objects.containsKey(objectId)) {
-      throw ArgumentError.value(objectId, 'objectId', 'object is not loaded');
+      EditorSceneObject? found;
+      for (final scene in _state.scenes.values) {
+        found = scene.objects.where((o) => o.objectId == objectId).firstOrNull;
+        if (found != null) break;
+      }
+      if (found != null) {
+        final objects = Map<String, EditorObjectState>.from(_state.objects);
+        objects[objectId] = EditorObjectState(
+          objectId: objectId,
+          pageId: found.pageId,
+          acceptedText: found.text ?? '',
+          modifiedRevision: found.modifiedRevision,
+        );
+        _state = _state.copyWith(objects: objects);
+      } else {
+        throw ArgumentError.value(objectId, 'objectId', 'object is not loaded');
+      }
     }
     final edit = OptimisticTextEdit(
       commandId: _commandIds(),
@@ -523,6 +539,7 @@ class EditorSessionController {
       _emit(
         _state.copyWith(
           revision: result.committedRevision,
+          scenes: _patchScenes(_state.scenes, result.objectPatches),
           objects: objects,
           save: _state.save.copyWith(
             phase: EditorSavePhase.dirty,

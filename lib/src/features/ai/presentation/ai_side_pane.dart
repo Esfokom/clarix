@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
@@ -150,6 +151,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               ],
             ),
           ),
+          _ProviderSelectorBar(aiState: widget.aiState, colors: colors),
           if (agentController != null)
             StreamBuilder<AgentRunControllerState>(
               stream: agentController.changes,
@@ -502,70 +504,113 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isUser = message.isUser;
-    final Widget content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        MarkdownBody(
-          data: message.text.isEmpty ? '...' : message.text,
-          extensionSet: markdown.ExtensionSet(
-            <markdown.BlockSyntax>[
-              ...markdown.ExtensionSet.gitHubFlavored.blockSyntaxes,
-              LatexBlockSyntax(),
-            ],
-            <markdown.InlineSyntax>[
-              ...markdown.ExtensionSet.gitHubFlavored.inlineSyntaxes,
-              LatexInlineSyntax(),
-              if (!isUser) InlinePageReferenceSyntax(),
-            ],
-          ),
-          builders: <String, MarkdownElementBuilder>{
-            'latex': LatexElementBuilder(
-              textStyle: const TextStyle(
+    final Widget content = SelectionArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          MarkdownBody(
+            data: message.text.isEmpty ? '...' : message.text,
+            extensionSet: markdown.ExtensionSet(
+              <markdown.BlockSyntax>[
+                ...markdown.ExtensionSet.gitHubFlavored.blockSyntaxes,
+                LatexBlockSyntax(),
+              ],
+              <markdown.InlineSyntax>[
+                ...markdown.ExtensionSet.gitHubFlavored.inlineSyntaxes,
+                LatexInlineSyntax(),
+                if (!isUser) InlinePageReferenceSyntax(),
+              ],
+            ),
+            builders: <String, MarkdownElementBuilder>{
+              'latex': LatexElementBuilder(
+                textStyle: const TextStyle(
+                  color: WorkspaceColors.textStrong,
+                  fontSize: 13.5,
+                  height: 1.45,
+                ),
+              ),
+              if (!isUser)
+                'inline-page-reference': InlinePageReferenceBuilder(
+                  document: documentContext,
+                  documentRef: null,
+                  onNavigate: null,
+                ),
+            },
+            styleSheet: MarkdownStyleSheet(
+              p: const TextStyle(
                 color: WorkspaceColors.textStrong,
                 fontSize: 13.5,
                 height: 1.45,
               ),
-            ),
-            if (!isUser)
-              'inline-page-reference': InlinePageReferenceBuilder(
-                document: documentContext,
-                documentRef: null,
-                onNavigate: null,
+              tableHead: const TextStyle(
+                color: WorkspaceColors.textStrong,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+                height: 1.4,
               ),
-          },
-          styleSheet: MarkdownStyleSheet(
-            p: const TextStyle(
-              color: WorkspaceColors.textStrong,
-              fontSize: 13.5,
-              height: 1.45,
+              tableBody: const TextStyle(
+                color: WorkspaceColors.textStrong,
+                fontSize: 13.5,
+                height: 1.4,
+              ),
+              tableCellsPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+              code: const TextStyle(color: WorkspaceColors.textStrong),
             ),
-            tableHead: const TextStyle(
-              color: WorkspaceColors.textStrong,
-              fontSize: 13.5,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
-            tableBody: const TextStyle(
-              color: WorkspaceColors.textStrong,
-              fontSize: 13.5,
-              height: 1.4,
-            ),
-            tableCellsPadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 10,
-            ),
-            code: const TextStyle(color: WorkspaceColors.textStrong),
           ),
-        ),
-      ],
+        ],
+      ),
     );
 
     if (!isUser) {
       return Padding(
         key: const Key('assistant-message-content'),
         padding: const EdgeInsets.fromLTRB(4, 10, 4, 12),
-        child: SizedBox(width: double.infinity, child: content),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            content,
+            const SizedBox(height: 4),
+            InkWell(
+              onTap: () async {
+                final cleanText = message.text
+                    .replaceAll(RegExp(r'\[\[EDIT_TEXT:.*?\]\]'), '')
+                    .replaceAll(RegExp(r'\[\[SCROLL_TO_PAGE:.*?\]\]'), '')
+                    .replaceAll(RegExp(r'\[\[CREATE_SOLUTION_PDF:.*?\]\]'), '')
+                    .replaceAll(RegExp(r'\[\[SAVE_DOCUMENT:.*?\]\]'), '')
+                    .trim();
+                await Clipboard.setData(ClipboardData(text: cleanText));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Message copied to clipboard'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                }
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Icon(LucideIcons.copy, size: 12, color: colors.textFaint),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Copy',
+                      style: TextStyle(color: colors.textFaint, fontSize: 10.5),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
@@ -573,17 +618,52 @@ class _MessageBubble extends StatelessWidget {
       builder: (BuildContext context, WidgetRef ref, Widget? _) {
         return Align(
           alignment: Alignment.centerRight,
-          child: Container(
-            key: const Key('user-message-bubble'),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
-            constraints: const BoxConstraints(maxWidth: 300),
-            decoration: BoxDecoration(
-              color: colors.accentSoft,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colors.accentBorder),
-            ),
-            child: content,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Container(
+                key: const Key('user-message-bubble'),
+                margin: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.all(10),
+                constraints: const BoxConstraints(maxWidth: 300),
+                decoration: BoxDecoration(
+                  color: colors.accentSoft,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: colors.accentBorder),
+                ),
+                child: content,
+              ),
+              InkWell(
+                onTap: () async {
+                  await Clipboard.setData(ClipboardData(text: message.text.trim()));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Prompt copied to clipboard'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(LucideIcons.copy, size: 11, color: colors.textFaint),
+                      const SizedBox(width: 3),
+                      Text(
+                        'Copy',
+                        style: TextStyle(color: colors.textFaint, fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
           ),
         );
       },
@@ -686,5 +766,288 @@ class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
         ],
       ),
     );
+  }
+}
+
+class _ProviderSelectorBar extends ConsumerWidget {
+  const _ProviderSelectorBar({
+    required this.aiState,
+    required this.colors,
+  });
+
+  final AiFeatureState aiState;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profiles = aiState.providerProfiles;
+    final selectedId = aiState.chat.selectedProviderId;
+    final selectedProfile =
+        profiles.where((p) => p.id == selectedId).firstOrNull ??
+            profiles.firstOrNull;
+
+    final isOffline = selectedProfile?.baseUrl.contains('localhost') == true ||
+        selectedProfile?.baseUrl.contains('127.0.0.1') == true ||
+        selectedProfile?.id.contains('local') == true ||
+        selectedProfile?.id.contains('gemma') == true;
+
+    final label = selectedProfile?.label ?? 'Select Provider';
+    final accentColor =
+        isOffline ? const Color(0xFF10B981) : const Color(0xFF3B82F6);
+    final badgeText = isOffline ? '100% Offline' : 'Cloud API';
+    final icon =
+        isOffline ? LucideIcons.laptop : LucideIcons.cloud;
+
+    final offlineProfiles = profiles
+        .where(
+          (p) =>
+              p.baseUrl.contains('localhost') ||
+              p.baseUrl.contains('127.0.0.1') ||
+              p.id.contains('local') ||
+              p.id.contains('gemma'),
+        )
+        .toList();
+
+    final onlineProfiles =
+        profiles.where((p) => !offlineProfiles.contains(p)).toList();
+
+    return InkWell(
+      onTap: () => _showProviderMenu(
+        context,
+        ref,
+        offlineProfiles,
+        onlineProfiles,
+        selectedProfile?.id,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: accentColor.withValues(alpha: 0.06),
+          border: Border(bottom: BorderSide(color: colors.border)),
+        ),
+        child: Row(
+          children: <Widget>[
+            Icon(icon, size: 13, color: accentColor),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: colors.textStrong,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(
+                  color: accentColor.withValues(alpha: 0.4),
+                  width: 0.8,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Container(
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: accentColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    badgeText,
+                    style: TextStyle(
+                      color: accentColor,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(LucideIcons.chevronDown, size: 13, color: colors.textFaint),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showProviderMenu(
+    BuildContext context,
+    WidgetRef ref,
+    List<AiProviderProfile> offline,
+    List<AiProviderProfile> online,
+    String? selectedId,
+  ) {
+    final RenderBox box = context.findRenderObject()! as RenderBox;
+    final position = RelativeRect.fromRect(
+      box.localToGlobal(Offset.zero) & box.size,
+      Offset.zero & MediaQuery.of(context).size,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: position,
+      items: <PopupMenuEntry<String>>[
+        const PopupMenuItem<String>(
+          enabled: false,
+          child: Text(
+            '🏠 OFFLINE LOCAL MODELS',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF10B981),
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        ...offline.map(
+          (profile) => PopupMenuItem<String>(
+            value: profile.id,
+            child: Row(
+              children: <Widget>[
+                Icon(
+                  profile.id == selectedId
+                      ? LucideIcons.check
+                      : LucideIcons.circle,
+                  size: 14,
+                  color: profile.id == selectedId
+                      ? const Color(0xFF10B981)
+                      : Colors.grey,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        profile.label,
+                        style: TextStyle(
+                          fontWeight: profile.id == selectedId
+                              ? FontWeight.w700
+                              : FontWeight.normal,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        '${profile.modelId} · No Internet',
+                        style:
+                            const TextStyle(fontSize: 10, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+                if (profile.id == selectedId)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'ACTIVE',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF10B981),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        if (online.isNotEmpty) ...<PopupMenuEntry<String>>[
+          const PopupMenuDivider(),
+          const PopupMenuItem<String>(
+            enabled: false,
+            child: Text(
+              '☁️ ONLINE CLOUD MODELS',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF3B82F6),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          ...online.map(
+            (profile) => PopupMenuItem<String>(
+              value: profile.id,
+              child: Row(
+                children: <Widget>[
+                  Icon(
+                    profile.id == selectedId
+                        ? LucideIcons.check
+                        : LucideIcons.circle,
+                    size: 14,
+                    color: profile.id == selectedId
+                        ? const Color(0xFF3B82F6)
+                        : Colors.grey,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          profile.label,
+                          style: TextStyle(
+                            fontWeight: profile.id == selectedId
+                                ? FontWeight.w700
+                                : FontWeight.normal,
+                            fontSize: 13,
+                          ),
+                        ),
+                        Text(
+                          '${profile.modelId} · Cloud API',
+                          style:
+                              const TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (profile.id == selectedId)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'ACTIVE',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3B82F6),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    ).then((profileId) {
+      if (profileId != null) {
+        ref.read(aiNotifierProvider.notifier).selectProvider(profileId);
+      }
+    });
   }
 }
