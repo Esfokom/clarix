@@ -429,6 +429,7 @@ class _ViewerHud extends StatelessWidget {
     required this.pageCount,
     required this.zoom,
     required this.documentId,
+    required this.filePath,
     required this.onPreviousPage,
     required this.onNextPage,
     required this.onZoomOut,
@@ -448,6 +449,7 @@ class _ViewerHud extends StatelessWidget {
   final int? pageCount;
   final double zoom;
   final String documentId;
+  final String filePath;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
   final VoidCallback? onZoomOut;
@@ -539,6 +541,27 @@ class _ViewerHud extends StatelessWidget {
             _HudIcon(icon: LucideIcons.plus, onPressed: onZoomIn),
             const SizedBox(width: 10),
             const _HudDivider(),
+            const SizedBox(width: 10),
+            Tooltip(
+              message: 'Copy Deep Link to Page $page (clarix://open)',
+              child: _HudIcon(
+                icon: LucideIcons.link,
+                onPressed: () {
+                  final link = const DeepLinkService().generateDeepLink(
+                    filePath: filePath,
+                    page: page,
+                  );
+                  Clipboard.setData(ClipboardData(text: link));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Copied deep link: $link'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 6),
             const SizedBox(width: 10),
             Tooltip(
               message: 'Highlight selected text',
