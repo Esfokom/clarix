@@ -71,6 +71,10 @@ final livingDocumentServiceProvider = Provider<LivingDocumentService>(
   (Ref ref) => LivingDocumentService(),
 );
 
+final forensicMarginaliaServiceProvider = Provider<ForensicMarginaliaService>(
+  (Ref ref) => ForensicMarginaliaService(),
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );

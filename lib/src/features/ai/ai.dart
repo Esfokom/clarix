@@ -29,6 +29,8 @@ export 'application/gemma_cognitive_ui_service.dart';
 export 'application/gemma_auditor_service.dart';
 export 'application/voice_copilot_service.dart';
 export 'application/living_document_service.dart';
+export 'application/forensic_marginalia_service.dart';
 export 'presentation/timeline_seekbar_widget.dart';
 export 'presentation/simulation_slider_card.dart';
 export 'presentation/chart_interrogator_widget.dart';
+export 'presentation/forensic_diff_viewer.dart';
