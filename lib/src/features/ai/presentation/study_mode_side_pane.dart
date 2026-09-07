@@ -12,6 +12,7 @@ import '../domain/ai_feature_state.dart';
 import '../application/ai_document_context.dart';
 import '../application/ai_providers.dart';
 import '../../tts/tts.dart';
+import '../../annotations/annotations.dart';
 
 /// Merged Q&A Icon Widget representing Study Mode
 class QaMergedIcon extends StatelessWidget {
@@ -711,6 +712,13 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
               ),
             ),
           ),
+          if (ref.watch(offlineAudioBookServiceProvider).state != AudioBookState.idle)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              child: AudioBookPlayerBar(
+                audioBookService: ref.watch(offlineAudioBookServiceProvider),
+              ),
+            ),
         ],
       ),
     );
@@ -872,6 +880,37 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             ),
           ),
           const SizedBox(width: 6),
+          Tooltip(
+            message: 'Privacy-First Data Masking (Smart Redact)',
+            child: IconButton(
+              icon: const Icon(LucideIcons.shieldAlert, size: 15, color: Color(0xFFEF4444)),
+              onPressed: () {
+                final documentText = _pageSummaryText;
+                showDialog(
+                  context: context,
+                  builder: (ctx) => RedactionDialog(
+                    documentText: documentText,
+                    redactionService: ref.read(smartRedactionServiceProvider),
+                  ),
+                );
+              },
+            ),
+          ),
+          Tooltip(
+            message: 'Offline Audio-Book Mode',
+            child: IconButton(
+              icon: const Icon(LucideIcons.headphones, size: 15, color: Color(0xFF10B981)),
+              onPressed: () {
+                final text = _pageSummaryText;
+                final audioBook = ref.read(offlineAudioBookServiceProvider);
+                audioBook.loadBook([text]);
+                audioBook.play();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Offline Audio-Book Mode started!'), duration: Duration(seconds: 2)),
+                );
+              },
+            ),
+          ),
           Tooltip(
             message: 'Refresh Study Mode & generate 10 new items',
             child: IconButton(
