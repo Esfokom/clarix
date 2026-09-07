@@ -78,6 +78,7 @@ class AiRuntimeService {
 
     onStatus?.call(AiRuntimePhase.generating, 'Contacting ${profile.label}...');
     final client = HttpClient();
+    client.connectionTimeout = const Duration(seconds: 10);
     try {
       final String endpoint = profile.baseUrl.endsWith('/chat/completions')
           ? profile.baseUrl

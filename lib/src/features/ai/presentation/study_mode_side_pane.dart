@@ -159,12 +159,21 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
       _generateMaterialForCurrentDocument();
     }
 
+    if (_isRefreshing && !widget.aiState.chat.chatBusy) {
+      setState(() {
+        _isRefreshing = false;
+      });
+    }
+
     // Parse newly arrived AI assistant messages
     final messages = widget.aiState.chat.messages;
     if (messages.length != _lastParsedMessageCount) {
       _lastParsedMessageCount = messages.length;
       if (messages.isNotEmpty && !messages.last.isUser && messages.last.text.trim().isNotEmpty) {
         _parseIncomingAiResponse(messages.last.text.trim());
+        setState(() {
+          _isRefreshing = false;
+        });
       }
     }
   }
@@ -543,6 +552,21 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
 
   void _sendStudyPrompt(String prompt) {
     if (widget.documentContext == null) return;
+
+    final bool providerReady = widget.aiState.chat.providerReady &&
+        widget.aiState.chat.selectedProviderId != null;
+
+    if (!providerReady) {
+      setState(() {
+        _generateMaterialForCurrentDocument();
+        _flashCards.shuffle();
+        _quizzes.shuffle();
+        _concepts.shuffle();
+        _isRefreshing = false;
+      });
+      return;
+    }
+
     setState(() => _isRefreshing = true);
 
     final StringBuffer buffer = StringBuffer();

@@ -254,8 +254,9 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
             final chunks = await chunkStore.readChunks(tab.documentId);
             if (chunks.isNotEmpty) {
               contextBuffer.writeln('\n--- DOCUMENT SOURCE: "${tab.title}" ---');
-              for (final c in chunks.take(15)) {
-                contextBuffer.writeln('[Page ${c.pageNumber}]: ${c.text}');
+              for (final c in chunks.take(5)) {
+                final snippet = c.text.length > 300 ? '${c.text.substring(0, 300)}...' : c.text;
+                contextBuffer.writeln('[Page ${c.pageNumber}]: $snippet');
               }
             }
           }
@@ -263,8 +264,9 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           final chunks = await chunkStore.readChunks(context.documentId);
           if (chunks.isNotEmpty) {
             contextBuffer.writeln('[DOCUMENT SOURCE TEXT: "${context.title}"]');
-            for (final c in chunks.take(20)) {
-              contextBuffer.writeln('[Page ${c.pageNumber}]: ${c.text}');
+            for (final c in chunks.take(10)) {
+              final snippet = c.text.length > 300 ? '${c.text.substring(0, 300)}...' : c.text;
+              contextBuffer.writeln('[Page ${c.pageNumber}]: $snippet');
             }
           }
         }
