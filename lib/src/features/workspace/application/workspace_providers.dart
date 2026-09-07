@@ -47,6 +47,26 @@ final offlineAudioBookServiceProvider = Provider<OfflineAudioBookService>(
   ),
 );
 
+final gemmaSimulationServiceProvider = Provider<GemmaSimulationService>(
+  (Ref ref) => GemmaSimulationService(),
+);
+
+final gemmaTimelineServiceProvider = Provider<GemmaTimelineService>(
+  (Ref ref) => GemmaTimelineService(),
+);
+
+final gemmaCognitiveUiServiceProvider = Provider<GemmaCognitiveUiService>(
+  (Ref ref) => GemmaCognitiveUiService(),
+);
+
+final gemmaAuditorServiceProvider = Provider<GemmaAuditorService>(
+  (Ref ref) => GemmaAuditorService(),
+);
+
+final voiceCopilotServiceProvider = Provider<VoiceCopilotService>(
+  (Ref ref) => VoiceCopilotService(),
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );

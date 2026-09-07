@@ -8,9 +8,7 @@ import 'package:file_picker/file_picker.dart';
 
 import '../../workspace/application/workspace_providers.dart';
 import '../../workspace/presentation/widgets/workspace_common.dart';
-import '../domain/ai_feature_state.dart';
-import '../application/ai_document_context.dart';
-import '../application/ai_providers.dart';
+import '../ai.dart';
 import '../../tts/tts.dart';
 import '../../annotations/annotations.dart';
 
@@ -70,6 +68,10 @@ enum StudyTab {
   concepts,
   studyCards,
   pageSummary,
+  timeline,
+  simulation,
+  auditor,
+  bionic,
 }
 
 enum StudyContextScope {
@@ -644,6 +646,11 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           'Analyze $pageRangeStr of "$docTitle" and provide an executive study brief covering major subtopics, key theorems, and 5 suggested deep-dive questions to explore.',
         );
         break;
+      default:
+        _sendStudyPrompt(
+          'Analyze $pageRangeStr of "$docTitle" and generate detailed structural insights for study mode.',
+        );
+        break;
     }
   }
 
@@ -1117,6 +1124,10 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           _tabChip(StudyTab.concepts, '10 Concepts', LucideIcons.lightbulb, const Color(0xFFF59E0B)),
           _tabChip(StudyTab.studyCards, 'Study Guide', LucideIcons.bookOpen, const Color(0xFF3B82F6)),
           _tabChip(StudyTab.pageSummary, 'Summary', LucideIcons.fileText, const Color(0xFF10B981)),
+          _tabChip(StudyTab.timeline, 'Timeline Seekbar', LucideIcons.history, const Color(0xFF818CF8)),
+          _tabChip(StudyTab.simulation, 'Simulation Sliders', LucideIcons.sliders, const Color(0xFF0EA5E9)),
+          _tabChip(StudyTab.auditor, 'Bias Auditor', LucideIcons.shieldCheck, const Color(0xFFF59E0B)),
+          _tabChip(StudyTab.bionic, 'Bionic Reflow', LucideIcons.eye, const Color(0xFF10B981)),
         ],
       ),
     );
@@ -1171,7 +1182,120 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
       StudyTab.studyCards => _buildStudyCardsView(),
       StudyTab.pageSummary => _buildPageSummaryView(),
       StudyTab.qaChat => _buildQaChatView(),
+      StudyTab.timeline => _buildTimelineView(),
+      StudyTab.simulation => _buildSimulationView(),
+      StudyTab.auditor => _buildAuditorView(),
+      StudyTab.bionic => _buildBionicView(),
     };
+  }
+
+  Widget _buildTimelineView() {
+    final timelineService = ref.watch(gemmaTimelineServiceProvider);
+    if (timelineService.timelineEvents.isEmpty) {
+      timelineService.extractChronology(_pageSummaryText);
+    }
+    return SingleChildScrollView(
+      child: TimelineSeekbarWidget(timelineService: timelineService),
+    );
+  }
+
+  Widget _buildSimulationView() {
+    final simService = ref.watch(gemmaSimulationServiceProvider);
+    final formulas = simService.parsedFormulas.isEmpty
+        ? simService.parseFormulasFromJson(_pageSummaryText)
+        : simService.parsedFormulas;
+
+    return ListView.builder(
+      itemCount: formulas.length,
+      itemBuilder: (context, index) {
+        return SimulationSliderCard(
+          formula: formulas[index],
+          simulationService: simService,
+        );
+      },
+    );
+  }
+
+  Widget _buildAuditorView() {
+    final auditorService = ref.watch(gemmaAuditorServiceProvider);
+    final items = auditorService.auditedFallacies.isEmpty
+        ? auditorService.auditDocumentBiasAndFallacies(_pageSummaryText)
+        : auditorService.auditedFallacies;
+
+    return ListView.builder(
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final isHigh = item.severity == FallacySeverity.high;
+        final color = isHigh ? const Color(0xFFEF4444) : const Color(0xFFF59E0B);
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: const Color(0x331E293B),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.5)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(LucideIcons.shieldAlert, size: 14, color: color),
+                  const SizedBox(width: 6),
+                  Text(item.fallacyType, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.bold)),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
+                    child: Text(item.severity.name.toUpperCase(), style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(item.claim, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(item.explanation, style: const TextStyle(color: Colors.white70, fontSize: 10.5)),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBionicView() {
+    final cognitiveService = ref.watch(gemmaCognitiveUiServiceProvider);
+    final reflowed = cognitiveService.reflowLayout(_pageSummaryText);
+    final bionicText = cognitiveService.generateBionicReadingText(reflowed);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0x331E293B),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0x3310B981)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(LucideIcons.eye, size: 14, color: Color(0xFF10B981)),
+                SizedBox(width: 6),
+                Text('Reasoning-Injected Bionic Reading View', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SelectableText(
+              bionicText,
+              style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.6),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // 1. Quizzes View
