@@ -236,6 +236,7 @@ pub struct PreparedCommand {
     /// Present only for commands whose semantic object changes can be applied
     /// by the live PDFium backend without Rust materialization.
     pub physical_plan: Option<crate::PhysicalEditPlan>,
+    pub physical_apply_required: bool,
     pub result: CommandResult,
     pub(crate) next_state: Box<crate::EditorSessionState>,
 }

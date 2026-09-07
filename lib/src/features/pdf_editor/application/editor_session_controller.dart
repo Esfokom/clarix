@@ -45,7 +45,7 @@ class EditorSessionController {
   final EditorCommandIdFactory _commandIds;
   final int _maxResidentScenes;
   final StreamController<EditorDocumentState> _changes =
-      StreamController<EditorDocumentState>.broadcast(sync: true);
+      StreamController<EditorDocumentState>.broadcast();
   StreamSubscription<EditorEvent>? _events;
   EditorDocumentState _state = const EditorDocumentState();
   bool _disposed = false;
@@ -63,6 +63,7 @@ class EditorSessionController {
 
   EditorDocumentState get state => _state;
   Stream<EditorDocumentState> get changes => _changes.stream;
+  bool get usesLivePdfiumRendering => _gateway is EditorLivePdfiumTileGateway;
   Stream<List<EditorTileInvalidation>> get liveTileInvalidations {
     final gateway = _gateway;
     return gateway is EditorLivePdfiumTileGateway
@@ -121,9 +122,16 @@ class EditorSessionController {
     int pageNumber, {
     EditorViewportPriority priority = EditorViewportPriority.visible,
     bool force = false,
-  }) {
+  }) async {
     _ensureActive();
-    return _viewport.refreshPage(pageNumber, priority: priority, force: force);
+    try {
+      await _viewport.refreshPage(pageNumber, priority: priority, force: force);
+    } catch (error) {
+      if (!_disposed && _errorCode(error) == 'live_hydration_failed') {
+        _emit(_state.copyWith(errorCode: 'live_hydration_failed'));
+      }
+      rethrow;
+    }
   }
 
   void updateViewport(Set<int> visiblePages, {int preloadRadius = 2}) {
@@ -827,6 +835,13 @@ Map<int, EditorPageScene> _removeObjectsFromScenes(
 }
 
 String _errorCode(Object error) {
+  final rawMessage = error is StateError ? error.message : error.toString();
+  if (rawMessage.startsWith('live PDFium revision conflict')) {
+    return 'live_pdfium_revision_conflict';
+  }
+  if (rawMessage.contains('glyph') || rawMessage.contains('FPDFText_SetText')) {
+    return 'glyph_unsupported';
+  }
   final message = error.toString().replaceFirst(
     RegExp(r'^(Exception|StateError):\s*'),
     '',

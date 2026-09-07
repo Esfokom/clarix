@@ -14,7 +14,31 @@ abstract final class EditorPageGeometry {
     required Size pageSize,
     required Size displaySize,
     double bleedPoints = 0,
+    EditorAffineTransform? transform,
   }) {
+    if (transform != null) {
+      final points = [
+        for (final x in [bounds.left, bounds.right])
+          for (final y in [bounds.bottom, bounds.top])
+            Offset(
+              transform.a * x + transform.c * y + transform.e,
+              transform.b * x + transform.d * y + transform.f,
+            ),
+      ];
+      final rect = points
+          .skip(1)
+          .fold<Rect>(
+            Rect.fromPoints(points.first, points.first),
+            (rect, point) =>
+                rect.expandToInclude(Rect.fromPoints(point, point)),
+          );
+      bounds = EditorPdfBox(
+        left: rect.left,
+        bottom: rect.top,
+        right: rect.right,
+        top: rect.bottom,
+      );
+    }
     final sx = displaySize.width / pageSize.width;
     final sy = displaySize.height / pageSize.height;
     final rawLeft = (bounds.left - bleedPoints) * sx;

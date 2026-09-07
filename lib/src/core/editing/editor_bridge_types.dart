@@ -608,6 +608,7 @@ class EditorPreparedLiveCommand {
     required this.commandId,
     required this.previousRevision,
     required this.committedRevision,
+    required this.physicalApplyRequired,
     required this.plan,
   });
 
@@ -617,6 +618,7 @@ class EditorPreparedLiveCommand {
   final String commandId;
   final int previousRevision;
   final int committedRevision;
+  final bool physicalApplyRequired;
   final EditorPhysicalEditPlan plan;
 }
 

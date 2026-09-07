@@ -217,6 +217,9 @@ class BridgeEditorSessionGateway
       _session = semanticSession;
       _sessionId = metadata.sessionId;
       _livePdfiumSession = liveSession;
+      if (liveSession case final LivePdfiumRevisionSync revisionSync) {
+        revisionSync.seedRevision(metadata.revision);
+      }
       final locatorRegistry = LivePdfiumLocatorRegistry();
       locatorRegistry.registerManifest(
         manifest,
@@ -258,11 +261,61 @@ class BridgeEditorSessionGateway
     EditorViewportPriority priority = EditorViewportPriority.visible,
   }) async {
     await _hydrateLivePageIfAvailable(pageNumber, expectedRevision);
-    return _required().pageScene(
+    final scene = await _required().pageScene(
       pageNumber: pageNumber,
       expectedRevision: expectedRevision,
       priority: priority,
     );
+    return EditorPageScene(
+      schemaVersion: scene.schemaVersion,
+      pageId: scene.pageId,
+      pageNumber: scene.pageNumber,
+      width: scene.width,
+      height: scene.height,
+      revision: scene.revision,
+      objects: await _measureObjects(scene.objects),
+    );
+  }
+
+  Future<List<EditorSceneObject>> _measureObjects(
+    List<EditorSceneObject> objects,
+  ) async {
+    final live = _livePdfiumSession;
+    final registry = _livePdfiumLocatorRegistry;
+    if (live is! LivePdfiumSession || registry == null) return objects;
+    final bound = <EditorSceneObject>[];
+    for (final object in objects) {
+      if (!registry.hasObject(object.objectId)) {
+        bound.add(object);
+        continue;
+      }
+      final locator = registry.locatorForObject(object.objectId);
+      bound.add(
+        EditorSceneObject(
+          kind: object.kind,
+          objectId: object.objectId,
+          pageId: object.pageId,
+          text: object.text,
+          bounds: object.bounds,
+          transform: object.transform,
+          capability: object.capability,
+          capabilityReason: object.capabilityReason,
+          modifiedRevision: object.modifiedRevision,
+          runs: object.runs,
+          characterBoxes: object.characterBoxes,
+          layout: object.layout,
+          fontFingerprint: object.fontFingerprint,
+          fontAssetHandle: object.fontAssetHandle,
+          physicalLocator: locator,
+        ),
+      );
+    }
+    try {
+      return await live.measureTextObjects(bound);
+    } catch (error) {
+      debugPrint('[editor] native character measurement failed: $error');
+      return bound;
+    }
   }
 
   Future<void> _hydrateLivePageIfAvailable(
@@ -282,41 +335,119 @@ class BridgeEditorSessionGateway
   }
 
   Future<void> _hydrateLivePage(int pageNumber, int expectedRevision) async {
+    try {
+      return await _hydrateLivePageOrThrow(pageNumber, expectedRevision);
+    } catch (error) {
+      throw StateError('live_hydration_failed: $error');
+    }
+  }
+
+  Future<void> _hydrateLivePageOrThrow(
+    int pageNumber,
+    int expectedRevision,
+  ) async {
     final liveSession = _livePdfiumSession;
     if (liveSession is! LivePdfiumPageImportSource) return;
     final semanticSession = _required();
-    final metadata = await semanticSession.metadata();
-    if (metadata.revision != expectedRevision) return;
-    final inspection = await (liveSession as LivePdfiumPageImportSource)
-        .inspectPageForImport(
-          sourceRevision: metadata.sourceFingerprint,
-          pageNumber: pageNumber,
-        );
-    final builder = const LivePdfiumImportManifestBuilder();
-    final manifest = builder.build(
-      sourceFingerprint: metadata.sourceFingerprint,
-      blocks: inspection.blocks,
-    );
-    await semanticSession.importLivePage(
-      builder.buildPageImport(
-        expectedRevision: expectedRevision,
+    var revision = expectedRevision;
+    for (var attempt = 0; attempt < 2; attempt++) {
+      final metadata = await semanticSession.metadata();
+      if (metadata.revision != revision) {
+        revision = metadata.revision;
+        continue;
+      }
+      final inspection = await (liveSession as LivePdfiumPageImportSource)
+          .inspectPageForImport(
+            sourceRevision: metadata.sourceFingerprint,
+            pageNumber: pageNumber,
+          );
+      final builder = const LivePdfiumImportManifestBuilder();
+      final manifest = builder.build(
         sourceFingerprint: metadata.sourceFingerprint,
-        pageNumber: inspection.pageNumber,
-        width: inspection.width,
-        height: inspection.height,
         blocks: inspection.blocks,
-      ),
-    );
-    _livePdfiumLocatorRegistry?.registerManifest(
-      manifest,
-      sourceFingerprint: metadata.sourceFingerprint,
-    );
-    _liveImportedPages.add(pageNumber);
+      );
+      await semanticSession.importLivePage(
+        builder.buildPageImport(
+          expectedRevision: revision,
+          sourceFingerprint: metadata.sourceFingerprint,
+          pageNumber: inspection.pageNumber,
+          width: inspection.width,
+          height: inspection.height,
+          blocks: inspection.blocks,
+        ),
+      );
+      _livePdfiumLocatorRegistry?.registerManifest(
+        manifest,
+        sourceFingerprint: metadata.sourceFingerprint,
+      );
+      _liveImportedPages.add(pageNumber);
+      return;
+    }
+    throw StateError('live_hydration_revision_moved_repeatedly');
   }
 
   @override
   Future<EditorCommandResult> submit(EditorCommandRequest request) =>
       _submitRouted(request);
+
+  Future<EditorCommandResult> _acknowledgePublish(
+    Future<EditorCommandResult> Function() publish,
+  ) async {
+    final result = await publish();
+    final liveSession = _livePdfiumSession;
+    if (liveSession case final LivePdfiumRevisionSync revisionSync) {
+      try {
+        revisionSync.acknowledgeRevision(result.committedRevision);
+      } on StateError {
+        // A concurrent close owns teardown of the live session.
+      }
+    }
+    if (liveSession is! LivePdfiumSession || result.objectPatches.isEmpty) {
+      return result;
+    }
+    // The command is already published. Geometry enrichment must not turn an
+    // accepted mutation into a reported failure (which could prompt a retry).
+    try {
+      final objects = await Future.wait(
+        result.objectPatches.map(
+          (patch) => _required().objectDetails(patch.objectId),
+        ),
+      );
+      final measured = {
+        for (final object in await _measureObjects(objects))
+          object.objectId: object,
+      };
+      return EditorCommandResult(
+        schemaVersion: result.schemaVersion,
+        commandId: result.commandId,
+        previousRevision: result.previousRevision,
+        committedRevision: result.committedRevision,
+        durable: result.durable,
+        warnings: result.warnings,
+        removedObjectIds: result.removedObjectIds,
+        objectPatches: [
+          for (final patch in result.objectPatches)
+            EditorObjectPatch(
+              objectId: patch.objectId,
+              pageId: patch.pageId,
+              modifiedRevision: patch.modifiedRevision,
+              text: patch.text,
+              textRuns: patch.textRuns,
+              characterBoxes:
+                  measured[patch.objectId]?.characterBoxes ??
+                  patch.characterBoxes,
+              bounds: measured[patch.objectId]?.bounds ?? patch.bounds,
+              transform: patch.transform,
+              fontFingerprint: patch.fontFingerprint,
+              fontAssetHandle: patch.fontAssetHandle,
+            ),
+        ],
+      );
+    } catch (error) {
+      debugPrint('[editor] accepted edit geometry unavailable: $error');
+      return result;
+    }
+  }
 
   Future<EditorCommandResult> _submitRouted(EditorCommandRequest request) {
     final objectId = request.payload.objectId;
@@ -341,12 +472,12 @@ class BridgeEditorSessionGateway
     );
     if (livePort != null && isLiveTextCommand) {
       if (!hasLiveBinding) throw StateError('live_pdfium_binding_missing');
-      return livePort.submit(request);
+      return _acknowledgePublish(() => livePort.submit(request));
     }
     if (isHistoryCommand && livePort != null) {
-      return livePort.submit(request);
+      return _acknowledgePublish(() => livePort.submit(request));
     }
-    return _required().submit(request);
+    return _acknowledgePublish(() => _required().submit(request));
   }
 
   @override
@@ -369,10 +500,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required String proposalToken,
-  }) => _required().approveFontFallback(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    proposalToken: proposalToken,
+  }) => _acknowledgePublish(
+    () => _required().approveFontFallback(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      proposalToken: proposalToken,
+    ),
   );
 
   @override
@@ -391,6 +524,15 @@ class BridgeEditorSessionGateway
   Future<EditorSaveResult> save(EditorSaveRequest request) async {
     final liveSession = _livePdfiumSession;
     if (liveSession is LivePdfiumSaveSource) {
+      if (liveSession case final LivePdfiumRevisionSync revisionSync) {
+        final metadata = await _required().metadata();
+        if (revisionSync.appliedRevision != metadata.revision) {
+          throw StateError(
+            'live_pdfium_save_revision_mismatch: applied '
+            '${revisionSync.appliedRevision}, published ${metadata.revision}',
+          );
+        }
+      }
       return _required().saveLivePdfium(
         request,
         await (liveSession as LivePdfiumSaveSource).saveBytes(),
@@ -424,10 +566,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required EditorAnnotation annotation,
-  }) => _required().createAnnotation(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    annotation: annotation,
+  }) => _acknowledgePublish(
+    () => _required().createAnnotation(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      annotation: annotation,
+    ),
   );
 
   @override
@@ -435,10 +579,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required EditorAnnotation annotation,
-  }) => _required().updateAnnotation(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    annotation: annotation,
+  }) => _acknowledgePublish(
+    () => _required().updateAnnotation(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      annotation: annotation,
+    ),
   );
 
   @override
@@ -446,10 +592,12 @@ class BridgeEditorSessionGateway
     required String commandId,
     required int baseRevision,
     required String objectId,
-  }) => _required().deleteAnnotation(
-    commandId: commandId,
-    baseRevision: baseRevision,
-    objectId: objectId,
+  }) => _acknowledgePublish(
+    () => _required().deleteAnnotation(
+      commandId: commandId,
+      baseRevision: baseRevision,
+      objectId: objectId,
+    ),
   );
 
   @override

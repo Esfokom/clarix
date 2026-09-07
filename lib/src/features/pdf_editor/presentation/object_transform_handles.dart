@@ -49,6 +49,7 @@ class _ObjectTransformHandlesState extends State<ObjectTransformHandles> {
   Widget build(BuildContext context) {
     final rect = EditorPageGeometry.rectForBox(
       widget.object.bounds,
+      transform: widget.object.transform,
       pageSize: widget.pageSize,
       displaySize: widget.displaySize,
     );
@@ -145,7 +146,10 @@ class _ObjectTransformHandlesState extends State<ObjectTransformHandles> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFF2F80ED), width: 1.5),
+                      border: Border.all(
+                        color: const Color(0xFF2F80ED),
+                        width: 1.5,
+                      ),
                     ),
                     child: const Icon(
                       Icons.refresh,
@@ -293,7 +297,7 @@ class _ObjectTransformHandlesState extends State<ObjectTransformHandles> {
     final command = EditorCommand(
       kind: EditorCommandKind.rotateObject,
       objectId: widget.object.objectId,
-      radians: _rotationPreview,
+      radians: -_rotationPreview,
       centerX: center.dx,
       centerY: center.dy,
     );
