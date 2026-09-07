@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../core/clarix_logger.dart';
-import '../../ai/ai.dart';
 import 'kitten_tts_service.dart';
 
 enum AudioInteractionState {
@@ -20,12 +19,11 @@ enum AudioInteractionState {
 
 class AudioToAudioService extends ChangeNotifier {
   AudioToAudioService({
-    required KittenTtsService ttsService,
+    required this.ttsService,
     String? sttBaseUrl,
-  })  : _ttsService = ttsService,
-        _sttBaseUrl = sttBaseUrl ?? 'http://127.0.0.1:8880';
+  })  : _sttBaseUrl = sttBaseUrl ?? 'http://127.0.0.1:8880';
 
-  final KittenTtsService _ttsService;
+  final KittenTtsService ttsService;
   String _sttBaseUrl;
   AudioInteractionState _state = AudioInteractionState.idle;
   String _lastUserTranscript = '';
@@ -86,8 +84,8 @@ class AudioToAudioService extends ChangeNotifier {
     }
   }
 
-  /// Stops recording, transcribes audio, queries AI notifier, and speaks back response
-  Future<void> stopAndProcess(AiNotifier aiNotifier) async {
+  /// Stops recording, transcribes audio, queries AI, and speaks back response.
+  Future<void> stopAndProcess(Future<String> Function(String prompt) sendPromptHandler) async {
     if (_state != AudioInteractionState.listening) return;
 
     if (_recorderProcess != null) {
@@ -106,30 +104,17 @@ class AudioToAudioService extends ChangeNotifier {
       }
 
       _lastUserTranscript = text;
-      // Submit transcript to AI Notifier & wait for AI response
-      await aiNotifier.sendPrompt(
-        text,
-        const AiDocumentContext(
-          tabId: 'voice',
-          documentId: 'voice',
-          title: 'Voice Interaction',
-          filePath: 'voice',
-          editorRevision: 0,
-        ),
-      );
-      final aiState = aiNotifier.state.value;
+      _state = AudioInteractionState.thinking;
+      notifyListeners();
 
-      final messages = aiState?.chat.messages ?? [];
-      final reply = messages.isEmpty
-          ? 'I processed your voice request.'
-          : (messages.lastWhere((m) => m.role == 'assistant', orElse: () => messages.last).text);
+      final reply = await sendPromptHandler(text);
       _lastAiResponse = reply;
 
       _state = AudioInteractionState.speaking;
       notifyListeners();
 
       // Speak back the AI response via KittenTTS
-      await _ttsService.speak(reply);
+      await ttsService.speak(reply);
 
       _setState(AudioInteractionState.idle);
     } catch (e, stack) {
@@ -192,7 +177,7 @@ class AudioToAudioService extends ChangeNotifier {
       _recorderProcess!.kill();
       _recorderProcess = null;
     }
-    await _ttsService.stop();
+    await ttsService.stop();
     _cleanUpTempAudio();
     _setState(AudioInteractionState.idle);
   }

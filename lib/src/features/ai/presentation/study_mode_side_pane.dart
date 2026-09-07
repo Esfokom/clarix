@@ -11,6 +11,7 @@ import '../../workspace/presentation/widgets/workspace_common.dart';
 import '../domain/ai_feature_state.dart';
 import '../application/ai_document_context.dart';
 import '../application/ai_providers.dart';
+import '../../tts/tts.dart';
 
 /// Merged Q&A Icon Widget representing Study Mode
 class QaMergedIcon extends StatelessWidget {
@@ -1541,6 +1542,15 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             const Text('Detailed Bulleted Summary', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
             const Spacer(),
             Tooltip(
+              message: 'Read Summary Aloud via KittenTTS',
+              child: IconButton(
+                icon: const Icon(LucideIcons.volume2, size: 14, color: Color(0xFF38BDF8)),
+                onPressed: () {
+                  ref.read(kittenTtsServiceProvider).speak(_pageSummaryText);
+                },
+              ),
+            ),
+            Tooltip(
               message: 'Copy Summary Bullet Points to Clipboard',
               child: IconButton(
                 icon: const Icon(LucideIcons.copy, size: 14, color: Colors.white70),
@@ -1582,9 +1592,13 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
     );
   }
 
-  // 6. Q&A Chat View
+  // 6. Q&A Chat View with Audio-to-Audio & KittenTTS Voice Interaction
   Widget _buildQaChatView() {
     final titleText = _cleanTitle(widget.documentContext?.title ?? 'Document');
+    final audioService = ref.watch(audioToAudioServiceProvider);
+    final ttsService = ref.watch(kittenTtsServiceProvider);
+    final isListening = audioService.state == AudioInteractionState.listening;
+
     return Column(
       children: <Widget>[
         Expanded(
@@ -1641,6 +1655,16 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                               child: SelectableText(m.text, style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.4)),
                             ),
                           ),
+                          if (!isUser) ...[
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(LucideIcons.volume2, size: 12, color: Color(0xFFA5B4FC)),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              tooltip: 'Listen via KittenTTS',
+                              onPressed: () => ttsService.speak(m.text),
+                            ),
+                          ],
                           if (isUser) ...[
                             const SizedBox(width: 6),
                             Container(
@@ -1658,6 +1682,42 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             ),
           ),
         ),
+        if (audioService.state != AudioInteractionState.idle) ...[
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: isListening ? const Color(0x44EF4444) : const Color(0x448B5CF6),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: isListening ? const Color(0xFFEF4444) : const Color(0xFFA78BFA)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isListening ? LucideIcons.mic : LucideIcons.loader2,
+                  size: 13,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    audioService.state == AudioInteractionState.listening
+                        ? '🎙️ Listening to mic... Click mic again to send.'
+                        : audioService.state == AudioInteractionState.transcribing
+                            ? '✍️ Transcribing speech to text...'
+                            : audioService.state == AudioInteractionState.thinking
+                                ? '🧠 Local AI is reasoning...'
+                                : audioService.state == AudioInteractionState.speaking
+                                    ? '🔊 KittenTTS speaking AI response...'
+                                    : '⚠️ Voice error: ${audioService.lastError ?? "Unknown"}',
+                    style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 8),
         Row(
           children: <Widget>[
@@ -1683,6 +1743,29 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
               ),
             ),
             const SizedBox(width: 6),
+            Tooltip(
+              message: isListening ? 'Stop & Send Voice Input' : 'Start Audio-to-Audio Voice Chat',
+              child: IconButton.filled(
+                onPressed: () async {
+                  if (isListening) {
+                    await audioService.stopAndProcess((prompt) async {
+                      _sendStudyPrompt(prompt);
+                      final messages = widget.aiState.chat.messages;
+                      return messages.isEmpty ? 'I processed your voice prompt.' : messages.last.text;
+                    });
+                  } else {
+                    await audioService.startListening();
+                  }
+                },
+                icon: Icon(isListening ? LucideIcons.micOff : LucideIcons.mic, size: 14),
+                style: IconButton.styleFrom(
+                  backgroundColor: isListening ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(10),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             IconButton.filled(
               onPressed: () {
                 if (_qaController.text.trim().isNotEmpty) {

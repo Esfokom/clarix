@@ -54,7 +54,9 @@ void main() {
         // Windows releases it when this test process exits.
         try {
           await root.delete(recursive: true);
-        } on FileSystemException {}
+        } on FileSystemException {
+          // Ignore cleanup error if file handle locked by native layer.
+        }
       });
       await controller.open(file.path);
       final object = controller.state.scenes[1]!.objects.single;
