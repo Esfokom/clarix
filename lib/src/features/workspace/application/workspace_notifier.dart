@@ -248,6 +248,12 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   Future<void> reopenRecent(String path) => openPdfFiles(<String>[path]);
 
+  Future<void> restoreSession(WorkspaceSession session) async {
+    final WorkspaceFeatureState current = _requireState();
+    final updated = current.copyWith(session: session);
+    await _commit(updated, persistAi: false);
+  }
+
   Future<void> saveActivePdfEdits() async {
     final WorkspaceFeatureState current = _requireState();
     final String? activeId = current.session.activeTabId;

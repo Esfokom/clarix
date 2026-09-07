@@ -14,6 +14,7 @@ import 'document_workspace.dart';
 import 'quickstart_surface.dart';
 import 'reader_inspector.dart';
 import 'workspace_common.dart';
+import 'workspace_presets_dialog.dart';
 
 import 'package:clarix/src/core/theme_controller.dart';
 import 'package:clarix/src/core/theme_profile.dart';
@@ -629,6 +630,20 @@ class _RightToolRail extends ConsumerWidget {
               onPressed: () => ref
                   .read(workspaceNotifierProvider.notifier)
                   .selectRightToolWindow(RightToolWindow.studyMode),
+            ),
+          ),
+          Tooltip(
+            message: 'Saved Workspace Presets',
+            child: ShadIconButton.ghost(
+              key: const Key('workspace-presets-btn'),
+              width: 40,
+              height: 40,
+              padding: EdgeInsets.zero,
+              icon: const Icon(LucideIcons.layoutGrid, size: 16),
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (_) => const WorkspacePresetsDialog(),
+              ),
             ),
           ),
         ],
