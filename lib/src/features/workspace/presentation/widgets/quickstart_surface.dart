@@ -70,6 +70,13 @@ class QuickstartSurface extends ConsumerWidget {
                           .selectRightToolWindow(RightToolWindow.studyMode),
                       child: const Text('Enter Study Mode'),
                     ),
+                    const SizedBox(width: 8),
+                    ShadButton.outline(
+                      height: 34,
+                      leading: const Icon(LucideIcons.link, size: 15),
+                      onPressed: () => _showOpenDeepLinkDialog(context, ref),
+                      child: const Text('Open Deep Link'),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 18),
@@ -307,5 +314,74 @@ class _QuickstartRecentTile extends ConsumerWidget {
         ),
       ),
     );
+  }
+}
+
+Future<void> _showOpenDeepLinkDialog(BuildContext context, WidgetRef ref) async {
+  final controller = TextEditingController();
+  final result = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: const Color(0xFF18181B),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFF3F3F46)),
+      ),
+      title: const Row(
+        children: [
+          Icon(LucideIcons.link, size: 18, color: Color(0xFFA1A1AA)),
+          SizedBox(width: 8),
+          Text(
+            'Open clarix:// Deep Link',
+            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+      content: SizedBox(
+        width: 440,
+        child: TextField(
+          controller: controller,
+          style: const TextStyle(color: Colors.white, fontSize: 12),
+          decoration: InputDecoration(
+            hintText: 'clarix://open?path=C:/docs/sample.pdf&page=4',
+            hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+            isDense: true,
+            filled: true,
+            fillColor: const Color(0xFF27272A),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF3F3F46)),
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(controller.text),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF3F3F46),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Open Link'),
+        ),
+      ],
+    ),
+  );
+
+  if (result != null && result.trim().isNotEmpty) {
+    final success = await ref
+        .read(workspaceNotifierProvider.notifier)
+        .openDeepLink(result);
+    if (!success && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid deep link URI or target file not found on disk.'),
+        ),
+      );
+    }
   }
 }

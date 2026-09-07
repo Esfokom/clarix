@@ -267,6 +267,7 @@ class _QuickSelectionMenu extends StatelessWidget {
     required this.colors,
     required this.onCopy,
     required this.onBookmark,
+    this.onScrapbook,
     required this.onHighlight,
     required this.onDismiss,
   });
@@ -274,6 +275,7 @@ class _QuickSelectionMenu extends StatelessWidget {
   final WorkspaceSurfaceTokens colors;
   final Future<void> Function() onCopy;
   final Future<void> Function() onBookmark;
+  final Future<void> Function()? onScrapbook;
   final Future<void> Function(int color) onHighlight;
   final VoidCallback onDismiss;
 
@@ -294,6 +296,15 @@ class _QuickSelectionMenu extends StatelessWidget {
             icon: const Icon(LucideIcons.copy, size: 14),
             label: const Text('Copy'),
           ),
+          if (onScrapbook != null)
+            TextButton.icon(
+              onPressed: () async {
+                await onScrapbook!();
+                onDismiss();
+              },
+              icon: const Icon(LucideIcons.scissors, size: 14),
+              label: const Text('Scrapbook'),
+            ),
           TextButton.icon(
             onPressed: () async {
               await onBookmark();

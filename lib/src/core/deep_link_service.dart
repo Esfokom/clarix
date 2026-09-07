@@ -31,23 +31,32 @@ class DeepLinkService {
 
   /// Parses a deep-link URI string into its document location components
   ({String filePath, int page, double? scrollOffset})? parseDeepLink(String uriString) {
-    if (uriString.trim().isEmpty) return null;
+    final raw = uriString.trim();
+    if (raw.isEmpty) return null;
     try {
-      final uri = Uri.parse(uriString.trim());
-      if (uri.scheme != scheme && !uriString.startsWith('clarix://')) return null;
+      final uri = Uri.parse(raw);
+      if (uri.scheme != scheme && !raw.toLowerCase().startsWith('clarix://')) {
+        return null;
+      }
 
-      final path = uri.queryParameters['path'];
-      final pageStr = uri.queryParameters['page'];
+      final path = uri.queryParameters['path'] ?? uri.queryParameters['file'];
+      final pageStr = uri.queryParameters['page'] ?? uri.queryParameters['p'];
       if (path == null || path.trim().isEmpty || pageStr == null) return null;
 
-      final page = int.tryParse(pageStr);
+      final decodedPath = Uri.decodeComponent(path.trim());
+      final page = int.tryParse(pageStr.trim());
       if (page == null || page < 1) return null;
 
-      final scrollStr = uri.queryParameters['scroll'];
-      final scrollOffset = scrollStr != null ? double.tryParse(scrollStr) : null;
+      final scrollStr = uri.queryParameters['scroll'] ?? uri.queryParameters['offset'];
+      double? scrollOffset = scrollStr != null ? double.tryParse(scrollStr.trim()) : null;
+      if (scrollOffset != null && (scrollOffset.isNaN || scrollOffset.isInfinite)) {
+        scrollOffset = null;
+      } else if (scrollOffset != null) {
+        scrollOffset = scrollOffset.clamp(0.0, 1.0);
+      }
 
       return (
-        filePath: path,
+        filePath: decodedPath,
         page: page,
         scrollOffset: scrollOffset,
       );

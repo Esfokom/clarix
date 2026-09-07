@@ -22,6 +22,7 @@ import 'reader_interaction_math.dart';
 import 'reading_velocity_pill.dart';
 import 'package:clarix/src/core/deep_link_service.dart';
 import '../domain/pdf_night_mode.dart';
+import 'package:clarix/src/features/scrapbook/presentation/scrapbook_side_pane.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
 
@@ -765,6 +766,28 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                   colors: widget.colors,
                   onCopy: _copyCurrentSelection,
                   onBookmark: _addNamedBookmark,
+                  onScrapbook: () async {
+                    final contextText =
+                        await _controller.textSelectionDelegate.getSelectedText();
+                    if (contextText.trim().isNotEmpty) {
+                      ref.read(scrapbookServiceProvider).addItem(
+                            documentTitle: widget.tab.title,
+                            filePath: widget.tab.filePath,
+                            pageNumber: _page,
+                            text: contextText,
+                          );
+                      await ref
+                          .read(workspaceNotifierProvider.notifier)
+                          .selectRightToolWindow(RightToolWindow.scrapbook);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Added clipping to Scrapbook!'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+                    }
+                  },
                   onHighlight: (int color) =>
                       _highlightSelection(colorValue: color),
                   onDismiss: () =>

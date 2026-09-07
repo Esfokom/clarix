@@ -11,6 +11,7 @@ import '../../../core/editing/editor_bridge_types.dart';
 import '../../../core/models.dart';
 import '../../../core/pdf_oxide_bridge.dart';
 import '../../../core/session_store.dart';
+import '../../../core/deep_link_service.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import '../../utilities/domain/utility_job.dart';
 import '../domain/workspace_feature_state.dart';
@@ -248,9 +249,45 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
 
   Future<void> reopenRecent(String path) => openPdfFiles(<String>[path]);
 
+  /// Opens a clarix:// URI deep link, validates target file existence,
+  /// opens the document tab, and navigates to the target page safely.
+  Future<bool> openDeepLink(String uriString) async {
+    final parsed = const DeepLinkService().parseDeepLink(uriString);
+    if (parsed == null) return false;
+    final file = File(parsed.filePath);
+    if (!file.existsSync()) return false;
+    await openPdfFiles(<String>[parsed.filePath]);
+    if (parsed.page > 1) {
+      final WorkspaceFeatureState current = _requireState();
+      final String? activeId = current.session.activeTabId;
+      if (activeId != null) {
+        final List<DocumentTabState> updatedTabs = current.session.tabs
+            .map((DocumentTabState tab) =>
+                tab.id == activeId ? tab.copyWith(currentPage: parsed.page) : tab)
+            .toList(growable: false);
+        final WorkspaceSession updatedSession =
+            current.session.copyWith(tabs: updatedTabs);
+        await _commit(current.copyWith(session: updatedSession), persistAi: false);
+      }
+    }
+    return true;
+  }
+
   Future<void> restoreSession(WorkspaceSession session) async {
     final WorkspaceFeatureState current = _requireState();
-    final updated = current.copyWith(session: session);
+    final List<DocumentTabState> validTabs = session.tabs
+        .where((DocumentTabState tab) => File(tab.filePath).existsSync())
+        .toList(growable: false);
+    final String? validActiveTabId = validTabs.any((tab) => tab.id == session.activeTabId)
+        ? session.activeTabId
+        : (validTabs.isNotEmpty ? validTabs.first.id : null);
+
+    final WorkspaceSession sanitized = session.copyWith(
+      tabs: validTabs,
+      activeTabId: validActiveTabId,
+      rightPaneWidth: session.rightPaneWidth.clamp(200.0, 800.0),
+    );
+    final WorkspaceFeatureState updated = current.copyWith(session: sanitized);
     await _commit(updated, persistAi: false);
   }
 

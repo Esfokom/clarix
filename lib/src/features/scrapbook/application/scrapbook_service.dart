@@ -124,7 +124,7 @@ class ScrapbookService extends ChangeNotifier {
 
     for (var i = 0; i < _items.length; i++) {
       final item = _items[i];
-      final escapedText = const HtmlEscape().convert(item.text);
+      final escapedText = const HtmlEscape().convert(item.text).replaceAll('\n', '<br>');
       final escapedTitle = const HtmlEscape().convert(item.documentTitle);
       buffer
         ..writeln('<div class="card">')

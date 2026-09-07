@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -123,7 +124,21 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                           : showTextFormatInline
                           ? _TextFormatPane(activeTab: activeTab)
                           : showScrapbookInline
-                          ? const ScrapbookSidePane()
+                          ? ScrapbookSidePane(
+                              onJumpToClipping: (item) async {
+                                final file = File(item.filePath);
+                                if (!file.existsSync()) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('File not found on disk: ${item.filePath}'),
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final notifier = ref.read(workspaceNotifierProvider.notifier);
+                                await notifier.openPdfFiles([item.filePath]);
+                              },
+                            )
                           : ReaderInspector(
                               state: widget.state,
                               activeTab: activeTab,

@@ -12,7 +12,12 @@ final scrapbookServiceProvider = Provider<ScrapbookService>((ref) {
 });
 
 class ScrapbookSidePane extends ConsumerWidget {
-  const ScrapbookSidePane({super.key});
+  const ScrapbookSidePane({
+    this.onJumpToClipping,
+    super.key,
+  });
+
+  final ValueChanged<ScrapbookItem>? onJumpToClipping;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -119,12 +124,30 @@ class ScrapbookSidePane extends ConsumerWidget {
                                     const Icon(LucideIcons.fileText, size: 12, color: Color(0xFFA1A1AA)),
                                     const SizedBox(width: 6),
                                     Expanded(
-                                      child: Text(
-                                        '${item.documentTitle} • p.${item.pageNumber}',
-                                        style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 11, fontWeight: FontWeight.bold),
-                                        overflow: TextOverflow.ellipsis,
+                                      child: InkWell(
+                                        onTap: onJumpToClipping != null
+                                            ? () => onJumpToClipping!(item)
+                                            : null,
+                                        child: Text(
+                                          '${item.documentTitle} • p.${item.pageNumber}',
+                                          style: const TextStyle(
+                                            color: Color(0xFFFAFAFA),
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            decoration: TextDecoration.underline,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
                                     ),
+                                    if (onJumpToClipping != null)
+                                      Tooltip(
+                                        message: 'Jump to PDF Page ${item.pageNumber}',
+                                        child: IconButton(
+                                          icon: const Icon(LucideIcons.externalLink, size: 12, color: Color(0xFFA1A1AA)),
+                                          onPressed: () => onJumpToClipping!(item),
+                                        ),
+                                      ),
                                     IconButton(
                                       icon: const Icon(LucideIcons.copy, size: 12, color: Color(0xFFA1A1AA)),
                                       onPressed: () {

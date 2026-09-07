@@ -33,7 +33,12 @@ class _WorkspacePresetsDialogState extends ConsumerState<WorkspacePresetsDialog>
 
   Future<void> _saveCurrentLayout() async {
     final name = _nameController.text.trim();
-    if (name.isEmpty) return;
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a preset name.')),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
     final currentState = ref.read(workspaceNotifierProvider).value;
@@ -48,6 +53,11 @@ class _WorkspacePresetsDialogState extends ConsumerState<WorkspacePresetsDialog>
       await store.savePreset(preset);
       ref.invalidate(workspacePresetsProvider);
       _nameController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Saved preset "$name"!')),
+        );
+      }
     }
     setState(() => _isSaving = false);
   }
