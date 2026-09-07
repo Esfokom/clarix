@@ -22,3 +22,4 @@ export 'application/ai_notifier.dart';
 export 'application/ai_providers.dart';
 export 'application/ai_runtime_service.dart';
 export 'application/conversation_context.dart';
+export 'application/latex_ocr_service.dart';

@@ -1766,6 +1766,19 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
               ),
             ),
             const SizedBox(width: 4),
+            Tooltip(
+              message: 'Local Mathematical Formula Parsing (LaTeX-OCR)',
+              child: IconButton.filled(
+                onPressed: () => _showLatexOcrDialog(context),
+                icon: const Icon(LucideIcons.functionSquare, size: 14),
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF0EA5E9),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(10),
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
             IconButton.filled(
               onPressed: () {
                 if (_qaController.text.trim().isNotEmpty) {
@@ -1783,6 +1796,96 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           ],
         ),
       ],
+    );
+  }
+
+  void _showLatexOcrDialog(BuildContext context) {
+    final textController = TextEditingController(text: 'int 0 to infinity alpha * x^2 dx');
+    String latexResult = ref.read(latexOcrServiceProvider).parseTextToLatex(textController.text);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF0F172A),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Color(0x3364748B))),
+            title: const Row(
+              children: [
+                Icon(LucideIcons.functionSquare, size: 18, color: Color(0xFF38BDF8)),
+                SizedBox(width: 8),
+                Text('Local LaTeX Math OCR & Formula Parser', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              ],
+            ),
+            content: SizedBox(
+              width: 460,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Enter mathematical expression or OCR tokens:', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: textController,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. sqrt(x + 1) / (y - 2) or int 0 to inf alpha * x^2 dx',
+                      hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
+                      filled: true,
+                      fillColor: const Color(0x441E293B),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0x3364748B))),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        latexResult = ref.read(latexOcrServiceProvider).parseTextToLatex(val);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('Generated LaTeX Code:', style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0x66020617),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0x2238BDF8)),
+                    ),
+                    child: SelectableText(
+                      latexResult,
+                      style: const TextStyle(color: Color(0xFF7DD3FC), fontFamily: 'monospace', fontSize: 11.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel', style: TextStyle(color: Colors.white60)),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  if (latexResult.trim().isNotEmpty) {
+                    setState(() {
+                      _qaController.text = '${_qaController.text} $latexResult'.trim();
+                    });
+                  }
+                  Navigator.of(ctx).pop();
+                },
+                icon: const Icon(LucideIcons.plus, size: 14),
+                label: const Text('Insert into Q&A Chat Prompt'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0EA5E9),
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

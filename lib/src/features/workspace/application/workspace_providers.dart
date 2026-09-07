@@ -33,6 +33,10 @@ final audioToAudioServiceProvider = Provider<AudioToAudioService>(
   ),
 );
 
+final latexOcrServiceProvider = Provider<LatexOcrService>(
+  (Ref ref) => LatexOcrService(),
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );
