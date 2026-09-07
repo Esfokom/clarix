@@ -609,6 +609,7 @@ class _ViewerHud extends StatelessWidget {
               },
               child: _HudIcon(
                 icon: nightMode.icon,
+                onPressed: null,
                 active: nightMode != PdfNightMode.off,
               ),
             ),

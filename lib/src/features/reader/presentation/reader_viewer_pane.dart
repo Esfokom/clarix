@@ -735,6 +735,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                         );
                       },
                     ),
+                ),
             ),
             if (_shouldShowSearchOverlay)
               Positioned(
