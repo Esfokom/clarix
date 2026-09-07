@@ -27,6 +27,12 @@ final kittenTtsServiceProvider = Provider<KittenTtsService>(
   (Ref ref) => KittenTtsService(),
 );
 
+final audioToAudioServiceProvider = Provider<AudioToAudioService>(
+  (Ref ref) => AudioToAudioService(
+    ttsService: ref.watch(kittenTtsServiceProvider),
+  ),
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );
