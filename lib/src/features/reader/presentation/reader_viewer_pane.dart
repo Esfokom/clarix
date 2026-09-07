@@ -19,6 +19,7 @@ import 'package:clarix/src/features/workspace/application/workspace_providers.da
 import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/workspace_common.dart';
 import 'reader_interaction_math.dart';
+import 'reading_velocity_pill.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
 
@@ -870,6 +871,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             page: metrics.page,
                             pageCount: widget.tab.pageCountHint,
                             zoom: metrics.zoom,
+                            documentId: widget.tab.documentId,
                             onPreviousPage:
                                 _controller.isReady && metrics.page > 1
                                 ? () => _controller.goToPage(

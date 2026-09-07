@@ -428,6 +428,7 @@ class _ViewerHud extends StatelessWidget {
     required this.page,
     required this.pageCount,
     required this.zoom,
+    required this.documentId,
     required this.onPreviousPage,
     required this.onNextPage,
     required this.onZoomOut,
@@ -446,6 +447,7 @@ class _ViewerHud extends StatelessWidget {
   final int page;
   final int? pageCount;
   final double zoom;
+  final String documentId;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
   final VoidCallback? onZoomOut;
@@ -484,7 +486,13 @@ class _ViewerHud extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             _HudIcon(icon: LucideIcons.chevronRight, onPressed: onNextPage),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
+            ReadingVelocityPill(
+              documentId: documentId,
+              currentPage: page,
+              totalPages: pageCount ?? 1,
+            ),
+            const SizedBox(width: 8),
             const _HudDivider(),
             const SizedBox(width: 10),
             _HudIcon(icon: LucideIcons.minus, onPressed: onZoomOut),
