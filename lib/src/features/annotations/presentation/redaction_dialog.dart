@@ -44,11 +44,11 @@ class _RedactionDialogState extends State<RedactionDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xFF0F172A),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Color(0x3364748B))),
+      backgroundColor: const Color(0xFF18181B),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Color(0xFF3F3F46))),
       title: const Row(
         children: [
-          Icon(LucideIcons.shieldAlert, size: 18, color: Color(0xFFEF4444)),
+          Icon(LucideIcons.shieldAlert, size: 18, color: Color(0xFFA1A1AA)),
           SizedBox(width: 8),
           Text('Privacy-First Data Masking (Smart Redact)', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
         ],
@@ -70,8 +70,8 @@ class _RedactionDialogState extends State<RedactionDialog> {
                 return FilterChip(
                   label: Text(label, style: TextStyle(fontSize: 10, color: isSelected ? Colors.white : Colors.white60, fontWeight: FontWeight.bold)),
                   selected: isSelected,
-                  selectedColor: const Color(0xFFEF4444),
-                  backgroundColor: const Color(0x331E293B),
+                  selectedColor: const Color(0xFF3F3F46),
+                  backgroundColor: const Color(0xFF27272A),
                   onSelected: (val) {
                     setState(() {
                       if (val) {
@@ -88,9 +88,9 @@ class _RedactionDialogState extends State<RedactionDialog> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(LucideIcons.scanLine, size: 13, color: Color(0xFFF59E0B)),
+                const Icon(LucideIcons.scanLine, size: 13, color: Color(0xFFA1A1AA)),
                 const SizedBox(width: 6),
-                Text('Detected Sensitive Items: ${_detectedMatches.length}', style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 11, fontWeight: FontWeight.bold)),
+                Text('Detected Sensitive Items: ${_detectedMatches.length}', style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 11, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 6),
@@ -99,9 +99,9 @@ class _RedactionDialogState extends State<RedactionDialog> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0x66020617),
+                color: const Color(0xFF141416),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0x22EF4444)),
+                border: Border.all(color: const Color(0xFF3F3F46)),
               ),
               child: SingleChildScrollView(
                 child: SelectableText(
@@ -129,7 +129,7 @@ class _RedactionDialogState extends State<RedactionDialog> {
           icon: const Icon(LucideIcons.copy, size: 14),
           label: const Text('Copy Redacted PDF Text'),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFEF4444),
+            backgroundColor: const Color(0xFF3F3F46),
             foregroundColor: Colors.white,
           ),
         ),

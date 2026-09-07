@@ -741,7 +741,7 @@ class _ProviderSelectorBar extends ConsumerWidget {
 
     final label = selectedProfile?.label ?? 'Select Provider';
     final accentColor =
-        isOffline ? const Color(0xFF10B981) : const Color(0xFF3B82F6);
+        isOffline ? const Color(0xFF71717A) : const Color(0xFF3B82F6);
     final badgeText = isOffline ? '100% Offline' : 'Cloud API';
     final icon =
         isOffline ? LucideIcons.laptop : LucideIcons.cloud;
@@ -853,7 +853,7 @@ class _ProviderSelectorBar extends ConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              color: Color(0xFF10B981),
+              color: Color(0xFFA1A1AA),
               letterSpacing: 0.5,
             ),
           ),
@@ -869,7 +869,7 @@ class _ProviderSelectorBar extends ConsumerWidget {
                       : LucideIcons.circle,
                   size: 14,
                   color: profile.id == selectedId
-                      ? const Color(0xFF10B981)
+                      ? const Color(0xFFFAFAFA)
                       : Colors.grey,
                 ),
                 const SizedBox(width: 8),
@@ -900,7 +900,7 @@ class _ProviderSelectorBar extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                      color: const Color(0xFF3F3F46),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: const Text(
@@ -908,7 +908,7 @@ class _ProviderSelectorBar extends ConsumerWidget {
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF10B981),
+                        color: Color(0xFFFAFAFA),
                       ),
                     ),
                   ),

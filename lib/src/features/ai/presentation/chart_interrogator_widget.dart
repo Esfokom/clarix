@@ -35,31 +35,32 @@ class _ChartInterrogatorWidgetState extends State<ChartInterrogatorWidget> {
         return Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0x331E293B),
+            color: const Color(0xFF18181B),
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: const Color(0x3338BDF8)),
+            border: Border.all(color: const Color(0xFF3F3F46)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  const Icon(LucideIcons.barChart2, size: 16, color: Color(0xFF38BDF8)),
+                  const Icon(LucideIcons.barChart2, size: 16, color: Color(0xFFA1A1AA)),
                   const SizedBox(width: 6),
                   const Text('Spatial Chart Interrogator', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
-                      color: const Color(0x3310B981),
+                      color: const Color(0xFF27272A),
                       borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF3F3F46)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(LucideIcons.volume2, size: 10, color: Color(0xFF34D399)),
+                        const Icon(LucideIcons.volume2, size: 10, color: Color(0xFFA1A1AA)),
                         const SizedBox(width: 4),
-                        Text('Scenery: ${scenery.name.toUpperCase()}', style: const TextStyle(color: Color(0xFF34D399), fontSize: 9, fontWeight: FontWeight.bold)),
+                        Text('Scenery: ${scenery.name.toUpperCase()}', style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 9, fontWeight: FontWeight.bold)),
                       ],
                     ),
                   ),
@@ -77,8 +78,8 @@ class _ChartInterrogatorWidgetState extends State<ChartInterrogatorWidget> {
                         hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
                         isDense: true,
                         filled: true,
-                        fillColor: const Color(0x440F172A),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0x3364748B))),
+                        fillColor: const Color(0xFF27272A),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF3F3F46))),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       ),
                     ),
@@ -97,7 +98,7 @@ class _ChartInterrogatorWidgetState extends State<ChartInterrogatorWidget> {
                     icon: Icon(isProcessing ? LucideIcons.loader2 : LucideIcons.scan, size: 14),
                     label: Text(isProcessing ? 'Analyzing...' : 'Analyze Crop'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0EA5E9),
+                      backgroundColor: const Color(0xFF3F3F46),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     ),
@@ -110,14 +111,14 @@ class _ChartInterrogatorWidgetState extends State<ChartInterrogatorWidget> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0x66020617),
+                    color: const Color(0xFF141416),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0x2238BDF8)),
+                    border: Border.all(color: const Color(0xFF3F3F46)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Q: ${result.question}', style: const TextStyle(color: Color(0xFF7DD3FC), fontSize: 11, fontWeight: FontWeight.bold)),
+                      Text('Q: ${result.question}', style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 11, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
                       Text(result.analysisText, style: const TextStyle(color: Colors.white70, fontSize: 11, height: 1.4)),
                     ],

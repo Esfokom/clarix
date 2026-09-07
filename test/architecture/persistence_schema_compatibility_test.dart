@@ -81,6 +81,7 @@ void main() {
       'leftPaneCollapsed': false,
       'rightPaneCollapsed': true,
       'rightToolWindow': 'ai',
+      'studyModeFullScreen': false,
     };
 
     expect(session.toJson(), expected);

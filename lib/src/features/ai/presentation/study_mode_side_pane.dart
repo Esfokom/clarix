@@ -100,8 +100,7 @@ class StudyModeSidePane extends ConsumerStatefulWidget {
   ConsumerState<StudyModeSidePane> createState() => _StudyModeSidePaneState();
 }
 
-class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
-    with SingleTickerProviderStateMixin {
+class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
   StudyTab _activeTab = StudyTab.qaChat;
   StudyContextScope _contextScope = StudyContextScope.activeTab;
   String _difficultyLevel = 'Medium'; // Easy, Medium, Hard, Master
@@ -138,25 +137,14 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
   int? _selectedOptionIndex;
   bool _quizSubmitted = false;
   int _quizScore = 0;
-
-  // Ambient pulse & spin animation
-  late final AnimationController _pulseController;
-  late final Animation<double> _pulseAnimation;
   bool _isRefreshing = false;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    )..repeat(reverse: true);
-    _pulseAnimation = Tween<double>(begin: 0.3, end: 0.85).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
     _checkAndUpdateDocumentContext();
   }
+
 
   @override
   void didUpdateWidget(covariant StudyModeSidePane oldWidget) {
@@ -517,7 +505,6 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
 
   @override
   void dispose() {
-    _pulseController.dispose();
     _qaController.dispose();
     _specificationsController.dispose();
     _pageRangeController.dispose();
@@ -731,23 +718,23 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
     );
 
     final glassContainer = ClipRRect(
-      borderRadius: BorderRadius.circular(widget.isFullScreen ? 20 : 0),
+      borderRadius: BorderRadius.circular(widget.isFullScreen ? 16 : 0),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
         child: Container(
           decoration: BoxDecoration(
-            color: const Color(0xDC0F172A),
-            borderRadius: BorderRadius.circular(widget.isFullScreen ? 20 : 0),
+            color: const Color(0xFA1E1E22),
+            borderRadius: BorderRadius.circular(widget.isFullScreen ? 16 : 0),
             border: Border.all(
-              color: const Color(0x336366F1),
-              width: 1.5,
+              color: const Color(0xFF3F3F46),
+              width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: const Color(0x66000000),
-                blurRadius: widget.isFullScreen ? 35 : 10,
-                spreadRadius: widget.isFullScreen ? 5 : 0,
-                offset: const Offset(0, 10),
+                color: const Color(0x88000000),
+                blurRadius: widget.isFullScreen ? 25 : 10,
+                spreadRadius: widget.isFullScreen ? 2 : 0,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -758,40 +745,12 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
 
     final mainWidget = widget.isFullScreen
         ? Container(
-            color: const Color(0xFF07090E),
-            child: Stack(
-              children: [
-                Positioned(
-                  left: -80,
-                  top: -80,
-                  child: Container(
-                    width: 320,
-                    height: 320,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0x336366F1),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: -80,
-                  bottom: -80,
-                  child: Container(
-                    width: 320,
-                    height: 320,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0x3310B981),
-                    ),
-                  ),
-                ),
-                Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1060),
-                    child: glassContainer,
-                  ),
-                ),
-              ],
+            color: const Color(0xFF141416),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1060),
+                child: glassContainer,
+              ),
             ),
           )
         : glassContainer;
@@ -815,34 +774,19 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: const BoxDecoration(
-        color: Color(0x551E293B),
-        border: Border(bottom: BorderSide(color: Color(0x22FFFFFF))),
+        color: Color(0xFF27272A),
+        border: Border(bottom: BorderSide(color: Color(0xFF3F3F46))),
       ),
       child: Row(
         children: <Widget>[
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6366F1).withValues(alpha: _pulseAnimation.value * 0.6),
-                      blurRadius: 12,
-                      spreadRadius: 1,
-                    ),
-                  ],
-                ),
-                child: const QaMergedIcon(size: 16, color: Colors.white),
-              );
-            },
+          Container(
+            padding: const EdgeInsets.all(7),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3F3F46),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF52525B)),
+            ),
+            child: const QaMergedIcon(size: 16, color: Colors.white),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -865,13 +809,13 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                       decoration: BoxDecoration(
-                        color: const Color(0x336366F1),
+                        color: const Color(0xFF3F3F46),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFF818CF8), width: 0.8),
+                        border: Border.all(color: const Color(0xFF52525B), width: 0.8),
                       ),
                       child: const Text(
-                        '10-ITEM RAG',
-                        style: TextStyle(color: Color(0xFFA5B4FC), fontSize: 8.5, fontWeight: FontWeight.bold),
+                        'RAG ENGINE',
+                        style: TextStyle(color: Color(0xFFE4E4E7), fontSize: 8.5, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -879,7 +823,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                 const SizedBox(height: 2),
                 Text(
                   titleText,
-                  style: const TextStyle(color: Colors.white60, fontSize: 10.5, fontWeight: FontWeight.w500),
+                  style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 10.5, fontWeight: FontWeight.w500),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
@@ -890,7 +834,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           Tooltip(
             message: 'Privacy-First Data Masking (Smart Redact)',
             child: IconButton(
-              icon: const Icon(LucideIcons.shieldAlert, size: 15, color: Color(0xFFEF4444)),
+              icon: const Icon(LucideIcons.shieldAlert, size: 15, color: Color(0xFFA1A1AA)),
               onPressed: () {
                 final documentText = _pageSummaryText;
                 showDialog(
@@ -906,7 +850,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           Tooltip(
             message: 'Offline Audio-Book Mode',
             child: IconButton(
-              icon: const Icon(LucideIcons.headphones, size: 15, color: Color(0xFF10B981)),
+              icon: const Icon(LucideIcons.headphones, size: 15, color: Color(0xFFA1A1AA)),
               onPressed: () {
                 final text = _pageSummaryText;
                 final audioBook = ref.read(offlineAudioBookServiceProvider);
@@ -921,21 +865,28 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           Tooltip(
             message: 'Refresh Study Mode & generate 10 new items',
             child: IconButton(
-              icon: const Icon(LucideIcons.refreshCw, size: 15, color: Color(0xFFA5B4FC)),
+              icon: const Icon(LucideIcons.refreshCw, size: 15, color: Color(0xFFA1A1AA)),
               onPressed: _refreshStudyModeContent,
             ),
           ),
           Tooltip(
             message: 'Add document or image asset',
             child: IconButton(
-              icon: const Icon(LucideIcons.plus, size: 15, color: Color(0xFFA5B4FC)),
+              icon: const Icon(LucideIcons.plus, size: 15, color: Color(0xFFA1A1AA)),
               onPressed: _pickAttachments,
             ),
           ),
           if (widget.isFullScreen)
-            IconButton(
-              tooltip: 'Exit Full Screen',
-              icon: const Icon(LucideIcons.x, size: 16, color: Color(0xFFEF4444)),
+            TextButton.icon(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFF27272A),
+                foregroundColor: const Color(0xFFFAFAFA),
+                side: const BorderSide(color: Color(0xFF3F3F46)),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              ),
+              icon: const Icon(LucideIcons.x, size: 14, color: Color(0xFFA1A1AA)),
+              label: const Text('Exit Full Screen', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               onPressed: widget.onToggleFullScreen,
             )
           else if (widget.onToggleFullScreen != null)
@@ -1066,16 +1017,16 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           duration: const Duration(milliseconds: 150),
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFF6366F1) : const Color(0x22334155),
+            color: active ? const Color(0xFF3F3F46) : const Color(0xFF27272A),
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: active ? const Color(0xFF818CF8) : const Color(0x3364748B)),
+            border: Border.all(color: active ? const Color(0xFF71717A) : const Color(0xFF3F3F46)),
           ),
           child: Text(
             label,
             style: TextStyle(
               fontSize: 10,
               fontWeight: active ? FontWeight.bold : FontWeight.w500,
-              color: active ? Colors.white : Colors.white60,
+              color: active ? const Color(0xFFFAFAFA) : const Color(0xFFA1A1AA),
             ),
           ),
         ),
@@ -1091,16 +1042,16 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: active ? const Color(0xFF8B5CF6) : const Color(0x11FFFFFF),
+          color: active ? const Color(0xFF3F3F46) : const Color(0xFF27272A),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: active ? const Color(0xFFA78BFA) : const Color(0x22FFFFFF)),
+          border: Border.all(color: active ? const Color(0xFF71717A) : const Color(0xFF3F3F46)),
         ),
         child: Text(
           level,
           style: TextStyle(
             fontSize: 9.5,
             fontWeight: active ? FontWeight.bold : FontWeight.normal,
-            color: active ? Colors.white : Colors.white60,
+            color: active ? const Color(0xFFFAFAFA) : const Color(0xFFA1A1AA),
           ),
         ),
       ),
@@ -1112,28 +1063,28 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
       height: 42,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: const BoxDecoration(
-        color: Color(0x220F172A),
-        border: Border(bottom: BorderSide(color: Color(0x15FFFFFF))),
+        color: Color(0xFF1E1E22),
+        border: Border(bottom: BorderSide(color: Color(0xFF3F3F46))),
       ),
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: <Widget>[
-          _tabChip(StudyTab.qaChat, 'Q&A Chat', LucideIcons.messageSquare, const Color(0xFF8B5CF6)),
-          _tabChip(StudyTab.quizzes, '10 Quizzes', LucideIcons.helpCircle, const Color(0xFFEC4899)),
-          _tabChip(StudyTab.flashCards, '10 Flash Cards', LucideIcons.layers, const Color(0xFF6366F1)),
-          _tabChip(StudyTab.concepts, '10 Concepts', LucideIcons.lightbulb, const Color(0xFFF59E0B)),
-          _tabChip(StudyTab.studyCards, 'Study Guide', LucideIcons.bookOpen, const Color(0xFF3B82F6)),
-          _tabChip(StudyTab.pageSummary, 'Summary', LucideIcons.fileText, const Color(0xFF10B981)),
-          _tabChip(StudyTab.timeline, 'Timeline Seekbar', LucideIcons.history, const Color(0xFF818CF8)),
-          _tabChip(StudyTab.simulation, 'Simulation Sliders', LucideIcons.sliders, const Color(0xFF0EA5E9)),
-          _tabChip(StudyTab.auditor, 'Bias Auditor', LucideIcons.shieldCheck, const Color(0xFFF59E0B)),
-          _tabChip(StudyTab.bionic, 'Bionic Reflow', LucideIcons.eye, const Color(0xFF10B981)),
+          _tabChip(StudyTab.qaChat, 'Q&A Chat', LucideIcons.messageSquare),
+          _tabChip(StudyTab.quizzes, '10 Quizzes', LucideIcons.helpCircle),
+          _tabChip(StudyTab.flashCards, '10 Flash Cards', LucideIcons.layers),
+          _tabChip(StudyTab.concepts, '10 Concepts', LucideIcons.lightbulb),
+          _tabChip(StudyTab.studyCards, 'Study Guide', LucideIcons.bookOpen),
+          _tabChip(StudyTab.pageSummary, 'Summary', LucideIcons.fileText),
+          _tabChip(StudyTab.timeline, 'Timeline Seekbar', LucideIcons.history),
+          _tabChip(StudyTab.simulation, 'Simulation Sliders', LucideIcons.sliders),
+          _tabChip(StudyTab.auditor, 'Bias Auditor', LucideIcons.shieldCheck),
+          _tabChip(StudyTab.bionic, 'Bionic Reflow', LucideIcons.eye),
         ],
       ),
     );
   }
 
-  Widget _tabChip(StudyTab tab, String label, IconData icon, Color themeAccent) {
+  Widget _tabChip(StudyTab tab, String label, IconData icon) {
     final bool active = _activeTab == tab;
     return Padding(
       padding: const EdgeInsets.only(right: 5),
@@ -1146,24 +1097,24 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             duration: const Duration(milliseconds: 180),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: active ? themeAccent : const Color(0x1A1E293B),
+              color: active ? const Color(0xFF3F3F46) : const Color(0xFF27272A),
               borderRadius: BorderRadius.circular(6),
               border: Border.all(
-                color: active ? themeAccent : const Color(0x3364748B),
-                width: active ? 1.4 : 1.0,
+                color: active ? const Color(0xFF71717A) : const Color(0xFF3F3F46),
+                width: active ? 1.2 : 1.0,
               ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(icon, size: 12, color: active ? Colors.white : Colors.white60),
+                Icon(icon, size: 12, color: active ? Colors.white : const Color(0xFFA1A1AA)),
                 const SizedBox(width: 5),
                 Text(
                   label,
                   style: TextStyle(
                     fontSize: 10.5,
                     fontWeight: active ? FontWeight.bold : FontWeight.w500,
-                    color: active ? Colors.white : Colors.white60,
+                    color: active ? Colors.white : const Color(0xFFA1A1AA),
                   ),
                 ),
               ],
@@ -1272,9 +1223,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0x331E293B),
+        color: const Color(0xFF242427),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0x3310B981)),
+        border: Border.all(color: const Color(0xFF3F3F46)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -1282,9 +1233,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           children: [
             const Row(
               children: [
-                Icon(LucideIcons.eye, size: 14, color: Color(0xFF10B981)),
+                Icon(LucideIcons.eye, size: 14, color: Color(0xFFE4E4E7)),
                 SizedBox(width: 6),
-                Text('Reasoning-Injected Bionic Reading View', style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold)),
+                Text('Reasoning-Injected Bionic Reading View', style: TextStyle(color: Color(0xFFFAFAFA), fontSize: 12, fontWeight: FontWeight.bold)),
               ],
             ),
             const SizedBox(height: 8),
@@ -1314,28 +1265,28 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          // Header Action Strip (Compact space-efficient controls)
+          // Header Action Strip
           Row(
             children: [
               Text(
-                'Q${(_currentQuizIndex % _quizzes.length) + 1} of ${_quizzes.length}',
+                'Question ${(_currentQuizIndex % _quizzes.length) + 1} of ${_quizzes.length}',
                 style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
               ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
-                  color: const Color(0x2210B981),
+                  color: const Color(0xFF27272A),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF10B981)),
+                  border: Border.all(color: const Color(0xFF3F3F46)),
                 ),
-                child: Text('Score: $_quizScore / ${_quizzes.length}', style: const TextStyle(color: Color(0xFF10B981), fontSize: 10.5, fontWeight: FontWeight.bold)),
+                child: Text('Score: $_quizScore / ${_quizzes.length}', style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 10.5, fontWeight: FontWeight.bold)),
               ),
               const Spacer(),
               Tooltip(
                 message: 'Regenerate 10 New Quizzes via AI',
                 child: IconButton(
-                  icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFFEC4899)),
+                  icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFFA1A1AA)),
                   onPressed: _refreshStudyModeContent,
                 ),
               ),
@@ -1347,8 +1298,8 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             child: LinearProgressIndicator(
               value: progressRatio,
               minHeight: 5,
-              backgroundColor: const Color(0x3364748B),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFEC4899)),
+              backgroundColor: const Color(0xFF27272A),
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF71717A)),
             ),
           ),
           const SizedBox(height: 12),
@@ -1357,13 +1308,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xEE1E1B4B), Color(0xEE0F172A)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x44EC4899), width: 1.2),
+              color: const Color(0xFF242427),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF3F3F46), width: 1.0),
             ),
             child: Text(
               quiz['question'] as String,
@@ -1379,23 +1326,23 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             final isSelected = _selectedOptionIndex == index;
             final isCorrect = index == correctIndex;
 
-            Color bgColor = const Color(0x221E293B);
-            Color borderColor = const Color(0x22FFFFFF);
+            Color bgColor = const Color(0xFF27272A);
+            Color borderColor = const Color(0xFF3F3F46);
             Color textColor = Colors.white;
 
             if (_quizSubmitted) {
               if (isCorrect) {
-                bgColor = const Color(0x3310B981);
-                borderColor = const Color(0xFF10B981);
-                textColor = const Color(0xFF34D399);
+                bgColor = const Color(0xFF143828);
+                borderColor = const Color(0xFF059669);
+                textColor = const Color(0xFF6EE7B7);
               } else if (isSelected && !isCorrect) {
-                bgColor = const Color(0x33EF4444);
-                borderColor = const Color(0xFFEF4444);
-                textColor = const Color(0xFFF87171);
+                bgColor = const Color(0xFF381414);
+                borderColor = const Color(0xFFDC2626);
+                textColor = const Color(0xFFFCA5A5);
               }
             } else if (isSelected) {
-              borderColor = const Color(0xFFEC4899);
-              bgColor = const Color(0x33EC4899);
+              borderColor = const Color(0xFF71717A);
+              bgColor = const Color(0xFF3F3F46);
             }
 
             return Padding(
@@ -1408,7 +1355,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                   decoration: BoxDecoration(
                     color: bgColor,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: borderColor, width: isSelected || (_quizSubmitted && isCorrect) ? 1.6 : 1.0),
+                    border: Border.all(color: borderColor, width: isSelected || (_quizSubmitted && isCorrect) ? 1.4 : 1.0),
                   ),
                   child: Row(
                     children: <Widget>[
@@ -1423,8 +1370,8 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                       Expanded(
                         child: Text(optionText, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w500)),
                       ),
-                      if (_quizSubmitted && isCorrect) const Icon(LucideIcons.checkCircle2, size: 16, color: Color(0xFF10B981)),
-                      if (_quizSubmitted && isSelected && !isCorrect) const Icon(LucideIcons.xCircle, size: 16, color: Color(0xFFEF4444)),
+                      if (_quizSubmitted && isCorrect) const Icon(LucideIcons.checkCircle2, size: 16, color: Color(0xFF059669)),
+                      if (_quizSubmitted && isSelected && !isCorrect) const Icon(LucideIcons.xCircle, size: 16, color: Color(0xFFDC2626)),
                     ],
                   ),
                 ),
@@ -1449,7 +1396,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
               icon: const Icon(LucideIcons.checkCircle, size: 14),
               label: const Text('Submit Answer', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFEC4899),
+                backgroundColor: const Color(0xFF3F3F46),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -1459,19 +1406,19 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0x223B82F6),
+                color: const Color(0xFF27272A),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0x663B82F6)),
+                border: Border.all(color: const Color(0xFF3F3F46)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    _selectedOptionIndex == correctIndex ? '🎉 Correct! AI Breakdown:' : '💡 Solution Explanation:',
-                    style: const TextStyle(color: Color(0xFF60A5FA), fontSize: 11.5, fontWeight: FontWeight.bold),
+                    _selectedOptionIndex == correctIndex ? 'Correct Explanation:' : 'Solution Explanation:',
+                    style: const TextStyle(color: Color(0xFFE4E4E7), fontSize: 11.5, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 6),
-                  Text((quiz['explanation'] as String?) ?? '', style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.4)),
+                  Text((quiz['explanation'] as String?) ?? '', style: const TextStyle(color: Colors.white70, fontSize: 11.5, height: 1.4)),
                 ],
               ),
             ),
@@ -1488,7 +1435,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
               label: Text((_currentQuizIndex % _quizzes.length) + 1 < _quizzes.length ? 'Next Question' : 'Restart Quiz', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
               style: OutlinedButton.styleFrom(
                 foregroundColor: Colors.white,
-                side: const BorderSide(color: Color(0x44FFFFFF)),
+                side: const BorderSide(color: Color(0xFF3F3F46)),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
@@ -1519,13 +1466,13 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             Text('Card ${(_currentFlashCardIndex % _flashCards.length) + 1} of ${_flashCards.length}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(color: const Color(0x2210B981), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF10B981))),
-              child: Text('Mastered: $_flashCardMasteredCount / ${_flashCards.length}', style: const TextStyle(color: Color(0xFF10B981), fontSize: 10.5, fontWeight: FontWeight.bold)),
+              decoration: BoxDecoration(color: const Color(0xFF27272A), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF3F3F46))),
+              child: Text('Mastered: $_flashCardMasteredCount / ${_flashCards.length}', style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 10.5, fontWeight: FontWeight.bold)),
             ),
             Tooltip(
               message: 'Regenerate 10 New Flash Cards',
               child: IconButton(
-                icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFF6366F1)),
+                icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFFA1A1AA)),
                 onPressed: _refreshStudyModeContent,
               ),
             ),
@@ -1537,8 +1484,8 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           child: LinearProgressIndicator(
             value: masteredRatio,
             minHeight: 5,
-            backgroundColor: const Color(0x3364748B),
-            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
+            backgroundColor: const Color(0xFF27272A),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF71717A)),
           ),
         ),
         const SizedBox(height: 10),
@@ -1566,13 +1513,13 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                     _isCardFlipped = false;
                   });
                 },
-                style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0x44FFFFFF)), padding: const EdgeInsets.symmetric(vertical: 10)),
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFF3F3F46)), padding: const EdgeInsets.symmetric(vertical: 10)),
                 child: const Text('Prev', style: TextStyle(fontSize: 11, color: Colors.white)),
               ),
             ),
             const SizedBox(width: 6),
             Expanded(
-              child: FilledButton(
+              child: FilledButton.icon(
                 onPressed: () {
                   setState(() {
                     _flashCardMasteredCount = math.min(_flashCards.length, _flashCardMasteredCount + 1);
@@ -1580,8 +1527,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                     _isCardFlipped = false;
                   });
                 },
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 10)),
-                child: const Text('Got It', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                icon: const Icon(LucideIcons.check, size: 14),
+                label: const Text('Got It', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF3F3F46), padding: const EdgeInsets.symmetric(vertical: 10)),
               ),
             ),
             const SizedBox(width: 6),
@@ -1593,7 +1541,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                     _isCardFlipped = false;
                   });
                 },
-                style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0x44FFFFFF)), padding: const EdgeInsets.symmetric(vertical: 10)),
+                style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFF3F3F46)), padding: const EdgeInsets.symmetric(vertical: 10)),
                 child: const Text('Next', style: TextStyle(fontSize: 11, color: Colors.white)),
               ),
             ),
@@ -1668,7 +1616,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             Tooltip(
               message: 'Regenerate Study Guide Card',
               child: IconButton(
-                icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFF3B82F6)),
+                icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFFA1A1AA)),
                 onPressed: _refreshStudyModeContent,
               ),
             ),
@@ -1679,9 +1627,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0x331E293B),
+              color: const Color(0xFF242427),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x22FFFFFF)),
+              border: Border.all(color: const Color(0xFF3F3F46)),
             ),
             child: SingleChildScrollView(
               child: SelectableText(
@@ -1707,7 +1655,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             Tooltip(
               message: 'Read Summary Aloud via KittenTTS',
               child: IconButton(
-                icon: const Icon(LucideIcons.volume2, size: 14, color: Color(0xFF38BDF8)),
+                icon: const Icon(LucideIcons.volume2, size: 14, color: Color(0xFFA1A1AA)),
                 onPressed: () {
                   ref.read(kittenTtsServiceProvider).speak(_pageSummaryText);
                 },
@@ -1728,7 +1676,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
             Tooltip(
               message: 'Regenerate Detailed Short-Points Summary',
               child: IconButton(
-                icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFF10B981)),
+                icon: const Icon(LucideIcons.refreshCw, size: 14, color: Color(0xFFA1A1AA)),
                 onPressed: _refreshStudyModeContent,
               ),
             ),
@@ -1739,9 +1687,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           child: Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0x331E293B),
+              color: const Color(0xFF242427),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x22FFFFFF)),
+              border: Border.all(color: const Color(0xFF3F3F46)),
             ),
             child: SingleChildScrollView(
               child: SelectableText(
@@ -1768,9 +1716,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0x331E293B),
+              color: const Color(0xFF242427),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0x22FFFFFF)),
+              border: Border.all(color: const Color(0xFF3F3F46)),
             ),
             child: SingleChildScrollView(
               child: Column(
@@ -1778,12 +1726,12 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      const Icon(LucideIcons.sparkles, size: 14, color: Color(0xFFC084FC)),
+                      const Icon(LucideIcons.sparkles, size: 14, color: Color(0xFFE4E4E7)),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           'Semantic Q&A Engine for $titleText',
-                          style: const TextStyle(color: Color(0xFFC084FC), fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 12, fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -1791,7 +1739,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                   ),
                   const SizedBox(height: 6),
                   const Text('Ask specific subtopic questions to expand deep understanding.', style: TextStyle(color: Colors.white70, fontSize: 11)),
-                  const Divider(height: 16, color: Color(0x22FFFFFF)),
+                  const Divider(height: 16, color: Color(0xFF3F3F46)),
                   ...widget.aiState.chat.messages.map((m) {
                     final isUser = m.isUser;
                     return Padding(
@@ -1803,7 +1751,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                           if (!isUser) ...[
                             Container(
                               padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(color: Color(0xFF8B5CF6), shape: BoxShape.circle),
+                              decoration: const BoxDecoration(color: Color(0xFF3F3F46), shape: BoxShape.circle),
                               child: const Icon(LucideIcons.bot, size: 11, color: Colors.white),
                             ),
                             const SizedBox(width: 6),
@@ -1812,7 +1760,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                             child: Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: isUser ? const Color(0xFF6366F1) : const Color(0x44334155),
+                                color: isUser ? const Color(0xFF3F3F46) : const Color(0xFF27272A),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: SelectableText(m.text, style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.4)),
@@ -1821,7 +1769,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                           if (!isUser) ...[
                             const SizedBox(width: 4),
                             IconButton(
-                              icon: const Icon(LucideIcons.volume2, size: 12, color: Color(0xFFA5B4FC)),
+                              icon: const Icon(LucideIcons.volume2, size: 12, color: Color(0xFFA1A1AA)),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               tooltip: 'Listen via KittenTTS',
@@ -1832,7 +1780,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                             const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(color: Color(0xFFEC4899), shape: BoxShape.circle),
+                              decoration: const BoxDecoration(color: Color(0xFF52525B), shape: BoxShape.circle),
                               child: const Icon(LucideIcons.user, size: 11, color: Colors.white),
                             ),
                           ],
@@ -1850,9 +1798,9 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: isListening ? const Color(0x44EF4444) : const Color(0x448B5CF6),
+              color: isListening ? const Color(0xFF381414) : const Color(0xFF27272A),
               borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: isListening ? const Color(0xFFEF4444) : const Color(0xFFA78BFA)),
+              border: Border.all(color: isListening ? const Color(0xFFDC2626) : const Color(0xFF3F3F46)),
             ),
             child: Row(
               children: [
@@ -1893,8 +1841,8 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                   hintStyle: const TextStyle(fontSize: 11, color: Colors.white38),
                   isDense: true,
                   filled: true,
-                  fillColor: const Color(0x440F172A),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0x3364748B))),
+                  fillColor: const Color(0xFF27272A),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF3F3F46))),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                 ),
                 onSubmitted: (text) {
@@ -1922,7 +1870,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                 },
                 icon: Icon(isListening ? LucideIcons.micOff : LucideIcons.mic, size: 14),
                 style: IconButton.styleFrom(
-                  backgroundColor: isListening ? const Color(0xFFEF4444) : const Color(0xFF10B981),
+                  backgroundColor: isListening ? const Color(0xFFDC2626) : const Color(0xFF3F3F46),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.all(10),
                 ),
@@ -1935,7 +1883,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
                 onPressed: () => _showLatexOcrDialog(context),
                 icon: const Icon(LucideIcons.functionSquare, size: 14),
                 style: IconButton.styleFrom(
-                  backgroundColor: const Color(0xFF0EA5E9),
+                  backgroundColor: const Color(0xFF3F3F46),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.all(10),
                 ),
@@ -1951,7 +1899,7 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane>
               },
               icon: const Icon(LucideIcons.send, size: 14),
               style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFF8B5CF6),
+                backgroundColor: const Color(0xFF52525B),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.all(10),
               ),
@@ -2081,27 +2029,27 @@ class _ConceptCardState extends State<_ConceptCard> {
   Widget build(BuildContext context) {
     String currentText = widget.explanation;
     IconData currentIcon = LucideIcons.lightbulb;
-    Color activeColor = const Color(0xFFF59E0B);
+    Color activeColor = const Color(0xFFFAFAFA);
     String modeLabel = 'Core Definition & Mechanism';
 
     if (_activeViewIndex == 1) {
       currentText = widget.application;
       currentIcon = LucideIcons.zap;
-      activeColor = const Color(0xFF10B981);
+      activeColor = const Color(0xFFE4E4E7);
       modeLabel = 'Practical Real-World Application';
     } else if (_activeViewIndex == 2) {
       currentText = widget.takeaway;
       currentIcon = LucideIcons.target;
-      activeColor = const Color(0xFFEC4899);
+      activeColor = const Color(0xFFD4D4D8);
       modeLabel = 'Key Rule & Structural Invariant';
     }
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0x331E293B),
+        color: const Color(0xFF242427),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: activeColor.withValues(alpha: 0.4), width: 1.2),
+        border: Border.all(color: const Color(0xFF3F3F46), width: 1.0),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2125,16 +2073,16 @@ class _ConceptCardState extends State<_ConceptCard> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0x228B5CF6),
+                        color: const Color(0xFF3F3F46),
                         borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: const Color(0xFF8B5CF6)),
+                        border: Border.all(color: const Color(0xFF52525B)),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(LucideIcons.sparkles, size: 10, color: Color(0xFFC084FC)),
+                          Icon(LucideIcons.sparkles, size: 10, color: Color(0xFFFAFAFA)),
                           SizedBox(width: 3),
-                          Text('Deep Dive', style: TextStyle(color: Color(0xFFC084FC), fontSize: 9.5, fontWeight: FontWeight.bold)),
+                          Text('Deep Dive', style: TextStyle(color: Color(0xFFFAFAFA), fontSize: 9.5, fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -2155,11 +2103,11 @@ class _ConceptCardState extends State<_ConceptCard> {
           // Interactive Mode Segmented Toggle Bar
           Row(
             children: <Widget>[
-              _modeChip(0, 'Definition', LucideIcons.bookOpen, const Color(0xFFF59E0B)),
+              _modeChip(0, 'Definition', LucideIcons.bookOpen, const Color(0xFF71717A)),
               const SizedBox(width: 4),
-              _modeChip(1, 'Application', LucideIcons.zap, const Color(0xFF10B981)),
+              _modeChip(1, 'Application', LucideIcons.zap, const Color(0xFF71717A)),
               const SizedBox(width: 4),
-              _modeChip(2, 'Takeaway', LucideIcons.target, const Color(0xFFEC4899)),
+              _modeChip(2, 'Takeaway', LucideIcons.target, const Color(0xFF71717A)),
             ],
           ),
           const SizedBox(height: 8),
@@ -2172,9 +2120,9 @@ class _ConceptCardState extends State<_ConceptCard> {
               width: double.infinity,
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0x220F172A),
+                color: const Color(0xFF1E1E22),
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0x15FFFFFF)),
+                border: Border.all(color: const Color(0xFF3F3F46)),
               ),
               child: Text(
                 currentText,
@@ -2313,31 +2261,21 @@ class _FlashCard3DWidgetState extends State<_FlashCard3DWidget>
     required String category,
     required String text,
   }) {
-    final themeColor = isBack ? const Color(0xFF10B981) : const Color(0xFF6366F1);
-    final bgGradient = isBack
-        ? const LinearGradient(
-            colors: [Color(0xEE064E3B), Color(0xEE022C22)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          )
-        : const LinearGradient(
-            colors: [Color(0xEE1E1B4B), Color(0xEE0F172A)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          );
+    final themeColor = isBack ? const Color(0xFFFAFAFA) : const Color(0xFFE4E4E7);
+    final bgColor = isBack ? const Color(0xFF27272A) : const Color(0xFF1F1F22);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: bgGradient,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: themeColor.withValues(alpha: 0.7), width: 1.5),
-        boxShadow: [
+        color: bgColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF3F3F46), width: 1.0),
+        boxShadow: const [
           BoxShadow(
-            color: themeColor.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
+            color: Color(0x66000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
           ),
         ],
       ),

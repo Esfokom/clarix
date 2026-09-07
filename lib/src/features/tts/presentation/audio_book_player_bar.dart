@@ -24,9 +24,9 @@ class AudioBookPlayerBar extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xEE0F172A),
+            color: const Color(0xFF18181B),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0x3364748B)),
+            border: Border.all(color: const Color(0xFF3F3F46)),
             boxShadow: const [
               BoxShadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4)),
             ],
@@ -36,7 +36,7 @@ class AudioBookPlayerBar extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(LucideIcons.headphones, size: 16, color: Color(0xFF10B981)),
+                  const Icon(LucideIcons.headphones, size: 16, color: Color(0xFFA1A1AA)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -73,13 +73,13 @@ class AudioBookPlayerBar extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0x331E293B),
+                        color: const Color(0xFF27272A),
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0x3364748B)),
+                        border: Border.all(color: const Color(0xFF3F3F46)),
                       ),
                       child: Text(
                         '${audioBookService.playbackSpeed}x',
-                        style: const TextStyle(color: Color(0xFF38BDF8), fontSize: 10.5, fontWeight: FontWeight.bold),
+                        style: const TextStyle(color: Color(0xFFFAFAFA), fontSize: 10.5, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -98,7 +98,7 @@ class AudioBookPlayerBar extends StatelessWidget {
                     },
                     icon: Icon(isPlaying ? LucideIcons.pause : LucideIcons.play, size: 16),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
+                      backgroundColor: const Color(0xFF3F3F46),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.all(8),
                     ),
@@ -112,8 +112,8 @@ class AudioBookPlayerBar extends StatelessWidget {
               const SizedBox(height: 6),
               LinearProgressIndicator(
                 value: progress,
-                backgroundColor: const Color(0x331E293B),
-                color: const Color(0xFF10B981),
+                backgroundColor: const Color(0xFF27272A),
+                color: const Color(0xFF71717A),
                 minHeight: 3,
               ),
             ],

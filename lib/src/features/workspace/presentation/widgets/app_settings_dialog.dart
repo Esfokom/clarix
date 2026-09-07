@@ -655,7 +655,7 @@ class _ProviderTile extends ConsumerWidget {
         profile.id.contains('local') ||
         profile.id.contains('gemma');
 
-    final accentColor = isOffline ? const Color(0xFF10B981) : const Color(0xFF3B82F6);
+    final accentColor = isOffline ? const Color(0xFF71717A) : const Color(0xFF3B82F6);
     final typeLabel = isOffline ? '100% Offline (No Internet)' : 'Cloud API (Requires Internet)';
     final typeIcon = isOffline ? Icons.laptop_windows_outlined : Icons.cloud_outlined;
 
@@ -725,7 +725,7 @@ class _ProviderTile extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: const Text(
-                          'ACTIVE',
+                          'Default',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 10,
