@@ -15,6 +15,7 @@ import 'quickstart_surface.dart';
 import 'reader_inspector.dart';
 import 'workspace_common.dart';
 import 'workspace_presets_dialog.dart';
+import 'package:clarix/src/features/scrapbook/presentation/scrapbook_side_pane.dart';
 
 import 'package:clarix/src/core/theme_controller.dart';
 import 'package:clarix/src/core/theme_profile.dart';
@@ -60,6 +61,10 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             showInspector &&
             activeTab != null &&
             widget.state.session.rightToolWindow == RightToolWindow.textFormat;
+        final bool showScrapbookInline =
+            showInspector &&
+            activeTab != null &&
+            widget.state.session.rightToolWindow == RightToolWindow.scrapbook;
         final bool showAiOverlay =
             !showInspector &&
             activeTab != null &&
@@ -93,7 +98,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                   if (showAiInline ||
                       showStudyModeInline ||
                       showDocumentInline ||
-                      showTextFormatInline)
+                      showTextFormatInline ||
+                      showScrapbookInline)
                     _PaneHandle(
                       key: const Key('right-pane-resizer'),
                       onDrag: (double delta) => ref
@@ -105,7 +111,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                   if ((showAiInline ||
                           showStudyModeInline ||
                           showDocumentInline ||
-                          showTextFormatInline) &&
+                          showTextFormatInline ||
+                          showScrapbookInline) &&
                       !widget.state.session.rightPaneCollapsed)
                     SizedBox(
                       width: widget.state.session.rightPaneWidth,
@@ -115,6 +122,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                           ? _studyModePane(aiState, activeTab)
                           : showTextFormatInline
                           ? _TextFormatPane(activeTab: activeTab)
+                          : showScrapbookInline
+                          ? const ScrapbookSidePane()
                           : ReaderInspector(
                               state: widget.state,
                               activeTab: activeTab,
@@ -615,6 +624,13 @@ class _RightToolRail extends ConsumerWidget {
             RightToolWindow.ai,
             'Clarix AI',
             LucideIcons.sparkles,
+          ),
+          _tool(
+            context,
+            ref,
+            RightToolWindow.scrapbook,
+            'Scrapbook Clipboard',
+            LucideIcons.scissors,
           ),
           Tooltip(
             message: 'Study Mode',
