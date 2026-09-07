@@ -67,6 +67,10 @@ final voiceCopilotServiceProvider = Provider<VoiceCopilotService>(
   (Ref ref) => VoiceCopilotService(),
 );
 
+final livingDocumentServiceProvider = Provider<LivingDocumentService>(
+  (Ref ref) => LivingDocumentService(),
+);
+
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>(
   (Ref ref) => SharedPreferencesAsync(),
 );
