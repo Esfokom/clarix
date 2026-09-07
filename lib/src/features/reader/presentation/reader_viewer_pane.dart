@@ -8,12 +8,14 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:smooth_corner/smooth_corner.dart';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/theme_controller.dart';
+import 'package:clarix/src/features/tts/tts.dart';
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
 import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/workspace_common.dart';
 import 'reader_interaction_math.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
+part 'reader_read_aloud.dart';
 
 class ReaderViewerPane extends ConsumerStatefulWidget {
   const ReaderViewerPane({
@@ -51,6 +53,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   bool _colorInspectorOpen = false;
   int _customHighlightColor = 0x66FFD54F;
   final Map<String, List<Rect>> _annotationHitAreas = <String, List<Rect>>{};
+  final Map<int, List<_PageSentence>> _pageSentenceCache = <int, List<_PageSentence>>{};
+  final Map<String, Rect> _readAloudHitAreas = <String, Rect>{};
+  final List<ReadAloudSegment> _readAloudSessionSegments = <ReadAloudSegment>[];
+  int? _readAloudNextPageToExtract;
+  bool _readAloudExtending = false;
+  bool _readAloudSessionOwned = false;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -88,6 +96,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       _viewerStateDebounce?.cancel();
       _lastPointerGlobalPosition = null;
       _pendingSearchQuery = null;
+      _resetReadAloudSession();
+      _pageSentenceCache.clear();
+      _readAloudHitAreas.clear();
       _createController();
       return;
     }
@@ -121,6 +132,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
     _disposeSearcher();
     _controller.removeListener(_syncViewerMetrics);
     _metrics.dispose();
+    if (_readAloudSessionOwned) {
+      unawaited(ref.read(ttsNotifierProvider.notifier).stop());
+    }
     super.dispose();
   }
 
@@ -152,6 +166,15 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
         .watch(clarixThemeProvider)
         .value
         ?.readerBackgroundPath;
+    final TtsPlaybackState readAloudPlayback =
+        ref.watch(ttsNotifierProvider).value?.playback ?? const TtsPlaybackState();
+    ref.listen<TtsPlaybackState>(
+      ttsNotifierProvider.select(
+        (AsyncValue<TtsFeatureState> value) =>
+            value.value?.playback ?? const TtsPlaybackState(),
+      ),
+      _onReadAloudPlaybackChanged,
+    );
     if (widget.tab.isMissingFile) {
       return Center(
         child: SurfaceBlock(
@@ -249,10 +272,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             onViewerReady: _onViewerReady,
                             pagePaintCallbacks: <PdfViewerPagePaintCallback>[
                               _paintAnnotations,
+                              _paintReadAloudHighlight,
                               if (_searcher != null)
                                 _searcher!.pageTextMatchPaintCallback,
                             ],
                             onGeneralTap: _onViewerTap,
+                            customizeContextMenuItems: _customizeContextMenu,
                             viewerOverlayBuilder: _buildViewerOverlay,
                           ),
                         );
@@ -277,6 +302,23 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                     onNext: _canGoToNextMatch
                         ? () => unawaited(_goToNextSearchMatch())
                         : null,
+                  ),
+                ),
+              ),
+            if (readAloudPlayback.status != TtsPlaybackStatus.idle)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 60,
+                child: Center(
+                  child: _ReadAloudBar(
+                    playback: readAloudPlayback,
+                    colors: widget.colors,
+                    onPauseResume: () =>
+                        readAloudPlayback.status == TtsPlaybackStatus.speaking
+                        ? ref.read(ttsNotifierProvider.notifier).pause()
+                        : ref.read(ttsNotifierProvider.notifier).resume(),
+                    onStop: () => ref.read(ttsNotifierProvider.notifier).stop(),
                   ),
                 ),
               ),

@@ -2,7 +2,6 @@ import 'dart:isolate';
 
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 
-import '../domain/tts_models.dart';
 import 'tts_model_store.dart';
 
 /// Hosts a sherpa-onnx [sherpa.OfflineTts] engine inside a dedicated isolate.
@@ -27,13 +26,11 @@ class TtsEngineWorker {
   bool _disposed = false;
 
   static Future<TtsEngineWorker> start({
-    required TtsEngineKind engine,
     required TtsInstalledModelPaths paths,
   }) async {
     final ReceivePort readyPort = ReceivePort();
     final Isolate isolate = await Isolate.spawn(_entryPoint, <Object?>[
       readyPort.sendPort,
-      engine == TtsEngineKind.kokoro ? 'kokoro' : 'kitten',
       paths.model,
       paths.voices,
       paths.tokens,
@@ -88,36 +85,24 @@ class TtsEngineWorker {
 
   static void _entryPoint(List<Object?> args) {
     final SendPort readyPort = args[0]! as SendPort;
-    final String engine = args[1]! as String;
-    final String model = args[2]! as String;
-    final String voices = args[3]! as String;
-    final String tokens = args[4]! as String;
-    final String dataDir = args[5]! as String;
+    final String model = args[1]! as String;
+    final String voices = args[2]! as String;
+    final String tokens = args[3]! as String;
+    final String dataDir = args[4]! as String;
 
     late final sherpa.OfflineTts tts;
     try {
       sherpa.initBindings();
-      final sherpa.OfflineTtsModelConfig modelConfig = engine == 'kokoro'
-          ? sherpa.OfflineTtsModelConfig(
-              kokoro: sherpa.OfflineTtsKokoroModelConfig(
-                model: model,
-                voices: voices,
-                tokens: tokens,
-                dataDir: dataDir,
-              ),
-              numThreads: 2,
-              debug: false,
-            )
-          : sherpa.OfflineTtsModelConfig(
-              kitten: sherpa.OfflineTtsKittenModelConfig(
-                model: model,
-                voices: voices,
-                tokens: tokens,
-                dataDir: dataDir,
-              ),
-              numThreads: 2,
-              debug: false,
-            );
+      final sherpa.OfflineTtsModelConfig modelConfig = sherpa.OfflineTtsModelConfig(
+        kitten: sherpa.OfflineTtsKittenModelConfig(
+          model: model,
+          voices: voices,
+          tokens: tokens,
+          dataDir: dataDir,
+        ),
+        numThreads: 2,
+        debug: false,
+      );
       tts = sherpa.OfflineTts(
         sherpa.OfflineTtsConfig(model: modelConfig, maxNumSenetences: 1),
       );

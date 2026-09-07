@@ -13,6 +13,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
       zoom: _controller.isReady ? _controller.currentZoom : _zoom,
     );
     _queueViewerStatePersistence();
+    _precachePageSentences(page);
   }
 
   Future<void> _onViewerReady(
@@ -48,10 +49,12 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
         );
     if (mounted) {
       _updateState(() => _searcher = searcher);
+      final int readyPage = controller.pageNumber ?? widget.tab.currentPage;
       _metrics.value = _ReaderViewportMetrics(
-        page: controller.pageNumber ?? widget.tab.currentPage,
+        page: readyPage,
         zoom: controller.currentZoom,
       );
+      _precachePageSentences(readyPage);
     } else {
       searcher.dispose();
     }
@@ -142,6 +145,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     PdfViewerGeneralTapHandlerDetails details,
   ) {
     if (details.type != PdfViewerGeneralTapType.tap) return false;
+    if (_handleReadAloudSkipTap(details.documentPosition)) return true;
     for (final DocumentAnnotation annotation in widget.annotations) {
       if (annotation.kind == AnnotationKind.highlight &&
           annotationHitAreaContains(

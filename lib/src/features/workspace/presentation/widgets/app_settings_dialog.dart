@@ -11,6 +11,7 @@ import '../../../../core/theme_controller.dart';
 import '../../../../core/theme_profile.dart';
 import '../../../../core/reader_background_store.dart';
 import '../../domain/workspace_feature_state.dart';
+import 'app_settings_tts_section.dart';
 import 'workspace_common.dart';
 
 Future<void> showAppSettingsDialog(BuildContext context) => showDialog<void>(
@@ -189,6 +190,8 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                   ),
                                   const SizedBox(height: 24),
                                   const _VoiceInputSettings(),
+                                  const SizedBox(height: 24),
+                                  const TtsSettingsSection(),
                                   const SizedBox(height: 24),
                                   const Text(
                                     'Storage',

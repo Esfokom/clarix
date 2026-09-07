@@ -8,7 +8,6 @@ import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import 'package:clarix/src/features/ai/ai.dart';
 import 'package:clarix/src/features/study/study.dart';
-import 'package:clarix/src/features/tts/tts.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'document_workspace.dart';
 import 'quickstart_surface.dart';
@@ -62,12 +61,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
             showInspector &&
             activeTab != null &&
             widget.state.session.rightToolWindow == RightToolWindow.study;
-        final bool showTtsInline =
-            showInspector &&
-            activeTab != null &&
-            widget.state.session.rightToolWindow == RightToolWindow.tts;
         final bool showAnyInline =
-            showAiInline || showDocumentInline || showStudyInline || showTtsInline;
+            showAiInline || showDocumentInline || showStudyInline;
         final bool showAiOverlay =
             !showInspector &&
             activeTab != null &&
@@ -112,8 +107,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                           ? _aiPane(aiState, activeTab)
                           : showStudyInline
                           ? _studyPane(activeTab)
-                          : showTtsInline
-                          ? _ttsPane(activeTab)
                           : ReaderInspector(
                               state: widget.state,
                               activeTab: activeTab,
@@ -210,18 +203,6 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
       onCollapse: () => ref
           .read(workspaceNotifierProvider.notifier)
           .selectRightToolWindow(RightToolWindow.study),
-      onNavigateToPage: (int pageNumber) => ref
-          .read(workspaceNotifierProvider.notifier)
-          .updateViewerState(tabId: tab.id, currentPage: pageNumber),
-    );
-  }
-
-  Widget _ttsPane(DocumentTabState tab) {
-    return TtsSidePane(
-      documentId: tab.documentId,
-      onCollapse: () => ref
-          .read(workspaceNotifierProvider.notifier)
-          .selectRightToolWindow(RightToolWindow.tts),
       onNavigateToPage: (int pageNumber) => ref
           .read(workspaceNotifierProvider.notifier)
           .updateViewerState(tabId: tab.id, currentPage: pageNumber),
@@ -368,13 +349,6 @@ class _RightToolRail extends ConsumerWidget {
             RightToolWindow.study,
             'Study',
             LucideIcons.graduationCap,
-          ),
-          _tool(
-            context,
-            ref,
-            RightToolWindow.tts,
-            'Listen',
-            LucideIcons.headphones,
           ),
         ],
       ),

@@ -1,4 +1,4 @@
-enum TtsEngineKind { kitten, kokoro }
+enum TtsEngineKind { kitten }
 
 /// Describes a downloadable sherpa-onnx TTS voice pack.
 class TtsModelSpec {
@@ -13,6 +13,7 @@ class TtsModelSpec {
     required this.voicesFileName,
     required this.tokensFileName,
     required this.dataDirName,
+    required this.voiceCount,
   });
 
   final String id;
@@ -25,6 +26,7 @@ class TtsModelSpec {
   final String voicesFileName;
   final String tokensFileName;
   final String dataDirName;
+  final int voiceCount;
 }
 
 enum TtsInstallStatus { notInstalled, downloading, extracting, installed, failed }
@@ -54,6 +56,21 @@ class TtsModelInstallState {
   );
 }
 
+/// A single unit of narration: one sentence (or sentence-like fragment)
+/// extracted directly from a document page, with enough identity for the
+/// reader to map it back to an on-page highlight.
+class ReadAloudSegment {
+  const ReadAloudSegment({
+    required this.id,
+    required this.text,
+    required this.pageNumber,
+  });
+
+  final String id;
+  final String text;
+  final int pageNumber;
+}
+
 enum TtsPlaybackStatus { idle, preparing, speaking, paused }
 
 class TtsPlaybackState {
@@ -63,6 +80,7 @@ class TtsPlaybackState {
     this.segmentIndex = 0,
     this.segmentTotal = 0,
     this.currentPage,
+    this.currentSegmentId,
     this.errorMessage,
   });
 
@@ -71,6 +89,7 @@ class TtsPlaybackState {
   final int segmentIndex;
   final int segmentTotal;
   final int? currentPage;
+  final String? currentSegmentId;
   final String? errorMessage;
 
   TtsPlaybackState copyWith({
@@ -81,6 +100,8 @@ class TtsPlaybackState {
     int? segmentTotal,
     int? currentPage,
     bool clearCurrentPage = false,
+    String? currentSegmentId,
+    bool clearCurrentSegmentId = false,
     String? errorMessage,
     bool clearErrorMessage = false,
   }) => TtsPlaybackState(
@@ -89,6 +110,9 @@ class TtsPlaybackState {
     segmentIndex: segmentIndex ?? this.segmentIndex,
     segmentTotal: segmentTotal ?? this.segmentTotal,
     currentPage: clearCurrentPage ? null : (currentPage ?? this.currentPage),
+    currentSegmentId: clearCurrentSegmentId
+        ? null
+        : (currentSegmentId ?? this.currentSegmentId),
     errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
   );
 }

@@ -1,44 +1,38 @@
 import '../domain/tts_models.dart';
-import '../infrastructure/tts_model_catalog.dart';
 
 class TtsFeatureState {
   const TtsFeatureState({
     required this.installState,
-    required this.selectedModelId,
-    required this.selectedSid,
-    required this.speed,
+    required this.defaultVoiceSid,
+    required this.defaultSpeed,
     required this.playback,
     this.errorMessage,
   });
 
-  factory TtsFeatureState.initial() => TtsFeatureState(
+  factory TtsFeatureState.initial() => const TtsFeatureState(
     installState: <String, TtsModelInstallState>{},
-    selectedModelId: TtsModelCatalog.defaultModel.id,
-    selectedSid: 0,
-    speed: 1,
+    defaultVoiceSid: 0,
+    defaultSpeed: 1,
     playback: TtsPlaybackState(),
   );
 
   final Map<String, TtsModelInstallState> installState;
-  final String selectedModelId;
-  final int selectedSid;
-  final double speed;
+  final int defaultVoiceSid;
+  final double defaultSpeed;
   final TtsPlaybackState playback;
   final String? errorMessage;
 
   TtsFeatureState copyWith({
     Map<String, TtsModelInstallState>? installState,
-    String? selectedModelId,
-    int? selectedSid,
-    double? speed,
+    int? defaultVoiceSid,
+    double? defaultSpeed,
     TtsPlaybackState? playback,
     String? errorMessage,
     bool clearErrorMessage = false,
   }) => TtsFeatureState(
     installState: installState ?? this.installState,
-    selectedModelId: selectedModelId ?? this.selectedModelId,
-    selectedSid: selectedSid ?? this.selectedSid,
-    speed: speed ?? this.speed,
+    defaultVoiceSid: defaultVoiceSid ?? this.defaultVoiceSid,
+    defaultSpeed: defaultSpeed ?? this.defaultSpeed,
     playback: playback ?? this.playback,
     errorMessage: clearErrorMessage
         ? null
