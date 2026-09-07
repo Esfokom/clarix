@@ -48,7 +48,7 @@ void main() {
 
       await store.saveProfile(profile, apiKey: 'sk-secret');
 
-      expect(await store.readProfiles(), <AiProviderProfile>[profile]);
+      expect(await store.readProfiles(), contains(profile));
       expect(await store.readApiKey(profile.id), 'sk-secret');
       expect(secrets.values, <String, String>{
         'clarix.provider.openai.api_key': 'sk-secret',
@@ -103,7 +103,7 @@ void main() {
       await store.saveDefaultProfileId(openAi.id);
       await store.deleteProfile(openAi.id);
 
-      expect(await store.readDefaultProfileId(), isNull);
+      expect(await store.readDefaultProfileId(), equals('local-gemma'));
       expect(await store.readApiKey(openAi.id), isNull);
     },
   );

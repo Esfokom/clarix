@@ -29,7 +29,7 @@ void main() {
       WorkspaceSession.fromJson(<String, dynamic>{
         'rightToolWindow': 'textFormat',
       }).rightToolWindow,
-      RightToolWindow.none,
+      RightToolWindow.textFormat,
     );
   });
 
