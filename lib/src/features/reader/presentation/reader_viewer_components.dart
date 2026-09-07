@@ -443,6 +443,8 @@ class _ViewerHud extends StatelessWidget {
     this.onRedo,
     this.onSave,
     this.scanning = false,
+    this.nightMode = PdfNightMode.off,
+    this.onNightModeChanged,
   });
 
   final int page;
@@ -450,6 +452,8 @@ class _ViewerHud extends StatelessWidget {
   final double zoom;
   final String documentId;
   final String filePath;
+  final PdfNightMode nightMode;
+  final ValueChanged<PdfNightMode>? onNightModeChanged;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
   final VoidCallback? onZoomOut;
@@ -562,6 +566,52 @@ class _ViewerHud extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
+            PopupMenuButton<PdfNightMode>(
+              key: const Key('pdf-night-mode-btn'),
+              tooltip: 'Night Mode / Smart Dark Mode',
+              color: WorkspaceColors.panelRaised,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: WorkspaceColors.border),
+              ),
+              onSelected: onNightModeChanged,
+              itemBuilder: (BuildContext context) {
+                return PdfNightMode.values.map((PdfNightMode mode) {
+                  return PopupMenuItem<PdfNightMode>(
+                    value: mode,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(
+                          mode.icon,
+                          size: 14,
+                          color: mode == nightMode
+                              ? WorkspaceColors.accent
+                              : WorkspaceColors.textMuted,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          mode.label,
+                          style: TextStyle(
+                            color: mode == nightMode
+                                ? WorkspaceColors.textStrong
+                                : WorkspaceColors.textMuted,
+                            fontSize: 11.5,
+                            fontWeight:
+                                mode == nightMode ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(growable: false);
+              },
+              child: _HudIcon(
+                icon: nightMode.icon,
+                active: nightMode != PdfNightMode.off,
+              ),
+            ),
             const SizedBox(width: 10),
             Tooltip(
               message: 'Highlight selected text',

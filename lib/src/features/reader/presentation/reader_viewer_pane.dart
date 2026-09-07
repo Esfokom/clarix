@@ -21,6 +21,7 @@ import 'package:clarix/src/features/workspace/presentation/widgets/workspace_com
 import 'reader_interaction_math.dart';
 import 'reading_velocity_pill.dart';
 import 'package:clarix/src/core/deep_link_service.dart';
+import '../domain/pdf_night_mode.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
 
@@ -66,6 +67,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   Timer? _selectionAutoPanTimer;
   bool _nativeLifecycleSyncScheduled = false;
   bool _isCanvasEditingActive = false;
+  PdfNightMode _nightMode = PdfNightMode.off;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -603,7 +605,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
               )
             else
               Positioned.fill(
-                child: ReaderCursorLockedPdfRegion(
+                child: ColorFiltered(
+                  colorFilter: _nightMode.colorFilter ?? const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                  child: ReaderCursorLockedPdfRegion(
                   controller: _controller,
                   onViewChanged: _queueViewerStatePersistence,
                   builder:
@@ -874,6 +878,8 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             zoom: metrics.zoom,
                             documentId: widget.tab.documentId,
                             filePath: widget.tab.filePath,
+                            nightMode: _nightMode,
+                            onNightModeChanged: (mode) => setState(() => _nightMode = mode),
                             onPreviousPage:
                                 _controller.isReady && metrics.page > 1
                                 ? () => _controller.goToPage(
