@@ -25,12 +25,18 @@ class ReaderViewerPane extends ConsumerStatefulWidget {
     required this.documentRef,
     required this.annotations,
     required this.colors,
+    this.fullscreen = false,
+    this.onExitFullscreen,
+    this.onOpenSettings,
   });
 
   final DocumentTabState tab;
   final PdfDocumentRef documentRef;
   final List<DocumentAnnotation> annotations;
   final WorkspaceSurfaceTokens colors;
+  final bool fullscreen;
+  final VoidCallback? onExitFullscreen;
+  final VoidCallback? onOpenSettings;
 
   @override
   ConsumerState<ReaderViewerPane> createState() => _PdfViewerPaneState();
@@ -54,12 +60,17 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   bool _colorInspectorOpen = false;
   int _customHighlightColor = 0x66FFD54F;
   final Map<String, List<Rect>> _annotationHitAreas = <String, List<Rect>>{};
-  final Map<int, List<_PageSentence>> _pageSentenceCache = <int, List<_PageSentence>>{};
+  final Map<int, List<_PageSentence>> _pageSentenceCache =
+      <int, List<_PageSentence>>{};
   final Map<String, Rect> _readAloudHitAreas = <String, Rect>{};
   final List<ReadAloudSegment> _readAloudSessionSegments = <ReadAloudSegment>[];
   int? _readAloudNextPageToExtract;
   bool _readAloudExtending = false;
   bool _readAloudSessionOwned = false;
+  bool _showTopChrome = false;
+  bool _showBottomChrome = false;
+  Timer? _hideChromeTimer;
+  double? _scrubPreviewPage;
 
   int get _page => _metrics.value.page;
   double get _zoom => _metrics.value.zoom;
@@ -130,6 +141,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   @override
   void dispose() {
     _viewerStateDebounce?.cancel();
+    _hideChromeTimer?.cancel();
     _disposeSearcher();
     _controller.removeListener(_syncViewerMetrics);
     _metrics.dispose();
@@ -170,7 +182,8 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
     final bool readerBookBackgroundOverride =
         themeProfile.readerBookBackgroundOverride;
     final TtsPlaybackState readAloudPlayback =
-        ref.watch(ttsNotifierProvider).value?.playback ?? const TtsPlaybackState();
+        ref.watch(ttsNotifierProvider).value?.playback ??
+        const TtsPlaybackState();
     ref.listen<TtsPlaybackState>(
       ttsNotifierProvider.select(
         (AsyncValue<TtsFeatureState> value) =>
@@ -194,10 +207,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
               const SizedBox(height: 10),
               Text(
                 widget.tab.missingFileMessage ?? 'This file is missing.',
-                style: TextStyle(
-                  color: widget.colors.textMuted,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: widget.colors.textMuted, fontSize: 12),
               ),
               const SizedBox(height: 14),
               FilledButton.icon(
@@ -213,250 +223,425 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       );
     }
 
-    return DecoratedBox(
-      decoration: BoxDecoration(color: widget.colors.canvas),
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          textSelectionTheme: TextSelectionThemeData(
-            selectionColor: widget.colors.selection,
-          ),
-        ),
-        child: Stack(
-          children: <Widget>[
-            if (readerBackgroundPath case final String path)
-              Positioned.fill(
-                child: readerBackgroundInverted
-                    ? ColorFiltered(
-                        colorFilter: const ColorFilter.matrix(<double>[
-                          -1, 0, 0, 0, 255,
-                          0, -1, 0, 0, 255,
-                          0, 0, -1, 0, 255,
-                          0, 0, 0, 1, 0,
-                        ]),
-                        child: Image.file(
-                          File(path),
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => const SizedBox(),
-                        ),
-                      )
-                    : Image.file(
-                        File(path),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const SizedBox(),
-                      ),
-              ),
-            Positioned.fill(
-              child: Listener(
-                onPointerHover: _rememberPointerPosition,
-                onPointerDown: _rememberPointerPosition,
-                onPointerMove: _rememberPointerPosition,
-                onPointerUp: _rememberPointerPosition,
-                onPointerCancel: _rememberPointerPosition,
-                onPointerPanZoomStart: _rememberTrackpadZoomStart,
-                onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
-                child: ReaderCursorLockedPdfRegion(
-                  controller: _controller,
-                  onViewChanged: _queueViewerStatePersistence,
-                  builder:
-                      (BuildContext context, ReaderCursorLockedPdfInput input) {
-                        return PdfViewer(
-                          widget.documentRef,
-                          controller: _controller,
-                          initialPageNumber: widget.tab.currentPage,
-                          params: PdfViewerParams(
-                            backgroundColor: readerBookBackgroundOverride
-                                ? const Color(0xFFF3ECD9)
-                                : (readerBackgroundPath == null
-                                      ? widget.colors.viewerBackground
-                                      : Colors.transparent),
-                            margin: 14,
-                            pageDropShadow: const BoxShadow(
-                              color: Color(0x1A000000),
-                              blurRadius: 10,
-                              offset: Offset(0, 6),
-                            ),
-                            // Render and keep a screenful of pages beyond the
-                            // viewport in every direction so a fast scroll
-                            // lands on painted pages instead of placeholders.
-                            limitRenderingCache: false,
-                            maxImageBytesCachedOnMemory: 192 * 1024 * 1024,
-                            horizontalCacheExtent: 1,
-                            verticalCacheExtent: 2,
-                            panEnabled: true,
-                            scaleEnabled: input.pdfrxScaleEnabled,
-                            scaleByPointerScale: readerPointerZoomSensitivity,
-                            interactionDelegateProvider:
-                                input.interactionDelegateProvider,
-                            onInteractionEnd: (_) => _persistViewerState(),
-                            onPageChanged: _onPageChanged,
-                            onViewerReady: _onViewerReady,
-                            pagePaintCallbacks: <PdfViewerPagePaintCallback>[
-                              _paintAnnotations,
-                              _paintReadAloudHighlight,
-                              if (_searcher != null)
-                                _searcher!.pageTextMatchPaintCallback,
-                            ],
-                            onGeneralTap: _onViewerTap,
-                            customizeContextMenuItems: _customizeContextMenu,
-                            viewerOverlayBuilder: _buildViewerOverlay,
-                          ),
-                        );
-                      },
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final Size paneSize = constraints.biggest;
+        return MouseRegion(
+          onHover: widget.fullscreen
+              ? (PointerHoverEvent event) =>
+                    _onFullscreenChromeHover(event.localPosition, paneSize)
+              : null,
+          onExit: widget.fullscreen
+              ? (_) => _scheduleHideFullscreenChrome()
+              : null,
+          child: DecoratedBox(
+            decoration: BoxDecoration(color: widget.colors.canvas),
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                textSelectionTheme: TextSelectionThemeData(
+                  selectionColor: widget.colors.selection,
                 ),
               ),
-            ),
-            if (_shouldShowSearchOverlay)
-              Positioned(
-                top: 14,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: _DocumentSearchOverlay(
-                    query: widget.tab.searchQuery,
-                    isSearching: _isSearchInProgress,
-                    matchCount: _searcher?.matches.length ?? 0,
-                    currentIndex: _searcher?.currentIndex,
-                    onPrevious: _canGoToPreviousMatch
-                        ? () => unawaited(_goToPreviousSearchMatch())
-                        : null,
-                    onNext: _canGoToNextMatch
-                        ? () => unawaited(_goToNextSearchMatch())
-                        : null,
-                    colors: widget.colors,
-                  ),
-                ),
-              ),
-            if (readAloudPlayback.status != TtsPlaybackStatus.idle)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 60,
-                child: Center(
-                  child: _ReadAloudBar(
-                    playback: readAloudPlayback,
-                    colors: widget.colors,
-                    onPauseResume: () =>
-                        readAloudPlayback.status == TtsPlaybackStatus.speaking
-                        ? ref.read(ttsNotifierProvider.notifier).pause()
-                        : ref.read(ttsNotifierProvider.notifier).resume(),
-                    onStop: () => ref.read(ttsNotifierProvider.notifier).stop(),
-                  ),
-                ),
-              ),
-            if (_colorInspectorOpen)
-              Positioned(
-                top: 18,
-                right: 18,
-                child: Material(
-                  color: widget.colors.panelRaised,
-                  borderRadius: BorderRadius.circular(10),
-                  child: SizedBox(
-                    width: 230,
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              const Expanded(
-                                child: Text('Custom highlight colour'),
+              child: Stack(
+                children: <Widget>[
+                  if (readerBackgroundPath case final String path)
+                    Positioned.fill(
+                      child: readerBackgroundInverted
+                          ? ColorFiltered(
+                              colorFilter: const ColorFilter.matrix(<double>[
+                                -1,
+                                0,
+                                0,
+                                0,
+                                255,
+                                0,
+                                -1,
+                                0,
+                                0,
+                                255,
+                                0,
+                                0,
+                                -1,
+                                0,
+                                255,
+                                0,
+                                0,
+                                0,
+                                1,
+                                0,
+                              ]),
+                              child: Image.file(
+                                File(path),
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => const SizedBox(),
                               ),
-                              IconButton(
-                                onPressed: () =>
-                                    setState(() => _colorInspectorOpen = false),
-                                icon: const Icon(LucideIcons.x, size: 15),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            height: 24,
-                            decoration: BoxDecoration(
-                              color: Color(_customHighlightColor),
-                              borderRadius: BorderRadius.circular(5),
+                            )
+                          : Image.file(
+                              File(path),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => const SizedBox(),
                             ),
-                          ),
-                          const SizedBox(height: 12),
-                          _ColourWheel(
-                            color: Color(_customHighlightColor),
-                            onChanged: (Color color) => setState(
-                              () => _customHighlightColor = color.toARGB32(),
-                            ),
-                          ),
-                          FilledButton(
-                            onPressed: () async {
-                              await _highlightSelection(
-                                colorValue: _customHighlightColor,
+                    ),
+                  Positioned.fill(
+                    child: Listener(
+                      onPointerHover: _rememberPointerPosition,
+                      onPointerDown: _rememberPointerPosition,
+                      onPointerMove: _rememberPointerPosition,
+                      onPointerUp: _rememberPointerPosition,
+                      onPointerCancel: _rememberPointerPosition,
+                      onPointerPanZoomStart: _rememberTrackpadZoomStart,
+                      onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
+                      child: ReaderCursorLockedPdfRegion(
+                        controller: _controller,
+                        onViewChanged: _queueViewerStatePersistence,
+                        builder:
+                            (
+                              BuildContext context,
+                              ReaderCursorLockedPdfInput input,
+                            ) {
+                              return PdfViewer(
+                                widget.documentRef,
+                                controller: _controller,
+                                initialPageNumber: widget.tab.currentPage,
+                                params: PdfViewerParams(
+                                  backgroundColor: readerBookBackgroundOverride
+                                      ? const Color(0xFFF3ECD9)
+                                      : (readerBackgroundPath == null
+                                            ? widget.colors.viewerBackground
+                                            : Colors.transparent),
+                                  margin: 14,
+                                  pageDropShadow: const BoxShadow(
+                                    color: Color(0x1A000000),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 6),
+                                  ),
+                                  // Render and keep a screenful of pages beyond the
+                                  // viewport in every direction so a fast scroll
+                                  // lands on painted pages instead of placeholders.
+                                  limitRenderingCache: false,
+                                  maxImageBytesCachedOnMemory:
+                                      192 * 1024 * 1024,
+                                  horizontalCacheExtent: 1,
+                                  verticalCacheExtent: 2,
+                                  panEnabled: true,
+                                  scaleEnabled: input.pdfrxScaleEnabled,
+                                  scaleByPointerScale:
+                                      readerPointerZoomSensitivity,
+                                  interactionDelegateProvider:
+                                      input.interactionDelegateProvider,
+                                  onInteractionEnd: (_) =>
+                                      _persistViewerState(),
+                                  onPageChanged: _onPageChanged,
+                                  onViewerReady: _onViewerReady,
+                                  pagePaintCallbacks:
+                                      <PdfViewerPagePaintCallback>[
+                                        _paintAnnotations,
+                                        _paintReadAloudHighlight,
+                                        if (_searcher != null)
+                                          _searcher!.pageTextMatchPaintCallback,
+                                      ],
+                                  onGeneralTap: _onViewerTap,
+                                  customizeContextMenuItems:
+                                      _customizeContextMenu,
+                                  viewerOverlayBuilder: _buildViewerOverlay,
+                                ),
                               );
-                              if (mounted) {
-                                setState(() => _colorInspectorOpen = false);
-                              }
                             },
-                            child: const Text('Apply to selection'),
-                          ),
-                        ],
                       ),
                     ),
                   ),
-                ),
-              ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 14,
-              child: IgnorePointer(
-                ignoring: false,
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: ValueListenableBuilder<_ReaderViewportMetrics>(
-                    valueListenable: _metrics,
-                    builder:
-                        (
-                          BuildContext context,
-                          _ReaderViewportMetrics metrics,
-                          Widget? child,
-                        ) {
-                          return _ViewerHud(
-                            page: metrics.page,
-                            pageCount: widget.tab.pageCountHint,
-                            zoom: metrics.zoom,
-                            onPreviousPage:
-                                _controller.isReady && metrics.page > 1
-                                ? () => _controller.goToPage(
-                                    pageNumber: metrics.page - 1,
-                                  )
-                                : null,
-                            onNextPage:
-                                _controller.isReady &&
-                                    (widget.tab.pageCountHint == null ||
-                                        metrics.page <
-                                            widget.tab.pageCountHint!)
-                                ? () => _controller.goToPage(
-                                    pageNumber: metrics.page + 1,
-                                  )
-                                : null,
-                            onZoomOut: _controller.isReady
-                                ? _zoomOutAtPointer
-                                : null,
-                            onZoomIn: _controller.isReady
-                                ? _zoomInAtPointer
-                                : null,
-                            onSelectZoomPreset: _controller.isReady
-                                ? _applyZoomPreset
-                                : null,
-                            onHighlightSelection: _controller.isReady
-                                ? _highlightSelection
-                                : null,
-                            colors: widget.colors,
-                          );
-                        },
-                  ),
-                ),
+                  if (_shouldShowSearchOverlay)
+                    Positioned(
+                      top: 14,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: _DocumentSearchOverlay(
+                          query: widget.tab.searchQuery,
+                          isSearching: _isSearchInProgress,
+                          matchCount: _searcher?.matches.length ?? 0,
+                          currentIndex: _searcher?.currentIndex,
+                          onPrevious: _canGoToPreviousMatch
+                              ? () => unawaited(_goToPreviousSearchMatch())
+                              : null,
+                          onNext: _canGoToNextMatch
+                              ? () => unawaited(_goToNextSearchMatch())
+                              : null,
+                          colors: widget.colors,
+                        ),
+                      ),
+                    ),
+                  if (readAloudPlayback.status != TtsPlaybackStatus.idle)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 60,
+                      child: Center(
+                        child: _ReadAloudBar(
+                          playback: readAloudPlayback,
+                          colors: widget.colors,
+                          onPauseResume: () =>
+                              readAloudPlayback.status ==
+                                  TtsPlaybackStatus.speaking
+                              ? ref.read(ttsNotifierProvider.notifier).pause()
+                              : ref.read(ttsNotifierProvider.notifier).resume(),
+                          onStop: () =>
+                              ref.read(ttsNotifierProvider.notifier).stop(),
+                        ),
+                      ),
+                    ),
+                  if (_colorInspectorOpen)
+                    Positioned(
+                      top: 18,
+                      right: 18,
+                      child: Material(
+                        color: widget.colors.panelRaised,
+                        borderRadius: BorderRadius.circular(10),
+                        child: SizedBox(
+                          width: 230,
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Row(
+                                  children: <Widget>[
+                                    const Expanded(
+                                      child: Text('Custom highlight colour'),
+                                    ),
+                                    IconButton(
+                                      onPressed: () => setState(
+                                        () => _colorInspectorOpen = false,
+                                      ),
+                                      icon: const Icon(LucideIcons.x, size: 15),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: Color(_customHighlightColor),
+                                    borderRadius: BorderRadius.circular(5),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                _ColourWheel(
+                                  color: Color(_customHighlightColor),
+                                  onChanged: (Color color) => setState(
+                                    () => _customHighlightColor = color
+                                        .toARGB32(),
+                                  ),
+                                ),
+                                FilledButton(
+                                  onPressed: () async {
+                                    await _highlightSelection(
+                                      colorValue: _customHighlightColor,
+                                    );
+                                    if (mounted) {
+                                      setState(
+                                        () => _colorInspectorOpen = false,
+                                      );
+                                    }
+                                  },
+                                  child: const Text('Apply to selection'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (!widget.fullscreen)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 14,
+                      child: IgnorePointer(
+                        ignoring: false,
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: ValueListenableBuilder<_ReaderViewportMetrics>(
+                            valueListenable: _metrics,
+                            builder:
+                                (
+                                  BuildContext context,
+                                  _ReaderViewportMetrics metrics,
+                                  Widget? child,
+                                ) {
+                                  return _ViewerHud(
+                                    page: metrics.page,
+                                    pageCount: widget.tab.pageCountHint,
+                                    zoom: metrics.zoom,
+                                    onPreviousPage:
+                                        _controller.isReady && metrics.page > 1
+                                        ? () => _controller.goToPage(
+                                            pageNumber: metrics.page - 1,
+                                          )
+                                        : null,
+                                    onNextPage:
+                                        _controller.isReady &&
+                                            (widget.tab.pageCountHint == null ||
+                                                metrics.page <
+                                                    widget.tab.pageCountHint!)
+                                        ? () => _controller.goToPage(
+                                            pageNumber: metrics.page + 1,
+                                          )
+                                        : null,
+                                    onZoomOut: _controller.isReady
+                                        ? _zoomOutAtPointer
+                                        : null,
+                                    onZoomIn: _controller.isReady
+                                        ? _zoomInAtPointer
+                                        : null,
+                                    onSelectZoomPreset: _controller.isReady
+                                        ? _applyZoomPreset
+                                        : null,
+                                    onHighlightSelection: _controller.isReady
+                                        ? _highlightSelection
+                                        : null,
+                                    colors: widget.colors,
+                                  );
+                                },
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (widget.fullscreen) ...<Widget>[
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      top: 0,
+                      child: IgnorePointer(
+                        ignoring: !_showTopChrome,
+                        child: AnimatedSlide(
+                          duration: const Duration(milliseconds: 180),
+                          offset: _showTopChrome
+                              ? Offset.zero
+                              : const Offset(0, -1),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 180),
+                            opacity: _showTopChrome ? 1 : 0,
+                            child: _FullscreenTopBar(
+                              title: widget.tab.title,
+                              onOpenSettings: widget.onOpenSettings,
+                              onExit: widget.onExitFullscreen ?? () {},
+                              colors: widget.colors,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: IgnorePointer(
+                        ignoring: !_showBottomChrome,
+                        child: AnimatedSlide(
+                          duration: const Duration(milliseconds: 180),
+                          offset: _showBottomChrome
+                              ? Offset.zero
+                              : const Offset(0, 1),
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 180),
+                            opacity: _showBottomChrome ? 1 : 0,
+                            child: ValueListenableBuilder<_ReaderViewportMetrics>(
+                              valueListenable: _metrics,
+                              builder:
+                                  (
+                                    BuildContext context,
+                                    _ReaderViewportMetrics metrics,
+                                    Widget? child,
+                                  ) {
+                                    return _FullscreenBottomBar(
+                                      page: metrics.page,
+                                      pageCount: widget.tab.pageCountHint,
+                                      zoom: metrics.zoom,
+                                      scrubPreviewPage: _scrubPreviewPage,
+                                      onPreviousPage:
+                                          _controller.isReady &&
+                                              metrics.page > 1
+                                          ? () => _controller.goToPage(
+                                              pageNumber: metrics.page - 1,
+                                            )
+                                          : null,
+                                      onNextPage:
+                                          _controller.isReady &&
+                                              (widget.tab.pageCountHint ==
+                                                      null ||
+                                                  metrics.page <
+                                                      widget.tab.pageCountHint!)
+                                          ? () => _controller.goToPage(
+                                              pageNumber: metrics.page + 1,
+                                            )
+                                          : null,
+                                      onScrubChanged: _controller.isReady
+                                          ? (double value) => setState(
+                                              () => _scrubPreviewPage = value,
+                                            )
+                                          : null,
+                                      onScrubEnd: _controller.isReady
+                                          ? (double value) {
+                                              setState(
+                                                () => _scrubPreviewPage = null,
+                                              );
+                                              unawaited(
+                                                _controller.goToPage(
+                                                  pageNumber: value.round(),
+                                                ),
+                                              );
+                                            }
+                                          : null,
+                                      onZoomOut: _controller.isReady
+                                          ? _zoomOutAtPointer
+                                          : null,
+                                      onZoomIn: _controller.isReady
+                                          ? _zoomInAtPointer
+                                          : null,
+                                      onSelectZoomPreset: _controller.isReady
+                                          ? _applyZoomPreset
+                                          : null,
+                                      onHighlightSelection: _controller.isReady
+                                          ? _highlightSelection
+                                          : null,
+                                      readAloudStatus: readAloudPlayback.status,
+                                      onReadAloudPressed: !_controller.isReady
+                                          ? null
+                                          : readAloudPlayback.status ==
+                                                TtsPlaybackStatus.speaking
+                                          ? () => ref
+                                                .read(
+                                                  ttsNotifierProvider.notifier,
+                                                )
+                                                .pause()
+                                          : readAloudPlayback.status ==
+                                                TtsPlaybackStatus.paused
+                                          ? () => ref
+                                                .read(
+                                                  ttsNotifierProvider.notifier,
+                                                )
+                                                .resume()
+                                          : readAloudPlayback.status ==
+                                                TtsPlaybackStatus.preparing
+                                          ? null
+                                          : () => unawaited(
+                                              _startReadAloudFromCurrentPage(),
+                                            ),
+                                      colors: widget.colors,
+                                    );
+                                  },
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }

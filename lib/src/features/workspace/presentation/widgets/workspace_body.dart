@@ -48,6 +48,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
         tab: activeTab,
         state: widget.state,
         onExit: widget.onExitFullscreen!,
+        onOpenSettings: widget.onOpenSettings,
       );
     }
     return LayoutBuilder(
@@ -229,70 +230,32 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
   }
 }
 
-class _FullscreenReader extends ConsumerStatefulWidget {
+class _FullscreenReader extends ConsumerWidget {
   const _FullscreenReader({
     required this.tab,
     required this.state,
     required this.onExit,
+    required this.onOpenSettings,
   });
   final DocumentTabState tab;
   final WorkspaceFeatureState state;
   final VoidCallback onExit;
-  @override
-  ConsumerState<_FullscreenReader> createState() => _FullscreenReaderState();
-}
-
-class _FullscreenReaderState extends ConsumerState<_FullscreenReader> {
-  bool _showExit = false;
+  final VoidCallback onOpenSettings;
 
   @override
-  Widget build(BuildContext context) => MouseRegion(
-    onHover: (_) {
-      if (!_showExit) setState(() => _showExit = true);
-    },
-    child: Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: ReaderViewerPane(
-            tab: widget.tab,
-            documentRef: ref.watch(pdfDocumentRefProvider(widget.tab.filePath)),
-            annotations:
-                widget
-                    .state
-                    .documentMetadata[widget.tab.documentId]
-                    ?.annotations ??
-                const <DocumentAnnotation>[],
-            colors: WorkspaceSurfaceTokens.fromProfile(
-              ref.watch(clarixThemeProvider).value ??
-                  const ClarixThemeProfile(),
-              context,
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: 24,
-          left: 0,
-          right: 0,
-          child: IgnorePointer(
-            ignoring: !_showExit,
-            child: AnimatedOpacity(
-              opacity: _showExit ? 1 : 0,
-              duration: const Duration(milliseconds: 160),
-              child: Center(
-                child: Tooltip(
-                  message: 'Exit fullscreen (Escape)',
-                  child: IconButton.filled(
-                    key: const Key('fullscreen-reader-exit'),
-                    onPressed: widget.onExit,
-                    icon: const Icon(Icons.close),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+  Widget build(BuildContext context, WidgetRef ref) => ReaderViewerPane(
+    tab: tab,
+    documentRef: ref.watch(pdfDocumentRefProvider(tab.filePath)),
+    annotations:
+        state.documentMetadata[tab.documentId]?.annotations ??
+        const <DocumentAnnotation>[],
+    colors: WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     ),
+    fullscreen: true,
+    onExitFullscreen: onExit,
+    onOpenSettings: onOpenSettings,
   );
 }
 

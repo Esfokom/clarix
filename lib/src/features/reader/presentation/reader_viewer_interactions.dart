@@ -203,6 +203,34 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     _lastPointerGlobalPosition = event.position;
   }
 
+  static const double _chromeEdgeZone = 56;
+
+  void _onFullscreenChromeHover(Offset localPosition, Size size) {
+    final bool nearTop = localPosition.dy <= _chromeEdgeZone;
+    final bool nearBottom = localPosition.dy >= size.height - _chromeEdgeZone;
+    _hideChromeTimer?.cancel();
+    if (nearTop != _showTopChrome || nearBottom != _showBottomChrome) {
+      _updateState(() {
+        _showTopChrome = nearTop;
+        _showBottomChrome = nearBottom;
+      });
+    }
+    if (!nearTop && !nearBottom) {
+      _scheduleHideFullscreenChrome();
+    }
+  }
+
+  void _scheduleHideFullscreenChrome() {
+    _hideChromeTimer?.cancel();
+    _hideChromeTimer = Timer(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      _updateState(() {
+        _showTopChrome = false;
+        _showBottomChrome = false;
+      });
+    });
+  }
+
   void _rememberTrackpadZoomStart(PointerPanZoomStartEvent event) {
     _lastPointerGlobalPosition = event.position;
   }

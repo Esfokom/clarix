@@ -37,9 +37,7 @@ class _DocumentSearchOverlay extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.panelRaised,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: noMatches ? colors.warning : colors.border,
-          ),
+          border: Border.all(color: noMatches ? colors.warning : colors.border),
           boxShadow: const <BoxShadow>[
             BoxShadow(
               color: Color(0x33000000),
@@ -472,6 +470,237 @@ class _ViewerHud extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _FullscreenTopBar extends StatelessWidget {
+  const _FullscreenTopBar({
+    required this.title,
+    required this.onOpenSettings,
+    required this.onExit,
+    required this.colors,
+  });
+
+  final String title;
+  final VoidCallback? onOpenSettings;
+  final VoidCallback onExit;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 52,
+      decoration: BoxDecoration(
+        color: colors.panelRaised,
+        border: Border(bottom: BorderSide(color: colors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: <Widget>[
+          Icon(LucideIcons.fileText, size: 15, color: colors.textMuted),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colors.textStrong,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          if (onOpenSettings != null)
+            Tooltip(
+              message: 'Settings',
+              child: _HudIcon(
+                icon: LucideIcons.settings,
+                onPressed: onOpenSettings,
+              ),
+            ),
+          const SizedBox(width: 6),
+          Tooltip(
+            key: const Key('fullscreen-reader-exit'),
+            message: 'Exit fullscreen (Escape)',
+            child: _HudIcon(icon: LucideIcons.x, onPressed: onExit),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FullscreenBottomBar extends StatelessWidget {
+  const _FullscreenBottomBar({
+    required this.page,
+    required this.pageCount,
+    required this.zoom,
+    required this.scrubPreviewPage,
+    required this.onPreviousPage,
+    required this.onNextPage,
+    required this.onScrubChanged,
+    required this.onScrubEnd,
+    required this.onZoomOut,
+    required this.onZoomIn,
+    required this.onSelectZoomPreset,
+    required this.onHighlightSelection,
+    required this.readAloudStatus,
+    required this.onReadAloudPressed,
+    required this.colors,
+  });
+
+  final int page;
+  final int? pageCount;
+  final double zoom;
+  final double? scrubPreviewPage;
+  final VoidCallback? onPreviousPage;
+  final VoidCallback? onNextPage;
+  final ValueChanged<double>? onScrubChanged;
+  final ValueChanged<double>? onScrubEnd;
+  final VoidCallback? onZoomOut;
+  final VoidCallback? onZoomIn;
+  final ValueChanged<_ZoomPreset>? onSelectZoomPreset;
+  final VoidCallback? onHighlightSelection;
+  final TtsPlaybackStatus readAloudStatus;
+  final VoidCallback? onReadAloudPressed;
+  final WorkspaceSurfaceTokens colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final int displayPage = (scrubPreviewPage ?? page.toDouble()).round();
+    final bool canScrub = pageCount != null && pageCount! > 1;
+    return Container(
+      height: 56,
+      decoration: BoxDecoration(
+        color: colors.panelRaised,
+        border: Border(top: BorderSide(color: colors.border)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Row(
+        children: <Widget>[
+          _HudIcon(icon: LucideIcons.chevronLeft, onPressed: onPreviousPage),
+          const SizedBox(width: 8),
+          Text(
+            pageCount == null
+                ? 'p.$displayPage'
+                : 'p.$displayPage / $pageCount',
+            style: TextStyle(
+              color: colors.textStrong,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 8),
+          _HudIcon(icon: LucideIcons.chevronRight, onPressed: onNextPage),
+          const SizedBox(width: 14),
+          Expanded(
+            child: canScrub
+                ? SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: 3,
+                      thumbShape: const RoundSliderThumbShape(
+                        enabledThumbRadius: 6,
+                      ),
+                      overlayShape: const RoundSliderOverlayShape(
+                        overlayRadius: 12,
+                      ),
+                      activeTrackColor: colors.accent,
+                      inactiveTrackColor: colors.border,
+                      thumbColor: colors.accent,
+                    ),
+                    child: Slider(
+                      min: 1,
+                      max: pageCount!.toDouble(),
+                      value: (scrubPreviewPage ?? page.toDouble()).clamp(
+                        1,
+                        pageCount!.toDouble(),
+                      ),
+                      onChanged: onScrubChanged,
+                      onChangeEnd: onScrubEnd,
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(width: 14),
+          _HudDivider(colors: colors),
+          const SizedBox(width: 10),
+          _HudIcon(icon: LucideIcons.minus, onPressed: onZoomOut),
+          const SizedBox(width: 6),
+          PopupMenuButton<_ZoomPreset>(
+            enabled: onSelectZoomPreset != null,
+            tooltip: 'Zoom presets',
+            color: colors.panelRaised,
+            surfaceTintColor: Colors.transparent,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: colors.border),
+            ),
+            onSelected: onSelectZoomPreset,
+            itemBuilder: (BuildContext context) {
+              return _ZoomPreset.values
+                  .map((_ZoomPreset preset) {
+                    return PopupMenuItem<_ZoomPreset>(
+                      value: preset,
+                      child: Text(
+                        preset.label,
+                        style: TextStyle(
+                          color: colors.textStrong,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    );
+                  })
+                  .toList(growable: false);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Text(
+                '${(zoom * 100).round()}%',
+                style: TextStyle(
+                  color: colors.textStrong,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          _HudIcon(icon: LucideIcons.plus, onPressed: onZoomIn),
+          const SizedBox(width: 10),
+          _HudDivider(colors: colors),
+          const SizedBox(width: 10),
+          Tooltip(
+            message: 'Highlight selected text',
+            child: _HudIcon(
+              icon: LucideIcons.highlighter,
+              onPressed: onHighlightSelection,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Tooltip(
+            message: readAloudStatus == TtsPlaybackStatus.speaking
+                ? 'Pause reading'
+                : 'Read this page aloud',
+            child: readAloudStatus == TtsPlaybackStatus.preparing
+                ? const Padding(
+                    padding: EdgeInsets.all(6),
+                    child: SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.6),
+                    ),
+                  )
+                : _HudIcon(
+                    icon: readAloudStatus == TtsPlaybackStatus.speaking
+                        ? LucideIcons.pause
+                        : LucideIcons.headphones,
+                    onPressed: onReadAloudPressed,
+                  ),
+          ),
+        ],
       ),
     );
   }

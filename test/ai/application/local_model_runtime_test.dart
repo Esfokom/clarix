@@ -31,7 +31,8 @@ void main() {
 
     expect(tokens, <String>['Local ', 'answer']);
     expect(gateway.profile, profile);
-    expect(gateway.prompt, 'What does the report conclude?');
+    expect(gateway.prompt, contains('What does the report conclude?'));
+    expect(gateway.prompt, contains('The conclusion is positive.'));
     expect(gateway.systemInstruction, contains('The conclusion is positive.'));
   });
 

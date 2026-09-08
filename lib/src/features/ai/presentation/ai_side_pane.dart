@@ -270,22 +270,10 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   colors: colors,
                   onStart: () {},
                 ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextButton.icon(
-                    key: const Key('start-live-conversation'),
-                    onPressed: widget.documentContext == null
-                        ? null
-                        : () => liveController.start(widget.documentContext!),
-                    icon: const Icon(LucideIcons.audioLines, size: 14),
-                    label: const Text('Start voice conversation'),
-                  ),
-                ),
               ),
+            // Voice entry is intentionally hidden until Gemini API credits are
+            // available. Keep the Live controller and surface implementation
+            // wired so this action can be restored without rework.
             if (!liveActive) ...<Widget>[
               if (ai.chatBusy)
                 _ComposerLoadingIndicator(

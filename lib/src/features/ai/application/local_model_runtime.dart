@@ -33,13 +33,26 @@ class LocalModelRuntime {
   }) async {
     await for (final String token in gateway.generate(
       profile: profile,
-      prompt: prompt,
+      prompt: _groundedPrompt(prompt, documentSnippets),
       systemInstruction: _documentContext(documentSnippets),
       conversationHistory: conversationHistory,
     )) {
       onToken(token);
     }
   }
+}
+
+String _groundedPrompt(String prompt, List<CitationSnippet> snippets) {
+  if (snippets.isEmpty) return prompt;
+  final excerpts = snippets
+      .map(
+        (snippet) =>
+            '[${snippet.label}, page ${snippet.pageNumber}]\n${snippet.snippet}',
+      )
+      .join('\n\n');
+  return 'Use these retrieved PDF passages to answer the question. Cite page '
+      'numbers when you rely on them.\n\n$excerpts\n\n'
+      'Question: $prompt';
 }
 
 String _documentContext(List<CitationSnippet> snippets) {

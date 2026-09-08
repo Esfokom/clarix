@@ -41,6 +41,32 @@ class _DocumentComposer extends StatelessWidget {
   final int estimatedTokens;
   final int contextLimit;
 
+  KeyEventResult _handleComposerKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    if (event.logicalKey != LogicalKeyboardKey.enter &&
+        event.logicalKey != LogicalKeyboardKey.numpadEnter) {
+      return KeyEventResult.ignored;
+    }
+    if (HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed) {
+      // Let the TextField insert a newline.
+      return KeyEventResult.ignored;
+    }
+    final bool isRecording = voiceInput.status == VoiceInputStatus.recording;
+    final bool isTranscribing =
+        voiceInput.status == VoiceInputStatus.transcribing;
+    final bool canSend =
+        enabled &&
+        !isBusy &&
+        !isRecording &&
+        !isTranscribing &&
+        controller.text.trim().isNotEmpty;
+    if (canSend) {
+      onSend();
+    }
+    return KeyEventResult.handled;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -58,26 +84,32 @@ class _DocumentComposer extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              TextField(
-                key: const Key('document-composer-input'),
-                controller: controller,
-                enabled: enabled,
-                minLines: 3,
-                maxLines: 6,
-                textInputAction: TextInputAction.newline,
-                style: TextStyle(
-                  color: colors.textStrong,
-                  fontSize: 12.5,
-                  height: 1.4,
-                ),
-                decoration: InputDecoration(
-                  isDense: true,
-                  hintText: hintText,
-                  hintStyle: TextStyle(color: colors.textFaint, fontSize: 12.5),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
+              Focus(
+                onKeyEvent: _handleComposerKeyEvent,
+                child: TextField(
+                  key: const Key('document-composer-input'),
+                  controller: controller,
+                  enabled: enabled,
+                  minLines: 3,
+                  maxLines: 6,
+                  textInputAction: TextInputAction.newline,
+                  style: TextStyle(
+                    color: colors.textStrong,
+                    fontSize: 12.5,
+                    height: 1.4,
+                  ),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: hintText,
+                    hintStyle: TextStyle(
+                      color: colors.textFaint,
+                      fontSize: 12.5,
+                    ),
+                    border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),

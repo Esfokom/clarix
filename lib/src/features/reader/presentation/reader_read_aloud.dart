@@ -43,8 +43,12 @@ extension _ReaderReadAloud on _PdfViewerPaneState {
     final PdfPageText pageText = await page.loadStructuredText();
     final List<_PageSentence> sentences = <_PageSentence>[];
     int order = 0;
-    for (final ({int start, int end}) range in _splitSentences(pageText.fullText)) {
-      final String text = pageText.fullText.substring(range.start, range.end).trim();
+    for (final ({int start, int end}) range in _splitSentences(
+      pageText.fullText,
+    )) {
+      final String text = pageText.fullText
+          .substring(range.start, range.end)
+          .trim();
       if (text.isEmpty) continue;
       final PdfPageTextRange pdfRange = pageText.getRangeFromAB(
         range.start,
@@ -86,12 +90,14 @@ extension _ReaderReadAloud on _PdfViewerPaneState {
     if (sentences == null || sentences.isEmpty) return;
 
     final TtsPlaybackState playback =
-        ref.read(ttsNotifierProvider).value?.playback ?? const TtsPlaybackState();
+        ref.read(ttsNotifierProvider).value?.playback ??
+        const TtsPlaybackState();
     final String? speakingId = playback.status == TtsPlaybackStatus.idle
         ? null
         : playback.currentSegmentId;
 
-    final Paint paint = Paint()..color = widget.colors.accent.withValues(alpha: 0.28);
+    final Paint paint = Paint()
+      ..color = widget.colors.accent.withValues(alpha: 0.28);
     for (final _PageSentence sentence in sentences) {
       final List<Rect> viewRects = sentence.pdfRects
           .map(
@@ -187,9 +193,47 @@ extension _ReaderReadAloud on _PdfViewerPaneState {
     }
   }
 
+  Future<void> _startReadAloudFromCurrentPage() async {
+    if (!_controller.isReady) return;
+    final int currentPage = _page;
+
+    final List<_PageSentence> currentSentences = await _ensurePageSentences(
+      currentPage,
+    );
+    if (currentSentences.isEmpty) return;
+
+    final List<ReadAloudSegment> initial = currentSentences
+        .map((_PageSentence s) => s.segment)
+        .toList(growable: false);
+
+    _readAloudSessionSegments
+      ..clear()
+      ..addAll(initial);
+
+    _readAloudSessionOwned = true;
+    await ref
+        .read(ttsNotifierProvider.notifier)
+        .startReading(
+          documentId: widget.tab.documentId,
+          segments: initial,
+          startIndex: 0,
+        );
+
+    final int? pageCount = widget.tab.pageCountHint;
+    final int next = currentPage + 1;
+    if (pageCount == null || next > pageCount) {
+      _readAloudNextPageToExtract = null;
+      ref.read(ttsNotifierProvider.notifier).finishSegments();
+    } else {
+      _readAloudNextPageToExtract = next;
+      unawaited(_extendReadAloudIfNeeded());
+    }
+  }
+
   bool _handleReadAloudSkipTap(Offset documentPosition) {
     final TtsPlaybackState playback =
-        ref.read(ttsNotifierProvider).value?.playback ?? const TtsPlaybackState();
+        ref.read(ttsNotifierProvider).value?.playback ??
+        const TtsPlaybackState();
     if (playback.status == TtsPlaybackStatus.idle) return false;
     final String? id = _readAloudSegmentIdAt(documentPosition);
     if (id == null) return false;
@@ -218,7 +262,9 @@ extension _ReaderReadAloud on _PdfViewerPaneState {
       _readAloudSessionOwned = false;
       return;
     }
-    if (next.currentPage != null && next.currentPage != _page && _controller.isReady) {
+    if (next.currentPage != null &&
+        next.currentPage != _page &&
+        _controller.isReady) {
       unawaited(_controller.goToPage(pageNumber: next.currentPage!));
     }
     if (_readAloudNextPageToExtract != null &&
@@ -236,7 +282,9 @@ extension _ReaderReadAloud on _PdfViewerPaneState {
 
     _readAloudExtending = true;
     try {
-      final List<_PageSentence> sentences = await _ensurePageSentences(nextPage);
+      final List<_PageSentence> sentences = await _ensurePageSentences(
+        nextPage,
+      );
       final List<ReadAloudSegment> segments = sentences
           .map((_PageSentence s) => s.segment)
           .toList(growable: false);
