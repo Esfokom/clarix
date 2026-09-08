@@ -161,7 +161,8 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     }
     final Offset? globalPosition = _lastPointerGlobalPosition;
     if (globalPosition == null) return;
-    final OverlayState? overlay = Overlay.of(context, rootOverlay: true);
+    final OverlayState? overlay = Overlay.maybeOf(context, rootOverlay: true);
+    if (overlay == null) return;
     final RenderBox? overlayBox =
         overlay.context.findRenderObject() as RenderBox?;
     if (overlayBox == null) return;

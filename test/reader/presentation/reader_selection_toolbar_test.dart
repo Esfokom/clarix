@@ -8,8 +8,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ReaderSelectionToolbar(
-            anchorAbove: const Offset(120, 100),
-            anchorBelow: const Offset(120, 120),
             highlightColors: const <int>[0xFFFFD54F, 0xFF80CBC4],
             onCopy: () {},
             onAskAi: () {},
@@ -35,8 +33,6 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ReaderSelectionToolbar(
-            anchorAbove: const Offset(120, 100),
-            anchorBelow: const Offset(120, 120),
             highlightColors: const <int>[0xFFFFD54F],
             onCopy: () {},
             onAskAi: () {},
