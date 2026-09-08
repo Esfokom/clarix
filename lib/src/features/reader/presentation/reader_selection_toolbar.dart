@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 
 class ReaderSelectionToolbar extends StatelessWidget {
   const ReaderSelectionToolbar({
-    required this.anchorAbove,
-    required this.anchorBelow,
     required this.highlightColors,
     required this.onCopy,
     required this.onAskAi,
@@ -15,8 +13,6 @@ class ReaderSelectionToolbar extends StatelessWidget {
     super.key,
   });
 
-  final Offset anchorAbove;
-  final Offset anchorBelow;
   final List<int> highlightColors;
   final VoidCallback onCopy;
   final VoidCallback onAskAi;
@@ -27,74 +23,65 @@ class ReaderSelectionToolbar extends StatelessWidget {
   final VoidCallback onMoreColors;
 
   @override
-  Widget build(BuildContext context) => Align(
-    alignment: Alignment.topLeft,
-    child: CustomSingleChildLayout(
-      delegate: TextSelectionToolbarLayoutDelegate(
-        anchorAbove: anchorAbove,
-        anchorBelow: anchorBelow,
+  Widget build(BuildContext context) => Material(
+    key: const Key('reader-selection-toolbar'),
+    color: const Color(0xFF424242),
+    borderRadius: BorderRadius.circular(10),
+    elevation: 10,
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: MediaQuery.sizeOf(context).width - 16,
       ),
-      child: Material(
-        key: const Key('reader-selection-toolbar'),
-        color: const Color(0xFF424242),
-        borderRadius: BorderRadius.circular(10),
-        elevation: 10,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.sizeOf(context).width - 16,
-          ),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                _SelectionAction(
-                  key: const Key('reader-selection-copy'),
-                  icon: Icons.copy_outlined,
-                  label: 'Copy',
-                  onPressed: onCopy,
-                ),
-                _SelectionAction(
-                  key: const Key('reader-selection-ask-ai'),
-                  icon: Icons.auto_awesome_outlined,
-                  label: 'Ask AI',
-                  onPressed: onAskAi,
-                ),
-                _SelectionAction(
-                  key: const Key('reader-selection-note'),
-                  icon: Icons.edit_note_outlined,
-                  label: 'Note',
-                  onPressed: onNote,
-                ),
-                _SelectionAction(
-                  key: const Key('reader-selection-bookmark'),
-                  icon: Icons.bookmark_border,
-                  label: 'Bookmark',
-                  onPressed: onBookmark,
-                ),
-                _SelectionAction(
-                  key: const Key('reader-selection-read-aloud'),
-                  icon: Icons.volume_up_outlined,
-                  label: 'Read aloud',
-                  onPressed: onReadAloud,
-                ),
-                const _ToolbarDivider(),
-                ...highlightColors.map(
-                  (int color) => _HighlightColorButton(
-                    key: Key('reader-highlight-${color.toRadixString(16)}'),
-                    color: Color(color),
-                    onPressed: () => onHighlight(color),
-                  ),
-                ),
-                _SelectionAction(
-                  key: const Key('reader-selection-more-colors'),
-                  label: 'More colours',
-                  onPressed: onMoreColors,
-                ),
-              ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            _SelectionAction(
+              key: const Key('reader-selection-copy'),
+              icon: Icons.copy_outlined,
+              label: 'Copy',
+              onPressed: onCopy,
             ),
-          ),
+            _SelectionAction(
+              key: const Key('reader-selection-ask-ai'),
+              icon: Icons.auto_awesome_outlined,
+              label: 'Ask AI',
+              onPressed: onAskAi,
+            ),
+            _SelectionAction(
+              key: const Key('reader-selection-note'),
+              icon: Icons.edit_note_outlined,
+              label: 'Note',
+              onPressed: onNote,
+            ),
+            _SelectionAction(
+              key: const Key('reader-selection-bookmark'),
+              icon: Icons.bookmark_border,
+              label: 'Bookmark',
+              onPressed: onBookmark,
+            ),
+            _SelectionAction(
+              key: const Key('reader-selection-read-aloud'),
+              icon: Icons.volume_up_outlined,
+              label: 'Read aloud',
+              onPressed: onReadAloud,
+            ),
+            const _ToolbarDivider(),
+            ...highlightColors.map(
+              (int color) => _HighlightColorButton(
+                key: Key('reader-highlight-${color.toRadixString(16)}'),
+                color: Color(color),
+                onPressed: () => onHighlight(color),
+              ),
+            ),
+            _SelectionAction(
+              key: const Key('reader-selection-more-colors'),
+              label: 'More colours',
+              onPressed: onMoreColors,
+            ),
+          ],
         ),
       ),
     ),

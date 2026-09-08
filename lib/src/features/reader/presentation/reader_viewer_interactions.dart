@@ -124,8 +124,6 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     final ClarixThemeProfile profile =
         ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile();
     return ReaderSelectionToolbar(
-      anchorAbove: params.anchorA,
-      anchorBelow: params.anchorB ?? params.anchorA,
       highlightColors: profile.highlightPalette,
       onCopy: () => unawaited(_copySelection(params)),
       onAskAi: () => unawaited(_askAiAboutSelection(params)),
