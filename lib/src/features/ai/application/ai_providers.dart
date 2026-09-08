@@ -14,7 +14,11 @@ import '../infrastructure/groq_transcription_service.dart';
 import '../infrastructure/provider_profile_store.dart';
 import '../infrastructure/record_voice_recorder.dart';
 import '../infrastructure/voice_input_settings_store.dart';
+import '../infrastructure/gemini_live_gateway.dart';
+import '../infrastructure/live_audio_adapter.dart';
 import 'ai_notifier.dart';
+import 'live_conversation_controller.dart';
+import 'live_document_tool.dart';
 import 'ai_runtime_service.dart';
 import 'local_model_runtime.dart';
 
@@ -94,6 +98,20 @@ final voiceRecorderProvider = Provider<RecordVoiceRecorder>(
 final voiceInputSettingsStoreProvider = Provider<VoiceInputSettingsStore>(
   (Ref ref) => VoiceInputSettingsStore(ref.watch(aiSharedPreferencesProvider)),
 );
+
+final liveConversationProvider = Provider<LiveConversationController>((
+  Ref ref,
+) {
+  final controller = LiveConversationController(
+    gateway: WebSocketGeminiLiveGateway(),
+    audio: RecordSoloudLiveAudioAdapter(),
+    documentTool: ActiveDocumentTool(ref.watch(localRagServiceProvider)),
+    apiKey: const String.fromEnvironment('GEMINI_API_KEY'),
+    conversationStore: ref.watch(conversationStoreProvider.future),
+  );
+  ref.onDispose(controller.dispose);
+  return controller;
+});
 
 final aiNotifierProvider = AsyncNotifierProvider<AiNotifier, AiFeatureState>(
   AiNotifier.new,

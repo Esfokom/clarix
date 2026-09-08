@@ -146,12 +146,12 @@ disposal use the same idempotent cleanup path.
 
 ## Dependencies and platforms
 
-Add `audio_io` for one real-time PCM capture/playback adapter. It supports
-Windows, Android, and iOS, supplies the amplitude stream that drives the orb,
-and avoids competing capture/playback audio engines. Use Dart's built-in
-`WebSocket` for the Live protocol. Android must request microphone and network
-permissions; iOS must include the microphone usage string. Existing desktop
-input-device selection should be reused where `audio_io` exposes it.
+Use the existing `record` package for real-time PCM16 microphone capture and
+amplitude monitoring, and add `flutter_soloud` for buffered PCM16 response
+playback. This keeps the audio path supported on Windows, Android, and iOS
+without a dependency conflict with Clarix's current `file_picker`. Use Dart's
+built-in `WebSocket` for the Live protocol. Android must request microphone
+and network permissions; iOS must include the microphone usage string.
 
 ## Testing
 

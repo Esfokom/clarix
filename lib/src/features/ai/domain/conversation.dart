@@ -1,4 +1,5 @@
 import 'ai_models.dart';
+import 'live_conversation.dart';
 
 class ConversationThread {
   const ConversationThread({
@@ -28,6 +29,7 @@ class ConversationMessage {
     required this.createdAt,
     required this.tokenEstimate,
     required this.citations,
+    this.sources = const <LiveWebSource>[],
     this.modelLabel,
     this.sequence,
     this.isCompacted = false,
@@ -39,6 +41,7 @@ class ConversationMessage {
   final DateTime createdAt;
   final int tokenEstimate;
   final List<CitationSnippet> citations;
+  final List<LiveWebSource> sources;
   final String? modelLabel;
   final int? sequence;
   final bool isCompacted;

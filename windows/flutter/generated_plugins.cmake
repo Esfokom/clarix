@@ -8,6 +8,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_gemma
   flutter_secure_storage_windows
   flutter_tts
+  permission_handler_windows
   record_windows
   screen_retriever_windows
   url_launcher_windows
@@ -15,6 +16,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
+  flutter_soloud
   jni
   sherpa_onnx_windows
 )
