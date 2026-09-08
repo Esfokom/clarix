@@ -34,7 +34,7 @@ class LocalModelRuntime {
     await for (final String token in gateway.generate(
       profile: profile,
       prompt: _groundedPrompt(prompt, documentSnippets),
-      systemInstruction: _documentContext(documentSnippets),
+      systemInstruction: _localSystemInstruction,
       conversationHistory: conversationHistory,
     )) {
       onToken(token);
@@ -45,9 +45,11 @@ class LocalModelRuntime {
 String _groundedPrompt(String prompt, List<CitationSnippet> snippets) {
   if (snippets.isEmpty) return prompt;
   final excerpts = snippets
+      .take(3)
       .map(
-        (snippet) =>
-            '[${snippet.label}, page ${snippet.pageNumber}]\n${snippet.snippet}',
+        (CitationSnippet snippet) =>
+            '[${snippet.label}, page ${snippet.pageNumber}]\n'
+            '${_truncateSnippet(snippet.snippet)}',
       )
       .join('\n\n');
   return 'Use these retrieved PDF passages to answer the question. Cite page '
@@ -55,17 +57,11 @@ String _groundedPrompt(String prompt, List<CitationSnippet> snippets) {
       'Question: $prompt';
 }
 
-String _documentContext(List<CitationSnippet> snippets) {
-  if (snippets.isEmpty) {
-    return 'You are Clarix, a helpful document assistant. Be concise and accurate.';
-  }
-  final String excerpts = snippets
-      .map(
-        (CitationSnippet snippet) =>
-            '[${snippet.label}, page ${snippet.pageNumber}]\n${snippet.snippet}',
-      )
-      .join('\n\n');
-  return 'You are Clarix, a helpful document assistant. Answer using the '
-      'supplied PDF excerpts when relevant. Mention page numbers when you '
-      'rely on an excerpt.\n\n$excerpts';
+String _truncateSnippet(String snippet) {
+  const int maximumCharacters = 600;
+  if (snippet.length <= maximumCharacters) return snippet;
+  return '${snippet.substring(0, maximumCharacters)}…';
 }
+
+const String _localSystemInstruction =
+    'You are Clarix, a helpful document assistant. Be concise and accurate.';

@@ -300,6 +300,10 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
       } else {
         snippets = const <CitationSnippet>[];
       }
+      clarixLog.i(
+        'RAG retrieved ${snippets.length} passage(s) for document '
+        '${context.documentId} before local or remote inference.',
+      );
       final store = await ref.read(conversationStoreProvider.future);
       final String threadId =
           _activeConversationId ??

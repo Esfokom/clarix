@@ -33,8 +33,39 @@ void main() {
     expect(gateway.profile, profile);
     expect(gateway.prompt, contains('What does the report conclude?'));
     expect(gateway.prompt, contains('The conclusion is positive.'));
-    expect(gateway.systemInstruction, contains('The conclusion is positive.'));
+    expect(
+      gateway.systemInstruction,
+      isNot(contains('The conclusion is positive.')),
+    );
   });
+
+  test(
+    'bounds retrieved passages before sending them to local inference',
+    () async {
+      final _FakeGateway gateway = _FakeGateway();
+      final LocalModelRuntime runtime = LocalModelRuntime(gateway: gateway);
+
+      await runtime.sendPrompt(
+        profile: profile,
+        prompt: 'Summarize the document.',
+        documentSnippets: List<CitationSnippet>.generate(
+          5,
+          (int index) => CitationSnippet(
+            documentId: 'document',
+            label: 'Report',
+            pageNumber: index + 1,
+            snippet: 'x' * 1000,
+          ),
+        ),
+        onToken: (_) {},
+      );
+
+      expect(gateway.prompt, contains('page 1'));
+      expect(gateway.prompt, contains('page 3'));
+      expect(gateway.prompt, isNot(contains('page 4')));
+      expect(gateway.prompt!.length, lessThan(2500));
+    },
+  );
 
   test(
     'downloads the selected Gemma profile through the local gateway',

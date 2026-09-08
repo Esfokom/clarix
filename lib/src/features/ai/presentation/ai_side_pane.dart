@@ -638,11 +638,6 @@ class _MessageBubble extends StatelessWidget {
                       await Clipboard.setData(
                         ClipboardData(text: message.text),
                       );
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Response copied.')),
-                        );
-                      }
                     },
                   ),
                 ],
