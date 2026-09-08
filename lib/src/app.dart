@@ -18,13 +18,18 @@ class ClarixApp extends StatelessWidget {
         builder: (context, ref, _) {
           final profile =
               ref.watch(clarixThemeProvider).value ?? ClarixThemeProfile();
-          return ShadApp(
-            debugShowCheckedModeBanner: false,
-            title: 'Clarix',
-            themeMode: profile.mode,
-            theme: buildShadTheme(profile, Brightness.light),
-            darkTheme: buildShadTheme(profile, Brightness.dark),
-            home: const _WindowBootstrap(child: WorkspaceScreen()),
+          return MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(profile.fontScale)),
+            child: ShadApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Clarix',
+              themeMode: profile.mode,
+              theme: buildShadTheme(profile, Brightness.light),
+              darkTheme: buildShadTheme(profile, Brightness.dark),
+              home: const _WindowBootstrap(child: WorkspaceScreen()),
+            ),
           );
         },
       ),
@@ -34,7 +39,10 @@ class ClarixApp extends StatelessWidget {
 
 /// Builds the shadcn theme for [profile] at a fixed [brightness]. Pure (no
 /// BuildContext), so it's unit-testable without booting the app.
-ShadThemeData buildShadTheme(ClarixThemeProfile profile, Brightness brightness) {
+ShadThemeData buildShadTheme(
+  ClarixThemeProfile profile,
+  Brightness brightness,
+) {
   final Color accentColor = accentFor(
     profile.accent,
     customAccentColor: profile.customAccentColor,

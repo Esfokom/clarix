@@ -15,6 +15,7 @@ void main() {
         highlightColor: 0xFFABCDEF,
         highlightOpacity: 0.72,
         customHighlightColors: <int>[0xFF001122, 0xFF334455],
+        fontScale: 1.2,
       );
 
       final restored = ClarixThemeProfile.fromJson(profile.toJson());
@@ -28,6 +29,7 @@ void main() {
       expect(restored.highlightColor, 0xFFABCDEF);
       expect(restored.highlightOpacity, 0.72);
       expect(restored.customHighlightColors, <int>[0xFF001122, 0xFF334455]);
+      expect(restored.fontScale, 1.2);
     });
 
     test('normalizes invalid persisted values and caps custom palette', () {
@@ -38,6 +40,7 @@ void main() {
         'highlightColor': 0x1FFFFFFFF,
         'highlightOpacity': 4,
         'customHighlightColors': List<int>.generate(13, (index) => index),
+        'fontScale': 5,
       });
 
       expect(profile.mode, ThemeMode.system);
@@ -46,6 +49,7 @@ void main() {
       expect(profile.highlightColor, ClarixThemeProfile.defaultHighlightColor);
       expect(profile.highlightOpacity, 1);
       expect(profile.customHighlightColors, hasLength(10));
+      expect(profile.fontScale, ClarixThemeProfile.maximumFontScale);
     });
   });
 

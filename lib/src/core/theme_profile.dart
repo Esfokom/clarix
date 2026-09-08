@@ -31,11 +31,15 @@ class ClarixThemeProfile {
     this.readerBackgroundInverted = false,
     this.readerBookBackgroundOverride = false,
     this.font = ClarixFont.sans,
+    this.fontScale = defaultFontScale,
   });
 
   static const int defaultHighlightColor = 0xFFFFD54F;
   static const double defaultHighlightOpacity = 0.4;
   static const int maxCustomHighlightColors = 10;
+  static const double defaultFontScale = 1;
+  static const double minimumFontScale = 0.9;
+  static const double maximumFontScale = 1.3;
 
   /// The five colours that are always offered by the reader highlight picker.
   static const List<int> builtInHighlightColors = <int>[
@@ -59,6 +63,7 @@ class ClarixThemeProfile {
   final bool readerBackgroundInverted;
   final bool readerBookBackgroundOverride;
   final ClarixFont font;
+  final double fontScale;
 
   int get activeHighlightColor => highlightColor;
   List<int> get highlightPalette => <int>[
@@ -88,6 +93,7 @@ class ClarixThemeProfile {
               .where((ClarixFont candidate) => candidate.name == json['font'])
               .firstOrNull ??
           ClarixFont.sans,
+      fontScale: _readFontScale(json['fontScale']),
     );
   }
 
@@ -104,6 +110,7 @@ class ClarixThemeProfile {
     'readerBackgroundInverted': readerBackgroundInverted,
     'readerBookBackgroundOverride': readerBookBackgroundOverride,
     'font': font.name,
+    'fontScale': fontScale,
   };
 
   ClarixThemeProfile copyWith({
@@ -119,6 +126,7 @@ class ClarixThemeProfile {
     bool? readerBackgroundInverted,
     bool? readerBookBackgroundOverride,
     ClarixFont? font,
+    double? fontScale,
   }) => ClarixThemeProfile(
     mode: mode ?? this.mode,
     accent: accent ?? this.accent,
@@ -138,6 +146,7 @@ class ClarixThemeProfile {
     readerBookBackgroundOverride:
         readerBookBackgroundOverride ?? this.readerBookBackgroundOverride,
     font: font ?? this.font,
+    fontScale: _readFontScale(fontScale ?? this.fontScale),
   );
 }
 
@@ -171,6 +180,19 @@ double _readOpacity(Object? value) {
       : ClarixThemeProfile.defaultHighlightOpacity;
   if (!opacity.isFinite) return ClarixThemeProfile.defaultHighlightOpacity;
   return opacity.clamp(0.0, 1.0).toDouble();
+}
+
+double _readFontScale(Object? value) {
+  final scale = value is num
+      ? value.toDouble()
+      : ClarixThemeProfile.defaultFontScale;
+  if (!scale.isFinite) return ClarixThemeProfile.defaultFontScale;
+  return scale
+      .clamp(
+        ClarixThemeProfile.minimumFontScale,
+        ClarixThemeProfile.maximumFontScale,
+      )
+      .toDouble();
 }
 
 List<int> _readColorList(Object? value) {

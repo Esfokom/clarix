@@ -513,6 +513,32 @@ class _FontSettings extends StatelessWidget {
             colors: colors,
           ),
         ),
+        const SizedBox(height: 18),
+        SectionLabel(label: 'Interface size', colors: colors),
+        Row(
+          children: <Widget>[
+            Text('Small', style: TextStyle(color: colors.textMuted)),
+            const Spacer(),
+            Text(
+              '${(profile.fontScale * 100).round()}%',
+              key: const Key('interface-font-scale-value'),
+              style: TextStyle(color: colors.textStrong),
+            ),
+            const Spacer(),
+            Text('Large', style: TextStyle(color: colors.textMuted)),
+          ],
+        ),
+        Slider(
+          key: const Key('interface-font-scale-slider'),
+          value: profile.fontScale,
+          min: ClarixThemeProfile.minimumFontScale,
+          max: ClarixThemeProfile.maximumFontScale,
+          divisions: 8,
+          label: '${(profile.fontScale * 100).round()}%',
+          onChanged: (double value) => ref
+              .read(clarixThemeProvider.notifier)
+              .setProfile(profile.copyWith(fontScale: value)),
+        ),
       ],
     );
   }
