@@ -22,26 +22,39 @@ class ClarixApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             title: 'Clarix',
             themeMode: profile.mode,
-            theme: _buildTheme(profile),
-            darkTheme: _buildTheme(profile),
+            theme: buildShadTheme(profile, Brightness.light),
+            darkTheme: buildShadTheme(profile, Brightness.dark),
             home: const _WindowBootstrap(child: WorkspaceScreen()),
           );
         },
       ),
     );
   }
+}
 
-  ShadThemeData _buildTheme(ClarixThemeProfile profile) {
-    return ShadThemeData(
-      brightness: Brightness.dark,
-      colorScheme: const ShadZincColorScheme.dark(),
-      textTheme: ShadTextTheme.fromGoogleFont(switch (profile.font) {
-        ClarixFont.sans => GoogleFonts.roboto,
-        ClarixFont.serif => GoogleFonts.sourceSerif4,
-        ClarixFont.mono => GoogleFonts.jetBrainsMono,
-      }),
-    );
-  }
+/// Builds the shadcn theme for [profile] at a fixed [brightness]. Pure (no
+/// BuildContext), so it's unit-testable without booting the app.
+ShadThemeData buildShadTheme(ClarixThemeProfile profile, Brightness brightness) {
+  final Color accentColor = accentFor(
+    profile.accent,
+    customAccentColor: profile.customAccentColor,
+  );
+  final ShadColorScheme base = brightness == Brightness.dark
+      ? const ShadZincColorScheme.dark()
+      : const ShadZincColorScheme.light();
+  return ShadThemeData(
+    brightness: brightness,
+    colorScheme: base.copyWith(
+      primary: accentColor,
+      ring: accentColor,
+      selection: accentColor.withValues(alpha: 0.3),
+    ),
+    textTheme: ShadTextTheme.fromGoogleFont(switch (profile.font) {
+      ClarixFont.sans => GoogleFonts.roboto,
+      ClarixFont.serif => GoogleFonts.sourceSerif4,
+      ClarixFont.mono => GoogleFonts.jetBrainsMono,
+    }),
+  );
 }
 
 class _WindowBootstrap extends StatefulWidget {

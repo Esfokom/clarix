@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:clarix/src/features/ai/ai.dart';
+import '../../../core/theme_controller.dart';
+import '../../../core/theme_profile.dart';
 import '../../../core/workspace_surface_tokens.dart';
 
 class ProviderEditorDialog extends ConsumerStatefulWidget {
@@ -53,6 +55,10 @@ class ProviderEditorDialogState extends ConsumerState<ProviderEditorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     return AlertDialog(
       title: Text(_editing ? 'Edit provider' : 'Add provider'),
       content: SizedBox(
@@ -134,7 +140,7 @@ class ProviderEditorDialogState extends ConsumerState<ProviderEditorDialog> {
                   padding: const EdgeInsets.only(top: 8),
                   child: Text(
                     _error!,
-                    style: const TextStyle(color: WorkspaceColors.warning),
+                    style: TextStyle(color: colors.warning),
                   ),
                 ),
             ],

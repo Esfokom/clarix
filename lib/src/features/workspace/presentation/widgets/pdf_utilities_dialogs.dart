@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as path;
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../../utilities/domain/utility_job.dart';
 import '../../../utilities/infrastructure/document_conversion_service.dart';
 import '../../../utilities/infrastructure/pdf_export_service.dart';
@@ -93,6 +95,10 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     return ShadDialog(
       constraints: const BoxConstraints(maxWidth: 680, maxHeight: 570),
       title: const Text('Export PDF'),
@@ -129,8 +135,8 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
                       path.basename(_source!),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: WorkspaceColors.textStrong,
+                      style: TextStyle(
+                        color: colors.textStrong,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -139,10 +145,10 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
               ],
             ),
             const SizedBox(height: 22),
-            const Text(
+            Text(
               'Output format',
               style: TextStyle(
-                color: WorkspaceColors.textStrong,
+                color: colors.textStrong,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -156,6 +162,7 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
                     label: 'Markdown',
                     detail: 'Page-by-page extracted text',
                     selected: _format == UtilityFormat.markdown,
+                    colors: colors,
                     onTap: _busy
                         ? null
                         : () => _selectFormat(UtilityFormat.markdown),
@@ -168,6 +175,7 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
                     label: 'Word (visual)',
                     detail: 'Page image with text below',
                     selected: _format == UtilityFormat.word,
+                    colors: colors,
                     onTap: _busy
                         ? null
                         : () => _selectFormat(UtilityFormat.word),
@@ -180,6 +188,7 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
                     label: 'PowerPoint (visual)',
                     detail: 'One page image per slide',
                     selected: _format == UtilityFormat.powerpoint,
+                    colors: colors,
                     onTap: _busy
                         ? null
                         : () => _selectFormat(UtilityFormat.powerpoint),
@@ -191,24 +200,20 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: WorkspaceColors.panelRaised,
+                color: colors.panelRaised,
                 borderRadius: BorderRadius.circular(9),
-                border: Border.all(color: WorkspaceColors.accentBorder),
+                border: Border.all(color: colors.accentBorder),
               ),
-              child: const Row(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Icon(
-                    LucideIcons.info,
-                    size: 15,
-                    color: WorkspaceColors.textMuted,
-                  ),
-                  SizedBox(width: 9),
+                  Icon(LucideIcons.info, size: 15, color: colors.textMuted),
+                  const SizedBox(width: 9),
                   Expanded(
                     child: Text(
                       'Word and PowerPoint are visual exports. They preserve each PDF page as an image and add extracted text for search and accessibility, but do not recreate editable page layouts.',
                       style: TextStyle(
-                        color: WorkspaceColors.textMuted,
+                        color: colors.textMuted,
                         fontSize: 11.5,
                         height: 1.35,
                       ),
@@ -221,10 +226,7 @@ class _ExportPdfDialogState extends ConsumerState<ExportPdfDialog> {
               const SizedBox(height: 12),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: WorkspaceColors.warning,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: colors.warning, fontSize: 12),
               ),
             ],
           ],
@@ -306,6 +308,7 @@ class _ExportFormatOption extends StatelessWidget {
     required this.detail,
     required this.selected,
     required this.onTap,
+    required this.colors,
     super.key,
   });
 
@@ -313,6 +316,7 @@ class _ExportFormatOption extends StatelessWidget {
   final String detail;
   final bool selected;
   final VoidCallback? onTap;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -325,12 +329,10 @@ class _ExportFormatOption extends StatelessWidget {
           height: 84,
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: selected
-                ? WorkspaceColors.accentSoft
-                : WorkspaceColors.panel,
+            color: selected ? colors.accentSoft : colors.panel,
             borderRadius: BorderRadius.circular(9),
             border: Border.all(
-              color: selected ? WorkspaceColors.accent : WorkspaceColors.border,
+              color: selected ? colors.accent : colors.border,
             ),
           ),
           child: Column(
@@ -339,8 +341,8 @@ class _ExportFormatOption extends StatelessWidget {
             children: <Widget>[
               Text(
                 label,
-                style: const TextStyle(
-                  color: WorkspaceColors.textStrong,
+                style: TextStyle(
+                  color: colors.textStrong,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -350,8 +352,8 @@ class _ExportFormatOption extends StatelessWidget {
                 detail,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: WorkspaceColors.textMuted,
+                style: TextStyle(
+                  color: colors.textMuted,
                   fontSize: 10,
                   height: 1.2,
                 ),
@@ -392,6 +394,10 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     return ShadDialog(
       constraints: const BoxConstraints(maxWidth: 680, maxHeight: 620),
       title: const Text('Convert files to PDF'),
@@ -427,10 +433,7 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
                     _files.isEmpty
                         ? 'PNG, JPG, WEBP, TXT, MD, DOCX, PPTX, or XLSX'
                         : '${_files.length} ${_files.length == 1 ? 'file' : 'files'} selected',
-                    style: const TextStyle(
-                      color: WorkspaceColors.textMuted,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
                   ),
                 ),
               ],
@@ -439,16 +442,16 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: WorkspaceColors.panelRaised,
+                  color: colors.panelRaised,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: WorkspaceColors.border),
+                  border: Border.all(color: colors.border),
                 ),
                 child: _files.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'Add one or more files to create a PDF for each.',
                           style: TextStyle(
-                            color: WorkspaceColors.textMuted,
+                            color: colors.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -465,16 +468,16 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
                               vertical: 7,
                             ),
                             decoration: BoxDecoration(
-                              color: WorkspaceColors.panel,
+                              color: colors.panel,
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: WorkspaceColors.border),
+                              border: Border.all(color: colors.border),
                             ),
                             child: Row(
                               children: <Widget>[
-                                const Icon(
+                                Icon(
                                   LucideIcons.fileText,
                                   size: 15,
-                                  color: WorkspaceColors.textMuted,
+                                  color: colors.textMuted,
                                 ),
                                 const SizedBox(width: 9),
                                 Expanded(
@@ -486,8 +489,8 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
                                         path.basename(source),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: WorkspaceColors.textStrong,
+                                        style: TextStyle(
+                                          color: colors.textStrong,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -496,8 +499,8 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
                                         source,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: WorkspaceColors.textFaint,
+                                        style: TextStyle(
+                                          color: colors.textFaint,
                                           fontSize: 10,
                                         ),
                                       ),
@@ -526,10 +529,7 @@ class _ConvertToPdfDialogState extends ConsumerState<ConvertToPdfDialog> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: WorkspaceColors.warning,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: colors.warning, fontSize: 12),
               ),
             ],
           ],

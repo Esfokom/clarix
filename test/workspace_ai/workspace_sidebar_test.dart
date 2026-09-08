@@ -1,3 +1,4 @@
+import 'package:clarix/src/core/theme_profile.dart';
 import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/workspace_common.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/workspace_sidebar.dart';
@@ -9,22 +10,32 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      const MaterialApp(
+      MaterialApp(
         home: Material(
-          child: DecoratedBox(
-            decoration: BoxDecoration(color: WorkspaceColors.panel),
-            child: SizedBox(
-              width: 224,
-              child: OutlinePane(
-                outline: <OutlineNodeState>[
-                  OutlineNodeState(
-                    title: 'Chapter one',
-                    pageNumber: 1,
-                    children: <OutlineNodeState>[],
+          child: Builder(
+            builder: (context) {
+              final WorkspaceSurfaceTokens colors =
+                  WorkspaceSurfaceTokens.fromProfile(
+                    const ClarixThemeProfile(),
+                    context,
+                  );
+              return DecoratedBox(
+                decoration: BoxDecoration(color: colors.panel),
+                child: SizedBox(
+                  width: 224,
+                  child: OutlinePane(
+                    colors: colors,
+                    outline: <OutlineNodeState>[
+                      OutlineNodeState(
+                        title: 'Chapter one',
+                        pageNumber: 1,
+                        children: <OutlineNodeState>[],
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),

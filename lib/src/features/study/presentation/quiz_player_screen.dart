@@ -33,6 +33,7 @@ class _QuizPlayerScreenState extends ConsumerState<QuizPlayerScreen> {
   Widget build(BuildContext context) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     final List<QuizQuestion> questions = widget.studySet.questions;
 

@@ -29,11 +29,13 @@ class InlinePageReferenceBuilder extends MarkdownElementBuilder {
     required this.document,
     required this.documentRef,
     required this.onNavigate,
+    required this.colors,
   });
 
   final AiDocumentContext? document;
   final PdfDocumentRef? documentRef;
   final ValueChanged<CitationSnippet>? onNavigate;
+  final WorkspaceSurfaceTokens colors;
   final Map<int, int> _occurrences = <int, int>{};
 
   @override
@@ -62,6 +64,7 @@ class InlinePageReferenceBuilder extends MarkdownElementBuilder {
       pageNumber: pageNumber,
       label: element.textContent,
       textStyle: preferredStyle ?? parentStyle,
+      colors: colors,
     );
   }
 }
@@ -75,6 +78,7 @@ class _InlinePageReference extends StatefulWidget {
     required this.pageNumber,
     required this.label,
     required this.textStyle,
+    required this.colors,
   });
 
   final AiDocumentContext? document;
@@ -83,6 +87,7 @@ class _InlinePageReference extends StatefulWidget {
   final int pageNumber;
   final String label;
   final TextStyle? textStyle;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   State<_InlinePageReference> createState() => _InlinePageReferenceState();
@@ -109,9 +114,9 @@ class _InlinePageReferenceState extends State<_InlinePageReference> {
         !document.isMissingFile &&
         widget.documentRef != null;
     final TextStyle style = (widget.textStyle ?? const TextStyle()).copyWith(
-      color: WorkspaceColors.accent,
+      color: widget.colors.accent,
       decoration: TextDecoration.underline,
-      decorationColor: WorkspaceColors.accent,
+      decorationColor: widget.colors.accent,
       fontWeight: FontWeight.w600,
     );
     final Widget label = Text(widget.label, style: style);
@@ -162,7 +167,7 @@ class _InlinePageReferenceState extends State<_InlinePageReference> {
             .clamp(_previewGap, viewport.height - _previewHeight - _previewGap)
             .toDouble(),
         child: Material(
-          color: WorkspaceColors.panelRaised,
+          color: widget.colors.panelRaised,
           elevation: 18,
           child: SizedBox(
             width: _previewWidth,

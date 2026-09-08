@@ -7,11 +7,13 @@ export '../../../../core/workspace_surface_tokens.dart';
 class SurfaceBlock extends StatelessWidget {
   const SurfaceBlock({
     required this.child,
+    required this.colors,
     this.padding = EdgeInsets.zero,
     super.key,
   });
 
   final Widget child;
+  final WorkspaceSurfaceTokens colors;
   final EdgeInsetsGeometry padding;
 
   @override
@@ -19,9 +21,9 @@ class SurfaceBlock extends StatelessWidget {
     return SmoothClipRRect(
       smoothness: 0.82,
       borderRadius: BorderRadius.circular(18),
-      side: const BorderSide(color: WorkspaceColors.border),
+      side: BorderSide(color: colors.border),
       child: DecoratedBox(
-        decoration: const BoxDecoration(color: WorkspaceColors.panel),
+        decoration: BoxDecoration(color: colors.panel),
         child: Padding(padding: padding, child: child),
       ),
     );
@@ -29,9 +31,10 @@ class SurfaceBlock extends StatelessWidget {
 }
 
 class SectionLabel extends StatelessWidget {
-  const SectionLabel({required this.label, super.key});
+  const SectionLabel({required this.label, required this.colors, super.key});
 
   final String label;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -39,8 +42,8 @@ class SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
-          color: WorkspaceColors.textFaint,
+        style: TextStyle(
+          color: colors.textFaint,
           fontSize: 10,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.8,
@@ -51,25 +54,27 @@ class SectionLabel extends StatelessWidget {
 }
 
 class SidebarEmpty extends StatelessWidget {
-  const SidebarEmpty({required this.message, super.key});
+  const SidebarEmpty({
+    required this.message,
+    required this.colors,
+    super.key,
+  });
 
   final String message;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: WorkspaceColors.panelRaised,
+        color: colors.panelRaised,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: WorkspaceColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Text(
         message,
-        style: const TextStyle(
-          color: WorkspaceColors.textFaint,
-          fontSize: 10.5,
-        ),
+        style: TextStyle(color: colors.textFaint, fontSize: 10.5),
       ),
     );
   }

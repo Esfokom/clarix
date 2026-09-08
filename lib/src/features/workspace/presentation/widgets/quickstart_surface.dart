@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'pdf_utilities_dialogs.dart';
@@ -15,6 +17,10 @@ class QuickstartSurface extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     return ColoredBox(
       color: const Color(0xFF2F2F2F),
       child: Center(
@@ -62,7 +68,7 @@ class QuickstartSurface extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                const _QuickstartSectionLabel(label: 'Utilities'),
+                _QuickstartSectionLabel(label: 'Utilities', colors: colors),
                 const SizedBox(height: 10),
                 SizedBox(
                   height: 240,
@@ -81,18 +87,21 @@ class QuickstartSurface extends ConsumerWidget {
                         detail:
                             'Order multiple PDFs and save them as one file.',
                         onTap: () => showCombinePdfDialog(context),
+                        colors: colors,
                       ),
                       _UtilityCard(
                         icon: LucideIcons.fileOutput,
                         title: 'Convert to PDF',
                         detail: 'Create PDFs from documents, text, and images.',
                         onTap: () => showConvertToPdfDialog(context),
+                        colors: colors,
                       ),
                       _UtilityCard(
                         icon: LucideIcons.fileStack,
                         title: 'Extract pages',
                         detail: 'Choose page ranges and save a new PDF.',
                         onTap: () => showExtractPagesDialog(context),
+                        colors: colors,
                       ),
                       _UtilityCard(
                         icon: LucideIcons.share2,
@@ -100,12 +109,16 @@ class QuickstartSurface extends ConsumerWidget {
                         detail:
                             'Export content to Markdown, Word, or PowerPoint.',
                         onTap: () => showExportPdfDialog(context),
+                        colors: colors,
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 28),
-                const _QuickstartSectionLabel(label: 'Recent documents'),
+                _QuickstartSectionLabel(
+                  label: 'Recent documents',
+                  colors: colors,
+                ),
                 const SizedBox(height: 12),
                 Expanded(
                   child: state.session.recentFiles.isEmpty
@@ -117,6 +130,7 @@ class QuickstartSurface extends ConsumerWidget {
                           itemBuilder: (BuildContext context, int index) =>
                               _QuickstartRecentTile(
                                 path: state.session.recentFiles[index],
+                                colors: colors,
                               ),
                         ),
                 ),
@@ -130,16 +144,17 @@ class QuickstartSurface extends ConsumerWidget {
 }
 
 class _QuickstartSectionLabel extends StatelessWidget {
-  const _QuickstartSectionLabel({required this.label});
+  const _QuickstartSectionLabel({required this.label, required this.colors});
 
   final String label;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
     return Text(
       label,
-      style: const TextStyle(
-        color: WorkspaceColors.textFaint,
+      style: TextStyle(
+        color: colors.textFaint,
         fontSize: 10,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.8,
@@ -153,6 +168,7 @@ class _UtilityCard extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.detail,
+    required this.colors,
     this.onTap,
   });
 
@@ -160,6 +176,7 @@ class _UtilityCard extends StatelessWidget {
   final String title;
   final String detail;
   final VoidCallback? onTap;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -187,17 +204,13 @@ class _UtilityCard extends StatelessWidget {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: enabled
-                        ? WorkspaceColors.accentSoft
-                        : WorkspaceColors.panelRaised,
+                    color: enabled ? colors.accentSoft : colors.panelRaised,
                     borderRadius: BorderRadius.circular(11),
                   ),
                   child: Icon(
                     icon,
                     size: 18,
-                    color: enabled
-                        ? WorkspaceColors.textStrong
-                        : WorkspaceColors.textFaint,
+                    color: enabled ? colors.textStrong : colors.textFaint,
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -218,8 +231,8 @@ class _UtilityCard extends StatelessWidget {
                       textAlign: TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: WorkspaceColors.textMuted,
+                      style: TextStyle(
+                        color: colors.textMuted,
                         fontSize: 10.5,
                         height: 1.25,
                       ),
@@ -236,9 +249,10 @@ class _UtilityCard extends StatelessWidget {
 }
 
 class _QuickstartRecentTile extends ConsumerWidget {
-  const _QuickstartRecentTile({required this.path});
+  const _QuickstartRecentTile({required this.path, required this.colors});
 
   final String path;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -249,25 +263,21 @@ class _QuickstartRecentTile extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: WorkspaceColors.panelRaised,
+          color: colors.panelRaised,
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: WorkspaceColors.border),
+          border: Border.all(color: colors.border),
         ),
         child: Row(
           children: <Widget>[
-            const Icon(
-              LucideIcons.fileText,
-              size: 15,
-              color: WorkspaceColors.textMuted,
-            ),
+            Icon(LucideIcons.fileText, size: 15, color: colors.textMuted),
             const SizedBox(width: 9),
             Expanded(
               child: Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: WorkspaceColors.textStrong,
+                style: TextStyle(
+                  color: colors.textStrong,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -280,18 +290,11 @@ class _QuickstartRecentTile extends ConsumerWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.end,
-                style: const TextStyle(
-                  color: WorkspaceColors.textFaint,
-                  fontSize: 10,
-                ),
+                style: TextStyle(color: colors.textFaint, fontSize: 10),
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(
-              LucideIcons.arrowRight,
-              size: 13,
-              color: WorkspaceColors.textFaint,
-            ),
+            Icon(LucideIcons.arrowRight, size: 13, color: colors.textFaint),
           ],
         ),
       ),

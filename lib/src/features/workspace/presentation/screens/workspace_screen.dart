@@ -3,6 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import '../widgets/workspace_body.dart';
@@ -119,52 +121,55 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
     );
   }
 
-  Widget _workspaceScaffold(AsyncValue<WorkspaceFeatureState> asyncState) =>
-      Scaffold(
-        backgroundColor: WorkspaceColors.canvas,
-        body: asyncState.when(
-          data: (WorkspaceFeatureState state) => WorkspaceBody(
-            state: state,
-            onOpenSettings: () => showAppSettingsDialog(context),
-            fullscreenReader: _readerFullscreen,
-            onExitFullscreen: _exitReading,
-          ),
-          error: (Object error, StackTrace stackTrace) => Center(
-            child: SurfaceBlock(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Text(
-                    'Clarix could not initialize.',
-                    style: TextStyle(
-                      color: WorkspaceColors.textStrong,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+  Widget _workspaceScaffold(AsyncValue<WorkspaceFeatureState> asyncState) {
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
+    return Scaffold(
+      backgroundColor: colors.canvas,
+      body: asyncState.when(
+        data: (WorkspaceFeatureState state) => WorkspaceBody(
+          state: state,
+          onOpenSettings: () => showAppSettingsDialog(context),
+          fullscreenReader: _readerFullscreen,
+          onExitFullscreen: _exitReading,
+        ),
+        error: (Object error, StackTrace stackTrace) => Center(
+          child: SurfaceBlock(
+            colors: colors,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Clarix could not initialize.',
+                  style: TextStyle(
+                    color: colors.textStrong,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '$error',
-                    style: const TextStyle(
-                      color: WorkspaceColors.textMuted,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          loading: () => const Center(
-            child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '$error',
+                  style: TextStyle(color: colors.textMuted, fontSize: 12),
+                ),
+              ],
             ),
           ),
         ),
-      );
+        loading: () => const Center(
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _enterReaderMode() => setState(() => _readerFullscreen = true);
 
@@ -186,18 +191,22 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
   }
 
   Future<bool> _showDiscardDialog() async {
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     final bool? result = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: WorkspaceColors.panel,
-          title: const Text(
+          backgroundColor: colors.panel,
+          title: Text(
             'Close all tabs?',
-            style: TextStyle(color: WorkspaceColors.textStrong),
+            style: TextStyle(color: colors.textStrong),
           ),
-          content: const Text(
+          content: Text(
             'Restore previous session is disabled, so closing now will discard the current workspace.',
-            style: TextStyle(color: WorkspaceColors.textMuted),
+            style: TextStyle(color: colors.textMuted),
           ),
           actions: <Widget>[
             TextButton(
@@ -216,17 +225,21 @@ class _WorkspaceScreenState extends ConsumerState<WorkspaceScreen>
   }
 
   Future<_CloseChoice> _showUnsavedPdfDialog() async {
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     final result = await showDialog<_CloseChoice>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        backgroundColor: WorkspaceColors.panel,
-        title: const Text(
+        backgroundColor: colors.panel,
+        title: Text(
           'Unsaved annotations',
-          style: TextStyle(color: WorkspaceColors.textStrong),
+          style: TextStyle(color: colors.textStrong),
         ),
-        content: const Text(
+        content: Text(
           'Save every document’s annotations, or close without saving them.',
-          style: TextStyle(color: WorkspaceColors.textMuted),
+          style: TextStyle(color: colors.textMuted),
         ),
         actions: <Widget>[
           TextButton(

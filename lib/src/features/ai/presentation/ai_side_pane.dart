@@ -67,6 +67,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
   Widget build(BuildContext context) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     final AiWorkspaceState ai = widget.aiState.chat;
     final String? activeThreadId = ai.activeConversationId;
@@ -407,10 +408,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
   }) {
     final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
       ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     return showShadDialog<bool>(
       context: context,
-      barrierColor: WorkspaceColors.backdrop,
+      barrierColor: colors.backdrop,
       builder: (BuildContext dialogContext) => ShadDialog(
         radius: BorderRadius.circular(18),
         backgroundColor: colors.panel,
@@ -533,8 +535,8 @@ class _MessageBubble extends StatelessWidget {
           ),
           builders: <String, MarkdownElementBuilder>{
             'latex': LatexElementBuilder(
-              textStyle: const TextStyle(
-                color: WorkspaceColors.textStrong,
+              textStyle: TextStyle(
+                color: colors.textStrong,
                 fontSize: 13.5,
                 height: 1.45,
               ),
@@ -544,22 +546,23 @@ class _MessageBubble extends StatelessWidget {
                 document: documentContext,
                 documentRef: null,
                 onNavigate: null,
+                colors: colors,
               ),
           },
           styleSheet: MarkdownStyleSheet(
-            p: const TextStyle(
-              color: WorkspaceColors.textStrong,
+            p: TextStyle(
+              color: colors.textStrong,
               fontSize: 13.5,
               height: 1.45,
             ),
-            tableHead: const TextStyle(
-              color: WorkspaceColors.textStrong,
+            tableHead: TextStyle(
+              color: colors.textStrong,
               fontSize: 13.5,
               fontWeight: FontWeight.w600,
               height: 1.4,
             ),
-            tableBody: const TextStyle(
-              color: WorkspaceColors.textStrong,
+            tableBody: TextStyle(
+              color: colors.textStrong,
               fontSize: 13.5,
               height: 1.4,
             ),
@@ -567,7 +570,7 @@ class _MessageBubble extends StatelessWidget {
               horizontal: 12,
               vertical: 10,
             ),
-            code: const TextStyle(color: WorkspaceColors.textStrong),
+            code: TextStyle(color: colors.textStrong),
           ),
         ),
       ],

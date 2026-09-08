@@ -38,6 +38,7 @@ class DesktopWindowChrome extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),

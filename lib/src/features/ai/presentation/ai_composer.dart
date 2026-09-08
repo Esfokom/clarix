@@ -516,10 +516,10 @@ class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
                 builder: (BuildContext context, Widget? child) => ShaderMask(
                   blendMode: BlendMode.srcIn,
                   shaderCallback: (Rect bounds) => LinearGradient(
-                    colors: const <Color>[
-                      WorkspaceColors.textMuted,
-                      WorkspaceColors.textStrong,
-                      WorkspaceColors.textMuted,
+                    colors: <Color>[
+                      widget.colors.textMuted,
+                      widget.colors.textStrong,
+                      widget.colors.textMuted,
                     ],
                     stops: <double>[0, _animationController.value, 1],
                   ).createShader(bounds),

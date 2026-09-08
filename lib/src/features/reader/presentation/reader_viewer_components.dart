@@ -8,6 +8,7 @@ class _DocumentSearchOverlay extends StatelessWidget {
     required this.currentIndex,
     required this.onPrevious,
     required this.onNext,
+    required this.colors,
   });
 
   final String query;
@@ -16,6 +17,7 @@ class _DocumentSearchOverlay extends StatelessWidget {
   final int? currentIndex;
   final VoidCallback? onPrevious;
   final VoidCallback? onNext;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -33,10 +35,10 @@ class _DocumentSearchOverlay extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 360),
         padding: const EdgeInsets.fromLTRB(12, 7, 6, 7),
         decoration: BoxDecoration(
-          color: WorkspaceColors.panelRaised,
+          color: colors.panelRaised,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: noMatches ? WorkspaceColors.warning : WorkspaceColors.border,
+            color: noMatches ? colors.warning : colors.border,
           ),
           boxShadow: const <BoxShadow>[
             BoxShadow(
@@ -50,20 +52,18 @@ class _DocumentSearchOverlay extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             if (isSearching)
-              const SizedBox(
+              SizedBox(
                 width: 13,
                 height: 13,
                 child: CircularProgressIndicator(
                   strokeWidth: 1.6,
-                  color: WorkspaceColors.textMuted,
+                  color: colors.textMuted,
                 ),
               )
             else
               Icon(
                 noMatches ? LucideIcons.circleAlert : LucideIcons.search,
-                color: noMatches
-                    ? WorkspaceColors.warning
-                    : WorkspaceColors.textMuted,
+                color: noMatches ? colors.warning : colors.textMuted,
                 size: 14,
               ),
             const SizedBox(width: 8),
@@ -76,9 +76,7 @@ class _DocumentSearchOverlay extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  color: noMatches
-                      ? WorkspaceColors.textStrong
-                      : WorkspaceColors.textMuted,
+                  color: noMatches ? colors.textStrong : colors.textMuted,
                   fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -92,8 +90,8 @@ class _DocumentSearchOverlay extends StatelessWidget {
                   key: const Key('search-previous-match'),
                   onPressed: onPrevious,
                   icon: const Icon(LucideIcons.chevronUp, size: 16),
-                  color: WorkspaceColors.textStrong,
-                  disabledColor: WorkspaceColors.textFaint,
+                  color: colors.textStrong,
+                  disabledColor: colors.textFaint,
                   visualDensity: VisualDensity.compact,
                 ),
               ),
@@ -103,8 +101,8 @@ class _DocumentSearchOverlay extends StatelessWidget {
                   key: const Key('search-next-match'),
                   onPressed: onNext,
                   icon: const Icon(LucideIcons.chevronDown, size: 16),
-                  color: WorkspaceColors.textStrong,
-                  disabledColor: WorkspaceColors.textFaint,
+                  color: colors.textStrong,
+                  disabledColor: colors.textFaint,
                   visualDensity: VisualDensity.compact,
                 ),
               ),
@@ -121,11 +119,13 @@ class _PdfEdgeScrollbar extends StatelessWidget {
     required this.controller,
     required this.axis,
     required this.viewportSize,
+    required this.colors,
   });
 
   final PdfViewerController controller;
   final PdfScrollbarAxis axis;
   final Size viewportSize;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +165,7 @@ class _PdfEdgeScrollbar extends StatelessWidget {
         width: 12,
         child: _PdfScrollbarTrack(
           axis: axis,
+          colors: colors,
           child: Stack(
             children: <Widget>[
               Positioned(
@@ -193,6 +194,7 @@ class _PdfEdgeScrollbar extends StatelessWidget {
       height: 12,
       child: _PdfScrollbarTrack(
         axis: axis,
+        colors: colors,
         child: Stack(
           children: <Widget>[
             Positioned(
@@ -226,20 +228,22 @@ class _PdfEdgeScrollbar extends StatelessWidget {
 }
 
 class _PdfScrollbarTrack extends StatelessWidget {
-  const _PdfScrollbarTrack({required this.axis, required this.child});
+  const _PdfScrollbarTrack({
+    required this.axis,
+    required this.child,
+    required this.colors,
+  });
 
   final PdfScrollbarAxis axis;
   final Widget child;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
-    final borderSide = const BorderSide(
-      color: WorkspaceColors.border,
-      width: 0.5,
-    );
+    final borderSide = BorderSide(color: colors.border, width: 0.5);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: WorkspaceColors.canvasRaised,
+        color: colors.canvasRaised,
         border: Border(
           left: axis == PdfScrollbarAxis.vertical
               ? borderSide
@@ -373,6 +377,7 @@ class _ViewerHud extends StatelessWidget {
     required this.onZoomIn,
     required this.onSelectZoomPreset,
     required this.onHighlightSelection,
+    required this.colors,
   });
 
   final int page;
@@ -384,13 +389,14 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onZoomIn;
   final ValueChanged<_ZoomPreset>? onSelectZoomPreset;
   final VoidCallback? onHighlightSelection;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
     return SmoothClipRRect(
       smoothness: 0.9,
       borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: WorkspaceColors.border),
+      side: BorderSide(color: colors.border),
       child: Container(
         color: const Color(0xE6121214),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -401,8 +407,8 @@ class _ViewerHud extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               pageCount == null ? 'p.$page' : 'p.$page / $pageCount',
-              style: const TextStyle(
-                color: WorkspaceColors.textStrong,
+              style: TextStyle(
+                color: colors.textStrong,
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
               ),
@@ -410,18 +416,18 @@ class _ViewerHud extends StatelessWidget {
             const SizedBox(width: 6),
             _HudIcon(icon: LucideIcons.chevronRight, onPressed: onNextPage),
             const SizedBox(width: 10),
-            const _HudDivider(),
+            _HudDivider(colors: colors),
             const SizedBox(width: 10),
             _HudIcon(icon: LucideIcons.minus, onPressed: onZoomOut),
             const SizedBox(width: 6),
             PopupMenuButton<_ZoomPreset>(
               enabled: onSelectZoomPreset != null,
               tooltip: 'Zoom presets',
-              color: WorkspaceColors.panelRaised,
+              color: colors.panelRaised,
               surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: WorkspaceColors.border),
+                side: BorderSide(color: colors.border),
               ),
               onSelected: onSelectZoomPreset,
               itemBuilder: (BuildContext context) {
@@ -431,8 +437,8 @@ class _ViewerHud extends StatelessWidget {
                         value: preset,
                         child: Text(
                           preset.label,
-                          style: const TextStyle(
-                            color: WorkspaceColors.textStrong,
+                          style: TextStyle(
+                            color: colors.textStrong,
                             fontSize: 11.5,
                           ),
                         ),
@@ -444,8 +450,8 @@ class _ViewerHud extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                 child: Text(
                   '${(zoom * 100).round()}%',
-                  style: const TextStyle(
-                    color: WorkspaceColors.textStrong,
+                  style: TextStyle(
+                    color: colors.textStrong,
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                   ),
@@ -455,7 +461,7 @@ class _ViewerHud extends StatelessWidget {
             const SizedBox(width: 6),
             _HudIcon(icon: LucideIcons.plus, onPressed: onZoomIn),
             const SizedBox(width: 10),
-            const _HudDivider(),
+            _HudDivider(colors: colors),
             const SizedBox(width: 10),
             Tooltip(
               message: 'Highlight selected text',
@@ -505,11 +511,13 @@ class _HudIcon extends StatelessWidget {
 }
 
 class _HudDivider extends StatelessWidget {
-  const _HudDivider();
+  const _HudDivider({required this.colors});
+
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
-    return Container(width: 1, height: 16, color: WorkspaceColors.border);
+    return Container(width: 1, height: 16, color: colors.border);
   }
 }
 

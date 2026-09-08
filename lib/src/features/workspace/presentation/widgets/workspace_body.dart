@@ -39,6 +39,10 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
     final DocumentTabState? activeTab = _activeTab(widget.state);
     final AiFeatureState aiState =
         ref.watch(aiNotifierProvider).value ?? AiFeatureState.initial();
+    final colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     if (widget.fullscreenReader && activeTab != null) {
       return _FullscreenReader(
         tab: activeTab,
@@ -79,7 +83,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                         border: Border(
                           left: BorderSide.none,
                           right: showInspector && activeTab != null
-                              ? const BorderSide(color: WorkspaceColors.border)
+                              ? BorderSide(color: colors.border)
                               : BorderSide.none,
                         ),
                       ),
@@ -94,6 +98,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                   if (showAnyInline)
                     _PaneHandle(
                       key: const Key('right-pane-resizer'),
+                      colors: colors,
                       onDrag: (double delta) => ref
                           .read(workspaceNotifierProvider.notifier)
                           .setRightPaneWidth(
@@ -113,7 +118,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                             ),
                     ),
                   if (showInspector && activeTab != null)
-                    _RightToolRail(state: widget.state),
+                    _RightToolRail(state: widget.state, colors: colors),
                 ],
               ),
             ),
@@ -123,7 +128,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                   onTap: () => ref
                       .read(workspaceNotifierProvider.notifier)
                       .toggleComposerExpanded(),
-                  child: Container(color: WorkspaceColors.backdrop),
+                  child: Container(color: colors.backdrop),
                 ),
               ),
               Positioned(
@@ -143,6 +148,7 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                 top: 16,
                 child: Center(
                   child: SurfaceBlock(
+                    colors: colors,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 10,
@@ -163,8 +169,8 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                         Flexible(
                           child: Text(
                             widget.state.bannerMessage!,
-                            style: const TextStyle(
-                              color: WorkspaceColors.warning,
+                            style: TextStyle(
+                              color: colors.warning,
                               fontSize: 11,
                             ),
                           ),
@@ -259,6 +265,7 @@ class _FullscreenReaderState extends ConsumerState<_FullscreenReader> {
             colors: WorkspaceSurfaceTokens.fromProfile(
               ref.watch(clarixThemeProvider).value ??
                   const ClarixThemeProfile(),
+              context,
             ),
           ),
         ),
@@ -290,8 +297,9 @@ class _FullscreenReaderState extends ConsumerState<_FullscreenReader> {
 }
 
 class _PaneHandle extends StatelessWidget {
-  const _PaneHandle({super.key, required this.onDrag});
+  const _PaneHandle({super.key, required this.onDrag, required this.colors});
   final ValueChanged<double> onDrag;
+  final WorkspaceSurfaceTokens colors;
   @override
   Widget build(BuildContext context) => SizedBox(
     width: 6,
@@ -306,7 +314,7 @@ class _PaneHandle extends StatelessWidget {
             width: 2,
             height: 36,
             decoration: BoxDecoration(
-              color: WorkspaceColors.border,
+              color: colors.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -317,15 +325,16 @@ class _PaneHandle extends StatelessWidget {
 }
 
 class _RightToolRail extends ConsumerWidget {
-  const _RightToolRail({required this.state});
+  const _RightToolRail({required this.state, required this.colors});
   final WorkspaceFeatureState state;
+  final WorkspaceSurfaceTokens colors;
   @override
   Widget build(BuildContext context, WidgetRef ref) => SizedBox(
     width: 40,
     child: DecoratedBox(
-      decoration: const BoxDecoration(
-        color: WorkspaceColors.panel,
-        border: Border(left: BorderSide(color: WorkspaceColors.border)),
+      decoration: BoxDecoration(
+        color: colors.panel,
+        border: Border(left: BorderSide(color: colors.border)),
       ),
       child: Column(
         children: <Widget>[
@@ -368,7 +377,7 @@ class _RightToolRail extends ConsumerWidget {
       height: 40,
       padding: EdgeInsets.zero,
       backgroundColor: state.session.rightToolWindow == tool
-          ? WorkspaceColors.accentSoft
+          ? colors.accentSoft
           : null,
       icon: Icon(icon, size: 16),
       onPressed: () => ref

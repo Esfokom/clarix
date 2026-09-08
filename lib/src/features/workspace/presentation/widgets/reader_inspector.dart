@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
 import '../../../../core/models.dart';
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../application/workspace_providers.dart';
 import '../../domain/workspace_feature_state.dart';
 import 'workspace_common.dart';
@@ -25,9 +27,13 @@ class ReaderInspector extends ConsumerWidget {
         metadata?.bookmarks ?? const <DocumentBookmark>[];
     final List<DocumentAnnotation> annotations =
         metadata?.annotations ?? const <DocumentAnnotation>[];
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
 
     return DecoratedBox(
-      decoration: const BoxDecoration(color: WorkspaceColors.panel),
+      decoration: BoxDecoration(color: colors.panel),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
@@ -35,11 +41,11 @@ class ReaderInspector extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 16, 12, 12),
             child: Row(
               children: <Widget>[
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Document',
                     style: TextStyle(
-                      color: WorkspaceColors.textStrong,
+                      color: colors.textStrong,
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                     ),
@@ -60,7 +66,7 @@ class ReaderInspector extends ConsumerWidget {
               ],
             ),
           ),
-          const Divider(height: 1, color: WorkspaceColors.border),
+          Divider(height: 1, color: colors.border),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.all(14),
@@ -69,8 +75,8 @@ class ReaderInspector extends ConsumerWidget {
                   activeTab.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: WorkspaceColors.textStrong,
+                  style: TextStyle(
+                    color: colors.textStrong,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -78,21 +84,19 @@ class ReaderInspector extends ConsumerWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${activeTab.pageCountHint ?? '—'} pages · local file',
-                  style: const TextStyle(
-                    color: WorkspaceColors.textFaint,
-                    fontSize: 10.5,
-                  ),
+                  style: TextStyle(color: colors.textFaint, fontSize: 10.5),
                 ),
                 const SizedBox(height: 18),
-                const SectionLabel(label: 'Bookmarks'),
+                SectionLabel(label: 'Bookmarks', colors: colors),
                 if (bookmarks.isEmpty)
-                  const SidebarEmpty(message: 'No bookmarks yet')
+                  SidebarEmpty(message: 'No bookmarks yet', colors: colors)
                 else
                   for (final DocumentBookmark bookmark in bookmarks)
                     _InspectorItem(
                       icon: LucideIcons.bookmark,
                       title: bookmark.label,
                       subtitle: 'Page ${bookmark.pageNumber}',
+                      colors: colors,
                       onTap: () => ref
                           .read(workspaceNotifierProvider.notifier)
                           .updateViewerState(
@@ -101,9 +105,9 @@ class ReaderInspector extends ConsumerWidget {
                           ),
                     ),
                 const SizedBox(height: 18),
-                const SectionLabel(label: 'Notes'),
+                SectionLabel(label: 'Notes', colors: colors),
                 if (annotations.isEmpty)
-                  const SidebarEmpty(message: 'No annotations yet')
+                  SidebarEmpty(message: 'No annotations yet', colors: colors)
                 else
                   for (final DocumentAnnotation annotation in annotations)
                     _InspectorItem(
@@ -114,6 +118,7 @@ class ReaderInspector extends ConsumerWidget {
                           ? annotation.note!
                           : annotation.selectedText,
                       subtitle: 'Page ${annotation.pageNumber}',
+                      colors: colors,
                       onTap: () => ref
                           .read(workspaceNotifierProvider.notifier)
                           .updateViewerState(
@@ -185,6 +190,7 @@ class _InspectorItem extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.onTap,
+    required this.colors,
     this.onEdit,
     this.onDelete,
   });
@@ -195,13 +201,14 @@ class _InspectorItem extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: Material(
-        color: WorkspaceColors.panelRaised,
+        color: colors.panelRaised,
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
@@ -210,7 +217,7 @@ class _InspectorItem extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(10, 9, 6, 9),
             child: Row(
               children: <Widget>[
-                Icon(icon, size: 14, color: WorkspaceColors.textMuted),
+                Icon(icon, size: 14, color: colors.textMuted),
                 const SizedBox(width: 9),
                 Expanded(
                   child: Column(
@@ -220,8 +227,8 @@ class _InspectorItem extends StatelessWidget {
                         title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: WorkspaceColors.textStrong,
+                        style: TextStyle(
+                          color: colors.textStrong,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
@@ -229,8 +236,8 @@ class _InspectorItem extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          color: WorkspaceColors.textFaint,
+                        style: TextStyle(
+                          color: colors.textFaint,
                           fontSize: 10,
                         ),
                       ),
@@ -242,7 +249,7 @@ class _InspectorItem extends StatelessWidget {
                     tooltip: 'Edit note',
                     visualDensity: VisualDensity.compact,
                     iconSize: 14,
-                    color: WorkspaceColors.textFaint,
+                    color: colors.textFaint,
                     onPressed: onEdit,
                     icon: const Icon(LucideIcons.pencilLine),
                   ),
@@ -251,7 +258,7 @@ class _InspectorItem extends StatelessWidget {
                     tooltip: 'Delete annotation',
                     visualDensity: VisualDensity.compact,
                     iconSize: 14,
-                    color: WorkspaceColors.textFaint,
+                    color: colors.textFaint,
                     onPressed: onDelete,
                     icon: const Icon(LucideIcons.trash2),
                   ),

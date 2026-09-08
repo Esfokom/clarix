@@ -24,6 +24,7 @@ class DocumentWorkspace extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     return Column(
       children: <Widget>[
@@ -149,7 +150,10 @@ class _TabStripState extends ConsumerState<_TabStrip> {
                   },
                 ),
               ),
-              _IndexStatusIndicator(status: widget.activeTab.indexStatus),
+              _IndexStatusIndicator(
+                status: widget.activeTab.indexStatus,
+                colors: widget.colors,
+              ),
             ],
           ),
         );
@@ -166,14 +170,14 @@ class _TabStripState extends ConsumerState<_TabStrip> {
     final String? choice = await showDialog<String>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
-        backgroundColor: WorkspaceColors.panel,
-        title: const Text(
+        backgroundColor: widget.colors.panel,
+        title: Text(
           'Save annotations?',
-          style: TextStyle(color: WorkspaceColors.textStrong),
+          style: TextStyle(color: widget.colors.textStrong),
         ),
         content: Text(
           '“${tab.title}” has unsaved bookmarks or highlights.',
-          style: const TextStyle(color: WorkspaceColors.textMuted),
+          style: TextStyle(color: widget.colors.textMuted),
         ),
         actions: <Widget>[
           TextButton(
@@ -203,8 +207,9 @@ class _TabStripState extends ConsumerState<_TabStrip> {
 }
 
 class _IndexStatusIndicator extends StatefulWidget {
-  const _IndexStatusIndicator({required this.status});
+  const _IndexStatusIndicator({required this.status, required this.colors});
   final DocumentIndexStatus status;
+  final WorkspaceSurfaceTokens colors;
   @override
   State<_IndexStatusIndicator> createState() => _IndexStatusIndicatorState();
 }
@@ -237,7 +242,7 @@ class _IndexStatusIndicatorState extends State<_IndexStatusIndicator>
         ? const Color(0xFF5BA56A)
         : active
         ? const Color(0xFFC5C5C5)
-        : WorkspaceColors.textFaint;
+        : widget.colors.textFaint;
     final String message = switch (widget.status) {
       DocumentIndexStatus.indexed =>
         'Indexed — ready for document-aware AI answers.',

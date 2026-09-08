@@ -7,6 +7,8 @@ import 'package:path/path.dart' as path;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:shadcn_ui/shadcn_ui.dart';
 
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import '../../../utilities/application/pdf_utility_service.dart';
 import '../../../utilities/domain/pdf_page_selection.dart';
 import '../../../utilities/domain/utility_job.dart';
@@ -71,6 +73,10 @@ class _CombinePdfDialogState extends ConsumerState<CombinePdfDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     return ShadDialog(
       constraints: const BoxConstraints(maxWidth: 680, maxHeight: 620),
       title: const Text('Combine PDF files'),
@@ -106,10 +112,7 @@ class _CombinePdfDialogState extends ConsumerState<CombinePdfDialog> {
                     _files.isEmpty
                         ? 'No PDFs selected'
                         : '${_files.length} PDFs selected',
-                    style: const TextStyle(
-                      color: WorkspaceColors.textMuted,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: colors.textMuted, fontSize: 12),
                   ),
                 ),
               ],
@@ -118,16 +121,16 @@ class _CombinePdfDialogState extends ConsumerState<CombinePdfDialog> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: WorkspaceColors.panelRaised,
+                  color: colors.panelRaised,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: WorkspaceColors.border),
+                  border: Border.all(color: colors.border),
                 ),
                 child: _files.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
                           'Add PDFs to create an ordered output.',
                           style: TextStyle(
-                            color: WorkspaceColors.textMuted,
+                            color: colors.textMuted,
                             fontSize: 12,
                           ),
                         ),
@@ -152,6 +155,7 @@ class _CombinePdfDialogState extends ConsumerState<CombinePdfDialog> {
                               _files.removeAt(index);
                               _error = null;
                             }),
+                            colors: colors,
                           );
                         },
                       ),
@@ -161,10 +165,7 @@ class _CombinePdfDialogState extends ConsumerState<CombinePdfDialog> {
               const SizedBox(height: 10),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: WorkspaceColors.warning,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: colors.warning, fontSize: 12),
               ),
             ],
           ],
@@ -240,6 +241,7 @@ class _CombineSourceTile extends StatelessWidget {
     required this.onMoveUp,
     required this.onMoveDown,
     required this.onRemove,
+    required this.colors,
     super.key,
   });
 
@@ -250,6 +252,7 @@ class _CombineSourceTile extends StatelessWidget {
   final VoidCallback onMoveUp;
   final VoidCallback onMoveDown;
   final VoidCallback onRemove;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -258,21 +261,21 @@ class _CombineSourceTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: WorkspaceColors.panel,
+        color: colors.panel,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: WorkspaceColors.border),
+        border: Border.all(color: colors.border),
       ),
       child: Row(
         children: <Widget>[
           ReorderableDragStartListener(
             key: Key('combine-drag-$index'),
             index: index,
-            child: const Padding(
-              padding: EdgeInsets.all(6),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
               child: Icon(
                 LucideIcons.gripVertical,
                 size: 15,
-                color: WorkspaceColors.textFaint,
+                color: colors.textFaint,
               ),
             ),
           ),
@@ -285,8 +288,8 @@ class _CombineSourceTile extends StatelessWidget {
                   path.basename(source),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: WorkspaceColors.textStrong,
+                  style: TextStyle(
+                    color: colors.textStrong,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -296,10 +299,7 @@ class _CombineSourceTile extends StatelessWidget {
                   source,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: WorkspaceColors.textFaint,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: colors.textFaint, fontSize: 10),
                 ),
               ],
             ),
@@ -393,6 +393,10 @@ class _ExtractPagesDialogState extends ConsumerState<ExtractPagesDialog> {
   @override
   Widget build(BuildContext context) {
     final PdfPageSelection? selection = _selection;
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
     return ShadDialog(
       constraints: const BoxConstraints(maxWidth: 620, maxHeight: 560),
       title: const Text('Extract PDF pages'),
@@ -438,16 +442,16 @@ class _ExtractPagesDialogState extends ConsumerState<ExtractPagesDialog> {
                           path.basename(_source!),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: WorkspaceColors.textStrong,
+                          style: TextStyle(
+                            color: colors.textStrong,
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         Text(
                           '$_pageCount pages',
-                          style: const TextStyle(
-                            color: WorkspaceColors.textMuted,
+                          style: TextStyle(
+                            color: colors.textMuted,
                             fontSize: 11,
                           ),
                         ),
@@ -457,10 +461,10 @@ class _ExtractPagesDialogState extends ConsumerState<ExtractPagesDialog> {
               ],
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Pages',
               style: TextStyle(
-                color: WorkspaceColors.textStrong,
+                color: colors.textStrong,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -483,8 +487,8 @@ class _ExtractPagesDialogState extends ConsumerState<ExtractPagesDialog> {
                         'Ranges are inclusive and pages keep the written order.',
               style: TextStyle(
                 color: _selectionError == null
-                    ? WorkspaceColors.textMuted
-                    : WorkspaceColors.warning,
+                    ? colors.textMuted
+                    : colors.warning,
                 fontSize: 11.5,
               ),
             ),
@@ -492,10 +496,7 @@ class _ExtractPagesDialogState extends ConsumerState<ExtractPagesDialog> {
               const SizedBox(height: 12),
               Text(
                 _operationError!,
-                style: const TextStyle(
-                  color: WorkspaceColors.warning,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: colors.warning, fontSize: 12),
               ),
             ],
           ],

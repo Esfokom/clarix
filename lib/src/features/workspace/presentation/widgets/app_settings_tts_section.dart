@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:clarix/src/features/tts/tts.dart';
+
+import '../../../../core/theme_controller.dart';
+import '../../../../core/theme_profile.dart';
 import 'workspace_common.dart';
 
 const String _previewText =
@@ -31,23 +34,27 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
     final TtsModelInstallState activeInstall =
         state.installState[activeSpec.id] ?? const TtsModelInstallState();
     final bool activeInstalled = activeInstall.status == TtsInstallStatus.installed;
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text(
+        Text(
           'Read aloud',
           style: TextStyle(
-            color: WorkspaceColors.textStrong,
+            color: colors.textStrong,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Choose an on-device voice pack to download, or use your system\'s '
           'built-in voice — available from the right-click "Read aloud" menu.',
-          style: TextStyle(color: WorkspaceColors.textMuted),
+          style: TextStyle(color: colors.textMuted),
         ),
         const SizedBox(height: 12),
         SegmentedButton<bool>(
@@ -70,14 +77,14 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
         ),
         const SizedBox(height: 14),
         if (isSystem)
-          _buildSystemVoiceList(state)
+          _buildSystemVoiceList(state, colors)
         else
-          _buildOnDeviceSection(state, activeSpec, activeInstalled),
+          _buildOnDeviceSection(state, activeSpec, activeInstalled, colors),
         if (state.errorMessage != null) ...<Widget>[
           const SizedBox(height: 8),
           Text(
             state.errorMessage!,
-            style: const TextStyle(color: WorkspaceColors.warning, fontSize: 12),
+            style: TextStyle(color: colors.warning, fontSize: 12),
           ),
         ],
       ],
@@ -88,6 +95,7 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
     TtsFeatureState state,
     TtsModelSpec activeSpec,
     bool activeInstalled,
+    WorkspaceSurfaceTokens colors,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,36 +104,40 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
           _buildModelRow(
             spec,
             state.installState[spec.id] ?? const TtsModelInstallState(),
+            colors,
             selected: spec.id == activeSpec.id,
           ),
           const SizedBox(height: 8),
         ],
         if (activeInstalled && activeSpec.voiceCount > 1) ...<Widget>[
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'Voice',
             style: TextStyle(
-              color: WorkspaceColors.textStrong,
+              color: colors.textStrong,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 8),
-          _buildVoiceGrid(state, activeSpec),
+          _buildVoiceGrid(state, activeSpec, colors),
         ],
         if (activeInstalled) ...<Widget>[
           const SizedBox(height: 18),
-          _buildSpeedSlider(state),
+          _buildSpeedSlider(state, colors),
         ],
       ],
     );
   }
 
-  Widget _buildSystemVoiceList(TtsFeatureState state) {
+  Widget _buildSystemVoiceList(
+    TtsFeatureState state,
+    WorkspaceSurfaceTokens colors,
+  ) {
     if (state.availableSystemVoices.isEmpty) {
-      return const Text(
+      return Text(
         'No system voices were found on this device.',
-        style: TextStyle(color: WorkspaceColors.textMuted, fontSize: 12),
+        style: TextStyle(color: colors.textMuted, fontSize: 12),
       );
     }
     return Column(
@@ -146,21 +158,21 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
             },
           ),
         const SizedBox(height: 10),
-        _buildSpeedSlider(state),
+        _buildSpeedSlider(state, colors),
       ],
     );
   }
 
-  Widget _buildSpeedSlider(TtsFeatureState state) {
+  Widget _buildSpeedSlider(TtsFeatureState state, WorkspaceSurfaceTokens colors) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Row(
           children: <Widget>[
-            const Text(
+            Text(
               'Speed',
               style: TextStyle(
-                color: WorkspaceColors.textStrong,
+                color: colors.textStrong,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -168,7 +180,7 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
             const Spacer(),
             Text(
               '${state.defaultSpeed.toStringAsFixed(2)}x',
-              style: const TextStyle(color: WorkspaceColors.textMuted),
+              style: TextStyle(color: colors.textMuted),
             ),
           ],
         ),
@@ -186,7 +198,8 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
 
   Widget _buildModelRow(
     TtsModelSpec spec,
-    TtsModelInstallState install, {
+    TtsModelInstallState install,
+    WorkspaceSurfaceTokens colors, {
     required bool selected,
   }) {
     final double sizeMb = spec.approxArchiveSizeBytes / 1000 / 1000;
@@ -201,10 +214,7 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
                   install.errorMessage ?? 'Download failed.',
-                  style: const TextStyle(
-                    color: WorkspaceColors.warning,
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: colors.warning, fontSize: 12),
                 ),
               ),
             OutlinedButton.icon(
@@ -231,13 +241,13 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
               install.status == TtsInstallStatus.extracting
                   ? 'Extracting…'
                   : 'Downloading ${spec.label}… ${(install.progress * 100).round()}%',
-              style: const TextStyle(color: WorkspaceColors.textMuted, fontSize: 12),
+              style: TextStyle(color: colors.textMuted, fontSize: 12),
             ),
           ],
         );
       case TtsInstallStatus.installed:
         return Material(
-          color: selected ? WorkspaceColors.accentSoft : Colors.transparent,
+          color: selected ? colors.accentSoft : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           child: ListTile(
             key: Key('tts-model-row-${spec.id}'),
@@ -264,7 +274,11 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
     }
   }
 
-  Widget _buildVoiceGrid(TtsFeatureState state, TtsModelSpec spec) {
+  Widget _buildVoiceGrid(
+    TtsFeatureState state,
+    TtsModelSpec spec,
+    WorkspaceSurfaceTokens colors,
+  ) {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
@@ -274,6 +288,7 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
             sid: sid,
             selected: state.defaultVoiceSid == sid,
             previewing: _previewingSid == sid,
+            colors: colors,
             onSelect: () =>
                 ref.read(ttsNotifierProvider.notifier).setDefaultVoice(sid),
             onPreview: () => _preview(sid),
@@ -298,6 +313,7 @@ class _VoiceTile extends StatelessWidget {
     required this.sid,
     required this.selected,
     required this.previewing,
+    required this.colors,
     required this.onSelect,
     required this.onPreview,
   });
@@ -305,12 +321,13 @@ class _VoiceTile extends StatelessWidget {
   final int sid;
   final bool selected;
   final bool previewing;
+  final WorkspaceSurfaceTokens colors;
   final VoidCallback onSelect;
   final VoidCallback onPreview;
 
   @override
   Widget build(BuildContext context) => Material(
-    color: selected ? WorkspaceColors.accentSoft : WorkspaceColors.panelRaised,
+    color: selected ? colors.accentSoft : colors.panelRaised,
     borderRadius: BorderRadius.circular(8),
     child: InkWell(
       key: Key('tts-voice-$sid'),
@@ -324,9 +341,7 @@ class _VoiceTile extends StatelessWidget {
             Text(
               'Voice ${sid + 1}',
               style: TextStyle(
-                color: selected
-                    ? WorkspaceColors.accent
-                    : WorkspaceColors.textStrong,
+                color: selected ? colors.accent : colors.textStrong,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),

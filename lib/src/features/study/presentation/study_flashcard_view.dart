@@ -40,6 +40,7 @@ class _StudyFlashcardViewState extends ConsumerState<StudyFlashcardView> {
   Widget build(BuildContext context) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     final List<Flashcard> cards = widget.studySet.cards;
     if (cards.isEmpty) {

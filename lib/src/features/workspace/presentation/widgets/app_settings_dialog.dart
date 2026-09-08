@@ -36,8 +36,14 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
         .value;
     final AiFeatureState aiState =
         ref.watch(aiNotifierProvider).value ?? AiFeatureState.initial();
+    final ClarixThemeProfile profile =
+        ref.watch(clarixThemeProvider).value ?? ClarixThemeProfile();
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      profile,
+      context,
+    );
     return Dialog(
-      backgroundColor: WorkspaceColors.panel,
+      backgroundColor: colors.panel,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 680, maxHeight: 680),
         child: Padding(
@@ -53,11 +59,11 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                   children: <Widget>[
                     Row(
                       children: <Widget>[
-                        const Expanded(
+                        Expanded(
                           child: Text(
                             'App settings',
                             style: TextStyle(
-                              color: WorkspaceColors.textStrong,
+                              color: colors.textStrong,
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                             ),
@@ -74,28 +80,30 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                     _SettingsTabs(
                       selected: _tab,
                       onSelected: (value) => setState(() => _tab = value),
+                      colors: colors,
                     ),
-                    const Divider(height: 25, color: WorkspaceColors.border),
+                    Divider(height: 25, color: colors.border),
                     Flexible(
                       child: SingleChildScrollView(
                         padding: const EdgeInsets.only(right: 8),
                         child: _tab == 0
-                            ? _FontSettings(ref: ref)
+                            ? _FontSettings(ref: ref, colors: colors)
                             : _tab == 1
-                            ? _ThemeSettings(ref: ref)
+                            ? _ThemeSettings(ref: ref, colors: colors)
                             : Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  const _SettingsHeading(
+                                  _SettingsHeading(
                                     title: 'AI models',
                                     description:
                                         'Choose an on-device model or configure an online provider.',
+                                    colors: colors,
                                   ),
                                   const SizedBox(height: 16),
-                                  const Text(
+                                  Text(
                                     'Local',
                                     style: TextStyle(
-                                      color: WorkspaceColors.textStrong,
+                                      color: colors.textStrong,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -146,25 +154,25 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                       ),
                                     ),
                                   const SizedBox(height: 20),
-                                  const Text(
+                                  Text(
                                     'Online',
                                     style: TextStyle(
-                                      color: WorkspaceColors.textStrong,
+                                      color: colors.textStrong,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
                                   if (aiState.providerProfiles.isEmpty)
-                                    const Padding(
-                                      padding: EdgeInsets.symmetric(
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
                                         vertical: 18,
                                       ),
                                       child: Center(
                                         child: Text(
                                           'No providers configured',
                                           style: TextStyle(
-                                            color: WorkspaceColors.textMuted,
+                                            color: colors.textMuted,
                                           ),
                                         ),
                                       ),
@@ -193,19 +201,19 @@ class _AppSettingsDialogState extends ConsumerState<AppSettingsDialog> {
                                   const SizedBox(height: 24),
                                   const TtsSettingsSection(),
                                   const SizedBox(height: 24),
-                                  const Text(
+                                  Text(
                                     'Storage',
                                     style: TextStyle(
-                                      color: WorkspaceColors.textStrong,
+                                      color: colors.textStrong,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  const Text(
+                                  Text(
                                     'Manage locally stored AI conversations.',
                                     style: TextStyle(
-                                      color: WorkspaceColors.textMuted,
+                                      color: colors.textMuted,
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -350,21 +358,28 @@ class _VoiceInputSettingsState extends ConsumerState<_VoiceInputSettings> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
+  Widget build(BuildContext context) {
+    final ClarixThemeProfile profile =
+        ref.watch(clarixThemeProvider).value ?? ClarixThemeProfile();
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      profile,
+      context,
+    );
+    return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: <Widget>[
-      const Text(
+      Text(
         'Voice input',
         style: TextStyle(
-          color: WorkspaceColors.textStrong,
+          color: colors.textStrong,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
       ),
       const SizedBox(height: 4),
-      const Text(
+      Text(
         'Choose the microphone used for voice questions.',
-        style: TextStyle(color: WorkspaceColors.textMuted),
+        style: TextStyle(color: colors.textMuted),
       ),
       const SizedBox(height: 10),
       if (_loading)
@@ -396,13 +411,19 @@ class _VoiceInputSettingsState extends ConsumerState<_VoiceInputSettings> {
           onChanged: _select,
         ),
     ],
-  );
+    );
+  }
 }
 
 class _SettingsTabs extends StatelessWidget {
-  const _SettingsTabs({required this.selected, required this.onSelected});
+  const _SettingsTabs({
+    required this.selected,
+    required this.onSelected,
+    required this.colors,
+  });
   final int selected;
   final ValueChanged<int> onSelected;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) => Wrap(
@@ -419,10 +440,10 @@ class _SettingsTabs extends StatelessWidget {
     return TextButton.icon(
       style: TextButton.styleFrom(
         foregroundColor: active
-            ? WorkspaceColors.textStrong
-            : WorkspaceColors.textMuted,
+            ? colors.textStrong
+            : colors.textMuted,
         backgroundColor: active
-            ? WorkspaceColors.panelRaised
+            ? colors.panelRaised
             : Colors.transparent,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
       ),
@@ -434,9 +455,14 @@ class _SettingsTabs extends StatelessWidget {
 }
 
 class _SettingsHeading extends StatelessWidget {
-  const _SettingsHeading({required this.title, required this.description});
+  const _SettingsHeading({
+    required this.title,
+    required this.description,
+    required this.colors,
+  });
   final String title;
   final String description;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -444,8 +470,8 @@ class _SettingsHeading extends StatelessWidget {
     children: <Widget>[
       Text(
         title,
-        style: const TextStyle(
-          color: WorkspaceColors.textStrong,
+        style: TextStyle(
+          color: colors.textStrong,
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
@@ -453,15 +479,16 @@ class _SettingsHeading extends StatelessWidget {
       const SizedBox(height: 4),
       Text(
         description,
-        style: const TextStyle(color: WorkspaceColors.textMuted),
+        style: TextStyle(color: colors.textMuted),
       ),
     ],
   );
 }
 
 class _FontSettings extends StatelessWidget {
-  const _FontSettings({required this.ref});
+  const _FontSettings({required this.ref, required this.colors});
   final WidgetRef ref;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -470,9 +497,10 @@ class _FontSettings extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const _SettingsHeading(
+        _SettingsHeading(
           title: 'Interface font',
           description: 'Choose the typeface used throughout Clarix.',
+          colors: colors,
         ),
         const SizedBox(height: 18),
         ...ClarixFont.values.map(
@@ -482,6 +510,7 @@ class _FontSettings extends StatelessWidget {
             onTap: () => ref
                 .read(clarixThemeProvider.notifier)
                 .setProfile(profile.copyWith(font: font)),
+            colors: colors,
           ),
         ),
       ],
@@ -494,10 +523,12 @@ class _FontOption extends StatelessWidget {
     required this.font,
     required this.selected,
     required this.onTap,
+    required this.colors,
   });
   final ClarixFont font;
   final bool selected;
   final VoidCallback onTap;
+  final WorkspaceSurfaceTokens colors;
 
   String get _name => switch (font) {
     ClarixFont.sans => 'Sans',
@@ -520,13 +551,13 @@ class _FontOption extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? WorkspaceColors.accentSoft
-              : WorkspaceColors.panelRaised,
+              ? colors.accentSoft
+              : colors.panelRaised,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: selected
-                ? WorkspaceColors.accentBorder
-                : WorkspaceColors.border,
+                ? colors.accentBorder
+                : colors.border,
           ),
         ),
         child: Row(
@@ -534,8 +565,8 @@ class _FontOption extends StatelessWidget {
             Icon(
               selected ? Icons.radio_button_checked : Icons.radio_button_off,
               color: selected
-                  ? WorkspaceColors.textStrong
-                  : WorkspaceColors.textFaint,
+                  ? colors.textStrong
+                  : colors.textFaint,
               size: 19,
             ),
             const SizedBox(width: 12),
@@ -546,7 +577,7 @@ class _FontOption extends StatelessWidget {
                   Text(
                     _name,
                     style: TextStyle(
-                      color: WorkspaceColors.textStrong,
+                      color: colors.textStrong,
                       fontSize: 15,
                       fontFamily: font == ClarixFont.serif
                           ? 'serif'
@@ -559,7 +590,7 @@ class _FontOption extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     _sample,
-                    style: const TextStyle(color: WorkspaceColors.textMuted),
+                    style: TextStyle(color: colors.textMuted),
                   ),
                 ],
               ),
@@ -572,8 +603,9 @@ class _FontOption extends StatelessWidget {
 }
 
 class _ThemeSettings extends StatelessWidget {
-  const _ThemeSettings({required this.ref});
+  const _ThemeSettings({required this.ref, required this.colors});
   final WidgetRef ref;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
@@ -583,12 +615,13 @@ class _ThemeSettings extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const _SettingsHeading(
+        _SettingsHeading(
           title: 'Appearance',
           description: 'Tune the app, reader, and annotation colors.',
+          colors: colors,
         ),
         const SizedBox(height: 18),
-        const SectionLabel(label: 'Color mode'),
+        SectionLabel(label: 'Color mode', colors: colors),
         Wrap(
           spacing: 8,
           children: ThemeMode.values
@@ -607,7 +640,7 @@ class _ThemeSettings extends StatelessWidget {
               .toList(),
         ),
         const SizedBox(height: 22),
-        const SectionLabel(label: 'Accent'),
+        SectionLabel(label: 'Accent', colors: colors),
         Wrap(
           spacing: 10,
           runSpacing: 10,
@@ -616,8 +649,9 @@ class _ThemeSettings extends StatelessWidget {
                 (accent) => Tooltip(
                   message: accent.name,
                   child: InkWell(
-                    onTap: () =>
-                        notifier.setProfile(profile.copyWith(accent: accent)),
+                    onTap: () => accent == ClarixAccent.custom
+                        ? _pickCustomAccent(context, profile, colors)
+                        : notifier.setProfile(profile.copyWith(accent: accent)),
                     borderRadius: BorderRadius.circular(20),
                     child: Container(
                       width: 32,
@@ -627,8 +661,8 @@ class _ThemeSettings extends StatelessWidget {
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: profile.accent == accent
-                              ? WorkspaceColors.textStrong
-                              : WorkspaceColors.border,
+                              ? colors.textStrong
+                              : colors.border,
                           width: profile.accent == accent ? 3 : 1,
                         ),
                       ),
@@ -646,7 +680,7 @@ class _ThemeSettings extends StatelessWidget {
               .toList(),
         ),
         const SizedBox(height: 22),
-        const SectionLabel(label: 'Highlight'),
+        SectionLabel(label: 'Highlight', colors: colors),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -666,8 +700,8 @@ class _ThemeSettings extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(
                             color: profile.highlightColor == color
-                                ? WorkspaceColors.textStrong
-                                : WorkspaceColors.border,
+                                ? colors.textStrong
+                                : colors.border,
                             width: profile.highlightColor == color ? 3 : 1,
                           ),
                         ),
@@ -679,14 +713,14 @@ class _ThemeSettings extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: <Widget>[
-            const Text(
+            Text(
               'Opacity',
-              style: TextStyle(color: WorkspaceColors.textMuted),
+              style: TextStyle(color: colors.textMuted),
             ),
             const Spacer(),
             Text(
               '${(profile.highlightOpacity * 100).round()}%',
-              style: const TextStyle(color: WorkspaceColors.textStrong),
+              style: TextStyle(color: colors.textStrong),
             ),
           ],
         ),
@@ -699,7 +733,7 @@ class _ThemeSettings extends StatelessWidget {
               notifier.setProfile(profile.copyWith(highlightOpacity: value)),
         ),
         const SizedBox(height: 12),
-        const SectionLabel(label: 'Reader background'),
+        SectionLabel(label: 'Reader background', colors: colors),
         Row(
           children: <Widget>[
             Expanded(
@@ -707,7 +741,7 @@ class _ThemeSettings extends StatelessWidget {
                 profile.readerBackgroundPath == null
                     ? 'No custom background selected'
                     : 'Custom image applied to the reader',
-                style: const TextStyle(color: WorkspaceColors.textMuted),
+                style: TextStyle(color: colors.textMuted),
               ),
             ),
             OutlinedButton.icon(
@@ -726,6 +760,29 @@ class _ThemeSettings extends StatelessWidget {
               ),
             ],
           ],
+        ),
+        const SizedBox(height: 8),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          dense: true,
+          title: const Text('Invert background image for dark mode'),
+          value: profile.readerBackgroundInverted,
+          onChanged: profile.readerBackgroundPath == null
+              ? null
+              : (bool? value) => notifier.setProfile(
+                  profile.copyWith(readerBackgroundInverted: value ?? false),
+                ),
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          dense: true,
+          title: const Text('Warm paper page background'),
+          value: profile.readerBookBackgroundOverride,
+          onChanged: (bool? value) => notifier.setProfile(
+            profile.copyWith(readerBookBackgroundOverride: value ?? false),
+          ),
         ),
       ],
     );
@@ -751,6 +808,82 @@ class _ThemeSettings extends StatelessWidget {
       }
     }
   }
+
+  Future<void> _pickCustomAccent(
+    BuildContext context,
+    ClarixThemeProfile profile,
+    WorkspaceSurfaceTokens colors,
+  ) async {
+    final TextEditingController controller = TextEditingController(
+      text: (profile.customAccentColor ?? 0xFFE4E4E7)
+          .toRadixString(16)
+          .padLeft(8, '0')
+          .substring(2)
+          .toUpperCase(),
+    );
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final int? parsed = _parseHexColor(controller.text);
+          return AlertDialog(
+            title: const Text('Custom accent color'),
+            content: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: parsed != null ? Color(parsed) : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colors.border),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    key: const Key('custom-accent-hex-field'),
+                    controller: controller,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      prefixText: '#',
+                      hintText: 'RRGGBB',
+                    ),
+                    maxLength: 6,
+                  ),
+                ),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                key: const Key('custom-accent-confirm'),
+                onPressed: parsed == null
+                    ? null
+                    : () => Navigator.of(context).pop(parsed),
+                child: const Text('Apply'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    if (picked != null) {
+      await ref.read(clarixThemeProvider.notifier).setProfile(
+        profile.copyWith(accent: ClarixAccent.custom, customAccentColor: picked),
+      );
+    }
+  }
+}
+
+int? _parseHexColor(String text) {
+  final String cleaned = text.trim().replaceFirst('#', '');
+  if (!RegExp(r'^[0-9a-fA-F]{6}$').hasMatch(cleaned)) return null;
+  return int.parse('FF$cleaned', radix: 16);
 }
 
 class _ProviderTile extends ConsumerWidget {
@@ -761,11 +894,17 @@ class _ProviderTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final ClarixThemeProfile themeProfile =
+        ref.watch(clarixThemeProvider).value ?? ClarixThemeProfile();
+    final WorkspaceSurfaceTokens colors = WorkspaceSurfaceTokens.fromProfile(
+      themeProfile,
+      context,
+    );
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: WorkspaceColors.border),
+        border: Border.all(color: colors.border),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
@@ -787,8 +926,8 @@ class _ProviderTile extends ConsumerWidget {
                     Flexible(
                       child: Text(
                         profile.label,
-                        style: const TextStyle(
-                          color: WorkspaceColors.textStrong,
+                        style: TextStyle(
+                          color: colors.textStrong,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -802,7 +941,7 @@ class _ProviderTile extends ConsumerWidget {
                 const SizedBox(height: 3),
                 Text(
                   '${profile.baseUrl} · ${profile.modelId}',
-                  style: const TextStyle(color: WorkspaceColors.textMuted),
+                  style: TextStyle(color: colors.textMuted),
                 ),
               ],
             ),

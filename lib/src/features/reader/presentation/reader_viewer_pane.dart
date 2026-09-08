@@ -8,6 +8,7 @@ import 'package:shadcn_ui/shadcn_ui.dart';
 import 'package:smooth_corner/smooth_corner.dart';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/theme_controller.dart';
+import 'package:clarix/src/core/theme_profile.dart';
 import 'package:clarix/src/features/tts/tts.dart';
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
 import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dart';
@@ -162,10 +163,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
 
   @override
   Widget build(BuildContext context) {
-    final String? readerBackgroundPath = ref
-        .watch(clarixThemeProvider)
-        .value
-        ?.readerBackgroundPath;
+    final ClarixThemeProfile themeProfile =
+        ref.watch(clarixThemeProvider).value ?? ClarixThemeProfile();
+    final String? readerBackgroundPath = themeProfile.readerBackgroundPath;
+    final bool readerBackgroundInverted = themeProfile.readerBackgroundInverted;
+    final bool readerBookBackgroundOverride =
+        themeProfile.readerBookBackgroundOverride;
     final TtsPlaybackState readAloudPlayback =
         ref.watch(ttsNotifierProvider).value?.playback ?? const TtsPlaybackState();
     ref.listen<TtsPlaybackState>(
@@ -179,19 +182,20 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       return Center(
         child: SurfaceBlock(
           padding: const EdgeInsets.all(18),
+          colors: widget.colors,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Icon(
+              Icon(
                 LucideIcons.fileQuestion,
-                color: WorkspaceColors.warning,
+                color: widget.colors.warning,
                 size: 24,
               ),
               const SizedBox(height: 10),
               Text(
                 widget.tab.missingFileMessage ?? 'This file is missing.',
-                style: const TextStyle(
-                  color: WorkspaceColors.textMuted,
+                style: TextStyle(
+                  color: widget.colors.textMuted,
                   fontSize: 12,
                 ),
               ),
@@ -221,11 +225,25 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
           children: <Widget>[
             if (readerBackgroundPath case final String path)
               Positioned.fill(
-                child: Image.file(
-                  File(path),
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox(),
-                ),
+                child: readerBackgroundInverted
+                    ? ColorFiltered(
+                        colorFilter: const ColorFilter.matrix(<double>[
+                          -1, 0, 0, 0, 255,
+                          0, -1, 0, 0, 255,
+                          0, 0, -1, 0, 255,
+                          0, 0, 0, 1, 0,
+                        ]),
+                        child: Image.file(
+                          File(path),
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const SizedBox(),
+                        ),
+                      )
+                    : Image.file(
+                        File(path),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox(),
+                      ),
               ),
             Positioned.fill(
               child: Listener(
@@ -246,9 +264,11 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                           controller: _controller,
                           initialPageNumber: widget.tab.currentPage,
                           params: PdfViewerParams(
-                            backgroundColor: readerBackgroundPath == null
-                                ? widget.colors.viewerBackground
-                                : Colors.transparent,
+                            backgroundColor: readerBookBackgroundOverride
+                                ? const Color(0xFFF3ECD9)
+                                : (readerBackgroundPath == null
+                                      ? widget.colors.viewerBackground
+                                      : Colors.transparent),
                             margin: 14,
                             pageDropShadow: const BoxShadow(
                               color: Color(0x1A000000),
@@ -302,6 +322,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                     onNext: _canGoToNextMatch
                         ? () => unawaited(_goToNextSearchMatch())
                         : null,
+                    colors: widget.colors,
                   ),
                 ),
               ),
@@ -426,6 +447,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                             onHighlightSelection: _controller.isReady
                                 ? _highlightSelection
                                 : null,
+                            colors: widget.colors,
                           );
                         },
                   ),

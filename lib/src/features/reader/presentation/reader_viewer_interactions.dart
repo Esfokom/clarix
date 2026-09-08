@@ -101,11 +101,13 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
         controller: _controller,
         axis: PdfScrollbarAxis.vertical,
         viewportSize: size,
+        colors: widget.colors,
       ),
       _PdfEdgeScrollbar(
         controller: _controller,
         axis: PdfScrollbarAxis.horizontal,
         viewportSize: size,
+        colors: widget.colors,
       ),
     ];
   }

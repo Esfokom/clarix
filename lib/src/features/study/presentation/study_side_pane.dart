@@ -53,6 +53,7 @@ class _StudySidePaneState extends ConsumerState<StudySidePane> {
   Widget build(BuildContext context) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     final StudyFeatureState state =
         ref.watch(studyNotifierProvider).value ?? StudyFeatureState.initial();

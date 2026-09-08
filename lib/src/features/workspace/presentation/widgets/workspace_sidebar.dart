@@ -26,6 +26,7 @@ class WorkspaceSidebar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = WorkspaceSurfaceTokens.fromProfile(
       ref.watch(clarixThemeProvider).value ?? const ClarixThemeProfile(),
+      context,
     );
     return SizedBox(
       width: 224,
@@ -102,6 +103,7 @@ class WorkspaceSidebar extends ConsumerWidget {
                       label: state.session.sidebarPane == SidebarPane.outline
                           ? 'Outline'
                           : 'Pages',
+                      colors: colors,
                     ),
                     SizedBox(
                       height: 172,
@@ -110,6 +112,7 @@ class WorkspaceSidebar extends ConsumerWidget {
                               outline:
                                   state.outlines[activeTab!.id] ??
                                   const <OutlineNodeState>[],
+                              colors: colors,
                             )
                           : ThumbnailPane(tab: activeTab!, colors: colors),
                     ),
@@ -119,9 +122,9 @@ class WorkspaceSidebar extends ConsumerWidget {
                     _HighlightsPane(tab: activeTab!, colors: colors),
                     const SizedBox(height: 14),
                   ],
-                  const SectionLabel(label: 'Open tabs'),
+                  SectionLabel(label: 'Open tabs', colors: colors),
                   if (state.session.tabs.isEmpty)
-                    const SidebarEmpty(message: 'No open PDFs')
+                    SidebarEmpty(message: 'No open PDFs', colors: colors)
                   else
                     for (final DocumentTabState tab in state.session.tabs)
                       Padding(
@@ -199,7 +202,7 @@ class _BookmarksPane extends ConsumerWidget {
       children: <Widget>[
         Row(
           children: <Widget>[
-            const Expanded(child: SectionLabel(label: 'Bookmarks')),
+            Expanded(child: SectionLabel(label: 'Bookmarks', colors: colors)),
             IconButton(
               tooltip: 'Add bookmark',
               icon: const Icon(LucideIcons.bookmarkPlus, size: 14),
@@ -335,7 +338,7 @@ class _HighlightsPane extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const SectionLabel(label: 'Highlights'),
+        SectionLabel(label: 'Highlights', colors: colors),
         if (items.isEmpty)
           Text(
             'No highlights yet.',
@@ -634,17 +637,18 @@ class ThumbnailPane extends ConsumerWidget {
 }
 
 class OutlinePane extends StatelessWidget {
-  const OutlinePane({required this.outline, super.key});
+  const OutlinePane({required this.outline, required this.colors, super.key});
 
   final List<OutlineNodeState> outline;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
     if (outline.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Outline appears after the document loads.',
-          style: TextStyle(color: WorkspaceColors.textFaint, fontSize: 10.5),
+          style: TextStyle(color: colors.textFaint, fontSize: 10.5),
           textAlign: TextAlign.center,
         ),
       );
@@ -653,7 +657,8 @@ class OutlinePane extends StatelessWidget {
     return ListView(
       children: outline
           .map(
-            (OutlineNodeState node) => _OutlineNodeTile(node: node, depth: 0),
+            (OutlineNodeState node) =>
+                _OutlineNodeTile(node: node, depth: 0, colors: colors),
           )
           .toList(growable: false),
     );
@@ -661,28 +666,33 @@ class OutlinePane extends StatelessWidget {
 }
 
 class _OutlineNodeTile extends StatelessWidget {
-  const _OutlineNodeTile({required this.node, required this.depth});
+  const _OutlineNodeTile({
+    required this.node,
+    required this.depth,
+    required this.colors,
+  });
 
   final OutlineNodeState node;
   final int depth;
+  final WorkspaceSurfaceTokens colors;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: WorkspaceColors.panel,
+      color: colors.panel,
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: EdgeInsets.only(left: depth * 10.0),
           childrenPadding: EdgeInsets.zero,
-          collapsedIconColor: WorkspaceColors.textMuted,
-          iconColor: WorkspaceColors.textMuted,
+          collapsedIconColor: colors.textMuted,
+          iconColor: colors.textMuted,
           title: Text(
             node.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: WorkspaceColors.textStrong,
+            style: TextStyle(
+              color: colors.textStrong,
               fontSize: 11,
               fontWeight: FontWeight.w500,
             ),
@@ -691,15 +701,15 @@ class _OutlineNodeTile extends StatelessWidget {
               ? null
               : Text(
                   'Page ${node.pageNumber}',
-                  style: const TextStyle(
-                    color: WorkspaceColors.textFaint,
-                    fontSize: 10,
-                  ),
+                  style: TextStyle(color: colors.textFaint, fontSize: 10),
                 ),
           children: node.children
               .map(
-                (OutlineNodeState child) =>
-                    _OutlineNodeTile(node: child, depth: depth + 1),
+                (OutlineNodeState child) => _OutlineNodeTile(
+                  node: child,
+                  depth: depth + 1,
+                  colors: colors,
+                ),
               )
               .toList(growable: false),
         ),
