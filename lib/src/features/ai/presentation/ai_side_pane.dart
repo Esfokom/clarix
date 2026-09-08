@@ -14,7 +14,6 @@ import '../../../core/clarix_logger.dart';
 import '../../../core/theme_controller.dart';
 import '../../../core/theme_profile.dart';
 import '../../../core/workspace_surface_tokens.dart';
-import 'live_conversation_surface.dart';
 
 part 'ai_composer.dart';
 part 'ai_conversation_history.dart';
@@ -38,7 +37,6 @@ class AiSidePane extends ConsumerStatefulWidget {
 class _AiSidePaneState extends ConsumerState<AiSidePane> {
   late final TextEditingController _controller;
   late final VoiceInputController _voiceInput;
-  late final LiveConversationController _liveConversation;
 
   /// History replaces the transcript in place instead of opening a dialog, so
   /// the pane only ever shows one of the two.
@@ -50,8 +48,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
   void initState() {
     super.initState();
     _controller = TextEditingController();
-    _liveConversation = ref.read(liveConversationProvider);
-    _liveConversation.addListener(_onLiveConversationChanged);
     _voiceInput = VoiceInputController(
       recorder: ref.read(voiceRecorderProvider),
       transcribe: ref.read(groqTranscriptionServiceProvider).transcribe,
@@ -62,14 +58,9 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
 
   @override
   void dispose() {
-    _liveConversation.removeListener(_onLiveConversationChanged);
     _voiceInput.dispose();
     _controller.dispose();
     super.dispose();
-  }
-
-  void _onLiveConversationChanged() {
-    if (mounted) setState(() {});
   }
 
   @override
@@ -79,11 +70,6 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
       context,
     );
     final AiWorkspaceState ai = widget.aiState.chat;
-    final liveController = _liveConversation;
-    final liveState = liveController.state;
-    final liveActive =
-        liveState.phase != LiveConversationPhase.idle &&
-        liveState.phase != LiveConversationPhase.ended;
     final String? activeThreadId = ai.activeConversationId;
     final String selectedRuntimeLabel =
         widget.aiState.localModels
@@ -188,10 +174,7 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                   height: 28,
                   padding: EdgeInsets.zero,
                   icon: const Icon(LucideIcons.chevronRight, size: 14),
-                  onPressed: () async {
-                    await liveController.end();
-                    widget.onCollapse();
-                  },
+                  onPressed: widget.onCollapse,
                 ),
               ],
             ),
@@ -202,10 +185,11 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               reverseDuration: const Duration(milliseconds: 180),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
-              layoutBuilder: (Widget? current, List<Widget> previous) => Stack(
-                fit: StackFit.expand,
-                children: <Widget>[...previous, ?current],
-              ),
+              layoutBuilder: (Widget? current, List<Widget> previous) =>
+                  Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[...previous, ?current],
+                  ),
               transitionBuilder: (Widget child, Animation<double> animation) {
                 // The history slides in from the side it lives on, so the two
                 // views read as one surface sliding rather than a hard cut.
@@ -243,15 +227,18 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
                               reverse: true,
                               padding: const EdgeInsets.all(12),
                               itemCount: ai.messages.length,
-                              itemBuilder: (BuildContext context, int index) {
-                                final ComposerMessage message =
-                                    ai.messages[ai.messages.length - 1 - index];
-                                return _MessageBubble(
-                                  message: message,
-                                  documentContext: widget.documentContext,
-                                  colors: colors,
-                                );
-                              },
+                              itemBuilder:
+                                  (BuildContext context, int index) {
+                                    final ComposerMessage message = ai
+                                        .messages[ai.messages.length -
+                                        1 -
+                                        index];
+                                    return _MessageBubble(
+                                      message: message,
+                                      documentContext: widget.documentContext,
+                                      colors: colors,
+                                    );
+                                  },
                             ),
                     ),
             ),
@@ -262,46 +249,32 @@ class _AiSidePaneState extends ConsumerState<AiSidePane> {
               onPressed: ai.chatBusy ? null : _startNewConversation,
             )
           else ...<Widget>[
-            if (liveActive)
-              Expanded(
-                child: LiveConversationSurface(
-                  state: liveState,
-                  controller: liveController,
-                  colors: colors,
-                  onStart: () {},
-                ),
-              ),
-            // Voice entry is intentionally hidden until Gemini API credits are
-            // available. Keep the Live controller and surface implementation
-            // wired so this action can be restored without rework.
-            if (!liveActive) ...<Widget>[
-              if (ai.chatBusy)
-                _ComposerLoadingIndicator(
-                  colors: colors,
-                  statusMessage: ai.statusMessage,
-                ),
-              _DocumentComposer(
-                controller: _controller,
-                voiceInput: _voiceInput,
-                enabled: composerEnabled,
-                isBusy: ai.chatBusy,
-                hintText: composerHint,
-                onSend: _send,
+            if (ai.chatBusy)
+              _ComposerLoadingIndicator(
                 colors: colors,
-                onStop: () =>
-                    ref.read(aiNotifierProvider.notifier).stopGeneration(),
-                runtimeLabel: selectedRuntimeLabel,
-                runtimeIconPath: selectedRuntimeIcon,
-                selectedRuntimeId: ai.selectedProviderId,
-                localModels: widget.aiState.localModels,
-                providerProfiles: widget.aiState.providerProfiles,
-                onSelectRuntime: _selectRuntime,
-                runtimePickerEnabled: !ai.chatBusy,
-                contextPercent: contextPercent,
-                estimatedTokens: estimatedTokens,
-                contextLimit: contextLimit,
+                statusMessage: ai.statusMessage,
               ),
-            ],
+            _DocumentComposer(
+              controller: _controller,
+              voiceInput: _voiceInput,
+              enabled: composerEnabled,
+              isBusy: ai.chatBusy,
+              hintText: composerHint,
+              onSend: _send,
+              colors: colors,
+              onStop: () =>
+                  ref.read(aiNotifierProvider.notifier).stopGeneration(),
+              runtimeLabel: selectedRuntimeLabel,
+              runtimeIconPath: selectedRuntimeIcon,
+              selectedRuntimeId: ai.selectedProviderId,
+              localModels: widget.aiState.localModels,
+              providerProfiles: widget.aiState.providerProfiles,
+              onSelectRuntime: _selectRuntime,
+              runtimePickerEnabled: !ai.chatBusy,
+              contextPercent: contextPercent,
+              estimatedTokens: estimatedTokens,
+              contextLimit: contextLimit,
+            ),
           ],
         ],
       ),
