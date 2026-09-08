@@ -168,16 +168,7 @@ class _MarkdownEditorPaneState extends State<MarkdownEditorPane> {
     }
   }
 
-  Future<void> _pickAndInsertImage() async {
-    final result = await FilePicker.pickFiles(
-      type: FileType.image,
-      allowMultiple: false,
-    );
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
-      _insertBlock('![Image]($path)');
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -502,9 +493,7 @@ class _MarkdownEditorPaneState extends State<MarkdownEditorPane> {
                 _insertBlock('| Column 1 | Column 2 | Column 3 |\n| --- | --- | --- |\n| Item 1 | Item 2 | Item 3 |');
               }),
               _actionChip('Image', Icons.image_outlined, _pickAndInsertImage),
-              _actionChip('Hyperlink', Icons.link_outlined, () {
-                _insertFormatting('[Link Title](', ')');
-              }),
+              _actionChip('Hyperlink', Icons.link_outlined, _showInsertLinkDialog),
             ],
           ),
           _vDivider(),
@@ -520,12 +509,8 @@ class _MarkdownEditorPaneState extends State<MarkdownEditorPane> {
               _actionChip('Code Block', Icons.code_rounded, () {
                 _insertBlock('```dart\n// Enter code snippet here\n```');
               }),
-              _actionChip('Math Formula', Icons.functions_rounded, () {
-                _insertBlock('\$\$\nE = mc^2\n\$\$');
-              }),
-              _actionChip('Footnote', Icons.short_text_rounded, () {
-                _insertFormatting('[^1]', '\n\n[^1]: Footnote description here.');
-              }),
+              _actionChip('Math Formula', Icons.functions_rounded, _showInsertMathDialog),
+              _actionChip('Footnote', Icons.short_text_rounded, _showInsertFootnoteDialog),
             ],
           ),
         ],
@@ -814,19 +799,13 @@ class _MarkdownEditorPaneState extends State<MarkdownEditorPane> {
                 );
               } catch (_) {}
             }
-            try {
-              final parsedUri = Uri.tryParse(src);
-              final filePath = parsedUri != null && parsedUri.scheme == 'file'
-                  ? parsedUri.toFilePath()
-                  : src;
-              final file = File(filePath);
-              if (file.existsSync()) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Image.file(file, fit: BoxFit.contain),
-                );
-              }
-            } catch (_) {}
+            final file = _resolveImageFile(src);
+            if (file != null) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Image.file(file, fit: BoxFit.contain),
+              );
+            }
             return Text('[Image: ${alt ?? 'Asset'}]', style: const TextStyle(color: Colors.white54));
           },
           styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
@@ -873,5 +852,134 @@ class _MarkdownEditorPaneState extends State<MarkdownEditorPane> {
         ),
       ),
     );
+  }
+
+  Future<void> _pickAndInsertImage() async {
+    final result = await FilePicker.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+    );
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      final cleanPath = Uri.file(path).toString();
+      _insertBlock('![Image]($cleanPath)');
+    }
+  }
+
+  File? _resolveImageFile(String src) {
+    final raw = src.trim();
+    if (raw.isEmpty) return null;
+    final candidates = <String>[
+      raw,
+      if (raw.startsWith('file:///')) Uri.parse(raw).toFilePath(),
+      if (raw.startsWith('file://')) raw.substring(7),
+      Uri.decodeFull(raw),
+    ];
+    for (final candidate in candidates) {
+      try {
+        final f = File(candidate);
+        if (f.existsSync()) return f;
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  Future<void> _showInsertLinkDialog() async {
+    final titleController = TextEditingController(text: 'Link Title');
+    final urlController = TextEditingController(text: 'https://');
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: panelBg,
+        title: const Text('Insert Hyperlink', style: TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Link Title / Display Text', labelStyle: TextStyle(color: Colors.white70)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: urlController,
+              style: const TextStyle(color: Colors.white),
+              decoration: const InputDecoration(labelText: 'Target URL (href)', labelStyle: TextStyle(color: Colors.white70)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white60))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: accentGreen),
+            onPressed: () => Navigator.pop(context, {'title': titleController.text, 'url': urlController.text}),
+            child: const Text('Insert', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result['url']!.isNotEmpty) {
+      final title = result['title']!.isEmpty ? result['url']! : result['title']!;
+      _insertBlock('[$title](${result['url']})');
+    }
+  }
+
+  Future<void> _showInsertMathDialog() async {
+    final mathController = TextEditingController(text: r'E = mc^2');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: panelBg,
+        title: const Text('Insert Math Formula', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: mathController,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(
+            labelText: 'LaTeX Math Expression',
+            hintText: r'E = mc^2 or \frac{a}{b}',
+            labelStyle: TextStyle(color: Colors.white70),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white60))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: accentGreen),
+            onPressed: () => Navigator.pop(context, mathController.text),
+            child: const Text('Insert', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      _insertBlock('\$\$\n$result\n\$\$');
+    }
+  }
+
+  Future<void> _showInsertFootnoteDialog() async {
+    final fnController = TextEditingController(text: 'Footnote description text');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: panelBg,
+        title: const Text('Insert Footnote', style: TextStyle(color: Colors.white)),
+        content: TextField(
+          controller: fnController,
+          style: const TextStyle(color: Colors.white),
+          decoration: const InputDecoration(labelText: 'Footnote Text', labelStyle: TextStyle(color: Colors.white70)),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel', style: TextStyle(color: Colors.white60))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: accentGreen),
+            onPressed: () => Navigator.pop(context, fnController.text),
+            child: const Text('Insert', style: TextStyle(color: Colors.black)),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      final fnId = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
+      _insertBlock('[^$fnId]\n\n[^$fnId]: $result');
+    }
   }
 }

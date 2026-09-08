@@ -148,7 +148,7 @@ class PageEditScene extends StatelessWidget {
               displaySize: displaySize,
             ),
           for (final object in overlayObjects)
-            if (cleanPatches.containsKey(object.objectId))
+            if (cleanPatches.containsKey(object.objectId) && !usesLivePdfiumTiles)
               CleanPatchLayer(
                 asset: cleanPatches[object.objectId]!,
                 pageSize: pageSize,
@@ -166,7 +166,7 @@ class PageEditScene extends StatelessWidget {
                 child: const ColoredBox(color: Color(0xFFFFFFFF)),
               ),
           for (final object in overlayObjects)
-            if (object.objectId != activeObject?.objectId)
+            if (object.objectId != activeObject?.objectId && !usesLivePdfiumTiles)
               EditorTextObjectLayer(
                 object: object,
                 text: _getVisibleText(object),

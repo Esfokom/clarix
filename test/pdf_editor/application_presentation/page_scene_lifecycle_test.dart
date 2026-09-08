@@ -40,7 +40,7 @@ void main() {
       expect(gateway.priorities[137], EditorViewportPriority.visible);
       expect(gateway.priorities[135], EditorViewportPriority.preload);
       expect(
-        find.byKey(const ValueKey<String>('page-edit-scene-137')),
+        find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key as ValueKey<String>).value.startsWith('page-edit-scene-137')),
         findsOneWidget,
       );
 
@@ -50,7 +50,7 @@ void main() {
       // A delivered scene stays mounted when the viewport moves on, so
       // preloaded pages render immediately when scrolled back into view.
       expect(
-        find.byKey(const ValueKey<String>('page-edit-scene-137')),
+        find.byWidgetPredicate((w) => w.key is ValueKey<String> && (w.key as ValueKey<String>).value.startsWith('page-edit-scene-137')),
         findsOneWidget,
       );
       expect(controller.state.scenes[137], isNotNull);

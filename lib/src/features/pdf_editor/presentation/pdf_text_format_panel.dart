@@ -503,6 +503,9 @@ final class _CanonicalPdfTextFormatPanelState
   late final TextEditingController _docAuthorController;
 
   EditorRibbonTab _activeRibbonTab = EditorRibbonTab.home;
+  String _selectedPageOrientation = 'portrait';
+  String _selectedPaperSize = 'a4';
+  String _selectedMargin = 'normal';
 
   static const List<String> _commonFontFamilies = <String>[
     'Helvetica',
@@ -710,7 +713,96 @@ final class _CanonicalPdfTextFormatPanelState
     );
     if (result != null && result.files.single.path != null) {
       final path = result.files.single.path!;
-      _insertSnippet('![Inserted Image]($path)');
+      final cleanPath = Uri.file(path).toString();
+      _insertSnippet('![Inserted Image]($cleanPath)');
+    }
+  }
+
+  Future<void> _showInsertLinkDialog() async {
+    final titleController = TextEditingController(text: 'Link Title');
+    final urlController = TextEditingController(text: 'https://');
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Insert Hyperlink'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(labelText: 'Link Title / Display Text'),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: urlController,
+              decoration: const InputDecoration(labelText: 'Target URL (href)'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, {'title': titleController.text, 'url': urlController.text}),
+            child: const Text('Insert'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result['url']!.isNotEmpty) {
+      final title = result['title']!.isEmpty ? result['url']! : result['title']!;
+      _insertSnippet('[$title](${result['url']})');
+    }
+  }
+
+  Future<void> _showInsertMathDialog() async {
+    final mathController = TextEditingController(text: r'E = mc^2');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Insert Math Formula'),
+        content: TextField(
+          controller: mathController,
+          decoration: const InputDecoration(
+            labelText: 'LaTeX Math Expression',
+            hintText: r'E = mc^2 or \frac{a}{b}',
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, mathController.text),
+            child: const Text('Insert'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      _insertSnippet('\$\$\n$result\n\$\$');
+    }
+  }
+
+  Future<void> _showInsertFootnoteDialog() async {
+    final fnController = TextEditingController(text: 'Footnote description text');
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Insert Footnote'),
+        content: TextField(
+          controller: fnController,
+          decoration: const InputDecoration(labelText: 'Footnote Text'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, fnController.text),
+            child: const Text('Insert'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.isNotEmpty) {
+      final fnId = DateTime.now().millisecondsSinceEpoch.toString().substring(8);
+      _insertSnippet('[^$fnId]\n\n[^$fnId]: $result');
     }
   }
 
@@ -839,6 +931,26 @@ final class _CanonicalPdfTextFormatPanelState
                 Clipboard.setData(ClipboardData(text: _textEditingController.text));
                 _textEditingController.clear();
                 _applyTextReplacement('');
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.content_paste, size: 14),
+              tooltip: 'Paste Clipboard Text',
+              onPressed: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                if (data?.text != null && data!.text!.isNotEmpty) {
+                  _insertSnippet(data.text!);
+                }
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.select_all, size: 14),
+              tooltip: 'Select All Content',
+              onPressed: () {
+                _textEditingController.selection = TextSelection(
+                  baseOffset: 0,
+                  extentOffset: _textEditingController.text.length,
+                );
               },
             ),
           ],
@@ -1192,7 +1304,7 @@ final class _CanonicalPdfTextFormatPanelState
             OutlinedButton.icon(
               icon: const Icon(Icons.link_outlined, size: 14),
               label: const Text('Hyperlink', style: TextStyle(fontSize: 11)),
-              onPressed: _enabled ? () => _insertSnippet('[Link Title](https://example.com)') : null,
+              onPressed: _enabled ? _showInsertLinkDialog : null,
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.code_outlined, size: 14),
@@ -1202,7 +1314,7 @@ final class _CanonicalPdfTextFormatPanelState
             OutlinedButton.icon(
               icon: const Icon(Icons.functions_outlined, size: 14),
               label: const Text('Math Formula', style: TextStyle(fontSize: 11)),
-              onPressed: _enabled ? () => _insertSnippet('\$\$\nE = mc^2\n\$\$') : null,
+              onPressed: _enabled ? _showInsertMathDialog : null,
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.space_bar_outlined, size: 14),
@@ -1228,12 +1340,14 @@ final class _CanonicalPdfTextFormatPanelState
             contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             isDense: true,
           ),
-          initialValue: 'portrait',
+          initialValue: _selectedPageOrientation,
           items: const [
-            DropdownMenuItem(value: 'portrait', child: Text('Portrait (Vertical A4)', style: TextStyle(fontSize: 12))),
-            DropdownMenuItem(value: 'landscape', child: Text('Landscape (Horizontal A4)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'portrait', child: Text('Portrait (Vertical Standard)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'landscape', child: Text('Landscape (Horizontal Wide)', style: TextStyle(fontSize: 12))),
           ],
-          onChanged: (_) {},
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedPageOrientation = val);
+          },
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
@@ -1243,13 +1357,35 @@ final class _CanonicalPdfTextFormatPanelState
             contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             isDense: true,
           ),
-          initialValue: 'a4',
+          initialValue: _selectedPaperSize,
           items: const [
             DropdownMenuItem(value: 'a4', child: Text('A4 (210 x 297 mm)', style: TextStyle(fontSize: 12))),
             DropdownMenuItem(value: 'letter', child: Text('US Letter (8.5 x 11 in)', style: TextStyle(fontSize: 12))),
             DropdownMenuItem(value: 'legal', child: Text('US Legal (8.5 x 14 in)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'executive', child: Text('Executive (7.25 x 10.5 in)', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'a3', child: Text('A3 Poster (297 x 420 mm)', style: TextStyle(fontSize: 12))),
           ],
-          onChanged: (_) {},
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedPaperSize = val);
+          },
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          decoration: const InputDecoration(
+            labelText: 'Document Margins',
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            isDense: true,
+          ),
+          initialValue: _selectedMargin,
+          items: const [
+            DropdownMenuItem(value: 'normal', child: Text('Normal (Top/Bottom 1.0", Left/Right 1.0")', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'narrow', child: Text('Narrow (Top/Bottom 0.5", Left/Right 0.5")', style: TextStyle(fontSize: 12))),
+            DropdownMenuItem(value: 'wide', child: Text('Wide (Top/Bottom 1.0", Left/Right 2.0")', style: TextStyle(fontSize: 12))),
+          ],
+          onChanged: (val) {
+            if (val != null) setState(() => _selectedMargin = val);
+          },
         ),
         const SizedBox(height: 12),
         const Text('Line Spacing Presets', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -1345,7 +1481,7 @@ final class _CanonicalPdfTextFormatPanelState
             OutlinedButton.icon(
               icon: const Icon(Icons.short_text_outlined, size: 14),
               label: const Text('Insert Footnote', style: TextStyle(fontSize: 11)),
-              onPressed: _enabled ? () => _insertSnippet('[^1]\n\n[^1]: Footnote details...') : null,
+              onPressed: _enabled ? _showInsertFootnoteDialog : null,
             ),
             OutlinedButton.icon(
               icon: const Icon(Icons.bookmark_outline, size: 14),

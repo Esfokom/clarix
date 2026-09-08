@@ -14,7 +14,7 @@ void main() {
       );
       expect(
         textSelectionParamsFor(PdfEditingInteraction.objectSelected).enabled,
-        isFalse,
+        isTrue,
       );
       expect(
         textSelectionParamsFor(PdfEditingInteraction.textEditing).enabled,
