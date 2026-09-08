@@ -27,20 +27,20 @@ extension PdfNightModeX on PdfNightMode {
         return null;
 
       case PdfNightMode.inverted:
-        // Full hardware RGB inversion matrix
+        // Hardware RGB inversion matrix for crisp night reading
         return const ColorFilter.matrix(<double>[
-          -1,  0,  0, 0, 255,
-           0, -1,  0, 0, 255,
-           0,  0, -1, 0, 255,
-           0,  0,  0, 1,   0,
+          -0.9,    0,    0, 0, 240,
+             0, -0.9,    0, 0, 240,
+             0,    0, -0.9, 0, 240,
+             0,    0,    0, 1,   0,
         ]);
 
       case PdfNightMode.smartDark:
-        // Warm dark slate reading matrix (reduces harsh blue light)
+        // Eye-care warm amber dark mode matrix
         return const ColorFilter.matrix(<double>[
-          -0.85,     0,     0, 0, 230,
-              0, -0.85,     0, 0, 225,
-              0,     0, -0.75, 0, 210,
+          -0.80,     0,     0, 0, 220,
+              0, -0.80,     0, 0, 212,
+              0,     0, -0.70, 0, 195,
               0,     0,     0, 1,   0,
         ]);
     }

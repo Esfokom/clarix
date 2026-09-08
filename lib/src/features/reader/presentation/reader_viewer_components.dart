@@ -443,6 +443,7 @@ class _ViewerHud extends StatelessWidget {
     required this.filePath,
     required this.onPreviousPage,
     required this.onNextPage,
+    this.onGoToPage,
     required this.onZoomOut,
     required this.onZoomIn,
     required this.onSelectZoomPreset,
@@ -467,6 +468,7 @@ class _ViewerHud extends StatelessWidget {
   final ValueChanged<PdfNightMode>? onNightModeChanged;
   final VoidCallback? onPreviousPage;
   final VoidCallback? onNextPage;
+  final ValueChanged<int>? onGoToPage;
   final VoidCallback? onZoomOut;
   final VoidCallback? onZoomIn;
   final ValueChanged<_ZoomPreset>? onSelectZoomPreset;
@@ -478,6 +480,64 @@ class _ViewerHud extends StatelessWidget {
   final VoidCallback? onRedo;
   final VoidCallback? onSave;
   final bool scanning;
+
+  void _showGoToPageDialog(BuildContext context) {
+    final controller = TextEditingController(text: '$page');
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF18181B),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: Color(0xFF3F3F46)),
+        ),
+        title: const Text('Go to Page', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Enter page number (1 - ${pageCount ?? 9999})',
+            hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+            filled: true,
+            fillColor: const Color(0xFF27272A),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFF3F3F46)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: WorkspaceColors.accent),
+            ),
+          ),
+          onSubmitted: (val) {
+            final p = int.tryParse(val.trim());
+            if (p != null && p >= 1 && onGoToPage != null) {
+              onGoToPage!(p);
+              Navigator.pop(ctx);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white70)),
+          ),
+          FilledButton(
+            onPressed: () {
+              final p = int.tryParse(controller.text.trim());
+              if (p != null && p >= 1 && onGoToPage != null) {
+                onGoToPage!(p);
+                Navigator.pop(ctx);
+              }
+            },
+            child: const Text('Go to Page'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -492,16 +552,27 @@ class _ViewerHud extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             _HudIcon(icon: LucideIcons.chevronLeft, onPressed: onPreviousPage),
-            const SizedBox(width: 6),
-            Text(
-              pageCount == null ? 'p.$page' : 'p.$page / $pageCount',
-              style: const TextStyle(
-                color: WorkspaceColors.textStrong,
-                fontSize: 11.5,
-                fontWeight: FontWeight.w600,
+            const SizedBox(width: 4),
+            Tooltip(
+              message: 'Click to jump to page N',
+              child: InkWell(
+                onTap: onGoToPage != null ? () => _showGoToPageDialog(context) : null,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  child: Text(
+                    pageCount == null ? 'p.$page' : 'p.$page / $pageCount',
+                    style: const TextStyle(
+                      color: WorkspaceColors.textStrong,
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
               ),
             ),
-            const SizedBox(width: 6),
+            const SizedBox(width: 4),
             _HudIcon(icon: LucideIcons.chevronRight, onPressed: onNextPage),
             const SizedBox(width: 8),
             ReadingVelocityPill(
@@ -760,8 +831,8 @@ class _HudDivider extends StatelessWidget {
 
 PdfTextSelectionParams textSelectionParamsFor(
   PdfEditingInteraction interaction,
-) => const PdfTextSelectionParams(
-  enabled: true,
+) => PdfTextSelectionParams(
+  enabled: interaction != PdfEditingInteraction.textEditing,
   showContextMenuAutomatically: true,
 );
 

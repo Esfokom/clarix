@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 /// Real-time Reading Velocity Tracker
@@ -7,7 +8,9 @@ class ReadingVelocityTracker extends ChangeNotifier {
   ReadingVelocityTracker({
     int defaultWpm = 250,
     this._averageWordsPerPage = 300,
-  }) : _wpm = defaultWpm;
+  }) : _wpm = defaultWpm {
+    _startTicker();
+  }
 
   final int _averageWordsPerPage;
   int _wpm;
@@ -16,12 +19,34 @@ class ReadingVelocityTracker extends ChangeNotifier {
   int _sessionWordsRead = 0;
   Duration _sessionReadingDuration = Duration.zero;
   DateTime? _pageStartTime;
+  Timer? _ticker;
 
   int get currentWpm => _wpm;
   int get currentPage => _currentPage;
   int get totalPages => _totalPages;
   int get sessionWordsRead => _sessionWordsRead;
   Duration get sessionReadingDuration => _sessionReadingDuration;
+
+  void _startTicker() {
+    _pageStartTime = DateTime.now();
+    _ticker = Timer.periodic(const Duration(seconds: 2), (_) {
+      if (_pageStartTime != null) {
+        final now = DateTime.now();
+        final elapsed = now.difference(_pageStartTime!);
+        if (elapsed.inSeconds >= 2 && elapsed.inMinutes <= 15) {
+          final totalSecs = _sessionReadingDuration.inSeconds + elapsed.inSeconds;
+          if (totalSecs >= 5) {
+            final effectiveWords = _sessionWordsRead + ((elapsed.inSeconds / 60) * _wpm).round();
+            if (effectiveWords > 0) {
+              final calcWpm = (effectiveWords / (totalSecs / 60)).round();
+              _wpm = calcWpm.clamp(60, 1000);
+            }
+          }
+        }
+        notifyListeners();
+      }
+    });
+  }
 
   /// Time remaining estimate based on current WPM and remaining pages
   Duration get estimatedTimeRemaining {
@@ -99,5 +124,11 @@ class ReadingVelocityTracker extends ChangeNotifier {
     _sessionReadingDuration = Duration.zero;
     _pageStartTime = DateTime.now();
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
   }
 }

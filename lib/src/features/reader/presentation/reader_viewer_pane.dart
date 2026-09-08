@@ -404,6 +404,8 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   void didUpdateWidget(covariant ReaderViewerPane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tab.id != widget.tab.id) {
+      _cachedFullMarkdownText = null;
+      _isCanvasEditingActive = false;
       _pageSceneLifecycle?.dispose();
       _pageSceneLifecycle = null;
       _pageSurface.dispose();
@@ -419,6 +421,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       _createController();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _initNativeSession();
+        _loadFullPdfTextViaNativeSession();
       });
       return;
     }
@@ -556,9 +559,10 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
     // edit interaction after the native session has actually opened.
     final isEditingMode =
         _isCanvasEditingActive ||
+        workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
+        workspaceSession?.rightToolWindow == RightToolWindow.document ||
         (editorState?.isOpen == true &&
-            (workspaceSession?.rightToolWindow == RightToolWindow.textFormat ||
-                editorState?.selection != null ||
+            (editorState?.selection != null ||
                 (editorState?.revision ?? 0) > 0));
     final interaction = isEditingMode
         ? PdfEditingInteraction.textEditing
@@ -918,6 +922,9 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                                 ? () => _controller.goToPage(
                                     pageNumber: metrics.page + 1,
                                   )
+                                : null,
+                            onGoToPage: _controller.isReady
+                                ? (page) => _controller.goToPage(pageNumber: page)
                                 : null,
                             onZoomOut: _controller.isReady
                                 ? _zoomOutAtPointer

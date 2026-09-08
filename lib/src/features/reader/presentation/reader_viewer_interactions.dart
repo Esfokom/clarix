@@ -169,7 +169,9 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
           annotation.kind != AnnotationKind.highlight) {
         continue;
       }
-      final Paint paint = Paint()..color = Color(annotation.colorValue);
+      final Paint paint = Paint()
+        ..color = Color(annotation.colorValue)
+        ..blendMode = BlendMode.multiply;
       for (final Rect stored in annotation.pageRects) {
         final PdfRect bounds = PdfRect(
           stored.left,
@@ -310,6 +312,34 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
             ),
             TextButton.icon(
               onPressed: () async {
+                final text = await params.textSelectionDelegate
+                    .getSelectedText();
+                params.dismissContextMenu();
+                if (text.trim().isNotEmpty) {
+                  ref.read(scrapbookServiceProvider).addItem(
+                    documentTitle: widget.tab.title,
+                    filePath: widget.tab.filePath,
+                    pageNumber: _page,
+                    text: text.trim(),
+                  );
+                  await ref
+                      .read(workspaceNotifierProvider.notifier)
+                      .selectRightToolWindow(RightToolWindow.scrapbook);
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Added clipping to Scrapbook!'),
+                        duration: Duration(seconds: 1),
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(LucideIcons.scissors, size: 14),
+              label: const Text('Scrapbook'),
+            ),
+            TextButton.icon(
+              onPressed: () async {
                 await _addNamedBookmark();
                 params.dismissContextMenu();
               },
@@ -317,9 +347,11 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
               label: const Text('Bookmark'),
             ),
             for (final int color in const <int>[
-              0x66FFD54F,
-              0x6686EFAC,
-              0x668EC5FF,
+              0x99FFD54F,
+              0x9986EFAC,
+              0x998EC5FF,
+              0x99F48FB1,
+              0x99FFB74D,
             ])
               IconButton(
                 tooltip: 'Highlight',
@@ -333,6 +365,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
                   decoration: BoxDecoration(
                     color: Color(color),
                     shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24, width: 0.5),
                   ),
                 ),
               ),
@@ -434,17 +467,21 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
   }
 
   Future<void> _zoomInAtPointer() async {
-    await _controller.zoomUpOnLocalPosition(
+    final newZoom = _clampZoom(_zoom * 1.25);
+    await _controller.zoomOnLocalPosition(
       localPosition: _lastPointerAnchor(),
-      duration: Duration.zero,
+      newZoom: newZoom,
+      duration: const Duration(milliseconds: 150),
     );
     await _persistViewerState();
   }
 
   Future<void> _zoomOutAtPointer() async {
-    await _controller.zoomDownOnLocalPosition(
+    final newZoom = _clampZoom(_zoom * 0.8);
+    await _controller.zoomOnLocalPosition(
       localPosition: _lastPointerAnchor(),
-      duration: Duration.zero,
+      newZoom: newZoom,
+      duration: const Duration(milliseconds: 150),
     );
     await _persistViewerState();
   }
