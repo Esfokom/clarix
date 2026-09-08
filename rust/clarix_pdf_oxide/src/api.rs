@@ -11,6 +11,8 @@ use crate::{
     PdfDocumentMetadata, PdfDocumentSession, PdfIndexingProgress, PdfSearchMatch, PdfTextChunk,
 };
 
+pub use crate::editing_api::*;
+
 #[derive(Debug, Clone)]
 pub struct NativePdfSource {
     pub path: String,

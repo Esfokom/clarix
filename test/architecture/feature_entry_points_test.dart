@@ -6,6 +6,7 @@ import 'architecture_allowlist.dart';
 
 const Set<String> _requiredEntryPoints = <String>{
   'lib/src/features/ai/ai.dart',
+  'lib/src/features/pdf_editor/pdf_editor.dart',
   'lib/src/features/reader/reader.dart',
   'lib/src/features/settings/settings.dart',
   'lib/src/features/utilities/utilities.dart',

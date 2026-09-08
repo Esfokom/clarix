@@ -38,3 +38,40 @@ cargo build --release --features ocr --manifest-path rust/clarix_pdf_oxide/Cargo
 ```
 
 Document bytes and OCR inputs remain local. Model acquisition is a separate, user-initiated network operation.
+
+## Phase 0 editing foundation
+
+The Windows editing foundation is split into four crates: the canonical model and
+session actor in `clarix_editing_core`, typed agent tools in `clarix_agent_core`,
+the read-only PDF qualification adapter in `clarix_pdf_adapter`, and this crate as
+the only Flutter FFI/DLL facade. Canonical IDs and snapshots never contain native
+PDF handles.
+
+From the repository root, run the reproducible checks with:
+
+```text
+pwsh -File tool/editing_foundation/run_phase0_checks.ps1
+pwsh -File tool/editing_foundation/record_baseline.ps1 -OutputPath docs/testing/editing-phase0-baseline.json
+```
+
+Binding regeneration is opt-in with `-IncludeBindingGeneration`. The Windows
+release build is deliberately opt-in with `-IncludeNativeBuild`; its explicit
+manual command remains the `cargo build --release` command above.
+
+## Phase 1 editing gate
+
+The Phase 1 gate covers the durable SQLite sidecar, bounded page service,
+clean-patch cache, native text materialization, independent validation, atomic
+Windows replacement, Flutter editing overlays, recovery, and external-reader
+qualification. From the repository root, run its non-build checks with:
+
+```text
+pwsh -File tool/editing_phase1/run_phase1_checks.ps1
+```
+
+The script compiles tests and benchmark targets but intentionally never invokes
+`cargo build`. Profile integration, forced-kill, external-reader, and evidence
+recording commands are documented in
+`docs/testing/editing-phase1-exit-gate.md`. The release DLL remains a user-owned
+command whose exit code, path, SHA-256, and timestamp must be added to
+`editing-phase1-results.json` before the legacy mutation path can be removed.

@@ -68,7 +68,7 @@ if(EXISTS "${CLARIX_RUST_FALLBACK_RELEASE_DIR}/clarix_pdf_oxide.dll")
   endif()
 endif()
 if(NOT EXISTS "${CLARIX_RUST_DLL}")
-  message(STATUS "Clarix Rust DLL is not prebuilt; native annotation persistence and semantic retrieval are unavailable until the user-owned release build runs.")
+  message(STATUS "Clarix Rust DLL is not prebuilt; native PDF editing and semantic retrieval are unavailable until the user-owned release build runs.")
 endif()
 
 

@@ -43,7 +43,6 @@ dependencies:
   ffi: 2.2.0
   flutter_riverpod: ^3.3.2
   flutter_rust_bridge: 2.13.0
-  freezed_annotation: ^3.1.0
   google_fonts: ^8.1.0
   path_provider: ^2.1.6
   pdfrx: ^2.4.7
@@ -69,8 +68,6 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  build_runner: ^2.6.0
-  freezed: 3.2.3
   shared_preferences_platform_interface: ^2.4.2
   xml: ^6.6.1
 

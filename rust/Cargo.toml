@@ -1,6 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+  "clarix_editing_core",
+  "clarix_editing_store",
+  "clarix_pdf_adapter",
+  "clarix_agent_core",
   "clarix_pdf_oxide",
 ]
 
@@ -13,7 +17,7 @@ crossbeam-channel = "0.5"
 criterion = { version = "0.5", features = ["html_reports"] }
 regex = "1"
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
-flutter_rust_bridge = "=2.13.0"
+flutter_rust_bridge = "=2.12.0"
 lopdf = "0.40"
 pdf_oxide = "0.3"
 serde = { version = "1", features = ["derive"] }

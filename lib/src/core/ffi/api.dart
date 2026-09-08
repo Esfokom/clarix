@@ -7,413 +7,383 @@ import 'frb_generated.dart';
 import 'lib.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `rag_backend`
+
+            // These functions are ignored because they are not marked as `pub`: `rag_backend`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PdfIndexEvent`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
-Future<NativePdfComposeResponse> composePdfs({
-  required NativePdfComposeRequest request,
-}) => RustLib.instance.api.crateApiComposePdfs(request: request);
 
-Future<NativeRagIndexResponse> localRagIndex({
-  required NativeRagIndexRequest request,
-}) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
+            Future<NativePdfComposeResponse>  composePdfs({required NativePdfComposeRequest request }) => RustLib.instance.api.crateApiComposePdfs(request: request);
 
-Future<NativePdfAnnotations> readPdfAnnotations({required String path}) =>
-    RustLib.instance.api.crateApiReadPdfAnnotations(path: path);
+Future<NativeRagIndexResponse>  localRagIndex({required NativeRagIndexRequest request }) => RustLib.instance.api.crateApiLocalRagIndex(request: request);
 
-Future<void> savePdfAnnotations({required NativePdfSaveRequest request}) =>
-    RustLib.instance.api.crateApiSavePdfAnnotations(request: request);
+Future<NativePdfAnnotations>  readPdfAnnotations({required String path }) => RustLib.instance.api.crateApiReadPdfAnnotations(path: path);
 
-Future<NativeRagIndexResponse> localRagValidate({
-  required NativeRagIndexRequest request,
-}) => RustLib.instance.api.crateApiLocalRagValidate(request: request);
+Future<void>  savePdfAnnotations({required NativePdfSaveRequest request }) => RustLib.instance.api.crateApiSavePdfAnnotations(request: request);
 
-Future<NativeRagQueryResponse> localRagQuery({
-  required NativeRagQueryRequest request,
-}) => RustLib.instance.api.crateApiLocalRagQuery(request: request);
+Future<NativeRagIndexResponse>  localRagValidate({required NativeRagIndexRequest request }) => RustLib.instance.api.crateApiLocalRagValidate(request: request);
 
-Future<String> localRagStatus({
-  required String storageDirectory,
-  required String documentFingerprint,
-}) => RustLib.instance.api.crateApiLocalRagStatus(
-  storageDirectory: storageDirectory,
-  documentFingerprint: documentFingerprint,
-);
+Future<NativeRagQueryResponse>  localRagQuery({required NativeRagQueryRequest request }) => RustLib.instance.api.crateApiLocalRagQuery(request: request);
 
-// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativePdfSession>>
-abstract class NativePdfSession implements RustOpaqueInterface {
-  Stream<String> index({
-    required BigInt maxCharsPerChunk,
-    required BigInt batchSize,
-  });
+Future<String>  localRagStatus({required String storageDirectory , required String documentFingerprint }) => RustLib.instance.api.crateApiLocalRagStatus(storageDirectory: storageDirectory, documentFingerprint: documentFingerprint);
 
-  Future<PdfDocumentMetadata> metadata();
+            
+                // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<NativePdfSession>>
+                abstract class NativePdfSession implements RustOpaqueInterface {
+                     Stream<String>  index({required BigInt maxCharsPerChunk , required BigInt batchSize });
 
-  static Future<NativePdfSession> open({required String path}) =>
-      RustLib.instance.api.crateApiNativePdfSessionOpen(path: path);
 
-  Future<String> pageText({required BigInt pageNumber});
+ Future<PdfDocumentMetadata>  metadata();
 
-  Future<List<PdfSearchMatch>> search({required String query});
-}
 
-class NativePdfAnnotations {
-  final List<NativePdfBookmark> bookmarks;
-  final List<NativePdfHighlight> highlights;
+static Future<NativePdfSession>  open({required String path })=>RustLib.instance.api.crateApiNativePdfSessionOpen(path: path);
 
-  const NativePdfAnnotations({
-    required this.bookmarks,
-    required this.highlights,
-  });
 
-  @override
-  int get hashCode => bookmarks.hashCode ^ highlights.hashCode;
+ Future<String>  pageText({required BigInt pageNumber });
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfAnnotations &&
-          runtimeType == other.runtimeType &&
-          bookmarks == other.bookmarks &&
-          highlights == other.highlights;
-}
 
-class NativePdfBookmark {
-  final String id;
-  final String title;
-  final BigInt pageNumber;
+ Future<List<PdfSearchMatch>>  search({required String query });
 
-  const NativePdfBookmark({
-    required this.id,
-    required this.title,
-    required this.pageNumber,
-  });
 
-  @override
-  int get hashCode => id.hashCode ^ title.hashCode ^ pageNumber.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfBookmark &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          title == other.title &&
-          pageNumber == other.pageNumber;
-}
+                    
+                }
+                
 
-class NativePdfComposeRequest {
-  final List<NativePdfSource> sources;
-  final String outputPath;
+class NativePdfAnnotations  {
+                final List<NativePdfBookmark> bookmarks;
+final List<NativePdfHighlight> highlights;
 
-  const NativePdfComposeRequest({
-    required this.sources,
-    required this.outputPath,
-  });
+                const NativePdfAnnotations({required this.bookmarks ,required this.highlights ,});
 
-  @override
-  int get hashCode => sources.hashCode ^ outputPath.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfComposeRequest &&
-          runtimeType == other.runtimeType &&
-          sources == other.sources &&
-          outputPath == other.outputPath;
-}
 
-class NativePdfComposeResponse {
-  final String outputPath;
-  final BigInt pageCount;
-  final String? message;
 
-  const NativePdfComposeResponse({
-    required this.outputPath,
-    required this.pageCount,
-    this.message,
-  });
 
-  @override
-  int get hashCode =>
-      outputPath.hashCode ^ pageCount.hashCode ^ message.hashCode;
+        @override
+        int get hashCode => bookmarks.hashCode^highlights.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfComposeResponse &&
-          runtimeType == other.runtimeType &&
-          outputPath == other.outputPath &&
-          pageCount == other.pageCount &&
-          message == other.message;
-}
 
-class NativePdfHighlight {
-  final String id;
-  final BigInt pageNumber;
-  final double left;
-  final double top;
-  final double right;
-  final double bottom;
-  final double red;
-  final double green;
-  final double blue;
-  final double opacity;
-  final String text;
-  final Float32List quadPoints;
 
-  const NativePdfHighlight({
-    required this.id,
-    required this.pageNumber,
-    required this.left,
-    required this.top,
-    required this.right,
-    required this.bottom,
-    required this.red,
-    required this.green,
-    required this.blue,
-    required this.opacity,
-    required this.text,
-    required this.quadPoints,
-  });
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfAnnotations &&
+                runtimeType == other.runtimeType
+                && bookmarks == other.bookmarks&& highlights == other.highlights;
 
-  @override
-  int get hashCode =>
-      id.hashCode ^
-      pageNumber.hashCode ^
-      left.hashCode ^
-      top.hashCode ^
-      right.hashCode ^
-      bottom.hashCode ^
-      red.hashCode ^
-      green.hashCode ^
-      blue.hashCode ^
-      opacity.hashCode ^
-      text.hashCode ^
-      quadPoints.hashCode;
+            }
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfHighlight &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          pageNumber == other.pageNumber &&
-          left == other.left &&
-          top == other.top &&
-          right == other.right &&
-          bottom == other.bottom &&
-          red == other.red &&
-          green == other.green &&
-          blue == other.blue &&
-          opacity == other.opacity &&
-          text == other.text &&
-          quadPoints == other.quadPoints;
-}
+class NativePdfBookmark  {
+                final String id;
+final String title;
+final BigInt pageNumber;
 
-class NativePdfSaveRequest {
-  final String path;
-  final String? outputPath;
-  final List<NativePdfBookmark> bookmarks;
-  final List<NativePdfHighlight> highlights;
+                const NativePdfBookmark({required this.id ,required this.title ,required this.pageNumber ,});
 
-  const NativePdfSaveRequest({
-    required this.path,
-    this.outputPath,
-    required this.bookmarks,
-    required this.highlights,
-  });
 
-  @override
-  int get hashCode =>
-      path.hashCode ^
-      outputPath.hashCode ^
-      bookmarks.hashCode ^
-      highlights.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfSaveRequest &&
-          runtimeType == other.runtimeType &&
-          path == other.path &&
-          outputPath == other.outputPath &&
-          bookmarks == other.bookmarks &&
-          highlights == other.highlights;
-}
 
-class NativePdfSource {
-  final String path;
-  final Uint64List pages;
 
-  const NativePdfSource({required this.path, required this.pages});
+        @override
+        int get hashCode => id.hashCode^title.hashCode^pageNumber.hashCode;
 
-  @override
-  int get hashCode => path.hashCode ^ pages.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativePdfSource &&
-          runtimeType == other.runtimeType &&
-          path == other.path &&
-          pages == other.pages;
-}
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfBookmark &&
+                runtimeType == other.runtimeType
+                && id == other.id&& title == other.title&& pageNumber == other.pageNumber;
+
+            }
+
+class NativePdfComposeRequest  {
+                final List<NativePdfSource> sources;
+final String outputPath;
+
+                const NativePdfComposeRequest({required this.sources ,required this.outputPath ,});
+
+
+
+
+
+        @override
+        int get hashCode => sources.hashCode^outputPath.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfComposeRequest &&
+                runtimeType == other.runtimeType
+                && sources == other.sources&& outputPath == other.outputPath;
+
+            }
+
+class NativePdfComposeResponse  {
+                final String outputPath;
+final BigInt pageCount;
+final String? message;
+
+                const NativePdfComposeResponse({required this.outputPath ,required this.pageCount ,this.message ,});
+
+
+
+
+
+        @override
+        int get hashCode => outputPath.hashCode^pageCount.hashCode^message.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfComposeResponse &&
+                runtimeType == other.runtimeType
+                && outputPath == other.outputPath&& pageCount == other.pageCount&& message == other.message;
+
+            }
+
+class NativePdfHighlight  {
+                final String id;
+final BigInt pageNumber;
+final double left;
+final double top;
+final double right;
+final double bottom;
+final double red;
+final double green;
+final double blue;
+final double opacity;
+final String text;
+final Float32List quadPoints;
+
+                const NativePdfHighlight({required this.id ,required this.pageNumber ,required this.left ,required this.top ,required this.right ,required this.bottom ,required this.red ,required this.green ,required this.blue ,required this.opacity ,required this.text ,required this.quadPoints ,});
+
+
+
+
+
+        @override
+        int get hashCode => id.hashCode^pageNumber.hashCode^left.hashCode^top.hashCode^right.hashCode^bottom.hashCode^red.hashCode^green.hashCode^blue.hashCode^opacity.hashCode^text.hashCode^quadPoints.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfHighlight &&
+                runtimeType == other.runtimeType
+                && id == other.id&& pageNumber == other.pageNumber&& left == other.left&& top == other.top&& right == other.right&& bottom == other.bottom&& red == other.red&& green == other.green&& blue == other.blue&& opacity == other.opacity&& text == other.text&& quadPoints == other.quadPoints;
+
+            }
+
+class NativePdfSaveRequest  {
+                final String path;
+final String? outputPath;
+final List<NativePdfBookmark> bookmarks;
+final List<NativePdfHighlight> highlights;
+
+                const NativePdfSaveRequest({required this.path ,this.outputPath ,required this.bookmarks ,required this.highlights ,});
+
+
+
+
+
+        @override
+        int get hashCode => path.hashCode^outputPath.hashCode^bookmarks.hashCode^highlights.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfSaveRequest &&
+                runtimeType == other.runtimeType
+                && path == other.path&& outputPath == other.outputPath&& bookmarks == other.bookmarks&& highlights == other.highlights;
+
+            }
+
+class NativePdfSource  {
+                final String path;
+final Uint64List pages;
+
+                const NativePdfSource({required this.path ,required this.pages ,});
+
+
+
+
+
+        @override
+        int get hashCode => path.hashCode^pages.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativePdfSource &&
+                runtimeType == other.runtimeType
+                && path == other.path&& pages == other.pages;
+
+            }
 
 /// A persisted Dart chunk represented at the native RAG boundary. The
 /// fingerprint and ids are supplied by Flutter so an index can never be used
 /// for a different persisted document.
-class NativeRagChunk {
-  final String id;
-  final String text;
+class NativeRagChunk  {
+                final String id;
+final String text;
 
-  const NativeRagChunk({required this.id, required this.text});
+                const NativeRagChunk({required this.id ,required this.text ,});
 
-  @override
-  int get hashCode => id.hashCode ^ text.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativeRagChunk &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          text == other.text;
-}
 
-class NativeRagIndexRequest {
-  final String storageDirectory;
-  final String modelCacheDirectory;
-  final String documentFingerprint;
-  final List<NativeRagChunk> chunks;
 
-  const NativeRagIndexRequest({
-    required this.storageDirectory,
-    required this.modelCacheDirectory,
-    required this.documentFingerprint,
-    required this.chunks,
-  });
 
-  @override
-  int get hashCode =>
-      storageDirectory.hashCode ^
-      modelCacheDirectory.hashCode ^
-      documentFingerprint.hashCode ^
-      chunks.hashCode;
+        @override
+        int get hashCode => id.hashCode^text.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativeRagIndexRequest &&
-          runtimeType == other.runtimeType &&
-          storageDirectory == other.storageDirectory &&
-          modelCacheDirectory == other.modelCacheDirectory &&
-          documentFingerprint == other.documentFingerprint &&
-          chunks == other.chunks;
-}
 
-class NativeRagIndexResponse {
-  final String status;
-  final String? message;
-  final String? outcome;
 
-  const NativeRagIndexResponse({
-    required this.status,
-    this.message,
-    this.outcome,
-  });
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativeRagChunk &&
+                runtimeType == other.runtimeType
+                && id == other.id&& text == other.text;
 
-  @override
-  int get hashCode => status.hashCode ^ message.hashCode ^ outcome.hashCode;
+            }
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativeRagIndexResponse &&
-          runtimeType == other.runtimeType &&
-          status == other.status &&
-          message == other.message &&
-          outcome == other.outcome;
-}
+class NativeRagIndexRequest  {
+                final String storageDirectory;
+final String modelCacheDirectory;
+final String documentFingerprint;
+final List<NativeRagChunk> chunks;
 
-class NativeRagQueryRequest {
-  final String storageDirectory;
-  final String modelCacheDirectory;
-  final String documentFingerprint;
-  final List<String> chunkIds;
-  final String query;
-  final BigInt limit;
+                const NativeRagIndexRequest({required this.storageDirectory ,required this.modelCacheDirectory ,required this.documentFingerprint ,required this.chunks ,});
 
-  const NativeRagQueryRequest({
-    required this.storageDirectory,
-    required this.modelCacheDirectory,
-    required this.documentFingerprint,
-    required this.chunkIds,
-    required this.query,
-    required this.limit,
-  });
 
-  @override
-  int get hashCode =>
-      storageDirectory.hashCode ^
-      modelCacheDirectory.hashCode ^
-      documentFingerprint.hashCode ^
-      chunkIds.hashCode ^
-      query.hashCode ^
-      limit.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativeRagQueryRequest &&
-          runtimeType == other.runtimeType &&
-          storageDirectory == other.storageDirectory &&
-          modelCacheDirectory == other.modelCacheDirectory &&
-          documentFingerprint == other.documentFingerprint &&
-          chunkIds == other.chunkIds &&
-          query == other.query &&
-          limit == other.limit;
-}
 
-class NativeRagQueryResponse {
-  final String status;
-  final String? message;
-  final List<NativeRagQueryResult> results;
 
-  const NativeRagQueryResponse({
-    required this.status,
-    this.message,
-    required this.results,
-  });
+        @override
+        int get hashCode => storageDirectory.hashCode^modelCacheDirectory.hashCode^documentFingerprint.hashCode^chunks.hashCode;
 
-  @override
-  int get hashCode => status.hashCode ^ message.hashCode ^ results.hashCode;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativeRagQueryResponse &&
-          runtimeType == other.runtimeType &&
-          status == other.status &&
-          message == other.message &&
-          results == other.results;
-}
 
-class NativeRagQueryResult {
-  final String chunkId;
-  final double score;
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativeRagIndexRequest &&
+                runtimeType == other.runtimeType
+                && storageDirectory == other.storageDirectory&& modelCacheDirectory == other.modelCacheDirectory&& documentFingerprint == other.documentFingerprint&& chunks == other.chunks;
 
-  const NativeRagQueryResult({required this.chunkId, required this.score});
+            }
 
-  @override
-  int get hashCode => chunkId.hashCode ^ score.hashCode;
+class NativeRagIndexResponse  {
+                final String status;
+final String? message;
+final String? outcome;
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NativeRagQueryResult &&
-          runtimeType == other.runtimeType &&
-          chunkId == other.chunkId &&
-          score == other.score;
-}
+                const NativeRagIndexResponse({required this.status ,this.message ,this.outcome ,});
+
+
+
+
+
+        @override
+        int get hashCode => status.hashCode^message.hashCode^outcome.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativeRagIndexResponse &&
+                runtimeType == other.runtimeType
+                && status == other.status&& message == other.message&& outcome == other.outcome;
+
+            }
+
+class NativeRagQueryRequest  {
+                final String storageDirectory;
+final String modelCacheDirectory;
+final String documentFingerprint;
+final List<String> chunkIds;
+final String query;
+final BigInt limit;
+
+                const NativeRagQueryRequest({required this.storageDirectory ,required this.modelCacheDirectory ,required this.documentFingerprint ,required this.chunkIds ,required this.query ,required this.limit ,});
+
+
+
+
+
+        @override
+        int get hashCode => storageDirectory.hashCode^modelCacheDirectory.hashCode^documentFingerprint.hashCode^chunkIds.hashCode^query.hashCode^limit.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativeRagQueryRequest &&
+                runtimeType == other.runtimeType
+                && storageDirectory == other.storageDirectory&& modelCacheDirectory == other.modelCacheDirectory&& documentFingerprint == other.documentFingerprint&& chunkIds == other.chunkIds&& query == other.query&& limit == other.limit;
+
+            }
+
+class NativeRagQueryResponse  {
+                final String status;
+final String? message;
+final List<NativeRagQueryResult> results;
+
+                const NativeRagQueryResponse({required this.status ,this.message ,required this.results ,});
+
+
+
+
+
+        @override
+        int get hashCode => status.hashCode^message.hashCode^results.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativeRagQueryResponse &&
+                runtimeType == other.runtimeType
+                && status == other.status&& message == other.message&& results == other.results;
+
+            }
+
+class NativeRagQueryResult  {
+                final String chunkId;
+final double score;
+
+                const NativeRagQueryResult({required this.chunkId ,required this.score ,});
+
+
+
+
+
+        @override
+        int get hashCode => chunkId.hashCode^score.hashCode;
+
+
+
+        @override
+        bool operator ==(Object other) =>
+            identical(this, other) ||
+            other is NativeRagQueryResult &&
+                runtimeType == other.runtimeType
+                && chunkId == other.chunkId&& score == other.score;
+
+            }
+            
