@@ -680,6 +680,9 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     required String tabId,
     required int pageNumber,
     required String note,
+    String selectedText = '',
+    List<Rect> pageRects = const <Rect>[],
+    int colorValue = 0x66FFD54F,
   }) async {
     final String trimmed = note.trim();
     if (trimmed.isEmpty) {
@@ -699,10 +702,10 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
             id: 'note_${DateTime.now().microsecondsSinceEpoch}',
             kind: AnnotationKind.note,
             pageNumber: pageNumber,
-            pageRects: const <Rect>[],
-            selectedText: '',
+            pageRects: pageRects,
+            selectedText: selectedText,
             note: trimmed,
-            colorValue: 0x66FFD54F,
+            colorValue: colorValue,
             createdAt: DateTime.now().toUtc(),
           ),
         );

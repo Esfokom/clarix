@@ -112,13 +112,242 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     ];
   }
 
+  Widget? _buildSelectionToolbar(
+    BuildContext context,
+    PdfViewerContextMenuBuilderParams params,
+  ) {
+    if (!params.isTextSelectionEnabled ||
+        !params.textSelectionDelegate.hasSelectedText) {
+      return null;
+    }
+    _dismissSelectionMenu = params.dismissContextMenu;
+    final ClarixThemeProfile profile =
+        ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile();
+    return ReaderSelectionToolbar(
+      anchorAbove: params.anchorA,
+      anchorBelow: params.anchorB ?? params.anchorA,
+      highlightColors: profile.highlightPalette,
+      onCopy: () => unawaited(_copySelection(params)),
+      onAskAi: () => unawaited(_askAiAboutSelection(params)),
+      onNote: () => unawaited(_addNoteForSelection(params)),
+      onBookmark: () => unawaited(_bookmarkSelection(params)),
+      onReadAloud: () => unawaited(_readSelectionAloud(params)),
+      onHighlight: (int color) =>
+          unawaited(_highlightSelection(colorValue: color, params: params)),
+      onMoreColors: () => unawaited(_chooseHighlightColor(params)),
+    );
+  }
+
+  bool? _onViewerKey(
+    PdfViewerKeyHandlerParams _,
+    LogicalKeyboardKey key,
+    bool isRealKeyPress,
+  ) {
+    if (key != LogicalKeyboardKey.escape || !isRealKeyPress) return null;
+    unawaited(_clearActiveTextSelection());
+    return true;
+  }
+
+  Future<void> _copySelection(PdfViewerContextMenuBuilderParams params) async {
+    await params.textSelectionDelegate.copyTextSelection();
+    params.dismissContextMenu();
+    _dismissSelectionMenu = null;
+  }
+
+  Future<void> _askAiAboutSelection(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
+    final String selectedText = await params.textSelectionDelegate
+        .getSelectedText();
+    await _dismissTextSelection(params);
+    if (selectedText.trim().isEmpty) return;
+    unawaited(
+      ref
+          .read(aiNotifierProvider.notifier)
+          .sendPrompt(
+            'Explain this selected passage from ${widget.tab.title}:\n\n'
+            '“${selectedText.trim()}”',
+            AiDocumentContext(
+              tabId: widget.tab.id,
+              documentId: widget.tab.documentId,
+              title: widget.tab.title,
+              filePath: widget.tab.filePath,
+            ),
+          ),
+    );
+  }
+
+  Future<void> _readSelectionAloud(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
+    final Offset anchor = params.anchorA;
+    await _dismissTextSelection(params);
+    await _startReadAloud(anchor);
+  }
+
+  Future<void> _bookmarkSelection(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
+    final String selectedText = await params.textSelectionDelegate
+        .getSelectedText();
+    final List<PdfPageTextRange> ranges = await params.textSelectionDelegate
+        .getSelectedTextRanges();
+    await _dismissTextSelection(params);
+    if (ranges.isEmpty) return;
+    final String normalized = selectedText
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    final String label = normalized.length <= 72
+        ? normalized
+        : '${normalized.substring(0, 69)}…';
+    if (label.isEmpty) return;
+    await ref
+        .read(workspaceNotifierProvider.notifier)
+        .addBookmark(
+          tabId: widget.tab.id,
+          pageNumber: ranges.first.pageNumber,
+          label: label,
+        );
+  }
+
+  Future<void> _addNoteForSelection(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
+    final String selectedText = await params.textSelectionDelegate
+        .getSelectedText();
+    final List<PdfPageTextRange> ranges = await params.textSelectionDelegate
+        .getSelectedTextRanges();
+    await _dismissTextSelection(params);
+    if (!mounted || selectedText.trim().isEmpty || ranges.isEmpty) return;
+    final TextEditingController controller = TextEditingController();
+    final String? note = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Add note'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                selectedText.trim(),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                minLines: 3,
+                maxLines: 6,
+                decoration: const InputDecoration(hintText: 'Write a note'),
+              ),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save note'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (note == null || note.trim().isEmpty) return;
+    final PdfPageTextRange range = ranges.first;
+    final ClarixThemeProfile profile =
+        ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile();
+    await ref
+        .read(workspaceNotifierProvider.notifier)
+        .addNote(
+          tabId: widget.tab.id,
+          pageNumber: range.pageNumber,
+          note: note,
+          selectedText: selectedText,
+          pageRects: _pageRectsForRange(range),
+          colorValue: _highlightColorWithOpacity(
+            profile.highlightColor,
+            profile.highlightOpacity,
+          ),
+        );
+  }
+
+  Future<void> _chooseHighlightColor(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
+    final ClarixThemeProfile profile =
+        ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile();
+    int selectedColor = profile.highlightColor;
+    final int? picked = await showDialog<int>(
+      context: context,
+      builder: (BuildContext context) => StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) => AlertDialog(
+          title: const Text('More highlight colours'),
+          content: _ColourWheel(
+            color: Color(selectedColor),
+            onChanged: (Color color) =>
+                setState(() => selectedColor = color.toARGB32()),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, selectedColor),
+              child: const Text('Highlight'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null) return;
+    final List<int> customColors = List<int>.from(profile.customHighlightColors)
+      ..remove(picked)
+      ..add(picked);
+    while (customColors.length > ClarixThemeProfile.maxCustomHighlightColors) {
+      customColors.removeAt(0);
+    }
+    await ref
+        .read(clarixThemeProvider.notifier)
+        .setProfile(
+          profile.copyWith(
+            highlightColor: picked,
+            customHighlightColors: customColors,
+          ),
+        );
+    await _highlightSelection(colorValue: picked, params: params);
+  }
+
+  Future<void> _dismissTextSelection(
+    PdfViewerContextMenuBuilderParams params,
+  ) async {
+    params.dismissContextMenu();
+    _dismissSelectionMenu = null;
+    await params.textSelectionDelegate.clearTextSelection();
+  }
+
+  Future<void> _clearActiveTextSelection() async {
+    _dismissSelectionMenu?.call();
+    _dismissSelectionMenu = null;
+    if (_controller.isReady) {
+      await _controller.textSelectionDelegate.clearTextSelection();
+    }
+  }
+
   void _paintAnnotations(Canvas canvas, Rect pageRect, PdfPage page) {
     for (final DocumentAnnotation annotation in widget.annotations) {
       if (annotation.pageNumber != page.pageNumber ||
-          annotation.kind != AnnotationKind.highlight) {
+          (annotation.kind != AnnotationKind.highlight &&
+              annotation.kind != AnnotationKind.note)) {
         continue;
       }
-      final Paint paint = Paint()..color = Color(annotation.colorValue);
       for (final Rect stored in annotation.pageRects) {
         final PdfRect bounds = PdfRect(
           stored.left,
@@ -136,7 +365,27 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
         _annotationHitAreas
             .putIfAbsent(annotation.id, () => <Rect>[])
             .add(documentRect);
-        canvas.drawRect(rendered, paint);
+        if (annotation.kind == AnnotationKind.highlight) {
+          canvas.drawRect(
+            rendered,
+            Paint()..color = Color(annotation.colorValue),
+          );
+        } else {
+          final Rect marker = Rect.fromCenter(
+            center: Offset(rendered.right, rendered.top),
+            width: 15,
+            height: 15,
+          );
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(marker, const Radius.circular(4)),
+            Paint()..color = const Color(0xFFF5C451),
+          );
+          canvas.drawCircle(
+            marker.center,
+            2,
+            Paint()..color = const Color(0xFF5A430D),
+          );
+        }
       }
     }
   }
@@ -147,14 +396,18 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     PdfViewerGeneralTapHandlerDetails details,
   ) {
     if (details.type != PdfViewerGeneralTapType.tap) return false;
+    unawaited(_clearActiveTextSelection());
     if (_handleReadAloudSkipTap(details.documentPosition)) return true;
     for (final DocumentAnnotation annotation in widget.annotations) {
-      if (annotation.kind == AnnotationKind.highlight &&
-          annotationHitAreaContains(
-            _annotationHitAreas[annotation.id] ?? const <Rect>[],
-            details.documentPosition,
-          )) {
-        unawaited(_showHighlightEditor(annotation));
+      if (annotationHitAreaContains(
+        _annotationHitAreas[annotation.id] ?? const <Rect>[],
+        details.documentPosition,
+      )) {
+        if (annotation.kind == AnnotationKind.highlight) {
+          unawaited(_showHighlightEditor(annotation));
+        } else {
+          unawaited(_showNoteEditor(annotation));
+        }
         return true;
       }
     }
@@ -162,41 +415,101 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
   }
 
   Future<void> _showHighlightEditor(DocumentAnnotation annotation) async {
-    final String? action = await showDialog<String>(
+    final ClarixThemeProfile profile =
+        ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile();
+    final int? action = await showDialog<int>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (BuildContext context) => AlertDialog(
         title: const Text('Edit highlight'),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.pop(context, 'delete'),
+            onPressed: () => Navigator.pop(context, -1),
             child: const Text('Delete'),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, 'yellow'),
-            child: const Text('Yellow'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, 'blue'),
-            child: const Text('Blue'),
+          ...profile.highlightPalette.map(
+            (int color) => IconButton(
+              tooltip: 'Change highlight colour',
+              onPressed: () => Navigator.pop(context, color),
+              icon: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: Color(color),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.black26),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
-    if (action == 'delete') {
+    if (action == -1) {
       final String groupId = annotation.id.split(':').first;
       await ref
           .read(workspaceNotifierProvider.notifier)
           .removeAnnotation(widget.tab.id, groupId);
-    } else if (action == 'yellow' || action == 'blue') {
+    } else if (action != null) {
       final String groupId = annotation.id.split(':').first;
       await ref
           .read(workspaceNotifierProvider.notifier)
           .updateHighlightColor(
             tabId: widget.tab.id,
             annotationId: groupId,
-            colorValue: action == 'yellow' ? 0x66FFD54F : 0x668EC5FF,
+            colorValue: _highlightColorWithOpacity(
+              action,
+              profile.highlightOpacity,
+            ),
           );
     }
+  }
+
+  Future<void> _showNoteEditor(DocumentAnnotation annotation) async {
+    final TextEditingController controller = TextEditingController(
+      text: annotation.note,
+    );
+    final String? value = await showDialog<String>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Edit note'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          minLines: 3,
+          maxLines: 6,
+          decoration: const InputDecoration(hintText: 'Note'),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, ''),
+            child: const Text('Delete'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (value == null) return;
+    if (value.trim().isEmpty) {
+      await ref
+          .read(workspaceNotifierProvider.notifier)
+          .removeAnnotation(widget.tab.id, annotation.id);
+      return;
+    }
+    await ref
+        .read(workspaceNotifierProvider.notifier)
+        .updateAnnotationNote(
+          tabId: widget.tab.id,
+          annotationId: annotation.id,
+          note: value,
+        );
   }
 
   void _rememberPointerPosition(PointerEvent event) {
@@ -241,30 +554,24 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     _lastPointerGlobalPosition = event.position;
   }
 
-  Future<void> _highlightSelection({int? colorValue}) async {
+  Future<void> _highlightSelection({
+    int? colorValue,
+    PdfViewerContextMenuBuilderParams? params,
+  }) async {
     final profile = ref.read(clarixThemeProvider).value;
-    final int resolvedColor =
-        colorValue ??
-        (((profile?.highlightOpacity ?? 0.4) * 255).round() << 24) |
-            (profile?.highlightColor ?? 0xFFFFD54F);
-    final List<PdfPageTextRange> ranges = await _controller
-        .textSelectionDelegate
+    final int resolvedColor = _highlightColorWithOpacity(
+      colorValue ?? profile?.highlightColor ?? 0xFFFFD54F,
+      profile?.highlightOpacity ?? ClarixThemeProfile.defaultHighlightOpacity,
+    );
+    final delegate =
+        params?.textSelectionDelegate ?? _controller.textSelectionDelegate;
+    final List<PdfPageTextRange> ranges = await delegate
         .getSelectedTextRanges();
-    final String selectedText = await _controller.textSelectionDelegate
-        .getSelectedText();
+    final String selectedText = await delegate.getSelectedText();
     final String highlightGroup =
         'highlight_${DateTime.now().microsecondsSinceEpoch}';
     for (final PdfPageTextRange range in ranges) {
-      final List<Rect> pageRects = _selectionLineRects(range)
-          .map(
-            (bounds) => Rect.fromLTRB(
-              bounds.left,
-              bounds.bottom,
-              bounds.right,
-              bounds.top,
-            ),
-          )
-          .toList(growable: false);
+      final List<Rect> pageRects = _pageRectsForRange(range);
       if (pageRects.isNotEmpty) {
         await ref
             .read(workspaceNotifierProvider.notifier)
@@ -278,8 +585,27 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
             );
       }
     }
-    await _controller.textSelectionDelegate.clearTextSelection();
+    if (params != null) {
+      await _dismissTextSelection(params);
+    } else {
+      await _clearActiveTextSelection();
+    }
   }
+
+  List<Rect> _pageRectsForRange(PdfPageTextRange range) =>
+      _selectionLineRects(range)
+          .map(
+            (PdfRect bounds) => Rect.fromLTRB(
+              bounds.left,
+              bounds.bottom,
+              bounds.right,
+              bounds.top,
+            ),
+          )
+          .toList(growable: false);
+
+  int _highlightColorWithOpacity(int color, double opacity) =>
+      ((opacity * 255).round() << 24) | (color & 0x00FFFFFF);
 
   List<PdfRect> _selectionLineRects(PdfPageTextRange range) {
     final List<PdfRect> lines = <PdfRect>[];

@@ -130,21 +130,6 @@ extension _ReaderReadAloud on _PdfViewerPaneState {
     return null;
   }
 
-  void _customizeContextMenu(
-    PdfViewerContextMenuBuilderParams params,
-    List<ContextMenuButtonItem> items,
-  ) {
-    items.add(
-      ContextMenuButtonItem(
-        label: 'Read aloud',
-        onPressed: () {
-          params.dismissContextMenu();
-          unawaited(_startReadAloud(params.anchorA));
-        },
-      ),
-    );
-  }
-
   Future<void> _startReadAloud(Offset localAnchor) async {
     if (!_controller.isReady) return;
     final Offset documentPosition = _controller.localToDocument(localAnchor);

@@ -9,11 +9,13 @@ import 'package:smooth_corner/smooth_corner.dart';
 import 'package:clarix/src/core/models.dart';
 import 'package:clarix/src/core/theme_controller.dart';
 import 'package:clarix/src/core/theme_profile.dart';
+import 'package:clarix/src/features/ai/ai.dart';
 import 'package:clarix/src/features/tts/tts.dart';
 import 'package:clarix/src/features/workspace/application/workspace_providers.dart';
 import 'package:clarix/src/features/workspace/domain/workspace_feature_state.dart';
 import 'package:clarix/src/features/workspace/presentation/widgets/workspace_common.dart';
 import 'reader_interaction_math.dart';
+import 'reader_selection_toolbar.dart';
 part 'reader_viewer_components.dart';
 part 'reader_viewer_interactions.dart';
 part 'reader_read_aloud.dart';
@@ -57,8 +59,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   String? _pendingSearchQuery;
   Timer? _viewerStateDebounce;
   Offset? _lastPointerGlobalPosition;
-  bool _colorInspectorOpen = false;
-  int _customHighlightColor = 0x66FFD54F;
+  VoidCallback? _dismissSelectionMenu;
   final Map<String, List<Rect>> _annotationHitAreas = <String, List<Rect>>{};
   final Map<int, List<_PageSentence>> _pageSentenceCache =
       <int, List<_PageSentence>>{};
@@ -107,6 +108,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
       _metrics.dispose();
       _viewerStateDebounce?.cancel();
       _lastPointerGlobalPosition = null;
+      _dismissSelectionMenu = null;
       _pendingSearchQuery = null;
       _resetReadAloudSession();
       _pageSentenceCache.clear();
@@ -341,8 +343,12 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                                           _searcher!.pageTextMatchPaintCallback,
                                       ],
                                   onGeneralTap: _onViewerTap,
-                                  customizeContextMenuItems:
-                                      _customizeContextMenu,
+                                  buildContextMenu: _buildSelectionToolbar,
+                                  textSelectionParams:
+                                      const PdfTextSelectionParams(
+                                        showContextMenuAutomatically: true,
+                                      ),
+                                  onKey: _onViewerKey,
                                   viewerOverlayBuilder: _buildViewerOverlay,
                                 ),
                               );
@@ -387,67 +393,6 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                               : ref.read(ttsNotifierProvider.notifier).resume(),
                           onStop: () =>
                               ref.read(ttsNotifierProvider.notifier).stop(),
-                        ),
-                      ),
-                    ),
-                  if (_colorInspectorOpen)
-                    Positioned(
-                      top: 18,
-                      right: 18,
-                      child: Material(
-                        color: widget.colors.panelRaised,
-                        borderRadius: BorderRadius.circular(10),
-                        child: SizedBox(
-                          width: 230,
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                Row(
-                                  children: <Widget>[
-                                    const Expanded(
-                                      child: Text('Custom highlight colour'),
-                                    ),
-                                    IconButton(
-                                      onPressed: () => setState(
-                                        () => _colorInspectorOpen = false,
-                                      ),
-                                      icon: const Icon(LucideIcons.x, size: 15),
-                                    ),
-                                  ],
-                                ),
-                                Container(
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: Color(_customHighlightColor),
-                                    borderRadius: BorderRadius.circular(5),
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                _ColourWheel(
-                                  color: Color(_customHighlightColor),
-                                  onChanged: (Color color) => setState(
-                                    () => _customHighlightColor = color
-                                        .toARGB32(),
-                                  ),
-                                ),
-                                FilledButton(
-                                  onPressed: () async {
-                                    await _highlightSelection(
-                                      colorValue: _customHighlightColor,
-                                    );
-                                    if (mounted) {
-                                      setState(
-                                        () => _colorInspectorOpen = false,
-                                      );
-                                    }
-                                  },
-                                  child: const Text('Apply to selection'),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),
