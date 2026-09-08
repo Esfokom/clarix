@@ -71,7 +71,7 @@ class KittenTtsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Synthesizes text via KittenTTS server and plays back audio.
+  /// Synthesizes text via KittenTTS server and plays back audio with fallback to Native System Speech.
   Future<void> speak(String text, {String? voiceId, double? speed}) async {
     if (text.trim().isEmpty) return;
 
@@ -86,15 +86,16 @@ class KittenTtsService extends ChangeNotifier {
 
     try {
       final audioFile = await _synthesizeText(text, targetVoice, targetSpeed);
-      if (audioFile == null) {
-        _setState(KittenTtsState.error, error: 'Failed to synthesize audio from KittenTTS');
-        return;
+      if (audioFile != null) {
+        _state = KittenTtsState.playing;
+        notifyListeners();
+        await _playAudioFile(audioFile);
+      } else {
+        // Fallback to Native System Speech Synthesizer (SAPI on Windows)
+        _state = KittenTtsState.playing;
+        notifyListeners();
+        await _speakWithNativeTts(text, targetSpeed);
       }
-
-      _state = KittenTtsState.playing;
-      notifyListeners();
-
-      await _playAudioFile(audioFile);
 
       if (_state == KittenTtsState.playing) {
         _setState(KittenTtsState.idle);
@@ -103,6 +104,76 @@ class KittenTtsService extends ChangeNotifier {
       clarixLog.e('KittenTTS speak error: $e\n$stack');
       _setState(KittenTtsState.error, error: e.toString());
     }
+  }
+
+  Future<void> _speakWithNativeTts(String text, double speed) async {
+    final cleanText = _cleanTextForHumanSpeech(text);
+    if (cleanText.isEmpty) return;
+
+    try {
+      if (Platform.isWindows) {
+        final base64Text = base64Encode(utf8.encode(cleanText));
+        final sapiRate = ((speed - 1.0) * 5).round().clamp(-10, 10);
+
+        final psScript =
+            '\$b=[Convert]::FromBase64String("$base64Text");'
+            '\$t=[Text.Encoding]::UTF8.GetString(\$b);'
+            'Add-Type -AssemblyName System.Speech;'
+            '\$s=New-Object System.Speech.Synthesis.SpeechSynthesizer;'
+            '\$v=\$s.GetInstalledVoices() | Where-Object { \$_.Enabled -and \$_.VoiceInfo.Culture.Name -like "en*" } | Select-Object -First 1;'
+            'if (\$v) { \$s.SelectVoice(\$v.VoiceInfo.Name); };'
+            '\$s.Rate=$sapiRate;'
+            '\$s.Speak(\$t);';
+
+        final process = await Process.start('powershell', [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          psScript,
+        ]);
+        _activePlayerProcess = process;
+        await process.exitCode;
+        _activePlayerProcess = null;
+      } else if (Platform.isMacOS) {
+        final rate = (speed * 175).round();
+        final process = await Process.start('say', ['-r', '$rate', cleanText]);
+        _activePlayerProcess = process;
+        await process.exitCode;
+        _activePlayerProcess = null;
+      } else if (Platform.isLinux) {
+        final rate = (speed * 100).round();
+        final process = await Process.start('spd-say', ['-r', '$rate', cleanText]);
+        _activePlayerProcess = process;
+        await process.exitCode;
+        _activePlayerProcess = null;
+      }
+    } catch (e) {
+      clarixLog.w('Native TTS playback warning: $e');
+    }
+  }
+
+  String _cleanTextForHumanSpeech(String input) {
+    var t = input;
+    // Strip URLs
+    t = t.replaceAll(RegExp(r'https?://\S+'), '');
+    // Strip markdown headings
+    t = t.replaceAll(RegExp(r'^#+\s*', multiLine: true), '');
+    // Strip bullet points and list markers (•, -, *, 1.)
+    t = t.replaceAll(RegExp(r'^[\•\-\*\+]\s*', multiLine: true), '');
+    t = t.replaceAll(RegExp(r'^\d+\.\s*', multiLine: true), '');
+    // Strip bold/italic markdown symbols (*, _, ~)
+    t = t.replaceAll(RegExp(r'[\*\_\~]+'), '');
+    // Strip page citations like (page 3) or [1]
+    t = t.replaceAll(RegExp(r'\(pages?\s*\d+(?:–\d+)?\)|\[\d+\]', caseSensitive: false), '');
+    // Replace mathematical symbols with natural words
+    t = t.replaceAll('&', ' and ')
+         .replaceAll('@', ' at ')
+         .replaceAll('%', ' percent ')
+         .replaceAll('=', ' equals ');
+    // Normalize newlines into natural sentence breaks
+    t = t.replaceAll(RegExp(r'\n+'), '. ');
+    t = t.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return t;
   }
 
   Future<File?> _synthesizeText(String text, String voice, double speed) async {

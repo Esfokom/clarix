@@ -43,7 +43,7 @@ class AudioBookPlayerBar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Offline Audio-Book Mode • Page $currentPage of $totalPages',
+                          '${audioBookService.bookTitle.isEmpty ? "Offline Audio-Book" : audioBookService.bookTitle} • Page $currentPage of $totalPages',
                           style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 2),
