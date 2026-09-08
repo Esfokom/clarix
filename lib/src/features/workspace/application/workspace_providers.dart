@@ -19,9 +19,7 @@ import 'package:clarix/src/features/ai/ai.dart';
 import 'workspace_notifier.dart';
 import '../domain/workspace_feature_state.dart';
 
-final annotationSidecarStoreProvider = Provider<AnnotationSidecarStore>(
-  (Ref ref) => AnnotationSidecarStore(),
-);
+
 
 final kittenTtsServiceProvider = Provider<KittenTtsService>(
   (Ref ref) => KittenTtsService(),

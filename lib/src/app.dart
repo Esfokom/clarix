@@ -1,3 +1,6 @@
+import 'dart:io';
+
+import 'package:bitsdojo_window/bitsdojo_window.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -57,6 +60,14 @@ class _WindowBootstrapState extends State<_WindowBootstrap> {
   @override
   void initState() {
     super.initState();
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      doWhenWindowReady(() {
+        appWindow.minSize = const Size(1100, 760);
+        appWindow.size = const Size(1500, 940);
+        appWindow.alignment = Alignment.center;
+        appWindow.show();
+      });
+    }
     windowManager.waitUntilReadyToShow(
       const WindowOptions(
         size: Size(1500, 940),

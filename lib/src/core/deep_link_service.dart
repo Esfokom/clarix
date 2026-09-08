@@ -14,8 +14,9 @@ class DeepLinkService {
     required int page,
     double? scrollOffset,
   }) {
+    final normalizedPath = filePath.replaceAll('\\', '/');
     final params = <String, String>{
-      'path': filePath,
+      'path': normalizedPath,
       'page': page.toString(),
     };
     if (scrollOffset != null) {
@@ -43,7 +44,10 @@ class DeepLinkService {
       final pageStr = uri.queryParameters['page'] ?? uri.queryParameters['p'];
       if (path == null || path.trim().isEmpty || pageStr == null) return null;
 
-      final decodedPath = Uri.decodeComponent(path.trim());
+      var decodedPath = Uri.decodeComponent(path.trim());
+      if (decodedPath.contains('/') && !decodedPath.contains('\\') && Uri.base.scheme == 'file') {
+        decodedPath = decodedPath.replaceAll('/', '\\');
+      }
       final page = int.tryParse(pageStr.trim());
       if (page == null || page < 1) return null;
 

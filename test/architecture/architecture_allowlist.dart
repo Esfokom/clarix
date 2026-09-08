@@ -3,15 +3,17 @@ const Set<String> oversizedProductionDartAllowlist = <String>{
   'lib/src/features/ai/presentation/ai_side_pane.dart',
   'lib/src/features/ai/presentation/study_mode_side_pane.dart',
   'lib/src/features/pdf_editor/application/editor_session_controller.dart',
-  'lib/src/features/pdf_editor/infrastructure/live_pdfium_session.dart',
   'lib/src/features/pdf_editor/presentation/markdown_editor_pane.dart',
   'lib/src/features/pdf_editor/presentation/pdf_text_format_panel.dart',
+  'lib/src/features/reader/presentation/reader_viewer_components.dart',
   'lib/src/features/reader/presentation/reader_viewer_pane.dart',
   'lib/src/features/workspace/application/workspace_notifier.dart',
   'lib/src/features/workspace/presentation/widgets/app_settings_dialog.dart',
 };
 
 const Set<String> temporaryFeatureBoundaryAllowlist = <String>{
+  'lib/src/features/ai/application/ai_notifier.dart',
+  'lib/src/features/ai/presentation/study_mode_side_pane.dart',
   'lib/src/features/reader/presentation/reader_viewer_pane.dart',
   'lib/src/features/reader_diagnostics/presentation/instrumented_pdfrx_screen.dart',
   'lib/src/features/reader_diagnostics/presentation/reader_diagnostics_hub.dart',

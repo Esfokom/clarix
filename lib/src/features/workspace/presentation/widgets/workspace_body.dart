@@ -18,9 +18,8 @@ import 'workspace_common.dart';
 import 'workspace_presets_dialog.dart';
 import 'package:clarix/src/features/scrapbook/presentation/scrapbook_side_pane.dart';
 
-import 'package:clarix/src/core/theme_controller.dart';
 import 'package:clarix/src/core/theme_profile.dart';
-import 'package:clarix/src/features/ai/presentation/study_mode_side_pane.dart';
+import 'package:clarix/src/core/theme_controller.dart';
 
 class WorkspaceBody extends ConsumerStatefulWidget {
   const WorkspaceBody({
@@ -138,6 +137,16 @@ class _WorkspaceBodyState extends ConsumerState<WorkspaceBody> {
                                 }
                                 final notifier = ref.read(workspaceNotifierProvider.notifier);
                                 await notifier.openPdfFiles([item.filePath]);
+                                final currentState = ref.read(workspaceNotifierProvider).value;
+                                final activeTab = currentState?.session.tabs
+                                    .where((t) => t.filePath == item.filePath)
+                                    .firstOrNull;
+                                if (activeTab != null) {
+                                  await notifier.updateViewerState(
+                                    tabId: activeTab.id,
+                                    currentPage: item.pageNumber,
+                                  );
+                                }
                               },
                             )
                           : ReaderInspector(

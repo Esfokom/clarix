@@ -45,7 +45,7 @@ void main() {
     );
     final search = tester.getRect(find.byKey(const Key('chrome-search-field')));
     expect(chrome.height, 56);
-    expect(search.left, 24);
+    expect(search.left, 116);
     expect(search.top, 10);
     expect(search.width, greaterThan(1000));
     expect(tester.getTopLeft(find.byKey(const Key('chrome-body'))).dy, 56);

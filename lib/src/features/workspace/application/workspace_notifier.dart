@@ -1476,6 +1476,34 @@ class WorkspaceNotifier extends AsyncNotifier<WorkspaceFeatureState> {
     }
   }
 
+  Future<void> saveAsNewDocument({
+    required String tabId,
+    required String targetPath,
+  }) async {
+    final current = _requireState();
+    final tab = current.session.tabs.firstWhere((item) => item.id == tabId);
+    final native = ref.read(editorSessionRegistryProvider)[tabId];
+    if (native != null) {
+      await _saveNativeEditor(
+        current: current,
+        tab: tab,
+        controller: native,
+        request: EditorSaveRequest(
+          targetPath: targetPath,
+          mode: EditorSaveMode.saveAs,
+          association: EditorSaveAssociation.followNewSource,
+          recoveryDirectory: _nativeRecoveryDirectory(targetPath),
+        ),
+      );
+    } else {
+      if (File(targetPath).existsSync()) {
+        await openPdfFiles([targetPath]);
+      } else {
+        throw StateError('No active native editor to save, and target file does not exist.');
+      }
+    }
+  }
+
   WorkspaceFeatureState _requireState() {
     final WorkspaceFeatureState? current = state.value;
     if (current == null) {
