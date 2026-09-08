@@ -32,54 +32,68 @@ class ReaderSelectionToolbar extends StatelessWidget {
       constraints: BoxConstraints(
         maxWidth: MediaQuery.sizeOf(context).width - 16,
       ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
+      child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            _SelectionAction(
-              key: const Key('reader-selection-copy'),
-              icon: Icons.copy_outlined,
-              label: 'Copy',
-              onPressed: onCopy,
-            ),
-            _SelectionAction(
-              key: const Key('reader-selection-ask-ai'),
-              icon: Icons.auto_awesome_outlined,
-              label: 'Ask AI',
-              onPressed: onAskAi,
-            ),
-            _SelectionAction(
-              key: const Key('reader-selection-note'),
-              icon: Icons.edit_note_outlined,
-              label: 'Note',
-              onPressed: onNote,
-            ),
-            _SelectionAction(
-              key: const Key('reader-selection-bookmark'),
-              icon: Icons.bookmark_border,
-              label: 'Bookmark',
-              onPressed: onBookmark,
-            ),
-            _SelectionAction(
-              key: const Key('reader-selection-read-aloud'),
-              icon: Icons.volume_up_outlined,
-              label: 'Read aloud',
-              onPressed: onReadAloud,
-            ),
-            const _ToolbarDivider(),
-            ...highlightColors.map(
-              (int color) => _HighlightColorButton(
-                key: Key('reader-highlight-${color.toRadixString(16)}'),
-                color: Color(color),
-                onPressed: () => onHighlight(color),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  _SelectionAction(
+                    key: const Key('reader-selection-copy'),
+                    icon: Icons.copy_outlined,
+                    label: 'Copy',
+                    onPressed: onCopy,
+                  ),
+                  _SelectionAction(
+                    key: const Key('reader-selection-ask-ai'),
+                    icon: Icons.auto_awesome_outlined,
+                    label: 'Ask AI',
+                    onPressed: onAskAi,
+                  ),
+                  _SelectionAction(
+                    key: const Key('reader-selection-note'),
+                    icon: Icons.edit_note_outlined,
+                    label: 'Note',
+                    onPressed: onNote,
+                  ),
+                  _SelectionAction(
+                    key: const Key('reader-selection-bookmark'),
+                    icon: Icons.bookmark_border,
+                    label: 'Bookmark',
+                    onPressed: onBookmark,
+                  ),
+                  _SelectionAction(
+                    key: const Key('reader-selection-read-aloud'),
+                    icon: Icons.volume_up_outlined,
+                    label: 'Read aloud',
+                    onPressed: onReadAloud,
+                  ),
+                ],
               ),
             ),
-            _SelectionAction(
-              key: const Key('reader-selection-more-colors'),
-              label: 'More colours',
-              onPressed: onMoreColors,
+            const SizedBox(height: 2),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                ...highlightColors.map(
+                  (int color) => _HighlightColorButton(
+                    key: Key('reader-highlight-${color.toRadixString(16)}'),
+                    color: Color(color),
+                    onPressed: () => onHighlight(color),
+                  ),
+                ),
+                const _ToolbarDivider(),
+                _SelectionAction(
+                  key: const Key('reader-selection-more-colors'),
+                  label: 'More colours',
+                  onPressed: onMoreColors,
+                ),
+              ],
             ),
           ],
         ),
@@ -157,7 +171,7 @@ class _ToolbarDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     width: 1,
-    height: 24,
+    height: 20,
     margin: const EdgeInsets.symmetric(horizontal: 7),
     color: Colors.white24,
   );

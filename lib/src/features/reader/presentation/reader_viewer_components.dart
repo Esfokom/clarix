@@ -279,22 +279,29 @@ class _ColourWheel extends StatelessWidget {
       height: 176,
       child: GestureDetector(
         key: const Key('highlight-colour-wheel'),
-        onPanDown: (details) => _select(details.localPosition),
-        onPanUpdate: (details) => _select(details.localPosition),
+        behavior: HitTestBehavior.opaque,
+        onPanDown: (details) =>
+            _select(details.localPosition, _wheelSize(context)),
+        onPanUpdate: (details) =>
+            _select(details.localPosition, _wheelSize(context)),
         child: CustomPaint(painter: _ColourWheelPainter(hsv)),
       ),
     );
   }
 
-  void _select(Offset point) {
-    const double radius = 88;
-    final Offset vector = point - const Offset(radius, radius);
+  void _select(Offset point, Size size) {
+    final Offset center = size.center(Offset.zero);
+    final double radius = size.shortestSide / 2;
+    final Offset vector = point - center;
     final double distance = vector.distance;
     if (distance > radius) return;
-    final double hue = (vector.direction * 180 / 3.141592653589793 + 360) % 360;
+    final double hue = (vector.direction * 180 / math.pi + 360) % 360;
     final double saturation = (distance / radius).clamp(0.0, 1.0);
     onChanged(HSVColor.fromAHSV(color.a, hue, saturation, 1).toColor());
   }
+
+  Size _wheelSize(BuildContext context) =>
+      (context.findRenderObject() as RenderBox?)?.size ?? const Size(176, 176);
 }
 
 class _ColourWheelPainter extends CustomPainter {
@@ -308,11 +315,11 @@ class _ColourWheelPainter extends CustomPainter {
     final Paint paint = Paint();
     for (int degrees = 0; degrees < 360; degrees++) {
       paint.color = HSVColor.fromAHSV(1, degrees.toDouble(), 1, 1).toColor();
-      final double start = degrees * 3.141592653589793 / 180;
+      final double start = degrees * math.pi / 180;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         start,
-        0.025,
+        math.pi / 180,
         true,
         paint,
       );
@@ -320,7 +327,7 @@ class _ColourWheelPainter extends CustomPainter {
     final Offset marker =
         center +
         Offset.fromDirection(
-          selected.hue * 3.141592653589793 / 180,
+          selected.hue * math.pi / 180,
           selected.saturation * radius,
         );
     canvas.drawCircle(marker, 7, Paint()..color = Colors.white);
