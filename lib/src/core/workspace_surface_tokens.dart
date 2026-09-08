@@ -42,7 +42,9 @@ const _Palette _lightPalette = _Palette(
   canvas: Color(0xFFF4F4F5),
   canvasRaised: Color(0xFFFAFAFA),
   panel: Color(0xFFFFFFFF),
-  panelRaised: Color(0xFFF4F4F5),
+  // Was 0xFFF4F4F5 (identical to canvas) — anything drawn as a "raised"
+  // surface against canvas/panel (e.g. disabled controls) was invisible.
+  panelRaised: Color(0xFFE4E4E7),
   viewerBackground: Color(0xFFD4D4D8),
   border: Color(0xFFE4E4E7),
   textStrong: Color(0xFF18181B),

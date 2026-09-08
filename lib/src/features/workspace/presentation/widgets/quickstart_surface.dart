@@ -22,7 +22,7 @@ class QuickstartSurface extends ConsumerWidget {
       context,
     );
     return ColoredBox(
-      color: const Color(0xFF2F2F2F),
+      color: colors.canvas,
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1240),
@@ -40,7 +40,7 @@ class QuickstartSurface extends ConsumerWidget {
                           Text(
                             'Welcome to Clarix',
                             style: TextStyle(
-                              color: Color(0xFFE3E0DC),
+                              color: colors.textStrong,
                               fontSize: 28,
                               fontWeight: FontWeight.w600,
                               height: 1.12,
@@ -193,9 +193,9 @@ class _UtilityCard extends StatelessWidget {
           child: Ink(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF343434),
+              color: colors.canvasRaised,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF454545)),
+              border: Border.all(color: colors.border),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -220,7 +220,7 @@ class _UtilityCard extends StatelessWidget {
                     Text(
                       title,
                       style: GoogleFonts.roboto(
-                        color: const Color(0xFFE3E0DC),
+                        color: colors.textStrong,
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
