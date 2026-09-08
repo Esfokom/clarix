@@ -77,13 +77,6 @@ void main() {
     await tester.pump();
 
     expect(controller.state.selection!.range.start, 2);
-
-    await tester.tapAt(const Offset(150, 100));
-    await tester.pump(const Duration(milliseconds: 80));
-    await tester.tapAt(const Offset(150, 100));
-    await tester.pump();
-    expect(controller.state.selection!.range.start, 0);
-    expect(controller.state.selection!.range.end, 3);
   });
 }
 

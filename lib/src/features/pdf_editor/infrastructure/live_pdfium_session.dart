@@ -20,15 +20,6 @@ abstract interface class LivePdfiumSessionOwner
   Future<void> close();
 }
 
-/// Synchronizes the physical PDFium document with the semantic revision.
-abstract interface class LivePdfiumRevisionSync {
-  int get appliedRevision;
-
-  void seedRevision(int revision);
-
-  void acknowledgeRevision(int revision);
-}
-
 /// Supplies one page scan from the PDFium document that owns live edits.
 abstract interface class LivePdfiumPageImportSource {
   Future<LivePdfiumPageInspection> inspectPageForImport({
@@ -61,7 +52,6 @@ final class LivePdfiumPageInspection {
 final class LivePdfiumSession
     implements
         LivePdfiumSessionOwner,
-        LivePdfiumRevisionSync,
         LivePdfiumPageImportSource,
         LivePdfiumSaveSource {
   LivePdfiumSession._(this._document) {
@@ -75,41 +65,6 @@ final class LivePdfiumSession
 
   static Future<LivePdfiumSession> open(String sourcePath) async =>
       LivePdfiumSession._(await PdfDocument.openFile(sourcePath));
-
-  @override
-  int get appliedRevision => _revision;
-
-  /// Copies measured glyph geometry from this document's worker. Physical
-  /// object ownership disambiguates repeated strings on the same page.
-  Future<List<EditorSceneObject>> measureTextObjects(
-    List<EditorSceneObject> objects,
-  ) {
-    _ensureOpen();
-    return const PdfiumWorkerExecutor().run(
-      document: _document,
-      callback: _measureTextObjectsOnWorker,
-      message: objects,
-    );
-  }
-
-  /// Aligns this session with Rust before any physical plan was applied.
-  @override
-  void seedRevision(int revision) {
-    _ensureOpen();
-    _revision = revision;
-  }
-
-  /// Aligns this session after a semantic-only publish.
-  @override
-  void acknowledgeRevision(int revision) {
-    _ensureOpen();
-    if (revision < _revision) {
-      throw StateError(
-        'cannot acknowledge a receding revision: $revision < $_revision',
-      );
-    }
-    _revision = revision;
-  }
 
   Future<EditorDirtyTile> renderTile(LivePdfiumTileRequest request) {
     _ensureOpen();
@@ -249,152 +204,6 @@ final class LivePdfiumSession
   }
 }
 
-List<EditorSceneObject> _measureTextObjectsOnWorker(
-  PdfiumWorkerInput<List<EditorSceneObject>> input,
-) {
-  final document = FPDF_DOCUMENT.fromAddress(input.documentAddress);
-  final result = <EditorSceneObject>[];
-  final pages = <int, List<EditorSceneObject>>{};
-  for (final object in input.message) {
-    final locator = object.physicalLocator;
-    if (locator == null || object.text == null || object.text!.isEmpty) {
-      result.add(object);
-    } else {
-      (pages[locator.pageNumber] ??= []).add(object);
-    }
-  }
-  for (final entry in pages.entries) {
-    final page = pdfiumBindings.FPDF_LoadPage(document, entry.key - 1);
-    if (page.address == 0) {
-      result.addAll(entry.value);
-      continue;
-    }
-    final textPage = pdfiumBindings.FPDFText_LoadPage(page);
-    final left = calloc<Double>();
-    final right = calloc<Double>();
-    final bottom = calloc<Double>();
-    final top = calloc<Double>();
-    try {
-      if (textPage.address == 0) {
-        result.addAll(entry.value);
-        continue;
-      }
-      final byOwner = <int, List<({String text, EditorPdfBox bounds})>>{};
-      for (
-        var index = 0;
-        index < pdfiumBindings.FPDFText_CountChars(textPage);
-        index++
-      ) {
-        final owner = pdfiumBindings.FPDFText_GetTextObject(textPage, index);
-        final unicode = pdfiumBindings.FPDFText_GetUnicode(textPage, index);
-        if (owner.address == 0 ||
-            unicode == 0 ||
-            pdfiumBindings.FPDFText_GetCharBox(
-                  textPage,
-                  index,
-                  left,
-                  right,
-                  bottom,
-                  top,
-                ) ==
-                0) {
-          continue;
-        }
-        (byOwner[owner.address] ??= []).add((
-          text: String.fromCharCode(unicode),
-          bounds: EditorPdfBox(
-            left: left.value,
-            bottom: bottom.value,
-            right: right.value,
-            top: top.value,
-          ),
-        ));
-      }
-      for (final object in entry.value) {
-        final boxes = <EditorTextCharacterBox>[];
-        var offset = 0;
-        final text = object.text!;
-        for (final path in object.physicalLocator!.allObjectPaths) {
-          final owner = objectAtPdfiumPath(page, path);
-          for (final glyph
-              in byOwner[owner.address] ??
-                  const <({String text, EditorPdfBox bounds})>[]) {
-            final start = text.indexOf(glyph.text, offset);
-            if (start < 0) continue;
-            offset = start + glyph.text.length;
-            boxes.add(
-              EditorTextCharacterBox(
-                start: start,
-                end: offset,
-                bounds: _inverseBox(glyph.bounds, object.transform),
-              ),
-            );
-          }
-        }
-        if (boxes.isEmpty) {
-          result.add(object);
-          continue;
-        }
-        final bounds = EditorPdfBox(
-          left: boxes.map((box) => box.bounds.left).reduce(math.min),
-          bottom: boxes.map((box) => box.bounds.bottom).reduce(math.min),
-          right: boxes.map((box) => box.bounds.right).reduce(math.max),
-          top: boxes.map((box) => box.bounds.top).reduce(math.max),
-        );
-        result.add(
-          EditorSceneObject(
-            kind: object.kind,
-            objectId: object.objectId,
-            pageId: object.pageId,
-            text: object.text,
-            bounds: bounds,
-            transform: object.transform,
-            capability: object.capability,
-            capabilityReason: object.capabilityReason,
-            modifiedRevision: object.modifiedRevision,
-            runs: object.runs,
-            characterBoxes: boxes,
-            layout: object.layout,
-            fontFingerprint: object.fontFingerprint,
-            fontAssetHandle: object.fontAssetHandle,
-            physicalLocator: object.physicalLocator,
-          ),
-        );
-      }
-    } finally {
-      calloc.free(left);
-      calloc.free(right);
-      calloc.free(bottom);
-      calloc.free(top);
-      if (textPage.address != 0) pdfiumBindings.FPDFText_ClosePage(textPage);
-      pdfiumBindings.FPDF_ClosePage(page);
-    }
-  }
-  final byId = {for (final object in result) object.objectId: object};
-  return [for (final object in input.message) byId[object.objectId] ?? object];
-}
-
-EditorPdfBox _inverseBox(EditorPdfBox box, EditorAffineTransform transform) {
-  final determinant = transform.a * transform.d - transform.b * transform.c;
-  if (determinant.abs() < 1e-10) return box;
-  final points = [
-    for (final x in [box.left, box.right])
-      for (final y in [box.bottom, box.top])
-        (
-          (transform.d * (x - transform.e) - transform.c * (y - transform.f)) /
-              determinant,
-          (-transform.b * (x - transform.e) + transform.a * (y - transform.f)) /
-              determinant,
-        ),
-  ];
-  return EditorPdfBox(
-    left: points.map((p) => p.$1).reduce(math.min),
-    bottom: points.map((p) => p.$2).reduce(math.min),
-    right: points.map((p) => p.$1).reduce(math.max),
-    top: points.map((p) => p.$2).reduce(math.max),
-  );
-}
-
 ({List<EditorPdfBox> bounds, String? error}) _applyTextPlanOnWorker(
   PdfiumWorkerInput<LivePdfiumEditPlan> input,
 ) {
@@ -481,7 +290,6 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
     final changed = <({FPDF_PAGEOBJECT object, String originalText})>[];
     final changedTransforms =
         <({FPDF_PAGEOBJECT object, EditorAffineTransform original})>[];
-    final transformedBounds = <EditorPdfBox>[];
     try {
       for (final replacement in resolved) {
         for (var index = 0; index < replacement.objects.length; index++) {
@@ -506,58 +314,25 @@ List<EditorPdfBox> _applyTextPlanOrThrow(
             throw StateError('locator does not resolve to a text object');
           }
           final original = _readObjectTransform(object);
-          if (!transform.pageSpace &&
-              !_sameTransform(original, transform.expectedTransform)) {
+          if (!_sameTransform(original, transform.expectedTransform)) {
             throw StateError(
               'locator transform no longer matches the prepared plan',
             );
           }
-          transformedBounds.add(
-            _readTextObjectMetrics(object, textPage).bounds,
-          );
-          final target = transform.pageSpace
-              ? _compose(
-                  transform.transform,
-                  _compose(_inverse(transform.expectedTransform), original),
-                )
-              : transform.transform;
-          _setObjectTransform(object, target);
+          _setObjectTransform(object, transform.transform);
           changedTransforms.add((object: object, original: original));
-          transformedBounds.add(
-            _readTextObjectMetrics(object, textPage).bounds,
-          );
         }
       }
       if (pdfiumBindings.FPDFPage_GenerateContent(page) == 0) {
         throw StateError('PDFium could not regenerate changed page content');
       }
       return <EditorPdfBox>[
-        ...resolved.map((replacement) {
-          var left = replacement.bounds.left;
-          var bottom = replacement.bounds.bottom;
-          var right = replacement.bounds.right;
-          var top = replacement.bounds.top;
-          for (final object in replacement.objects) {
-            final current = _readTextObjectMetrics(object, textPage).bounds;
-            left = math.min(left, current.left);
-            bottom = math.min(bottom, current.bottom);
-            right = math.max(right, current.right);
-            top = math.max(top, current.top);
-          }
-          return EditorPdfBox(
-            left: left - 1,
-            bottom: bottom - 1,
-            right: right + 1,
-            top: top + 1,
-          );
-        }),
-        ...transformedBounds.map(
-          (box) => EditorPdfBox(
-            left: box.left - 1,
-            bottom: box.bottom - 1,
-            right: box.right + 1,
-            top: box.top + 1,
-          ),
+        ...resolved.map((replacement) => replacement.bounds),
+        ...plan.transforms.expand(
+          (transform) => <EditorPdfBox>[
+            transform.oldBounds,
+            transform.newBounds,
+          ],
         ),
       ];
     } catch (_) {
@@ -668,31 +443,6 @@ void _setTextObjectText(FPDF_PAGEOBJECT object, String replacement) {
   } finally {
     calloc.free(buffer);
   }
-}
-
-EditorAffineTransform _compose(
-  EditorAffineTransform a,
-  EditorAffineTransform b,
-) => EditorAffineTransform(
-  a: a.a * b.a + a.c * b.b,
-  b: a.b * b.a + a.d * b.b,
-  c: a.a * b.c + a.c * b.d,
-  d: a.b * b.c + a.d * b.d,
-  e: a.a * b.e + a.c * b.f + a.e,
-  f: a.b * b.e + a.d * b.f + a.f,
-);
-
-EditorAffineTransform _inverse(EditorAffineTransform m) {
-  final determinant = m.a * m.d - m.b * m.c;
-  if (determinant.abs() < 1e-10) throw StateError('singular text transform');
-  return EditorAffineTransform(
-    a: m.d / determinant,
-    b: -m.b / determinant,
-    c: -m.c / determinant,
-    d: m.a / determinant,
-    e: (m.c * m.f - m.d * m.e) / determinant,
-    f: (m.b * m.e - m.a * m.f) / determinant,
-  );
 }
 
 EditorAffineTransform _readObjectTransform(FPDF_PAGEOBJECT object) {

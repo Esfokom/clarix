@@ -3673,15 +3673,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   ) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 5)
+      throw Exception('unexpected arr length: expect 5 but see ${arr.length}');
     return NativePreparedLiveCommand(
       token: dco_decode_String(arr[0]),
       commandId: dco_decode_String(arr[1]),
       previousRevision: dco_decode_u_64(arr[2]),
       committedRevision: dco_decode_u_64(arr[3]),
-      physicalApplyRequired: dco_decode_bool(arr[4]),
-      plan: dco_decode_native_physical_edit_plan(arr[5]),
+      plan: dco_decode_native_physical_edit_plan(arr[4]),
     );
   }
 
@@ -5999,14 +5998,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_commandId = sse_decode_String(deserializer);
     var var_previousRevision = sse_decode_u_64(deserializer);
     var var_committedRevision = sse_decode_u_64(deserializer);
-    var var_physicalApplyRequired = sse_decode_bool(deserializer);
     var var_plan = sse_decode_native_physical_edit_plan(deserializer);
     return NativePreparedLiveCommand(
       token: var_token,
       commandId: var_commandId,
       previousRevision: var_previousRevision,
       committedRevision: var_committedRevision,
-      physicalApplyRequired: var_physicalApplyRequired,
       plan: var_plan,
     );
   }
@@ -8269,7 +8266,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.commandId, serializer);
     sse_encode_u_64(self.previousRevision, serializer);
     sse_encode_u_64(self.committedRevision, serializer);
-    sse_encode_bool(self.physicalApplyRequired, serializer);
     sse_encode_native_physical_edit_plan(self.plan, serializer);
   }
 

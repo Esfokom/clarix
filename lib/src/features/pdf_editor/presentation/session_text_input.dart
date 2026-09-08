@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -86,17 +84,10 @@ final class _SessionTextInputState extends State<SessionTextInput>
       final start = widget.selection.range.start.clamp(0, _value.text.length);
       final end = widget.selection.range.end.clamp(start, _value.text.length);
       final selection = TextSelection(baseOffset: start, extentOffset: end);
-      if (_value.selection.start != selection.start ||
-          _value.selection.end != selection.end) {
+      if (_value.selection != selection) {
         _value = _value.copyWith(selection: selection);
         _connection?.setEditingState(_value);
       }
-    }
-    if ((oldWidget.selection.range != widget.selection.range ||
-            oldWidget.object.objectId != widget.object.objectId) &&
-        mounted &&
-        !_focusNode.hasFocus) {
-      _focusNode.requestFocus();
     }
   }
 
@@ -114,9 +105,7 @@ final class _SessionTextInputState extends State<SessionTextInput>
     key: const Key('session-text-input'),
     focusNode: _focusNode,
     onKeyEvent: (_, event) {
-      if (event is! KeyDownEvent && event is! KeyRepeatEvent) {
-        return KeyEventResult.ignored;
-      }
+      if (event is! KeyDownEvent) return KeyEventResult.ignored;
       if (event.logicalKey == LogicalKeyboardKey.escape) {
         widget.onEscape?.call();
         return KeyEventResult.handled;
@@ -129,43 +118,6 @@ final class _SessionTextInputState extends State<SessionTextInput>
           widget.onUndo?.call();
         }
         return KeyEventResult.handled;
-      }
-      if (HardwareKeyboard.instance.isControlPressed &&
-          event.logicalKey == LogicalKeyboardKey.keyA) {
-        _value = _value.copyWith(
-          selection: TextSelection(
-            baseOffset: 0,
-            extentOffset: _value.text.length,
-          ),
-        );
-        _notifySelection(_value);
-        _connection?.setEditingState(_value);
-        return KeyEventResult.handled;
-      }
-      if (HardwareKeyboard.instance.isControlPressed) {
-        if (event.logicalKey == LogicalKeyboardKey.keyC ||
-            event.logicalKey == LogicalKeyboardKey.keyX) {
-          final range = _value.selection;
-          if (range.isValid && !range.isCollapsed) {
-            unawaited(
-              Clipboard.setData(
-                ClipboardData(text: range.textInside(_value.text)),
-              ),
-            );
-            if (event.logicalKey == LogicalKeyboardKey.keyX) {
-              _replaceSelection('');
-            }
-          }
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.keyV) {
-          unawaited(_paste());
-          return KeyEventResult.handled;
-        }
-        if (event.logicalKey == LogicalKeyboardKey.keyY) {
-          widget.onRedo?.call();
-          return KeyEventResult.handled;
-        }
       }
       if (_value.composing.isValid && !_value.composing.isCollapsed) {
         return KeyEventResult.ignored;
@@ -195,34 +147,6 @@ final class _SessionTextInputState extends State<SessionTextInput>
       _connection?.close();
       _connection = null;
     }
-  }
-
-  Future<void> _paste() async {
-    final objectId = widget.object.objectId;
-    final before = _value;
-    final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (!mounted ||
-        !_focusNode.hasFocus ||
-        widget.object.objectId != objectId ||
-        _value != before ||
-        data?.text == null) {
-      return;
-    }
-    _replaceSelection(data!.text!);
-  }
-
-  void _replaceSelection(String text) {
-    final selection = _value.selection;
-    if (!selection.isValid) return;
-    updateEditingValue(
-      TextEditingValue(
-        text: _value.text.replaceRange(selection.start, selection.end, text),
-        selection: TextSelection.collapsed(
-          offset: selection.start + text.length,
-        ),
-      ),
-    );
-    _connection?.setEditingState(_value);
   }
 
   void _scheduleAttach() {
@@ -270,6 +194,11 @@ final class _SessionTextInputState extends State<SessionTextInput>
     if (value.text == base.text) return;
     final delta = computeTextDelta(base.text, value.text);
     if (delta.replacement.isEmpty && delta.start == delta.end) return;
+    debugPrint(
+      '[editor] text input delta: object=${widget.object.objectId} '
+      'start=${delta.start} end=${delta.end} '
+      'replacement="${delta.replacement}"',
+    );
     _pendingTexts.add(value.text);
     widget.session.applyLocalDelta(
       objectId: widget.object.objectId,

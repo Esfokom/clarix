@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:clarix/src/core/editing/editor_bridge.dart';
 import 'package:clarix/src/core/editing/editor_bridge_types.dart';
@@ -151,61 +150,6 @@ void main() {
     expect(liveSession.appliedPlans, isEmpty);
   });
 
-  test('a semantic-only publish acknowledges the live revision', () async {
-    final liveSession = _FakeLivePdfiumSession();
-    final native = _NativePort();
-    final gateway = BridgeEditorSessionGateway.forTest(
-      openBridgeSession: (_, {String? projectRoot}) async =>
-          EditorBridgeSession.forTest(native),
-      openLivePdfiumSession: (_) async => liveSession,
-      loadLivePdfiumImportManifest: (_) async =>
-          const LivePdfiumImportManifest(
-            sourceFingerprint: 'source',
-            bindings: <LivePdfiumImportBinding>[
-              LivePdfiumImportBinding(
-                objectId: _objectId,
-                sourceKey: 'manifest/page/1/object/0',
-                sourceRevision: 'source',
-                locator: EditorPhysicalLocator(
-                  pageNumber: 1,
-                  objectPath: <int>[0],
-                  objectType: 'text',
-                  sourceFingerprint: 'source',
-                  objectRevision: 0,
-                ),
-              ),
-            ],
-          ),
-    );
-    await gateway.open('fixture.pdf');
-
-    final checkpoint = await gateway.submit(
-      const EditorCommandRequest(
-        commandId: _commandId,
-        baseRevision: 0,
-        payload: EditorCommand(kind: EditorCommandKind.createCheckpoint),
-      ),
-    );
-    expect(checkpoint.committedRevision, 1);
-    expect(liveSession.appliedRevision, 1);
-
-    final applied = await gateway.submit(
-      const EditorCommandRequest(
-        commandId: _commandId,
-        baseRevision: 1,
-        payload: EditorCommand(
-          kind: EditorCommandKind.replaceTextRange,
-          objectId: _objectId,
-          start: 0,
-          end: 6,
-          replacement: 'Changed',
-        ),
-      ),
-    );
-    expect(applied.committedRevision, 2);
-    expect(liveSession.appliedRevision, 2);
-  });
-
   test('routes undo through the live PDFium transaction', () async {
     final liveSession = _FakeLivePdfiumSession();
     final native = _NativePort();
@@ -354,51 +298,6 @@ void main() {
     expect(page.objects.single.objectId, matches(RegExp(r'^[0-9a-f-]{36}$')));
   });
 
-  test('hydration retries once after a revision move', () async {
-    final liveSession = _ImportingLivePdfiumSession();
-    final native = _NativePort()..metadataRevision = 2;
-    final gateway = BridgeEditorSessionGateway.forTest(
-      openBridgeSession: (_, {String? projectRoot}) async =>
-          EditorBridgeSession.forTest(native),
-      openLivePdfiumSession: (_) async => liveSession,
-    );
-    await gateway.open('fixture.pdf');
-
-    await gateway.requestPage(1, 0);
-
-    expect(native.importedPages, hasLength(1));
-    expect(native.importedPages.single.expectedRevision, BigInt.from(2));
-  });
-
-  test('save refuses when the live document lags the Rust revision', () async {
-    final liveSession = _FakeLivePdfiumSession();
-    final native = _NativePort()..metadataRevision = 2;
-    final gateway = BridgeEditorSessionGateway.forTest(
-      openBridgeSession: (_, {String? projectRoot}) async =>
-          EditorBridgeSession.forTest(native),
-      openLivePdfiumSession: (_) async => liveSession,
-    );
-    await gateway.open('fixture.pdf');
-    native.metadataRevision = 4;
-
-    await expectLater(
-      gateway.save(
-        const EditorSaveRequest(
-          targetPath: 'saved.pdf',
-          mode: EditorSaveMode.saveAs,
-          association: EditorSaveAssociation.keepOriginalAssociation,
-        ),
-      ),
-      throwsA(
-        isA<StateError>().having(
-          (error) => error.message,
-          'message',
-          contains('live_pdfium_save_revision_mismatch'),
-        ),
-      ),
-    );
-  });
-
   test(
     'surfaces a recovered projection conflict instead of binding mismatched objects',
     () async {
@@ -425,41 +324,23 @@ const _commandId = '00000000-0000-4000-8000-000000000010';
 const _preparedToken = '00000000-0000-4000-8000-000000000011';
 const _objectId = '00000000-0000-4000-8000-000000000012';
 
-class _FakeLivePdfiumSession
-    implements LivePdfiumSessionOwner, LivePdfiumRevisionSync, LivePdfiumSaveSource {
+class _FakeLivePdfiumSession implements LivePdfiumSessionOwner {
   final List<String> openedPaths = <String>[];
   final List<LivePdfiumEditPlan> appliedPlans = <LivePdfiumEditPlan>[];
   List<EditorTileInvalidation> invalidations = const <EditorTileInvalidation>[];
   bool closed = false;
-  int _revision = 0;
-
-  @override
-  int get appliedRevision => _revision;
-
-  @override
-  void acknowledgeRevision(int revision) {
-    if (revision < _revision) throw StateError('receding revision');
-    _revision = revision;
-  }
-
-  @override
-  void seedRevision(int revision) => _revision = revision;
 
   @override
   Future<LivePdfiumApplyResult> apply(LivePdfiumEditPlan plan) async {
     appliedPlans.add(plan);
-    _revision = plan.revision ?? _revision + 1;
     return LivePdfiumApplyResult(
-      revision: _revision,
+      revision: plan.revision ?? 1,
       invalidations: invalidations,
     );
   }
 
   @override
   Future<void> close() async => closed = true;
-
-  @override
-  Future<Uint8List> saveBytes() async => Uint8List(0);
 }
 
 final class _ImportingLivePdfiumSession extends _FakeLivePdfiumSession
@@ -480,7 +361,6 @@ final class _NativePort
     implements
         NativeEditorPort,
         NativeLivePdfiumPort,
-        NativeLivePdfiumSavePort,
         NativeLivePageImportPort {
   final StreamController<EditorEvent> _events =
       StreamController<EditorEvent>.broadcast();
@@ -488,8 +368,6 @@ final class _NativePort
   bool published = false;
   bool closed = false;
   int legacySubmissions = 0;
-  int _preparedBaseRevision = 0;
-  int metadataRevision = 0;
   Object? importError;
   final List<native.NativeLivePageImport> importedPages =
       <native.NativeLivePageImport>[];
@@ -504,12 +382,12 @@ final class _NativePort
   }
 
   @override
-  Future<EditorSessionMetadata> metadata() async => EditorSessionMetadata(
+  Future<EditorSessionMetadata> metadata() async => const EditorSessionMetadata(
     schemaVersion: 1,
     sessionId: '00000000-0000-4000-8000-000000000001',
     documentId: '00000000-0000-4000-8000-000000000002',
     sourceFingerprint: 'source',
-    revision: metadataRevision,
+    revision: 0,
     pageCount: 1,
   );
 
@@ -545,17 +423,15 @@ final class _NativePort
     EditorCommandRequest request,
   ) async {
     prepared = true;
-    _preparedBaseRevision = request.baseRevision;
-    return EditorPreparedLiveCommand(
+    return const EditorPreparedLiveCommand(
       token: _preparedToken,
-      commandId: request.commandId,
-      previousRevision: request.baseRevision,
-      committedRevision: request.baseRevision + 1,
-      physicalApplyRequired: true,
+      commandId: _commandId,
+      previousRevision: 0,
+      committedRevision: 1,
       plan: EditorPhysicalEditPlan(
-        previousRevision: request.baseRevision,
-        revision: request.baseRevision + 1,
-        operations: const <EditorPhysicalEditOperation>[
+        previousRevision: 0,
+        revision: 1,
+        operations: <EditorPhysicalEditOperation>[
           EditorPhysicalEditOperation(
             kind: EditorPhysicalEditOperationKind.replaceText,
             objectId: _objectId,
@@ -575,7 +451,7 @@ final class _NativePort
   @override
   Future<EditorCommandResult> publishPreparedLiveCommand(String token) async {
     published = true;
-    return _result(_commandId, _preparedBaseRevision);
+    return _result(_commandId, 0);
   }
 
   @override
@@ -594,12 +470,6 @@ final class _NativePort
   @override
   Future<EditorSaveResult> save(EditorSaveRequest request) =>
       throw UnimplementedError();
-
-  @override
-  Future<EditorSaveResult> saveLivePdfium(
-    EditorSaveRequest request,
-    List<int> pdfBytes,
-  ) => throw UnimplementedError();
 
   @override
   Future<EditorCommandResult> checkpoint({

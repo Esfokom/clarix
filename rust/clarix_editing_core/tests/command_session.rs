@@ -104,38 +104,6 @@ fn annotation_creation_is_revisioned_and_undoable() {
 }
 
 #[test]
-fn undo_of_annotation_only_history_does_not_require_a_physical_plan() {
-    let (model, _) = sample_model("text");
-    let page_id = model.pages[0].id;
-    let annotation = AnnotationNode::comment(
-        ObjectId::from_source_key("annotation-prepare/page/1/comment/1"),
-        page_id,
-        PdfBox::new(10.0, 10.0, 11.0, 11.0).unwrap(),
-        AnnotationAnchor::PagePoint { x: 10.0, y: 10.0 },
-        "Note",
-    );
-    let mut session = EditorSessionState::new(SessionId::new(), model);
-    let created = session
-        .submit(CommandEnvelope::user(
-            CommandId::new(),
-            DocumentRevision::INITIAL,
-            EditorCommand::CreateAnnotation { annotation },
-        ))
-        .unwrap();
-
-    let prepared = session
-        .prepare(CommandEnvelope::user(
-            CommandId::new(),
-            created.committed_revision,
-            EditorCommand::Undo,
-        ))
-        .unwrap();
-
-    assert!(!prepared.physical_apply_required);
-    assert!(prepared.physical_plan.is_none());
-}
-
-#[test]
 fn annotation_deletion_is_revisioned_and_undoable() {
     let (model, _) = sample_model("text");
     let page_id = model.pages[0].id;

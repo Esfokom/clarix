@@ -235,7 +235,7 @@ class EditorBridgeSession {
         value.committedRevision <= value.previousRevision ||
         value.plan.previousRevision != value.previousRevision ||
         value.plan.revision != value.committedRevision ||
-        (value.physicalApplyRequired && value.plan.operations.isEmpty)) {
+        value.plan.operations.isEmpty) {
       throw const EditorProtocolViolation(
         'prepared live command does not describe a valid uncommitted revision',
       );
@@ -537,14 +537,10 @@ class EditorBridgeSession {
       return;
     }
     _closed = true;
-    // FRB cancellation can wait for the Rust event producer to return. Closing
-    // the native session terminates that producer, so start both operations
-    // before awaiting either one.
-    final cancellation = _nativeSubscription.cancel();
+    await _nativeSubscription.cancel();
     try {
       await _native.close();
     } finally {
-      await cancellation;
       await _eventsController.close();
     }
   }

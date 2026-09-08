@@ -47,7 +47,6 @@ two workers per document.
 | Area | Required evidence | Current state |
 |---|---|---|
 | Durable editing | 10,000 accepted replace/undo operations, reopen at revision 10,000, exact text and journal rows | Harness implemented |
-| Live PDFium round trip | Backspace/type through `SessionTextInput`, save via the live owner, reopen and extract the changed text | Required: `tool/editing_phase3/run_live_round_trip.ps1` |
 | Page service | 1,000 pages visited exactly once, maximum two workers, empty in-flight queue | Harness implemented |
 | Patch cache | cold/warm behavior, decoded bytes within budget, coldest non-visible eviction | Harness implemented |
 | Save loop | repeated materialize/independent-validate cycles and no temp/backup leak | Harness implemented |

@@ -227,7 +227,6 @@ impl EditorSessionState {
             &before_objects,
             &after_objects,
         );
-        let physical_apply_required = physical_plan.is_some();
         Ok(PreparedCommand {
             envelope,
             previous_revision,
@@ -236,7 +235,6 @@ impl EditorSessionState {
             after_objects,
             inverse,
             physical_plan,
-            physical_apply_required,
             result,
             next_state: Box::new(next_state),
         })

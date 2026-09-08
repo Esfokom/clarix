@@ -3959,14 +3959,12 @@ impl SseDecode for crate::editing_api::NativePreparedLiveCommand {
         let mut var_commandId = <String>::sse_decode(deserializer);
         let mut var_previousRevision = <u64>::sse_decode(deserializer);
         let mut var_committedRevision = <u64>::sse_decode(deserializer);
-        let mut var_physicalApplyRequired = <bool>::sse_decode(deserializer);
         let mut var_plan = <crate::editing_api::NativePhysicalEditPlan>::sse_decode(deserializer);
         return crate::editing_api::NativePreparedLiveCommand {
             token: var_token,
             command_id: var_commandId,
             previous_revision: var_previousRevision,
             committed_revision: var_committedRevision,
-            physical_apply_required: var_physicalApplyRequired,
             plan: var_plan,
         };
     }
@@ -6301,7 +6299,6 @@ impl flutter_rust_bridge::IntoDart for crate::editing_api::NativePreparedLiveCom
             self.command_id.into_into_dart().into_dart(),
             self.previous_revision.into_into_dart().into_dart(),
             self.committed_revision.into_into_dart().into_dart(),
-            self.physical_apply_required.into_into_dart().into_dart(),
             self.plan.into_into_dart().into_dart(),
         ]
         .into_dart()
@@ -8046,7 +8043,6 @@ impl SseEncode for crate::editing_api::NativePreparedLiveCommand {
         <String>::sse_encode(self.command_id, serializer);
         <u64>::sse_encode(self.previous_revision, serializer);
         <u64>::sse_encode(self.committed_revision, serializer);
-        <bool>::sse_encode(self.physical_apply_required, serializer);
         <crate::editing_api::NativePhysicalEditPlan>::sse_encode(self.plan, serializer);
     }
 }

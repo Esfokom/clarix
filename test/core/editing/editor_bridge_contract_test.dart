@@ -208,7 +208,6 @@ class FakeLivePdfiumPort extends FakeNativeEditorPort
       commandId: request.commandId,
       previousRevision: request.baseRevision,
       committedRevision: request.baseRevision + 1,
-      physicalApplyRequired: true,
       plan: EditorPhysicalEditPlan(
         previousRevision: request.baseRevision,
         revision: request.baseRevision + 1,

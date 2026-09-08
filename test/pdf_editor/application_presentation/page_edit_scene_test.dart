@@ -16,46 +16,6 @@ import 'package:pdfrx/pdfrx.dart';
 import 'support/native_editor_harness.dart';
 
 void main() {
-  testWidgets('a live binding failure shows an actionable banner', (
-    tester,
-  ) async {
-    final harness = NativeEditorTestHarness(text: 'Before');
-    await harness.open(selectionOffset: 0);
-    addTearDown(harness.controller.close);
-    final scene = EditorPageScene(
-      schemaVersion: 1,
-      pageId: 'page-1',
-      pageNumber: 1,
-      width: 420,
-      height: 72,
-      revision: 0,
-      objects: <EditorSceneObject>[harness.gateway.object],
-    );
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: SizedBox(
-          width: 420,
-          height: 72,
-          child: PageEditScene(
-            scene: scene,
-            document: harness.controller.state.copyWith(
-              errorCode: 'live_pdfium_binding_missing',
-            ),
-            session: harness.controller,
-            editingEnabled: true,
-            displaySize: const Size(420, 72),
-          ),
-        ),
-      ),
-    );
-
-    expect(find.byKey(const Key('editor-error-banner')), findsOneWidget);
-    expect(find.textContaining('not bound to the live document'), findsOneWidget);
-    expect(find.byKey(const Key('editor-error-retry')), findsOneWidget);
-    expect(find.byKey(const Key('editor-error-dismiss')), findsOneWidget);
-  });
-
   testWidgets('native text input is dormant until edit mode is enabled', (
     tester,
   ) async {
@@ -310,8 +270,8 @@ void main() {
 
     await tester.pumpWidget(
       _harness(
-        scene: _scene(3),
-        document: _document(3, selectedObject: 'object-1'),
+        scene: _scene(1),
+        document: _document(1, selectedObject: 'object-1'),
         patches: <String, CleanPatchAsset>{'object-1': patch},
         liveTiles: <LivePdfiumTileAsset>[tile],
         observer: RecordingLayerObserver(),
