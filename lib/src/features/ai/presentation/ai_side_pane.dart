@@ -737,7 +737,7 @@ class _ComposerLoadingIndicatorState extends State<_ComposerLoadingIndicator>
                 color: widget.colors.accent,
                 shape: BoxShape.circle,
               ),
-              child: SizedBox(width: 7, height: 7),
+              child: const SizedBox(width: 7, height: 7),
             ),
           ),
           const SizedBox(width: 8),

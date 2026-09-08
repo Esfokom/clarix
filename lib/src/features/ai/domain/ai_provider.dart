@@ -82,6 +82,27 @@ class AiProviderProfile {
   final int contextWindowTokens;
   final Map<String, String> headers;
 
+  AiProviderProfile copyWith({
+    String? id,
+    String? label,
+    String? baseUrl,
+    String? modelId,
+    bool? shareRetrievedPassages,
+    int? contextWindowTokens,
+    Map<String, String>? headers,
+  }) {
+    return AiProviderProfile.create(
+      id: id ?? this.id,
+      label: label ?? this.label,
+      baseUrl: baseUrl ?? this.baseUrl,
+      modelId: modelId ?? this.modelId,
+      shareRetrievedPassages:
+          shareRetrievedPassages ?? this.shareRetrievedPassages,
+      contextWindowTokens: contextWindowTokens ?? this.contextWindowTokens,
+      headers: headers ?? this.headers,
+    );
+  }
+
   Uri get normalizedBaseUri => Uri.parse(baseUrl);
   Uri get chatCompletionsUri => normalizedBaseUri.resolve('chat/completions');
 

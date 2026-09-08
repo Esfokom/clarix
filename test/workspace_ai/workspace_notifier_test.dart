@@ -71,7 +71,7 @@ void main() {
         container.read(aiNotifierProvider).requireValue.chat.selectedProviderId,
         isNull,
       );
-      expect(await store.readDefaultProfileId(), isNull);
+      expect(await store.readDefaultProfileId(), 'local-gemma');
     },
   );
 }

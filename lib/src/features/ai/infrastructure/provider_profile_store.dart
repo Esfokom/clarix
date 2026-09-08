@@ -42,7 +42,7 @@ class ProviderProfileStore {
     id: 'local-gemma',
     label: 'Local Gemma 4 (Ollama)',
     baseUrl: 'http://localhost:11434/v1',
-    modelId: 'gemma-eab',
+    modelId: 'gemma-eab:latest',
     shareRetrievedPassages: true,
     contextWindowTokens: 131072,
   );
@@ -67,6 +67,11 @@ class ProviderProfileStore {
         .map(
           (dynamic value) =>
               AiProviderProfile.fromJson(value as Map<String, dynamic>),
+        )
+        .map(
+          (AiProviderProfile profile) => profile.id == 'local-gemma' && profile.modelId == 'gemma-eab'
+              ? profile.copyWith(modelId: 'gemma-eab:latest')
+              : profile,
         )
         .toList(growable: true);
     if (!profiles.any((AiProviderProfile p) => p.id == 'local-gemma')) {

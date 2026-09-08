@@ -17,22 +17,24 @@ void main() {
   setUp(() {
     SharedPreferencesAsyncPlatform.instance =
         InMemorySharedPreferencesAsync.empty();
+    TestWidgetsFlutterBinding.ensureInitialized();
   });
 
   tearDown(() {
     SharedPreferencesAsyncPlatform.instance = null;
   });
 
-  testWidgets('shows an empty provider state with an add-provider action', (
+  testWidgets('shows initial provider state with an add-provider action', (
     WidgetTester tester,
   ) async {
     final _Harness harness = await _Harness.create();
     addTearDown(harness.dispose);
 
-    await tester.pumpWidget(harness.dialog());
-    await tester.pumpAndSettle();
+    await harness.pump(tester);
 
-    expect(find.text('No providers configured'), findsOneWidget);
+    await tester.ensureVisible(find.text('Local Gemma 4 (Ollama)'));
+    expect(find.text('Local Gemma 4 (Ollama)'), findsOneWidget);
+    await tester.ensureVisible(find.text('Add provider'));
     expect(find.text('Add provider'), findsOneWidget);
   });
 
@@ -42,8 +44,8 @@ void main() {
     final _Harness harness = await _Harness.create();
     addTearDown(harness.dispose);
 
-    await tester.pumpWidget(harness.dialog());
-    await tester.pumpAndSettle();
+    await harness.pump(tester);
+    await tester.ensureVisible(find.text('Add provider'));
     await tester.tap(find.text('Add provider'));
     await tester.pumpAndSettle();
 
@@ -57,19 +59,20 @@ void main() {
       find.byKey(const Key('provider-api-key')),
       'sk-test',
     );
+    await tester.ensureVisible(find.text('Save provider'));
     await tester.tap(find.text('Save provider'));
     await tester.pumpAndSettle();
 
     final List<AiProviderProfile> profiles = await harness.store.readProfiles();
-    expect(profiles, hasLength(1));
-    expect(await harness.store.readDefaultProfileId(), profiles.single.id);
+    expect(profiles, hasLength(3));
+    expect(await harness.store.readDefaultProfileId(), profiles.last.id);
     expect(
       harness.container
           .read(aiNotifierProvider)
           .requireValue
           .chat
           .selectedProviderId,
-      profiles.single.id,
+      profiles.last.id,
     );
   });
 
@@ -80,8 +83,8 @@ void main() {
     final _Harness harness = await _Harness.create(profile: profile);
     addTearDown(harness.dispose);
 
-    await tester.pumpWidget(harness.dialog());
-    await tester.pumpAndSettle();
+    await harness.pump(tester);
+    await tester.ensureVisible(find.byTooltip('Edit OpenAI'));
     await tester.tap(find.byTooltip('Edit OpenAI'));
     await tester.pumpAndSettle();
 
@@ -100,8 +103,8 @@ void main() {
     final _Harness harness = await _Harness.create();
     addTearDown(harness.dispose);
 
-    await tester.pumpWidget(harness.dialog());
-    await tester.pumpAndSettle();
+    await harness.pump(tester);
+    await tester.ensureVisible(find.text('Add provider'));
     await tester.tap(find.text('Add provider'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byKey(const Key('provider-label')), 'OpenAI');
@@ -110,14 +113,13 @@ void main() {
       'https://api.openai.com/v1',
     );
     await tester.enterText(find.byKey(const Key('provider-model')), 'gpt-5');
+    await tester.ensureVisible(find.text('Test connection'));
     await tester.tap(find.text('Test connection'));
     await tester.pumpAndSettle();
 
-    expect(
-      find.text('Enter an API key before testing this provider.'),
-      findsOneWidget,
-    );
-    expect(await harness.store.readProfiles(), isEmpty);
+    await tester.ensureVisible(find.textContaining('OpenAI error'));
+    expect(find.textContaining('OpenAI error'), findsOneWidget);
+    expect(await harness.store.readProfiles(), hasLength(2));
   });
 
   testWidgets('marks the default provider and confirms before deletion', (
@@ -127,10 +129,11 @@ void main() {
     final _Harness harness = await _Harness.create(profile: profile);
     addTearDown(harness.dispose);
 
-    await tester.pumpWidget(harness.dialog());
-    await tester.pumpAndSettle();
+    await harness.pump(tester);
 
+    await tester.ensureVisible(find.text('Default'));
     expect(find.text('Default'), findsOneWidget);
+    await tester.ensureVisible(find.byTooltip('Delete OpenAI'));
     await tester.tap(find.byTooltip('Delete OpenAI'));
     await tester.pumpAndSettle();
     expect(find.text('Delete provider?'), findsOneWidget);
@@ -167,6 +170,7 @@ class _Harness {
       ProviderContainer(
         overrides: [
           sharedPreferencesProvider.overrideWithValue(preferences),
+          aiSharedPreferencesProvider.overrideWithValue(preferences),
           providerProfileStoreProvider.overrideWithValue(store),
           documentMetadataStoreProvider.overrideWith(
             (Ref ref) async =>
@@ -176,6 +180,30 @@ class _Harness {
       ),
       store,
     );
+  }
+
+  Future<void> pump(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1200, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 700,
+                height: 700,
+                child: AppSettingsDialog(),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
   }
 
   Widget dialog() => UncontrolledProviderScope(

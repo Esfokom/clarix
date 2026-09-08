@@ -68,9 +68,7 @@ enum StudyTab {
   concepts,
   studyCards,
   pageSummary,
-  timeline,
-  simulation,
-  auditor,
+  audiobook,
   bionic,
 }
 
@@ -139,6 +137,11 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
   int _quizScore = 0;
   bool _isRefreshing = false;
 
+  // Bionic Reading state
+  double _bionicFixationRatio = 0.45;
+  double _bionicFontSize = 12.5;
+  String _bionicSource = 'summary';
+
   @override
   void initState() {
     super.initState();
@@ -157,6 +160,14 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
     if (_activeDocumentId != currentId) {
       _activeDocumentId = currentId;
       _generateMaterialForCurrentDocument();
+
+      final docContext = widget.documentContext;
+      if (docContext != null && docContext.filePath.isNotEmpty) {
+        ref.read(offlineAudioBookServiceProvider).loadPdfDocument(
+          docContext.filePath,
+          _cleanTitle(docContext.title),
+        );
+      }
     }
 
     if (_isRefreshing && !widget.aiState.chat.chatBusy) {
@@ -875,13 +886,18 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
             message: 'Offline Audio-Book Mode',
             child: IconButton(
               icon: const Icon(LucideIcons.headphones, size: 15, color: Color(0xFFA1A1AA)),
-              onPressed: () {
-                final text = _pageSummaryText;
+              onPressed: () async {
                 final audioBook = ref.read(offlineAudioBookServiceProvider);
-                audioBook.loadBook([text]);
+                final doc = widget.documentContext;
+                if (doc != null && doc.filePath.isNotEmpty) {
+                  await audioBook.loadPdfDocument(doc.filePath, _cleanTitle(doc.title));
+                } else if (_pageSummaryText.isNotEmpty) {
+                  audioBook.loadBook([_pageSummaryText], title: 'Study Notes');
+                }
                 audioBook.play();
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Offline Audio-Book Mode started!'), duration: Duration(seconds: 2)),
+                  SnackBar(content: Text('Audiobook reading "${audioBook.bookTitle}"!'), duration: const Duration(seconds: 2)),
                 );
               },
             ),
@@ -1099,10 +1115,8 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
           _tabChip(StudyTab.concepts, '10 Concepts', LucideIcons.lightbulb),
           _tabChip(StudyTab.studyCards, 'Study Guide', LucideIcons.bookOpen),
           _tabChip(StudyTab.pageSummary, 'Summary', LucideIcons.fileText),
-          _tabChip(StudyTab.timeline, 'Timeline Seekbar', LucideIcons.history),
-          _tabChip(StudyTab.simulation, 'Simulation Sliders', LucideIcons.sliders),
-          _tabChip(StudyTab.auditor, 'Bias Auditor', LucideIcons.shieldCheck),
-          _tabChip(StudyTab.bionic, 'Bionic Reflow', LucideIcons.eye),
+          _tabChip(StudyTab.audiobook, 'Audiobook', LucideIcons.headphones),
+          _tabChip(StudyTab.bionic, 'Bionic Reading', LucideIcons.eye),
         ],
       ),
     );
@@ -1157,117 +1171,598 @@ class _StudyModeSidePaneState extends ConsumerState<StudyModeSidePane> {
       StudyTab.studyCards => _buildStudyCardsView(),
       StudyTab.pageSummary => _buildPageSummaryView(),
       StudyTab.qaChat => _buildQaChatView(),
-      StudyTab.timeline => _buildTimelineView(),
-      StudyTab.simulation => _buildSimulationView(),
-      StudyTab.auditor => _buildAuditorView(),
+      StudyTab.audiobook => _buildAudiobookView(),
       StudyTab.bionic => _buildBionicView(),
     };
   }
 
-  Widget _buildTimelineView() {
-    final timelineService = ref.watch(gemmaTimelineServiceProvider);
-    if (timelineService.timelineEvents.isEmpty) {
-      timelineService.extractChronology(_pageSummaryText);
-    }
-    return SingleChildScrollView(
-      child: TimelineSeekbarWidget(timelineService: timelineService),
-    );
-  }
+  Widget _buildAudiobookView() {
+    final audioBook = ref.watch(offlineAudioBookServiceProvider);
+    final docTitle = audioBook.bookTitle.isNotEmpty
+        ? audioBook.bookTitle
+        : _cleanTitle(widget.documentContext?.title ?? 'Active PDF Document');
 
-  Widget _buildSimulationView() {
-    final simService = ref.watch(gemmaSimulationServiceProvider);
-    final formulas = simService.parsedFormulas.isEmpty
-        ? simService.parseFormulasFromJson(_pageSummaryText)
-        : simService.parsedFormulas;
+    final paragraphs = audioBook.currentParagraphs;
+    final activeParIndex = audioBook.currentParagraphIndex;
+    final isPlaying = audioBook.isPlaying;
 
-    return ListView.builder(
-      itemCount: formulas.length,
-      itemBuilder: (context, index) {
-        return SimulationSliderCard(
-          formula: formulas[index],
-          simulationService: simService,
-        );
-      },
-    );
-  }
-
-  Widget _buildAuditorView() {
-    final auditorService = ref.watch(gemmaAuditorServiceProvider);
-    final items = auditorService.auditedFallacies.isEmpty
-        ? auditorService.auditDocumentBiasAndFallacies(_pageSummaryText)
-        : auditorService.auditedFallacies;
-
-    return ListView.builder(
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final isHigh = item.severity == FallacySeverity.high;
-        final color = isHigh ? const Color(0xFFEF4444) : const Color(0xFFF59E0B);
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: const Color(0x331E293B),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.5)),
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF18181B),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF3F3F46)),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFF27272A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+              border: Border(bottom: BorderSide(color: Color(0xFF3F3F46))),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(LucideIcons.headphones, size: 16, color: Color(0xFFA5B4FC)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Audiobook • $docTitle',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: isPlaying ? const Color(0x3310B981) : const Color(0xFF3F3F46),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: isPlaying ? const Color(0xFF10B981) : const Color(0xFF71717A)),
+                      ),
+                      child: Text(
+                        isPlaying ? 'PLAYING' : 'PAUSED',
+                        style: TextStyle(
+                          color: isPlaying ? const Color(0xFF34D399) : const Color(0xFFA1A1AA),
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Reading Page ${audioBook.currentPageIndex + 1} of ${audioBook.totalPages} directly from open PDF document.',
+                  style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 10.5),
+                ),
+              ],
+            ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(LucideIcons.shieldAlert, size: 14, color: color),
-                  const SizedBox(width: 6),
-                  Text(item.fallacyType, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.bold)),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: color.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(4)),
-                    child: Text(item.severity.name.toUpperCase(), style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
+
+          // Controls Toolbar (Voice & Speed & Page Navigation)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: const Color(0xFF202024),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    // Voice Selector
+                    const Icon(LucideIcons.user, size: 14, color: Color(0xFFA5B4FC)),
+                    const SizedBox(width: 6),
+                    const Text('Voice: ', style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    PopupMenuButton<String>(
+                      initialValue: audioBook.selectedVoice,
+                      tooltip: 'Select Voice',
+                      onSelected: (voice) => audioBook.setSelectedVoice(voice),
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'Zira', child: Text('Microsoft Zira (Female - Clear)', style: TextStyle(fontSize: 11))),
+                        PopupMenuItem(value: 'David', child: Text('Microsoft David (Male - Deep)', style: TextStyle(fontSize: 11))),
+                        PopupMenuItem(value: 'Mark', child: Text('Microsoft Mark (Male - Warm)', style: TextStyle(fontSize: 11))),
+                        PopupMenuItem(value: 'kitten_female_1', child: Text('Kitten Female (Neural)', style: TextStyle(fontSize: 11))),
+                        PopupMenuItem(value: 'kitten_male_1', child: Text('Kitten Male (Neural)', style: TextStyle(fontSize: 11))),
+                      ],
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF27272A),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFF3F3F46)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              audioBook.selectedVoice.contains('Zira')
+                                  ? 'Microsoft Zira (Female)'
+                                  : audioBook.selectedVoice.contains('David')
+                                      ? 'Microsoft David (Male)'
+                                      : audioBook.selectedVoice.contains('Mark')
+                                          ? 'Microsoft Mark (Male)'
+                                          : audioBook.selectedVoice,
+                              style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(LucideIcons.chevronDown, size: 12, color: Colors.white70),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Spacer(),
+
+                    // Speed Selector
+                    PopupMenuButton<double>(
+                      initialValue: audioBook.playbackSpeed,
+                      tooltip: 'Playback Speed',
+                      onSelected: (speed) => audioBook.setPlaybackSpeed(speed),
+                      itemBuilder: (context) => [0.75, 1.0, 1.25, 1.5, 2.0].map((s) {
+                        return PopupMenuItem<double>(
+                          value: s,
+                          child: Text('${s}x Speed', style: const TextStyle(fontSize: 11)),
+                        );
+                      }).toList(),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF27272A),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFF3F3F46)),
+                        ),
+                        child: Text(
+                          '${audioBook.playbackSpeed}x Speed',
+                          style: const TextStyle(color: Color(0xFFA5B4FC), fontSize: 10.5, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+
+                // Transport Controls Bar
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: const Icon(LucideIcons.skipBack, size: 16, color: Colors.white70),
+                      onPressed: () => audioBook.previousPage(),
+                      tooltip: 'Previous Page',
+                    ),
+                    const SizedBox(width: 12),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        if (isPlaying) {
+                          audioBook.pause();
+                        } else {
+                          audioBook.play();
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isPlaying ? const Color(0xFFEF4444) : const Color(0xFF6366F1),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      icon: Icon(isPlaying ? LucideIcons.pause : LucideIcons.play, size: 16),
+                      label: Text(isPlaying ? 'Pause Audiobook' : 'Play Audiobook', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton(
+                      icon: const Icon(LucideIcons.skipForward, size: 16, color: Colors.white70),
+                      onPressed: () => audioBook.nextPage(),
+                      tooltip: 'Next Page',
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(height: 1, color: Color(0xFF3F3F46)),
+
+          // Scrollable PDF Text View with Live Paragraph Highlight (Karaoke Tracker)
+          Expanded(
+            child: paragraphs.isEmpty
+                ? const Center(
+                    child: Text('No PDF text extracted for this page.', style: TextStyle(color: Colors.white54)),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: paragraphs.length,
+                    itemBuilder: (context, index) {
+                      final isCurrentLine = isPlaying && index == activeParIndex;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isCurrentLine ? const Color(0x336366F1) : const Color(0xFF202024),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isCurrentLine ? const Color(0xFF818CF8) : const Color(0xFF27272A),
+                            width: isCurrentLine ? 1.5 : 1.0,
+                          ),
+                          boxShadow: isCurrentLine
+                              ? [
+                                  const BoxShadow(
+                                    color: Color(0x446366F1),
+                                    blurRadius: 8,
+                                    offset: Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (isCurrentLine)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6366F1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(LucideIcons.volume2, size: 10, color: Colors.white),
+                                    SizedBox(width: 4),
+                                    Text('READING NOW', style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            SelectableText(
+                              paragraphs[index],
+                              style: TextStyle(
+                                color: isCurrentLine ? Colors.white : const Color(0xFFD4D4D8),
+                                fontSize: 12,
+                                fontWeight: isCurrentLine ? FontWeight.w600 : FontWeight.normal,
+                                height: 1.5,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(item.claim, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 2),
-              Text(item.explanation, style: const TextStyle(color: Colors.white70, fontSize: 10.5)),
-            ],
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   Widget _buildBionicView() {
-    final cognitiveService = ref.watch(gemmaCognitiveUiServiceProvider);
-    final reflowed = cognitiveService.reflowLayout(_pageSummaryText);
-    final bionicText = cognitiveService.generateBionicReadingText(reflowed);
+    String sourceText = switch (_bionicSource) {
+      'studyCards' => _studyCardsText,
+      'concepts' => _concepts.map((c) => '• ${c['title']}: ${c['explanation']}\n  - Application: ${c['application']}\n  - Takeaway: ${c['takeaway']}').join('\n\n'),
+      _ => _pageSummaryText,
+    };
+
+    if (sourceText.trim().isEmpty) {
+      final docTitle = _cleanTitle(widget.documentContext?.title ?? 'Active Document');
+      sourceText = '📌 $docTitle Study Notes\n\n'
+          'Bionic Reading bolds the fixation letters of every word to guide your eyes smoothly through dense textbook material.\n'
+          'Use the source buttons above or generate a Summary/Study Guide first to view Bionic Reading formatting!';
+    }
+
+    final spans = _generateBionicSpans(sourceText);
 
     return Container(
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFF242427),
-        borderRadius: BorderRadius.circular(10),
+        color: const Color(0xFF18181B),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF3F3F46)),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
+      child: Column(
+        children: [
+          // Bionic Header & Explanation Strip
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: const BoxDecoration(
+              color: Color(0xFF27272A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+              border: Border(bottom: BorderSide(color: Color(0xFF3F3F46))),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(LucideIcons.eye, size: 14, color: Color(0xFFE4E4E7)),
-                SizedBox(width: 6),
-                Text('Reasoning-Injected Bionic Reading View', style: TextStyle(color: Color(0xFFFAFAFA), fontSize: 12, fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.eye, size: 16, color: Color(0xFFA5B4FC)),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Bionic Reading View',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    const Spacer(),
+                    // TTS Audio Play Button
+                    Tooltip(
+                      message: 'Listen to text (Audiobook TTS)',
+                      child: InkWell(
+                        onTap: () {
+                          if (sourceText.trim().isNotEmpty) {
+                            final audioBook = ref.read(offlineAudioBookServiceProvider);
+                            final docTitle = _cleanTitle(widget.documentContext?.title ?? 'Bionic Notes');
+                            audioBook.loadBook([sourceText], title: '$docTitle (Bionic)');
+                            audioBook.play();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Audiobook reading "$docTitle (Bionic)"!'), duration: const Duration(seconds: 2)),
+                            );
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0x336366F1),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0x666366F1)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(LucideIcons.volume2, size: 12, color: Color(0xFFA5B4FC)),
+                              SizedBox(width: 4),
+                              Text('Listen', style: TextStyle(color: Color(0xFFA5B4FC), fontSize: 10, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Copy Plain Text Button
+                    Tooltip(
+                      message: 'Copy text',
+                      child: InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: sourceText));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Bionic text copied to clipboard!'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3F3F46),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Icon(LucideIcons.copy, size: 12, color: Colors.white70),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  '💡 Bionic Reading highlights initial fixation letters of words to guide your eyes through dense textbook material, boosting speed & focus.',
+                  style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 10.5, height: 1.3),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            SelectableText(
-              bionicText,
-              style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.6),
+          ),
+
+          // Control Toolbar (Source & Fixation Intensity & Font Size)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: const Color(0xFF202024),
+            child: Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                // Source selector
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Source: ', style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    _bionicSourceChip('Summary', 'summary'),
+                    const SizedBox(width: 4),
+                    _bionicSourceChip('Study Guide', 'studyCards'),
+                    const SizedBox(width: 4),
+                    _bionicSourceChip('Concepts', 'concepts'),
+                  ],
+                ),
+                // Fixation Intensity
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Fixation: ', style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    _bionicFixationChip('Low', 0.30),
+                    const SizedBox(width: 4),
+                    _bionicFixationChip('Med', 0.45),
+                    const SizedBox(width: 4),
+                    _bionicFixationChip('High', 0.60),
+                  ],
+                ),
+                // Font Size Adjuster
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('Size: ', style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    InkWell(
+                      onTap: () {
+                        if (_bionicFontSize > 10.0) {
+                          setState(() => _bionicFontSize -= 1.0);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: const Color(0xFF27272A), borderRadius: BorderRadius.circular(4)),
+                        child: const Text('A-', style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text('${_bionicFontSize.toInt()}px', style: const TextStyle(color: Color(0xFFA5B4FC), fontSize: 10.5, fontWeight: FontWeight.bold)),
+                    const SizedBox(width: 4),
+                    InkWell(
+                      onTap: () {
+                        if (_bionicFontSize < 20.0) {
+                          setState(() => _bionicFontSize += 1.0);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: const Color(0xFF27272A), borderRadius: BorderRadius.circular(4)),
+                        child: const Text('A+', style: TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
+          ),
+
+          const Divider(height: 1, color: Color(0xFF3F3F46)),
+
+          // Scrollable Bionic Content Area
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(14),
+              child: SelectableText.rich(
+                TextSpan(children: spans),
+                style: const TextStyle(height: 1.6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<InlineSpan> _generateBionicSpans(String text) {
+    if (text.isEmpty) {
+      return [
+        TextSpan(
+          text: 'No text available for Bionic Reading.',
+          style: TextStyle(color: Colors.white54, fontSize: _bionicFontSize),
+        ),
+      ];
+    }
+
+    final List<InlineSpan> spans = <InlineSpan>[];
+    final lines = text.split('\n');
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i];
+      if (line.isEmpty) {
+        spans.add(TextSpan(text: '\n\n', style: TextStyle(fontSize: _bionicFontSize)));
+        continue;
+      }
+
+      final regExp = RegExp(r'(\w+)|([^\w]+)');
+      final matches = regExp.allMatches(line);
+
+      for (final match in matches) {
+        final word = match.group(1);
+        final nonWord = match.group(2);
+
+        if (word != null) {
+          if (word.length <= 1) {
+            spans.add(TextSpan(
+              text: word,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                fontSize: _bionicFontSize,
+                letterSpacing: 0.3,
+              ),
+            ));
+          } else {
+            final boldLen = (word.length * _bionicFixationRatio).ceil().clamp(1, word.length);
+            final boldPart = word.substring(0, boldLen);
+            final restPart = word.substring(boldLen);
+
+            spans.add(TextSpan(
+              text: boldPart,
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                fontSize: _bionicFontSize,
+                letterSpacing: 0.3,
+              ),
+            ));
+
+            if (restPart.isNotEmpty) {
+              spans.add(TextSpan(
+                text: restPart,
+                style: TextStyle(
+                  fontWeight: FontWeight.w400,
+                  color: const Color(0xFFD4D4D8),
+                  fontSize: _bionicFontSize,
+                  letterSpacing: 0.2,
+                ),
+              ));
+            }
+          }
+        } else if (nonWord != null) {
+          spans.add(TextSpan(
+            text: nonWord,
+            style: TextStyle(
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFFA1A1AA),
+              fontSize: _bionicFontSize,
+            ),
+          ));
+        }
+      }
+
+      if (i < lines.length - 1) {
+        spans.add(TextSpan(text: '\n', style: TextStyle(fontSize: _bionicFontSize)));
+      }
+    }
+
+    return spans;
+  }
+
+  Widget _bionicSourceChip(String label, String value) {
+    final active = _bionicSource == value;
+    return InkWell(
+      onTap: () => setState(() => _bionicSource = value),
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF6366F1) : const Color(0xFF27272A),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : const Color(0xFFA1A1AA),
+            fontSize: 10,
+            fontWeight: active ? FontWeight.bold : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _bionicFixationChip(String label, double ratio) {
+    final active = (_bionicFixationRatio - ratio).abs() < 0.05;
+    return InkWell(
+      onTap: () => setState(() => _bionicFixationRatio = ratio),
+      borderRadius: BorderRadius.circular(4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF10B981) : const Color(0xFF27272A),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: active ? Colors.white : const Color(0xFFA1A1AA),
+            fontSize: 10,
+            fontWeight: active ? FontWeight.bold : FontWeight.w500,
+          ),
         ),
       ),
     );

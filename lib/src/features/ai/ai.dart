@@ -36,3 +36,4 @@ export 'presentation/simulation_slider_card.dart';
 export 'presentation/chart_interrogator_widget.dart';
 export 'presentation/forensic_diff_viewer.dart';
 export 'presentation/brain_trust_panel_widget.dart';
+export 'presentation/study_mode_side_pane.dart';

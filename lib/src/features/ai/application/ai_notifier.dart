@@ -7,6 +7,7 @@ import '../../../core/clarix_logger.dart';
 import '../domain/ai_feature_state.dart';
 import '../domain/ai_models.dart';
 import '../domain/ai_provider.dart';
+import '../domain/conversation.dart';
 import '../infrastructure/native_conversation_migrator.dart';
 import 'ai_document_context.dart';
 import 'ai_providers.dart';
@@ -278,24 +279,48 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
         clarixLog.w('Failed to extract document chunks for AI prompt: $e');
       }
 
+      final activeThreadId = threads.isEmpty ? (await store.createThread(documentId: context.documentId, title: 'Chat')).id : threads.first.id;
+
       final reply = await ref
           .read(aiRuntimeServiceProvider)
           .sendPrompt(
             prompt: finalPrompt,
             profileId: current.chat.selectedProviderId!,
-            conversationId: threads.isEmpty
-                ? 'native:${context.documentId}'
-                : threads.first.id,
+            conversationId: activeThreadId,
             controller: context.agentController,
             history: chatHistory,
             onStatus: _setActivity,
             onToken: (token) {
               buffer.write(token);
-              final fullText = buffer.toString();
-              _replaceLastAssistant(fullText, assistantId: assistant.id, busy: true);
+              final raw = buffer.toString();
 
-              if (fullText.contains('[[SCROLL_TO_PAGE:')) {
-                final match = RegExp(r'\[\[SCROLL_TO_PAGE:\s*\{"page":\s*(\d+)\}\]\]').firstMatch(fullText);
+              String displayText = raw.replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '');
+              if (displayText.contains('<think>')) {
+                final thinkIdx = displayText.indexOf('<think>');
+                displayText = displayText.substring(0, thinkIdx);
+              }
+              displayText = displayText.trimLeft();
+
+              if (raw.contains('<think>')) {
+                final thinkMatch = RegExp(r'<think>([\s\S]*?)(?:</think>|$)').firstMatch(raw);
+                if (thinkMatch != null) {
+                  final thinkContent = thinkMatch.group(1)?.trim() ?? '';
+                  if (thinkContent.isNotEmpty) {
+                    final lastLine = thinkContent.split('\n').where((l) => l.trim().isNotEmpty).lastOrNull ?? thinkContent;
+                    final statusSnippet = lastLine.length > 40 ? '${lastLine.substring(0, 40)}...' : lastLine;
+                    _setActivity(AiRuntimePhase.generating, statusSnippet);
+                  }
+                }
+              }
+
+              _replaceLastAssistant(
+                displayText.isEmpty ? '...' : displayText,
+                assistantId: assistant.id,
+                busy: true,
+              );
+
+              if (raw.contains('[[SCROLL_TO_PAGE:')) {
+                final match = RegExp(r'\[\[SCROLL_TO_PAGE:\s*\{"page":\s*(\d+)\}\]\]').firstMatch(raw);
                 if (match != null) {
                   final pageNum = int.tryParse(match.group(1) ?? '');
                   if (pageNum != null) {
@@ -307,8 +332,8 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
                 }
               }
 
-              if (fullText.contains('[[EDIT_TEXT:')) {
-                final match = RegExp(r'\[\[EDIT_TEXT:\s*(\{.*?\})\]\]').firstMatch(fullText);
+              if (raw.contains('[[EDIT_TEXT:')) {
+                final match = RegExp(r'\[\[EDIT_TEXT:\s*(\{.*?\})\]\]').firstMatch(raw);
                 if (match != null) {
                   try {
                     final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
@@ -327,16 +352,119 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
                   }
                 }
               }
+
+              if (raw.contains('[[ADD_CONTENT:')) {
+                final match = RegExp(r'\[\[ADD_CONTENT:\s*(\{.*?\})\]\]').firstMatch(raw);
+                if (match != null) {
+                  try {
+                    final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+                    final int page = jsonMap['page'] as int? ?? 1;
+                    final String content = jsonMap['content'] as String? ?? '';
+                    if (content.isNotEmpty) {
+                      ref.read(workspaceNotifierProvider.notifier).updateViewerState(
+                        tabId: context.tabId,
+                        currentPage: page,
+                      );
+                      clarixLog.i('AI ADD_CONTENT targeted to Markdown Document Editor: page=$page, content="$content"');
+                    }
+                  } catch (e) {
+                    clarixLog.w('AI add content parsing failed: $e');
+                  }
+                }
+              }
             },
           );
+
+      final cleanFinalText = reply.text
+          .replaceAll(RegExp(r'<think>[\s\S]*?</think>'), '')
+          .replaceAll(RegExp(r'<think>[\s\S]*$'), '')
+          .trim();
+
       _replaceLastAssistant(
-        reply.text,
+        cleanFinalText.isEmpty ? 'Action complete.' : cleanFinalText,
         assistantId: assistant.id,
         citations: reply.citations,
         busy: false,
         phase: AiRuntimePhase.idle,
         status: 'Ready to chat with your remote provider.',
       );
+
+      await store.appendExchange(
+        threadId: activeThreadId,
+        user: ConversationMessage(
+          id: user.id,
+          role: user.role,
+          content: user.text,
+          createdAt: user.createdAt,
+          tokenEstimate: user.text.length ~/ 4,
+          citations: user.citations,
+        ),
+        assistant: ConversationMessage(
+          id: assistant.id,
+          role: assistant.role,
+          content: reply.text,
+          createdAt: DateTime.now().toUtc(),
+          tokenEstimate: reply.text.length ~/ 4,
+          citations: reply.citations,
+        ),
+      );
+
+      if (reply.text.contains('[[EDIT_TEXT:') ||
+          reply.text.contains('[[ADD_CONTENT:') ||
+          reply.text.contains('[[REPLACE_DOCUMENT:')) {
+        try {
+          String newMarkdown = '';
+          final chunkStore = ref.read(chunkStoreProvider);
+          final chunks = await chunkStore.readChunks(context.documentId);
+          final originalText = chunks.map((c) => c.text).join('\n\n');
+
+          if (reply.text.contains('[[EDIT_TEXT:')) {
+            final match = RegExp(r'\[\[EDIT_TEXT:\s*(\{[\s\S]*?\})\]\]').firstMatch(reply.text);
+            if (match != null) {
+              final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+              final String oldText = jsonMap['oldText'] as String? ?? '';
+              final String newText = jsonMap['newText'] as String? ?? '';
+              if (oldText.isNotEmpty && originalText.contains(oldText)) {
+                newMarkdown = originalText.replaceFirst(oldText, newText);
+              } else if (newText.isNotEmpty) {
+                newMarkdown = newText;
+              }
+            }
+          }
+
+          if (reply.text.contains('[[ADD_CONTENT:')) {
+            final match = RegExp(r'\[\[ADD_CONTENT:\s*(\{[\s\S]*?\})\]\]').firstMatch(reply.text);
+            if (match != null) {
+              final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+              final String content = jsonMap['content'] as String? ?? '';
+              if (content.isNotEmpty) {
+                newMarkdown = '$originalText\n\n$content';
+              }
+            }
+          }
+
+          if (newMarkdown.trim().isEmpty) {
+            // Fallback: extract clean response body without tags
+            newMarkdown = reply.text
+                .replaceAll(RegExp(r'\[\[[\s\S]*?\]\]'), '')
+                .trim();
+          }
+
+          if (newMarkdown.trim().isNotEmpty && context.filePath.isNotEmpty) {
+            final pdfBytes = await MarkdownPdfCompiler.compile(newMarkdown, title: context.title);
+            final file = File(context.filePath);
+            if (file.existsSync()) {
+              await file.delete();
+            }
+            await file.writeAsBytes(pdfBytes, flush: true);
+            clarixLog.i('Successfully performed in-place agentic PDF replacement at ${context.filePath}');
+
+            await ref.read(workspaceNotifierProvider.notifier).reloadActivePdf();
+          }
+        } catch (e, st) {
+          clarixLog.e('Failed to execute agentic edit in-place: $e', error: e, stackTrace: st);
+        }
+      }
 
       if (reply.text.contains('[[CREATE_SOLUTION_PDF:')) {
         final match = RegExp(r'\[\[CREATE_SOLUTION_PDF:\s*(\{[\s\S]*?\})\]\]').firstMatch(reply.text);
@@ -356,6 +484,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
             .replaceAll(RegExp(r'\[\[SAVE_DOCUMENT:[\s\S]*?\]\]'), '')
             .replaceAll(RegExp(r'\[\[SCROLL_TO_PAGE:[\s\S]*?\]\]'), '')
             .replaceAll(RegExp(r'\[\[EDIT_TEXT:[\s\S]*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[ADD_CONTENT:[\s\S]*?\]\]'), '')
             .trim();
 
         try {
@@ -389,6 +518,7 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
             .replaceAll(RegExp(r'\[\[CREATE_SOLUTION_PDF:.*?\]\]'), '')
             .replaceAll(RegExp(r'\[\[SCROLL_TO_PAGE:.*?\]\]'), '')
             .replaceAll(RegExp(r'\[\[EDIT_TEXT:.*?\]\]'), '')
+            .replaceAll(RegExp(r'\[\[ADD_CONTENT:.*?\]\]'), '')
             .trim();
 
         try {
@@ -399,6 +529,41 @@ class AiNotifier extends AsyncNotifier<AiFeatureState> {
           clarixLog.i('Successfully saved document PDF at ${targetFile.path}');
         } catch (e, st) {
           clarixLog.e('Failed to save document PDF: $e', error: e, stackTrace: st);
+        }
+      }
+
+      if (reply.text.contains('[[SAVE_PDF_EDITS]]')) {
+        try {
+          await ref.read(workspaceNotifierProvider.notifier).saveActivePdfEdits();
+          clarixLog.i('Successfully executed SAVE_PDF_EDITS.');
+        } catch (e, st) {
+          clarixLog.e('Failed to execute SAVE_PDF_EDITS: $e', error: e, stackTrace: st);
+        }
+      }
+
+      if (reply.text.contains('[[SAVE_AS_NEW_DOCUMENT:')) {
+        final match = RegExp(r'\[\[SAVE_AS_NEW_DOCUMENT:\s*(\{[\s\S]*?\})\]\]').firstMatch(reply.text);
+        String filename = 'edited_document.pdf';
+        if (match != null) {
+          try {
+            final jsonMap = jsonDecode(match.group(1)!) as Map<String, dynamic>;
+            filename = jsonMap['filename'] as String? ?? 'edited_document.pdf';
+          } catch (e) {
+            clarixLog.w('Failed to parse filename JSON: $e');
+          }
+        }
+        filename = filename.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+        
+        try {
+          final saveDir = Directory.current.path;
+          final targetPath = '$saveDir/$filename';
+          await ref.read(workspaceNotifierProvider.notifier).saveAsNewDocument(
+            tabId: context.tabId,
+            targetPath: targetPath,
+          );
+          clarixLog.i('Successfully executed SAVE_AS_NEW_DOCUMENT to $targetPath');
+        } catch (e, st) {
+          clarixLog.e('Failed to execute SAVE_AS_NEW_DOCUMENT: $e', error: e, stackTrace: st);
         }
       }
     } catch (error, stackTrace) {
