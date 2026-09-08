@@ -146,6 +146,65 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
     return true;
   }
 
+  void _handlePointerUp(PointerUpEvent event) {
+    _rememberPointerPosition(event);
+    if (event.kind != PointerDeviceKind.mouse) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showAutomaticSelectionToolbar();
+    });
+  }
+
+  void _showAutomaticSelectionToolbar() {
+    if (!_controller.isReady ||
+        !_controller.textSelectionDelegate.hasSelectedText) {
+      return;
+    }
+    final Offset? globalPosition = _lastPointerGlobalPosition;
+    if (globalPosition == null) return;
+    final OverlayState? overlay = Overlay.of(context, rootOverlay: true);
+    final RenderBox? overlayBox =
+        overlay.context.findRenderObject() as RenderBox?;
+    if (overlayBox == null) return;
+    final Offset position = overlayBox.globalToLocal(globalPosition);
+    final Size size = overlayBox.size;
+    final Offset anchor =
+        _controller.globalToLocal(globalPosition) ?? Offset.zero;
+    final PdfViewerContextMenuBuilderParams params =
+        PdfViewerContextMenuBuilderParams(
+          isTextSelectionEnabled: true,
+          anchorA: anchor,
+          textSelectionDelegate: _controller.textSelectionDelegate,
+          contextMenuFor: PdfViewerPart.selectedText,
+          dismissContextMenu: _removeAutomaticSelectionToolbar,
+        );
+    final ClarixThemeProfile profile =
+        ref.read(clarixThemeProvider).value ?? const ClarixThemeProfile();
+    _removeAutomaticSelectionToolbar();
+    _automaticSelectionToolbar = OverlayEntry(
+      builder: (BuildContext context) => Positioned(
+        left: (position.dx - 20).clamp(8.0, size.width - 8.0).toDouble(),
+        top: (position.dy + 12).clamp(8.0, size.height - 8.0).toDouble(),
+        child: ReaderSelectionToolbar(
+          highlightColors: profile.highlightPalette,
+          onCopy: () => unawaited(_copySelection(params)),
+          onAskAi: () => unawaited(_askAiAboutSelection(params)),
+          onNote: () => unawaited(_addNoteForSelection(params)),
+          onBookmark: () => unawaited(_bookmarkSelection(params)),
+          onReadAloud: () => unawaited(_readSelectionAloud(params)),
+          onHighlight: (int color) =>
+              unawaited(_highlightSelection(colorValue: color, params: params)),
+          onMoreColors: () => unawaited(_chooseHighlightColor(params)),
+        ),
+      ),
+    );
+    overlay.insert(_automaticSelectionToolbar!);
+  }
+
+  void _removeAutomaticSelectionToolbar() {
+    _automaticSelectionToolbar?.remove();
+    _automaticSelectionToolbar = null;
+  }
+
   Future<void> _copySelection(PdfViewerContextMenuBuilderParams params) async {
     await params.textSelectionDelegate.copyTextSelection();
     params.dismissContextMenu();
@@ -332,6 +391,7 @@ extension _ReaderViewerInteractions on _PdfViewerPaneState {
   }
 
   Future<void> _clearActiveTextSelection() async {
+    _removeAutomaticSelectionToolbar();
     _dismissSelectionMenu?.call();
     _dismissSelectionMenu = null;
     if (_controller.isReady) {

@@ -61,6 +61,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   Timer? _viewerStateDebounce;
   Offset? _lastPointerGlobalPosition;
   VoidCallback? _dismissSelectionMenu;
+  OverlayEntry? _automaticSelectionToolbar;
   final Map<String, List<Rect>> _annotationHitAreas = <String, List<Rect>>{};
   final Map<int, List<_PageSentence>> _pageSentenceCache =
       <int, List<_PageSentence>>{};
@@ -104,6 +105,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
   void didUpdateWidget(covariant ReaderViewerPane oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tab.id != widget.tab.id) {
+      _removeAutomaticSelectionToolbar();
       _disposeSearcher();
       _controller.removeListener(_syncViewerMetrics);
       _metrics.dispose();
@@ -143,6 +145,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
 
   @override
   void dispose() {
+    _removeAutomaticSelectionToolbar();
     _viewerStateDebounce?.cancel();
     _hideChromeTimer?.cancel();
     _disposeSearcher();
@@ -290,7 +293,7 @@ class _PdfViewerPaneState extends ConsumerState<ReaderViewerPane> {
                       onPointerHover: _rememberPointerPosition,
                       onPointerDown: _rememberPointerPosition,
                       onPointerMove: _rememberPointerPosition,
-                      onPointerUp: _rememberPointerPosition,
+                      onPointerUp: _handlePointerUp,
                       onPointerCancel: _rememberPointerPosition,
                       onPointerPanZoomStart: _rememberTrackpadZoomStart,
                       onPointerPanZoomUpdate: _rememberTrackpadZoomPosition,
