@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../domain/tts_models.dart';
+import '../infrastructure/system_tts_client.dart';
 import '../infrastructure/tts_engine_worker.dart';
 import '../infrastructure/tts_model_catalog.dart';
 import '../infrastructure/tts_model_store.dart';
@@ -39,6 +40,9 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
   bool _noMoreSegments = false;
   Directory? _sessionDir;
 
+  SystemTtsClient? _systemClient;
+  int _systemNextIndex = 0;
+
   @override
   Future<TtsFeatureState> build() async {
     ref.onDispose(() {
@@ -63,10 +67,30 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     }
     final int defaultVoiceSid = await preferences.readDefaultVoice();
     final double defaultSpeed = await preferences.readSpeed();
+    final TtsEngineKind activeEngine = await preferences.readActiveEngine();
+    final String? activeModelId = await preferences.readActiveModelId();
+    final String? systemVoiceName = await preferences.readSystemVoiceName();
+    final String? systemVoiceLocale = await preferences.readSystemVoiceLocale();
+
+    List<SystemTtsVoice> availableSystemVoices = const <SystemTtsVoice>[];
+    try {
+      availableSystemVoices =
+          await ref.read(systemTtsClientProvider).getVoices();
+    } catch (_) {
+      // Platform voice enumeration failed (e.g. unsupported platform); the
+      // System voice option will simply show no voices to pick from.
+    }
+
     return TtsFeatureState.initial().copyWith(
       installState: installState,
       defaultVoiceSid: defaultVoiceSid,
       defaultSpeed: defaultSpeed,
+      activeEngine: activeEngine,
+      activeModelId: activeModelId,
+      systemVoice: systemVoiceName != null && systemVoiceLocale != null
+          ? SystemTtsVoice(name: systemVoiceName, locale: systemVoiceLocale)
+          : null,
+      availableSystemVoices: availableSystemVoices,
     );
   }
 
@@ -75,6 +99,14 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
   void _commit(TtsFeatureState value) => state = AsyncData<TtsFeatureState>(value);
 
   bool get isReading => _current.playback.status != TtsPlaybackStatus.idle;
+
+  /// The sherpa-onnx spec to use for the active selection, resolving to the
+  /// catalog default when none has been explicitly chosen. Meaningless when
+  /// [TtsFeatureState.activeEngine] is [TtsEngineKind.system].
+  TtsModelSpec get activeSpec {
+    final String? id = _current.activeModelId;
+    return id == null ? TtsModelCatalog.defaultModel : TtsModelCatalog.byId(id);
+  }
 
   // --- Model management -----------------------------------------------
 
@@ -140,10 +172,27 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     _commit(_current.copyWith(defaultSpeed: speed));
   }
 
+  Future<void> setActiveEngine(TtsEngineKind engine) async {
+    await ref.read(ttsPreferencesStoreProvider).saveActiveEngine(engine);
+    _commit(_current.copyWith(activeEngine: engine));
+  }
+
+  Future<void> setActiveModel(TtsModelSpec spec) async {
+    await ref.read(ttsPreferencesStoreProvider).saveActiveModelId(spec.id);
+    _commit(_current.copyWith(activeModelId: spec.id));
+  }
+
+  Future<void> setSystemVoice(SystemTtsVoice voice) async {
+    await ref
+        .read(ttsPreferencesStoreProvider)
+        .saveSystemVoice(name: voice.name, locale: voice.locale);
+    _commit(_current.copyWith(systemVoice: voice));
+  }
+
   /// Speaks [text] once with the current default voice/speed, for previewing
   /// a voice from Settings. Does not touch reading-session state.
   Future<void> previewVoice(int sid, String text) async {
-    final TtsModelSpec spec = TtsModelCatalog.defaultModel;
+    final TtsModelSpec spec = activeSpec;
     if (_current.installState[spec.id]?.status != TtsInstallStatus.installed) {
       return;
     }
@@ -152,6 +201,7 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     AudioPlayer? previewPlayer;
     try {
       previewEngine = await TtsEngineWorker.start(
+        engine: spec.engine,
         paths: await store.paths(spec),
       );
       final Directory tempRoot = await getTemporaryDirectory();
@@ -182,13 +232,6 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     required int startIndex,
   }) async {
     await stop();
-    final TtsModelSpec spec = TtsModelCatalog.defaultModel;
-    if (_current.installState[spec.id]?.status != TtsInstallStatus.installed) {
-      _commit(
-        _current.copyWith(errorMessage: 'Download a voice pack in Settings first.'),
-      );
-      return;
-    }
     if (segments.isEmpty || startIndex < 0 || startIndex >= segments.length) {
       return;
     }
@@ -196,9 +239,7 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     _generation++;
     final int myGeneration = _generation;
     _segments = segments;
-    _nextToSynthesize = startIndex;
     _noMoreSegments = false;
-    _pendingQueue.clear();
 
     _commit(
       _current.copyWith(
@@ -214,9 +255,34 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
       ),
     );
 
+    if (_current.activeEngine == TtsEngineKind.system) {
+      await _startSystemReading(myGeneration, startIndex);
+      return;
+    }
+    await _startSherpaReading(myGeneration, startIndex);
+  }
+
+  Future<void> _startSherpaReading(int myGeneration, int startIndex) async {
+    final TtsModelSpec spec = activeSpec;
+    if (_current.installState[spec.id]?.status != TtsInstallStatus.installed) {
+      _commit(
+        _current.copyWith(
+          playback: const TtsPlaybackState(),
+          errorMessage: 'Download a voice pack in Settings first.',
+        ),
+      );
+      return;
+    }
+
+    _nextToSynthesize = startIndex;
+    _pendingQueue.clear();
+
     final TtsModelStore store = ref.read(ttsModelStoreProvider);
     try {
-      _engine = await TtsEngineWorker.start(paths: await store.paths(spec));
+      _engine = await TtsEngineWorker.start(
+        engine: spec.engine,
+        paths: await store.paths(spec),
+      );
     } catch (error) {
       _commit(
         _current.copyWith(
@@ -244,18 +310,74 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     unawaited(_synthesisLoop(myGeneration));
   }
 
+  Future<void> _startSystemReading(int myGeneration, int startIndex) async {
+    final SystemTtsClient client = ref.read(systemTtsClientProvider);
+    _systemClient = client;
+    _systemNextIndex = startIndex;
+
+    final SystemTtsVoice? voice = _current.systemVoice;
+    if (voice != null) await client.setVoice(voice);
+    await client.setSpeechRate((_current.defaultSpeed * 0.5).clamp(0.0, 1.0));
+
+    client.onComplete(() {
+      if (myGeneration != _generation) return;
+      unawaited(_speakNextSystemSegment(myGeneration));
+    });
+    client.onError((Object error) {
+      if (myGeneration != _generation) return;
+      _commit(
+        _current.copyWith(
+          playback: const TtsPlaybackState(),
+          errorMessage: 'System voice failed: $error',
+        ),
+      );
+    });
+
+    await _speakNextSystemSegment(myGeneration);
+  }
+
+  Future<void> _speakNextSystemSegment(int generation) async {
+    if (generation != _generation) return;
+    if (_systemNextIndex >= _segments.length) {
+      if (_noMoreSegments) unawaited(stop());
+      return;
+    }
+    final int index = _systemNextIndex;
+    final ReadAloudSegment segment = _segments[index];
+    _systemNextIndex++;
+    _commit(
+      _current.copyWith(
+        playback: _current.playback.copyWith(
+          status: TtsPlaybackStatus.speaking,
+          segmentIndex: index,
+          currentPage: segment.pageNumber,
+          currentSegmentId: segment.id,
+        ),
+      ),
+    );
+    await _systemClient?.speak(segment.text);
+  }
+
   /// Appends more segments to the current reading session (e.g. once the
   /// reader has extracted the next page's sentences), so a long document can
   /// start reading immediately instead of waiting for the whole thing to be
   /// extracted up front. No-op if there is no active session.
   void appendSegments(List<ReadAloudSegment> more) {
     if (more.isEmpty || !isReading) return;
+    final int previousLength = _segments.length;
     _segments = List<ReadAloudSegment>.of(_segments)..addAll(more);
     _commit(
       _current.copyWith(
         playback: _current.playback.copyWith(segmentTotal: _segments.length),
       ),
     );
+    if (_current.activeEngine == TtsEngineKind.system) {
+      if (_systemNextIndex >= previousLength) {
+        // The system loop had run out of segments and gone idle; nudge it.
+        unawaited(_speakNextSystemSegment(_generation));
+      }
+      return;
+    }
     if (_activeLoopGeneration != _generation) {
       unawaited(_synthesisLoop(_generation));
     }
@@ -279,10 +401,7 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
 
     _generation++;
     final int myGeneration = _generation;
-    _pendingQueue.clear();
-    _nextToSynthesize = index;
 
-    await _player?.stop();
     final ReadAloudSegment segment = _segments[index];
     _commit(
       _current.copyWith(
@@ -295,6 +414,16 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
       ),
     );
 
+    if (_current.activeEngine == TtsEngineKind.system) {
+      await _systemClient?.stop();
+      _systemNextIndex = index;
+      unawaited(_speakNextSystemSegment(myGeneration));
+      return;
+    }
+
+    _pendingQueue.clear();
+    _nextToSynthesize = index;
+    await _player?.stop();
     unawaited(_synthesisLoop(myGeneration));
   }
 
@@ -358,7 +487,11 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
   }
 
   Future<void> pause() async {
-    await _player?.pause();
+    if (_current.activeEngine == TtsEngineKind.system) {
+      await _systemClient?.pause();
+    } else {
+      await _player?.pause();
+    }
     if (_current.playback.status == TtsPlaybackStatus.speaking) {
       _commit(
         _current.copyWith(
@@ -369,7 +502,17 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
   }
 
   Future<void> resume() async {
-    await _player?.resume();
+    if (_current.activeEngine == TtsEngineKind.system) {
+      // flutter_tts doesn't guarantee true mid-utterance resume on every
+      // platform; re-speak the current segment as the best available
+      // approximation.
+      if (_current.playback.status == TtsPlaybackStatus.paused) {
+        _systemNextIndex = _current.playback.segmentIndex;
+        unawaited(_speakNextSystemSegment(_generation));
+      }
+    } else {
+      await _player?.resume();
+    }
     if (_current.playback.status == TtsPlaybackStatus.paused) {
       _commit(
         _current.copyWith(
@@ -386,6 +529,9 @@ class TtsNotifier extends AsyncNotifier<TtsFeatureState> {
     await _player?.stop();
     await _player?.dispose();
     _engine?.dispose();
+    await _systemClient?.stop();
+    _systemClient = null;
+    _systemNextIndex = 0;
     final Directory? sessionDir = _sessionDir;
     if (sessionDir != null && await sessionDir.exists()) {
       await sessionDir.delete(recursive: true);

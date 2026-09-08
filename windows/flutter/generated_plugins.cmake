@@ -7,6 +7,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   bitsdojo_window_windows
   flutter_gemma
   flutter_secure_storage_windows
+  flutter_tts
   record_windows
   screen_retriever_windows
   url_launcher_windows

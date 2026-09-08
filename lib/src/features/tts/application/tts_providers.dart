@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../infrastructure/system_tts_client.dart';
 import '../infrastructure/tts_model_store.dart';
 import '../infrastructure/tts_preferences_store.dart';
 import 'tts_feature_state.dart';
@@ -14,6 +15,10 @@ final ttsSharedPreferencesProvider = Provider<SharedPreferencesAsync>(
 
 final ttsPreferencesStoreProvider = Provider<TtsPreferencesStore>(
   (Ref ref) => TtsPreferencesStore(ref.watch(ttsSharedPreferencesProvider)),
+);
+
+final systemTtsClientProvider = Provider<SystemTtsClient>(
+  (Ref ref) => FlutterTtsClient(),
 );
 
 final ttsNotifierProvider =

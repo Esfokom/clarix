@@ -1,6 +1,7 @@
-enum TtsEngineKind { kitten }
+enum TtsEngineKind { kittenSherpa, piperSherpa, system }
 
-/// Describes a downloadable sherpa-onnx TTS voice pack.
+/// Describes a downloadable sherpa-onnx TTS voice pack. Not used for
+/// [TtsEngineKind.system], which has no on-disk model.
 class TtsModelSpec {
   const TtsModelSpec({
     required this.id,
@@ -10,7 +11,7 @@ class TtsModelSpec {
     required this.downloadUrl,
     required this.approxArchiveSizeBytes,
     required this.modelFileName,
-    required this.voicesFileName,
+    this.voicesFileName,
     required this.tokensFileName,
     required this.dataDirName,
     required this.voiceCount,
@@ -23,7 +24,11 @@ class TtsModelSpec {
   final String downloadUrl;
   final int approxArchiveSizeBytes;
   final String modelFileName;
-  final String voicesFileName;
+
+  /// Null for single-speaker packages (e.g. Piper), which have no separate
+  /// speaker-embedding file. Set for Kitten, which packs multiple voices into
+  /// one `voices.bin`.
+  final String? voicesFileName;
   final String tokensFileName;
   final String dataDirName;
   final int voiceCount;

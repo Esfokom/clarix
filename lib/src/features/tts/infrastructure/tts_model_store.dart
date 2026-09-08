@@ -39,7 +39,9 @@ class TtsModelStore {
   Future<bool> isInstalled(TtsModelSpec spec) async {
     final String dir = await _installDir(spec);
     final bool model = await File(p.join(dir, spec.modelFileName)).exists();
-    final bool voices = await File(p.join(dir, spec.voicesFileName)).exists();
+    final bool voices = spec.voicesFileName == null
+        ? true
+        : await File(p.join(dir, spec.voicesFileName!)).exists();
     final bool tokens = await File(p.join(dir, spec.tokensFileName)).exists();
     final bool dataDir = await Directory(p.join(dir, spec.dataDirName)).exists();
     return model && voices && tokens && dataDir;
@@ -51,7 +53,7 @@ class TtsModelStore {
     final String dir = await _installDir(spec);
     return TtsInstalledModelPaths(
       model: p.join(dir, spec.modelFileName),
-      voices: p.join(dir, spec.voicesFileName),
+      voices: spec.voicesFileName == null ? null : p.join(dir, spec.voicesFileName!),
       tokens: p.join(dir, spec.tokensFileName),
       dataDir: p.join(dir, spec.dataDirName),
     );
@@ -106,13 +108,13 @@ class TtsModelStore {
 class TtsInstalledModelPaths {
   const TtsInstalledModelPaths({
     required this.model,
-    required this.voices,
+    this.voices,
     required this.tokens,
     required this.dataDir,
   });
 
   final String model;
-  final String voices;
+  final String? voices;
   final String tokens;
   final String dataDir;
 }

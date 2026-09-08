@@ -7,8 +7,9 @@ import 'workspace_common.dart';
 const String _previewText =
     'This is how this voice sounds when reading a document aloud.';
 
-/// Settings section for on-device text-to-speech: voice-pack download and
-/// the default voice/speed used everywhere "Read aloud" is invoked.
+/// Settings section for on-device text-to-speech: engine choice, voice-pack
+/// download, and the default voice/speed used everywhere "Read aloud" is
+/// invoked.
 class TtsSettingsSection extends ConsumerStatefulWidget {
   const TtsSettingsSection({super.key});
 
@@ -23,10 +24,13 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
   Widget build(BuildContext context) {
     final TtsFeatureState state =
         ref.watch(ttsNotifierProvider).value ?? TtsFeatureState.initial();
-    final TtsModelSpec spec = TtsModelCatalog.defaultModel;
-    final TtsModelInstallState install =
-        state.installState[spec.id] ?? const TtsModelInstallState();
-    final bool installed = install.status == TtsInstallStatus.installed;
+    final bool isSystem = state.activeEngine == TtsEngineKind.system;
+    final TtsModelSpec activeSpec = state.activeModelId == null
+        ? TtsModelCatalog.defaultModel
+        : TtsModelCatalog.byId(state.activeModelId!);
+    final TtsModelInstallState activeInstall =
+        state.installState[activeSpec.id] ?? const TtsModelInstallState();
+    final bool activeInstalled = activeInstall.status == TtsInstallStatus.installed;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -41,51 +45,34 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
         ),
         const SizedBox(height: 4),
         const Text(
-          'Download an on-device voice to have documents read aloud from '
-          'the right-click menu.',
+          'Choose an on-device voice pack to download, or use your system\'s '
+          'built-in voice — available from the right-click "Read aloud" menu.',
           style: TextStyle(color: WorkspaceColors.textMuted),
         ),
-        const SizedBox(height: 10),
-        _buildModelRow(spec, install),
-        if (installed) ...<Widget>[
-          const SizedBox(height: 18),
-          const Text(
-            'Voice',
-            style: TextStyle(
-              color: WorkspaceColors.textStrong,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
+        const SizedBox(height: 12),
+        SegmentedButton<bool>(
+          segments: const <ButtonSegment<bool>>[
+            ButtonSegment<bool>(
+              value: false,
+              label: Text('On-device', key: Key('tts-engine-on-device')),
             ),
-          ),
-          const SizedBox(height: 8),
-          _buildVoiceGrid(state, spec),
-          const SizedBox(height: 18),
-          Row(
-            children: <Widget>[
-              const Text(
-                'Speed',
-                style: TextStyle(
-                  color: WorkspaceColors.textStrong,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+            ButtonSegment<bool>(
+              value: true,
+              label: Text('System voice', key: Key('tts-engine-system')),
+            ),
+          ],
+          selected: <bool>{isSystem},
+          onSelectionChanged: (Set<bool> selection) => ref
+              .read(ttsNotifierProvider.notifier)
+              .setActiveEngine(
+                selection.first ? TtsEngineKind.system : TtsEngineKind.kittenSherpa,
               ),
-              const Spacer(),
-              Text(
-                '${state.defaultSpeed.toStringAsFixed(2)}x',
-                style: const TextStyle(color: WorkspaceColors.textMuted),
-              ),
-            ],
-          ),
-          Slider(
-            value: state.defaultSpeed,
-            min: 0.75,
-            max: 1.5,
-            divisions: 15,
-            onChanged: (double value) =>
-                ref.read(ttsNotifierProvider.notifier).setDefaultSpeed(value),
-          ),
-        ],
+        ),
+        const SizedBox(height: 14),
+        if (isSystem)
+          _buildSystemVoiceList(state)
+        else
+          _buildOnDeviceSection(state, activeSpec, activeInstalled),
         if (state.errorMessage != null) ...<Widget>[
           const SizedBox(height: 8),
           Text(
@@ -97,7 +84,111 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
     );
   }
 
-  Widget _buildModelRow(TtsModelSpec spec, TtsModelInstallState install) {
+  Widget _buildOnDeviceSection(
+    TtsFeatureState state,
+    TtsModelSpec activeSpec,
+    bool activeInstalled,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (final TtsModelSpec spec in TtsModelCatalog.all) ...<Widget>[
+          _buildModelRow(
+            spec,
+            state.installState[spec.id] ?? const TtsModelInstallState(),
+            selected: spec.id == activeSpec.id,
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (activeInstalled && activeSpec.voiceCount > 1) ...<Widget>[
+          const SizedBox(height: 10),
+          const Text(
+            'Voice',
+            style: TextStyle(
+              color: WorkspaceColors.textStrong,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildVoiceGrid(state, activeSpec),
+        ],
+        if (activeInstalled) ...<Widget>[
+          const SizedBox(height: 18),
+          _buildSpeedSlider(state),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSystemVoiceList(TtsFeatureState state) {
+    if (state.availableSystemVoices.isEmpty) {
+      return const Text(
+        'No system voices were found on this device.',
+        style: TextStyle(color: WorkspaceColors.textMuted, fontSize: 12),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        for (final SystemTtsVoice voice in state.availableSystemVoices)
+          RadioListTile<SystemTtsVoice>(
+            key: Key('system-voice-${voice.name}-${voice.locale}'),
+            contentPadding: EdgeInsets.zero,
+            dense: true,
+            title: Text('${voice.name} (${voice.locale})'),
+            value: voice,
+            groupValue: state.systemVoice,
+            onChanged: (SystemTtsVoice? value) {
+              if (value != null) {
+                ref.read(ttsNotifierProvider.notifier).setSystemVoice(value);
+              }
+            },
+          ),
+        const SizedBox(height: 10),
+        _buildSpeedSlider(state),
+      ],
+    );
+  }
+
+  Widget _buildSpeedSlider(TtsFeatureState state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            const Text(
+              'Speed',
+              style: TextStyle(
+                color: WorkspaceColors.textStrong,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '${state.defaultSpeed.toStringAsFixed(2)}x',
+              style: const TextStyle(color: WorkspaceColors.textMuted),
+            ),
+          ],
+        ),
+        Slider(
+          value: state.defaultSpeed,
+          min: 0.75,
+          max: 1.5,
+          divisions: 15,
+          onChanged: (double value) =>
+              ref.read(ttsNotifierProvider.notifier).setDefaultSpeed(value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModelRow(
+    TtsModelSpec spec,
+    TtsModelInstallState install, {
+    required bool selected,
+  }) {
     final double sizeMb = spec.approxArchiveSizeBytes / 1000 / 1000;
     switch (install.status) {
       case TtsInstallStatus.notInstalled:
@@ -117,13 +208,11 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
                 ),
               ),
             OutlinedButton.icon(
-              key: const Key('download-tts-voice'),
+              key: Key('download-tts-voice-${spec.id}'),
               onPressed: () =>
                   ref.read(ttsNotifierProvider.notifier).downloadModel(spec),
               icon: const Icon(Icons.download_outlined),
-              label: Text(
-                '${spec.label} · ${sizeMb.toStringAsFixed(0)}MB',
-              ),
+              label: Text('${spec.label} · ${sizeMb.toStringAsFixed(0)}MB'),
             ),
           ],
         );
@@ -147,17 +236,29 @@ class _TtsSettingsSectionState extends ConsumerState<TtsSettingsSection> {
           ],
         );
       case TtsInstallStatus.installed:
-        return ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.graphic_eq),
-          title: Text(spec.label),
-          subtitle: const Text('Installed on this device'),
-          trailing: IconButton(
-            key: const Key('delete-tts-voice'),
-            tooltip: 'Delete ${spec.label}',
-            onPressed: () =>
-                ref.read(ttsNotifierProvider.notifier).deleteModel(spec),
-            icon: const Icon(Icons.delete_outline),
+        return Material(
+          color: selected ? WorkspaceColors.accentSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          child: ListTile(
+            key: Key('tts-model-row-${spec.id}'),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            leading: Icon(
+              selected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+            ),
+            title: Text(spec.label),
+            subtitle: const Text('Installed on this device'),
+            onTap: () =>
+                ref.read(ttsNotifierProvider.notifier).setActiveModel(spec),
+            trailing: IconButton(
+              key: Key('delete-tts-voice-${spec.id}'),
+              tooltip: 'Delete ${spec.label}',
+              onPressed: () =>
+                  ref.read(ttsNotifierProvider.notifier).deleteModel(spec),
+              icon: const Icon(Icons.delete_outline),
+            ),
           ),
         );
     }
