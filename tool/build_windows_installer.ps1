@@ -11,10 +11,30 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $pubspecPath = Join-Path $projectRoot 'pubspec.yaml'
 $releaseDir = Join-Path $projectRoot 'build\windows\x64\runner\Release'
 $installerScript = Join-Path $projectRoot 'installer\clarix.iss'
+$launcherIconConfig = Join-Path $projectRoot 'flutter_launcher_icons.yaml'
+$windowsIconPath = Join-Path $projectRoot 'windows\runner\resources\app_icon.ico'
 $innoCompiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
 
 if (-not (Test-Path -LiteralPath $innoCompiler)) {
   throw "Inno Setup 6 was not found at '$innoCompiler'. Install Inno Setup 6 and run this script again."
+}
+if (-not (Test-Path -LiteralPath $launcherIconConfig)) {
+  throw "The launcher icon configuration is missing at '$launcherIconConfig'."
+}
+
+Push-Location $projectRoot
+try {
+  & dart run flutter_launcher_icons -f $launcherIconConfig
+  if ($LASTEXITCODE -ne 0) {
+    throw "Launcher icon generation failed with exit code $LASTEXITCODE."
+  }
+}
+finally {
+  Pop-Location
+}
+
+if (-not (Test-Path -LiteralPath $windowsIconPath)) {
+  throw "The generated Windows launcher icon is missing at '$windowsIconPath'."
 }
 
 $versionLine = Select-String -LiteralPath $pubspecPath -Pattern '^version:\s*([^+\s]+)(?:\+(\d+))?\s*$' |
