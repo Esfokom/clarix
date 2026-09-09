@@ -2,8 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
-import 'ocr_models.dart';
-
 enum SidebarPane { thumbnails, outline }
 
 enum RightToolWindow { none, document, ai, study }
@@ -710,7 +708,6 @@ class DocumentMetadata {
     required this.identity,
     required this.bookmarks,
     required this.annotations,
-    this.ocrPages = const <int, OcrPageData>{},
   });
 
   factory DocumentMetadata.empty(DocumentIdentity identity) {
@@ -738,31 +735,22 @@ class DocumentMetadata {
                 DocumentAnnotation.fromJson(item as Map<String, dynamic>),
           )
           .toList(growable: false),
-      ocrPages: <int, OcrPageData>{
-        for (final dynamic item
-            in json['ocrPages'] as List<dynamic>? ?? const <dynamic>[])
-          (item as Map<String, dynamic>)['pageNumber'] as int:
-              OcrPageData.fromJson(item),
-      },
     );
   }
 
   final DocumentIdentity identity;
   final List<DocumentBookmark> bookmarks;
   final List<DocumentAnnotation> annotations;
-  final Map<int, OcrPageData> ocrPages;
 
   DocumentMetadata copyWith({
     DocumentIdentity? identity,
     List<DocumentBookmark>? bookmarks,
     List<DocumentAnnotation>? annotations,
-    Map<int, OcrPageData>? ocrPages,
   }) {
     return DocumentMetadata(
       identity: identity ?? this.identity,
       bookmarks: bookmarks ?? this.bookmarks,
       annotations: annotations ?? this.annotations,
-      ocrPages: ocrPages ?? this.ocrPages,
     );
   }
 
@@ -773,9 +761,6 @@ class DocumentMetadata {
         .toList(growable: false),
     'annotations': annotations
         .map((DocumentAnnotation item) => item.toJson())
-        .toList(growable: false),
-    'ocrPages': ocrPages.values
-        .map((OcrPageData page) => page.toJson())
         .toList(growable: false),
   };
 }

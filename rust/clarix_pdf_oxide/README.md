@@ -1,6 +1,6 @@
 # Clarix PDF native core
 
-This crate is the Windows-first native PDF and OCR core for Clarix.
+This crate is the Windows-first native PDF core for Clarix.
 
 ## Implemented
 
@@ -10,7 +10,6 @@ This crate is the Windows-first native PDF and OCR core for Clarix.
 - Incremental indexing in batches (the Flutter caller uses 32 records per batch).
 - UTF-8-safe text chunking.
 - `flutter_rust_bridge` 2.12 API entry points in `src/api.rs`.
-- Optional `ocr-rs` 2.3.2 support in `src/ocr.rs`, using PP-OCRv6/MNN models.
 
 ## Generate Flutter bindings
 
@@ -30,11 +29,3 @@ cargo clippy --manifest-path rust/clarix_pdf_oxide/Cargo.toml -- -D warnings
 cargo test --manifest-path rust/clarix_pdf_oxide/Cargo.toml
 cargo build --release --manifest-path rust/clarix_pdf_oxide/Cargo.toml --target x86_64-pc-windows-msvc
 ```
-
-Enable OCR only when the three local PP-OCRv6 model assets are installed:
-
-```text
-cargo build --release --features ocr --manifest-path rust/clarix_pdf_oxide/Cargo.toml
-```
-
-Document bytes and OCR inputs remain local. Model acquisition is a separate, user-initiated network operation.
